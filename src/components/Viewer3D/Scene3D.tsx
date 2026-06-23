@@ -51,13 +51,14 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
 export default function Scene3D() {
   const { center, radius } = useDesignBounds();
   const composerRef = useRef<any>(null);
+  const dollhouse = useDesign((s) => s.dollhouse);
 
   return (
     <Canvas
       flat // composer's ToneMapping owns tone mapping; avoid double-applying
       shadows
       gl={{ antialias: true, preserveDrawingBuffer: false }}
-      camera={{ position: [center[0] + radius * 0.85, radius * 1.45, center[2] + radius * 0.85], fov: 50 }}
+      camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => useDesign.getState().clearSelection()}
     >
@@ -97,7 +98,7 @@ export default function Scene3D() {
         infiniteGrid
       />
 
-      <DesignScene interactive />
+      <DesignScene interactive dollhouse={dollhouse} />
 
       <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
         <N8AO aoRadius={0.7} intensity={2.2} distanceFalloff={1} halfRes />

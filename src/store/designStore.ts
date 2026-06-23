@@ -29,6 +29,7 @@ interface DesignState extends DesignSnapshot {
   pan: Point; // px offset
   showGrid: boolean;
   gridSize: number; // cm
+  dollhouse: boolean; // 3D: fade walls between camera and interior
   defaultWallHeight: number;
   defaultWallThickness: number;
   pendingFurnitureType: string | null;
@@ -43,6 +44,7 @@ interface DesignState extends DesignSnapshot {
   setZoom: (z: number) => void;
   setPan: (p: Point) => void;
   setShowGrid: (b: boolean) => void;
+  setDollhouse: (b: boolean) => void;
   select: (sel: Selection) => void;
   clearSelection: () => void;
   setPendingFurniture: (type: string | null) => void;
@@ -131,6 +133,7 @@ export const useDesign = create<DesignState>((set, get) => {
     pan: { x: 400, y: 300 },
     showGrid: true,
     gridSize: 25,
+    dollhouse: true,
     defaultWallHeight: 270,
     defaultWallThickness: 12,
     pendingFurnitureType: null,
@@ -143,6 +146,7 @@ export const useDesign = create<DesignState>((set, get) => {
     setZoom: (z) => set({ zoom: Math.max(0.05, Math.min(4, z)) }),
     setPan: (p) => set({ pan: p }),
     setShowGrid: (b) => set({ showGrid: b }),
+    setDollhouse: (b) => set({ dollhouse: b }),
     select: (sel) => set({ selection: sel }),
     clearSelection: () => set({ selection: { kind: null, id: null } }),
     setPendingFurniture: (type) =>

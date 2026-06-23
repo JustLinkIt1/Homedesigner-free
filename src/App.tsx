@@ -13,7 +13,8 @@ import { initNative } from './lib/native';
 const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
 
 export default function App() {
-  const { view, tool, zoom, showGrid, setZoom, setShowGrid, pendingFurnitureType } = useDesign();
+  const { view, tool, zoom, showGrid, setZoom, setShowGrid, dollhouse, setDollhouse, pendingFurnitureType } =
+    useDesign();
   const [showImport, setShowImport] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
   const [rendering, setRendering] = useState(false);
@@ -99,6 +100,16 @@ export default function App() {
             <>
               <div className="hud">
                 <div className="pill">Drag to orbit · scroll to zoom · right-drag to pan</div>
+                <div className="pill">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={dollhouse}
+                      onChange={(e) => setDollhouse(e.target.checked)}
+                    />
+                    🏠 Dollhouse
+                  </label>
+                </div>
               </div>
               <div className="render-actions">
                 <button className="render-btn" onClick={handleRender} disabled={rendering}>

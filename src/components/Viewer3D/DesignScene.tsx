@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
@@ -8,17 +9,63 @@ import type { Room, Wall } from '../../types';
 
 export const M = 0.01; // cm -> m
 
-function WallMesh({ wall }: { wall: Wall }) {
+function WallMesh({
+  wall,
+  center,
+  dollhouse,
+}: {
+  wall: Wall;
+  center: [number, number, number];
+  dollhouse: boolean;
+}) {
   const len = dist(wall.start, wall.end) * M;
   const mx = ((wall.start.x + wall.end.x) / 2) * M;
   const mz = ((wall.start.y + wall.end.y) / 2) * M;
   const angle = (-angleDeg(wall.start, wall.end) * Math.PI) / 180;
   const h = wall.height * M;
   const t = wall.thickness * M;
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+
+  // Outward-facing horizontal normal (points away from the building centre).
+  const normal = useMemo(() => {
+    const dx = (wall.end.x - wall.start.x) * M;
+    const dz = (wall.end.y - wall.start.y) * M;
+    let nx = -dz;
+    let nz = dx;
+    const lenN = Math.hypot(nx, nz) || 1;
+    nx /= lenN;
+    nz /= lenN;
+    // Flip so it points away from centre.
+    if (nx * (mx - center[0]) + nz * (mz - center[2]) < 0) {
+      nx = -nx;
+      nz = -nz;
+    }
+    return { nx, nz };
+  }, [wall, mx, mz, center]);
+
+  // Dollhouse: fade walls the camera is "outside" of so interiors stay visible.
+  useFrame(({ camera }) => {
+    const m = matRef.current;
+    if (!m) return;
+    if (!dollhouse) {
+      if (m.opacity !== 1) {
+        m.opacity = 1;
+        m.transparent = false;
+        m.depthWrite = true;
+      }
+      return;
+    }
+    const camDot = normal.nx * (camera.position.x - mx) + normal.nz * (camera.position.z - mz);
+    const target = camDot > 0.25 ? 0.1 : 1;
+    m.transparent = true;
+    m.opacity += (target - m.opacity) * 0.2;
+    m.depthWrite = m.opacity > 0.85;
+  });
+
   return (
     <mesh position={[mx, h / 2, mz]} rotation={[0, angle, 0]} castShadow receiveShadow>
       <boxGeometry args={[len + t, h, t]} />
-      <meshStandardMaterial color={wall.color} roughness={0.92} metalness={0} />
+      <meshStandardMaterial ref={matRef} color={wall.color} roughness={0.92} metalness={0} />
     </mesh>
   );
 }
@@ -68,15 +115,22 @@ export function useDesignBounds() {
  * The actual home geometry (walls, floors, furniture). Shared by the live
  * editor view and the path-traced Photo mode so both render the same design.
  */
-export default function DesignScene({ interactive = true }: { interactive?: boolean }) {
+export default function DesignScene({
+  interactive = true,
+  dollhouse = false,
+}: {
+  interactive?: boolean;
+  dollhouse?: boolean;
+}) {
   const { walls, rooms, furniture, selection, select } = useDesign();
+  const { center } = useDesignBounds();
   return (
     <>
       {rooms.map((r) => (
         <FloorMesh key={r.id} room={r} />
       ))}
       {walls.map((w) => (
-        <WallMesh key={w.id} wall={w} />
+        <WallMesh key={w.id} wall={w} center={center} dollhouse={dollhouse} />
       ))}
       {furniture.map((f) => (
         <Furniture3D
