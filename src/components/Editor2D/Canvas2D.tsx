@@ -1,0 +1,464 @@
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { Stage, Layer, Line, Rect, Group, Text, Circle, Image as KImage } from 'react-konva';
+import type Konva from 'konva';
+import { useDesign } from '../../store/designStore';
+import { useHtmlImage } from '../../lib/useHtmlImage';
+import {
+  dist,
+  midpoint,
+  angleDeg,
+  snapToGrid,
+  snapAngle,
+  snapToEndpoints,
+  pointToSegment,
+  polygonCentroid,
+} from '../../lib/geometry';
+import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
+import type { Point } from '../../types';
+
+const fmtLen = (cm: number) =>
+  cm >= 100 ? `${(cm / 100).toFixed(2)} m` : `${Math.round(cm)} cm`;
+
+export default function Canvas2D() {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<Konva.Stage>(null);
+  const [size, setSize] = useState({ w: 800, h: 600 });
+
+  const s = useDesign();
+  const {
+    walls, rooms, furniture, background,
+    tool, zoom, pan, showGrid, gridSize, selection,
+  } = s;
+
+  const bgImage = useHtmlImage(background?.src);
+
+  // Draft state for in-progress drawing.
+  const [draft, setDraft] = useState<Point[]>([]);
+  const [cursor, setCursor] = useState<Point | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+
+  // Measure container.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      setSize({ w: el.clientWidth, h: el.clientHeight });
+    });
+    ro.observe(el);
+    setSize({ w: el.clientWidth, h: el.clientHeight });
+    return () => ro.disconnect();
+  }, []);
+
+  // Reset draft when tool changes.
+  useEffect(() => {
+    setDraft([]);
+  }, [tool]);
+
+  // Keyboard: Enter/Escape to finish, Delete to remove, undo/redo.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+      if (e.key === 'Escape') {
+        setDraft([]);
+        s.clearSelection();
+      } else if (e.key === 'Enter') {
+        finishDraft();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selection.id) s.deleteSelected();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) s.redo();
+        else s.undo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, draft, tool]);
+
+  // ---- coordinate helpers ----
+  const worldPointer = (): Point | null => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    const p = stage.getPointerPosition();
+    if (!p) return null;
+    return { x: (p.x - pan.x) / zoom, y: (p.y - pan.y) / zoom };
+  };
+
+  const applySnaps = (p: Point): Point => {
+    // Snap to existing wall endpoints first, then angle (during chains), then grid.
+    const ep = snapToEndpoints(p, walls, 18 / zoom);
+    if (ep) return ep;
+    let out = p;
+    if ((tool === 'wall' || tool === 'room') && draft.length > 0) {
+      out = snapAngle(draft[draft.length - 1], out, 15);
+    }
+    if (showGrid) out = snapToGrid(out, gridSize);
+    return out;
+  };
+
+  // ---- interaction handlers ----
+  const onWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
+    e.evt.preventDefault();
+    const stage = stageRef.current;
+    if (!stage) return;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+    const dir = e.evt.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.05, Math.min(4, zoom * dir));
+    // Keep the point under the cursor fixed.
+    const wx = (pointer.x - pan.x) / zoom;
+    const wy = (pointer.y - pan.y) / zoom;
+    s.setPan({ x: pointer.x - wx * newZoom, y: pointer.y - wy * newZoom });
+    s.setZoom(newZoom);
+  };
+
+  const onMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    const isMiddle = e.evt.button === 1;
+    const p = worldPointer();
+    if (!p) return;
+
+    if (tool === 'pan' || isMiddle || e.evt.button === 2) {
+      setIsPanning(true);
+      return;
+    }
+
+    const snapped = applySnaps(p);
+
+    if (tool === 'wall') {
+      setDraft((d) => [...d, snapped]);
+    } else if (tool === 'room') {
+      // Close polygon if clicking near the first point.
+      if (draft.length >= 3 && dist(snapped, draft[0]) < 25 / zoom) {
+        s.addRoom(draft);
+        setDraft([]);
+      } else {
+        setDraft((d) => [...d, snapped]);
+      }
+    } else if (tool === 'furniture' && s.pendingFurnitureType) {
+      const id = s.addFurniture(s.pendingFurnitureType, snapped);
+      s.select({ kind: 'furniture', id });
+    } else if (tool === 'select') {
+      hitTest(p);
+    } else if (tool === 'erase') {
+      eraseAt(p);
+    }
+  };
+
+  const onMouseMove = () => {
+    const p = worldPointer();
+    if (!p) return;
+    setCursor(applySnaps(p));
+  };
+
+  // Pan by tracking raw pointer deltas.
+  const lastPan = useRef<{ x: number; y: number } | null>(null);
+  const onStageMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    onMouseMove();
+    if (!isPanning) return;
+    const cur = { x: e.evt.clientX, y: e.evt.clientY };
+    if (lastPan.current) {
+      s.setPan({ x: pan.x + (cur.x - lastPan.current.x), y: pan.y + (cur.y - lastPan.current.y) });
+    }
+    lastPan.current = cur;
+  };
+  const endPan = () => {
+    setIsPanning(false);
+    lastPan.current = null;
+  };
+
+  const finishDraft = () => {
+    if (tool === 'wall' && draft.length >= 2) {
+      for (let i = 0; i < draft.length - 1; i++) s.addWall(draft[i], draft[i + 1]);
+    } else if (tool === 'room' && draft.length >= 3) {
+      s.addRoom(draft);
+    }
+    setDraft([]);
+  };
+
+  const hitTest = (p: Point) => {
+    // Furniture (top-most first).
+    for (let i = furniture.length - 1; i >= 0; i--) {
+      const f = furniture[i];
+      const dx = p.x - f.position.x;
+      const dy = p.y - f.position.y;
+      const a = (-f.rotation * Math.PI) / 180;
+      const lx = dx * Math.cos(a) - dy * Math.sin(a);
+      const ly = dx * Math.sin(a) + dy * Math.cos(a);
+      if (Math.abs(lx) <= f.width / 2 && Math.abs(ly) <= f.depth / 2) {
+        s.select({ kind: 'furniture', id: f.id });
+        return;
+      }
+    }
+    // Walls.
+    for (const w of walls) {
+      if (pointToSegment(p, w.start, w.end).dist <= Math.max(w.thickness, 14 / zoom)) {
+        s.select({ kind: 'wall', id: w.id });
+        return;
+      }
+    }
+    // Rooms.
+    for (const r of rooms) {
+      const c = polygonCentroid(r.points);
+      if (dist(p, c) < 9999 && pointInPoly(p, r.points)) {
+        s.select({ kind: 'room', id: r.id });
+        return;
+      }
+    }
+    s.clearSelection();
+  };
+
+  const eraseAt = (p: Point) => {
+    for (let i = furniture.length - 1; i >= 0; i--) {
+      const f = furniture[i];
+      if (dist(p, f.position) <= Math.max(f.width, f.depth) / 2) {
+        s.deleteById('furniture', f.id);
+        return;
+      }
+    }
+    for (const w of walls) {
+      if (pointToSegment(p, w.start, w.end).dist <= Math.max(w.thickness, 14 / zoom)) {
+        s.deleteById('wall', w.id);
+        return;
+      }
+    }
+    for (const r of rooms) {
+      if (pointInPoly(p, r.points)) {
+        s.deleteById('room', r.id);
+        return;
+      }
+    }
+  };
+
+  // ---- grid ----
+  const gridLines = useMemo(() => {
+    if (!showGrid) return [];
+    const lines: { pts: number[]; major: boolean }[] = [];
+    const left = -pan.x / zoom;
+    const top = -pan.y / zoom;
+    const right = (size.w - pan.x) / zoom;
+    const bottom = (size.h - pan.y) / zoom;
+    const step = gridSize;
+    const startX = Math.floor(left / step) * step;
+    const startY = Math.floor(top / step) * step;
+    for (let x = startX; x <= right; x += step) {
+      const major = Math.round(x / step) % 4 === 0;
+      lines.push({ pts: [x, top, x, bottom], major });
+    }
+    for (let y = startY; y <= bottom; y += step) {
+      const major = Math.round(y / step) % 4 === 0;
+      lines.push({ pts: [left, y, right, y], major });
+    }
+    return lines;
+  }, [showGrid, pan, zoom, size, gridSize]);
+
+  const cursorStyle =
+    tool === 'pan' || isPanning ? 'grabbing' :
+    tool === 'select' ? 'default' : 'crosshair';
+
+  return (
+    <div ref={wrapRef} style={{ position: 'absolute', inset: 0 }}>
+      <Stage
+        ref={stageRef}
+        width={size.w}
+        height={size.h}
+        onWheel={onWheel}
+        onMouseDown={onMouseDown}
+        onMouseMove={onStageMouseMove}
+        onMouseUp={endPan}
+        onMouseLeave={endPan}
+        onContextMenu={(e) => e.evt.preventDefault()}
+        style={{ cursor: cursorStyle, background: 'var(--canvas-bg)' }}
+      >
+        <Layer x={pan.x} y={pan.y} scaleX={zoom} scaleY={zoom}>
+          {/* Background plan */}
+          {background && bgImage && (
+            <KImage
+              image={bgImage}
+              x={background.x}
+              y={background.y}
+              width={background.imgWidth * background.scale}
+              height={background.imgHeight * background.scale}
+              rotation={background.rotation}
+              opacity={background.opacity}
+              listening={false}
+            />
+          )}
+
+          {/* Grid */}
+          {gridLines.map((l, i) => (
+            <Line
+              key={i}
+              points={l.pts}
+              stroke={l.major ? '#2c333f' : '#1b2029'}
+              strokeWidth={(l.major ? 1.4 : 0.8) / zoom}
+              listening={false}
+            />
+          ))}
+
+          {/* Rooms (floors) */}
+          {rooms.map((r) => {
+            const fill = FLOOR_BY_ID[r.floorMaterial]?.color ?? r.color;
+            const sel = selection.kind === 'room' && selection.id === r.id;
+            const c = polygonCentroid(r.points);
+            return (
+              <Group key={r.id}>
+                <Line
+                  points={r.points.flatMap((p) => [p.x, p.y])}
+                  closed
+                  fill={fill}
+                  opacity={0.55}
+                  stroke={sel ? 'var(--accent)' : 'transparent'}
+                  strokeWidth={3 / zoom}
+                  onMouseDown={() => tool === 'select' && s.select({ kind: 'room', id: r.id })}
+                />
+                <Text
+                  x={c.x - 50}
+                  y={c.y - 8}
+                  width={100}
+                  align="center"
+                  text={r.name}
+                  fontSize={14 / zoom}
+                  fill="#0e1014"
+                  fontStyle="bold"
+                  listening={false}
+                />
+              </Group>
+            );
+          })}
+
+          {/* Walls */}
+          {walls.map((w) => {
+            const sel = selection.kind === 'wall' && selection.id === w.id;
+            return (
+              <Group key={w.id}>
+                <Line
+                  points={[w.start.x, w.start.y, w.end.x, w.end.y]}
+                  stroke={sel ? 'var(--accent)' : w.color}
+                  strokeWidth={w.thickness}
+                  lineCap="round"
+                  onMouseDown={() => tool === 'select' && s.select({ kind: 'wall', id: w.id })}
+                />
+                {/* endpoints */}
+                {sel && (
+                  <>
+                    <Circle x={w.start.x} y={w.start.y} radius={7 / zoom} fill="#fff" stroke="var(--accent)" strokeWidth={2 / zoom} />
+                    <Circle x={w.end.x} y={w.end.y} radius={7 / zoom} fill="#fff" stroke="var(--accent)" strokeWidth={2 / zoom} />
+                    <Text
+                      x={midpoint(w.start, w.end).x}
+                      y={midpoint(w.start, w.end).y - 22 / zoom}
+                      text={fmtLen(dist(w.start, w.end))}
+                      fontSize={13 / zoom}
+                      fill="#fff"
+                      listening={false}
+                    />
+                  </>
+                )}
+              </Group>
+            );
+          })}
+
+          {/* Furniture */}
+          {furniture.map((f) => {
+            const sel = selection.kind === 'furniture' && selection.id === f.id;
+            const entry = CATALOG_BY_TYPE[f.type];
+            return (
+              <Group
+                key={f.id}
+                x={f.position.x}
+                y={f.position.y}
+                rotation={f.rotation}
+                draggable={tool === 'select'}
+                onMouseDown={() => tool === 'select' && s.select({ kind: 'furniture', id: f.id })}
+                onDragMove={(e) => {
+                  const np = snapToGrid({ x: e.target.x(), y: e.target.y() }, showGrid ? gridSize / 2 : 1);
+                  e.target.position(np);
+                }}
+                onDragEnd={(e) => {
+                  s.updateFurniture(f.id, { position: { x: e.target.x(), y: e.target.y() } });
+                }}
+              >
+                <Rect
+                  x={-f.width / 2}
+                  y={-f.depth / 2}
+                  width={f.width}
+                  height={f.depth}
+                  fill={f.color}
+                  opacity={0.92}
+                  cornerRadius={Math.min(f.width, f.depth) * 0.08}
+                  stroke={sel ? 'var(--accent)' : '#00000033'}
+                  strokeWidth={(sel ? 3 : 1) / zoom}
+                />
+                {/* direction notch */}
+                <Line
+                  points={[0, 0, 0, -f.depth / 2]}
+                  stroke={sel ? 'var(--accent)' : '#ffffff66'}
+                  strokeWidth={2 / zoom}
+                  listening={false}
+                />
+                <Text
+                  x={-f.width / 2}
+                  y={-7 / zoom}
+                  width={f.width}
+                  align="center"
+                  text={entry?.icon ?? '▭'}
+                  fontSize={Math.min(f.width, f.depth) * 0.5}
+                  listening={false}
+                />
+              </Group>
+            );
+          })}
+
+          {/* Draft (in-progress wall/room) */}
+          {draft.length > 0 && (
+            <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} />
+          )}
+        </Layer>
+      </Stage>
+    </div>
+  );
+}
+
+function DraftView({
+  draft, cursor, tool, zoom,
+}: { draft: Point[]; cursor: Point | null; tool: string; zoom: number }) {
+  const pts = cursor ? [...draft, cursor] : draft;
+  const flat = pts.flatMap((p) => [p.x, p.y]);
+  const last = draft[draft.length - 1];
+  return (
+    <Group listening={false}>
+      <Line
+        points={flat}
+        closed={tool === 'room'}
+        stroke="var(--accent)"
+        strokeWidth={(tool === 'wall' ? 8 : 2) / zoom}
+        lineCap="round"
+        opacity={0.7}
+        dash={tool === 'room' ? [10 / zoom, 6 / zoom] : undefined}
+        fill={tool === 'room' ? 'rgba(76,141,255,0.12)' : undefined}
+      />
+      {draft.map((p, i) => (
+        <Circle key={i} x={p.x} y={p.y} radius={5 / zoom} fill="#fff" stroke="var(--accent)" strokeWidth={2 / zoom} />
+      ))}
+      {cursor && last && (
+        <Text
+          x={midpoint(last, cursor).x}
+          y={midpoint(last, cursor).y - 20 / zoom}
+          text={`${fmtLen(dist(last, cursor))}  ·  ${Math.round(((angleDeg(last, cursor) % 360) + 360) % 360)}°`}
+          fontSize={13 / zoom}
+          fill="#fff"
+        />
+      )}
+    </Group>
+  );
+}
+
+// Local point-in-polygon (avoids importing into hot path repeatedly).
+function pointInPoly(p: Point, poly: Point[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+    if (yi > p.y !== yj > p.y && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
