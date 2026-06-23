@@ -12,10 +12,10 @@ import { useDesign } from '../../store/designStore';
 function StudioEnvironment() {
   return (
     <Environment resolution={256} frames={1}>
-      <Lightformer intensity={2} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
-      <Lightformer intensity={1.3} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
-      <Lightformer intensity={0.9} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
-      <Lightformer intensity={0.4} position={[0, -4, 0]} scale={[12, 12, 1]} rotation={[-Math.PI / 2, 0, 0]} color="#202225" />
+      <Lightformer intensity={1.1} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
+      <Lightformer intensity={0.8} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
+      <Lightformer intensity={0.6} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
+      <Lightformer intensity={0.3} position={[0, -4, 0]} scale={[12, 12, 1]} rotation={[-Math.PI / 2, 0, 0]} color="#202225" />
     </Environment>
   );
 }
@@ -57,7 +57,7 @@ export default function Scene3D() {
       flat // composer's ToneMapping owns tone mapping; avoid double-applying
       shadows
       gl={{ antialias: true, preserveDrawingBuffer: false }}
-      camera={{ position: [center[0] + radius, radius * 1.1, center[2] + radius], fov: 50 }}
+      camera={{ position: [center[0] + radius * 0.85, radius * 1.45, center[2] + radius * 0.85], fov: 50 }}
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => useDesign.getState().clearSelection()}
     >
@@ -65,11 +65,11 @@ export default function Scene3D() {
       <fog attach="fog" args={['#0c0e13', radius * 3, radius * 9]} />
       <SoftShadows size={24} samples={12} />
 
-      <ambientLight intensity={0.4} />
-      <hemisphereLight intensity={0.45} groundColor="#1a1c22" />
+      <ambientLight intensity={0.38} />
+      <hemisphereLight intensity={0.45} groundColor="#2a2c33" />
       <directionalLight
         position={[center[0] + 12, 22, center[2] + 8]}
-        intensity={1.6}
+        intensity={1.15}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-radius * 2}
@@ -78,7 +78,7 @@ export default function Scene3D() {
         shadow-camera-bottom={-radius * 2}
         shadow-camera-far={80}
       />
-      <directionalLight position={[center[0] - 14, 12, center[2] - 10]} intensity={0.45} color="#cdd8ff" />
+      <directionalLight position={[center[0] - 14, 12, center[2] - 10]} intensity={0.3} color="#cdd8ff" />
       <StudioEnvironment />
 
       {/* Ground + grid */}
@@ -100,8 +100,8 @@ export default function Scene3D() {
       <DesignScene interactive />
 
       <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
-        <N8AO aoRadius={0.7} intensity={2} distanceFalloff={1} halfRes />
-        <Bloom mipmapBlur intensity={0.35} luminanceThreshold={0.9} />
+        <N8AO aoRadius={0.7} intensity={2.2} distanceFalloff={1} halfRes />
+        <Bloom mipmapBlur intensity={0.18} luminanceThreshold={1.0} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       </EffectComposer>
 
