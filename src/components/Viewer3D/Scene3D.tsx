@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Grid, SoftShadows, Environment, Lightformer } from '@react-three/drei';
+import { OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows } from '@react-three/drei';
 import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import DesignScene, { useDesignBounds } from './DesignScene';
@@ -80,21 +80,36 @@ export default function Scene3D() {
       <fog attach="fog" args={['#0c0e13', radius * 3, radius * 9]} />
       <SoftShadows size={24} samples={12} />
 
-      <ambientLight intensity={0.38} />
-      <hemisphereLight intensity={0.45} groundColor="#2a2c33" />
+      <ambientLight intensity={0.32} />
+      <hemisphereLight intensity={0.42} groundColor="#2a2c33" />
+      {/* Warm key light (sun) for an inviting, rendered interior look. */}
       <directionalLight
         position={[center[0] + 12, 22, center[2] + 8]}
-        intensity={1.15}
+        intensity={1.45}
+        color="#fff3e2"
         castShadow
         shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0004}
         shadow-camera-left={-radius * 2}
         shadow-camera-right={radius * 2}
         shadow-camera-top={radius * 2}
         shadow-camera-bottom={-radius * 2}
         shadow-camera-far={80}
       />
-      <directionalLight position={[center[0] - 14, 12, center[2] - 10]} intensity={0.3} color="#cdd8ff" />
+      {/* Cool fill from the opposite side. */}
+      <directionalLight position={[center[0] - 14, 12, center[2] - 10]} intensity={0.32} color="#cdd8ff" />
       <StudioEnvironment />
+
+      {/* Soft contact shadows ground the furniture & walls realistically. */}
+      <ContactShadows
+        position={[center[0], 0.015, center[2]]}
+        scale={Math.max(20, radius * 4)}
+        resolution={1024}
+        blur={2.4}
+        far={2.2}
+        opacity={0.42}
+        color="#0a0c10"
+      />
 
       {/* Ground + grid */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center[0], -0.01, center[2]]} receiveShadow>
@@ -128,6 +143,14 @@ export default function Scene3D() {
       ) : (
         <OrbitControls
           target={center}
+          enableDamping
+          dampingFactor={0.09}
+          rotateSpeed={0.8}
+          zoomSpeed={1.1}
+          panSpeed={0.8}
+          zoomToCursor
+          screenSpacePanning
+          minPolarAngle={0.05}
           maxPolarAngle={Math.PI / 2.05}
           minDistance={2}
           maxDistance={radius * 8 + 20}

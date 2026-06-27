@@ -123,6 +123,15 @@ function WallMesh({
           </mesh>
         );
       })}
+      {/* Baseboards on floor-level spans (skip headers; breaks at doors). */}
+      {spans
+        .filter((s) => s.y0 <= 0.01 && s.b - s.a > 1)
+        .map((s, i) => (
+          <mesh key={`bb${i}`} position={[((s.a + s.b) / 2) * M, 0.045, 0]} castShadow receiveShadow>
+            <boxGeometry args={[(s.b - s.a) * M, 0.09, t + 0.02]} />
+            <meshStandardMaterial color="#efeae0" roughness={0.7} metalness={0} />
+          </mesh>
+        ))}
       {openings.map((o) => (
         <OpeningMesh key={o.id} opening={o} thickness={t} />
       ))}
