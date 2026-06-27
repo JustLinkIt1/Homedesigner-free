@@ -18,9 +18,19 @@ import {
 import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
 import DimensionsLayer from './DimensionsLayer';
 import type { Point } from '../../types';
+import {
+  resizeBox,
+  norm360,
+  snapAngleTo,
+  type Box,
+} from './editHandles';
 
 const fmtLen = (cm: number) =>
   cm >= 100 ? `${(cm / 100).toFixed(2)} m` : `${Math.round(cm)} cm`;
+
+// Handle visuals (screen-space px; divided by zoom at render to stay constant).
+const HANDLE_FILL = '#ffffff';
+const HANDLE_STROKE = 'var(--accent)';
 
 export default function Canvas2D() {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -39,6 +49,15 @@ export default function Canvas2D() {
   const [draft, setDraft] = useState<Point[]>([]);
   const [cursor, setCursor] = useState<Point | null>(null);
   const [isPanning, setIsPanning] = useState(false);
+
+  // Live drag-edit state for selection handles. While a handle is being
+  // dragged we render from these locals and commit to the store exactly once
+  // on drag end, so each gesture is a single undo step.
+  const [wallEdit, setWallEdit] = useState<{ id: string; start: Point; end: Point } | null>(null);
+  const [furnEdit, setFurnEdit] = useState<
+    { id: string; position: Point; rotation: number; width: number; depth: number } | null
+  >(null);
+  const [openEdit, setOpenEdit] = useState<{ id: string; offset: number } | null>(null);
 
   // Measure container.
   useEffect(() => {
@@ -107,6 +126,25 @@ export default function Canvas2D() {
     const p = stage.getPointerPosition();
     if (!p) return null;
     return { x: (p.x - pan.x) / zoom, y: (p.y - pan.y) / zoom };
+  };
+
+  // Snap a dragged wall endpoint: prefer other walls' endpoints, else grid.
+  // `excludeWallId` keeps an endpoint from snapping to its own wall.
+  const snapEndpoint = (p: Point, excludeWallId: string): Point => {
+    let best: Point | null = null;
+    let bestD = 18 / zoom;
+    for (const w of walls) {
+      if (w.id === excludeWallId) continue;
+      for (const e of [w.start, w.end]) {
+        const d = dist(p, e);
+        if (d < bestD) {
+          bestD = d;
+          best = e;
+        }
+      }
+    }
+    if (best) return best;
+    return showGrid ? snapToGrid(p, gridSize) : p;
   };
 
   const applySnaps = (p: Point): Point => {
@@ -472,24 +510,95 @@ export default function Canvas2D() {
           {/* Walls */}
           {walls.map((w) => {
             const sel = selection.kind === 'wall' && selection.id === w.id;
+            // Use live edit positions for the wall being dragged.
+            const live = wallEdit && wallEdit.id === w.id ? wallEdit : null;
+            const start = live ? live.start : w.start;
+            const end = live ? live.end : w.end;
+            const editing = sel && tool === 'select';
+            const hr = 8 / zoom; // handle radius (cm)
             return (
               <Group key={w.id}>
                 <Line
-                  points={[w.start.x, w.start.y, w.end.x, w.end.y]}
+                  points={[start.x, start.y, end.x, end.y]}
                   stroke={sel ? 'var(--accent)' : w.color}
                   strokeWidth={w.thickness}
                   lineCap="round"
+                  // Body drag translates both endpoints together.
+                  draggable={editing}
+                  hitStrokeWidth={Math.max(w.thickness, 16 / zoom)}
                   onMouseDown={() => tool === 'select' && s.select({ kind: 'wall', id: w.id })}
+                  onDragStart={() => {
+                    s.select({ kind: 'wall', id: w.id });
+                    setWallEdit({ id: w.id, start: w.start, end: w.end });
+                  }}
+                  onDragMove={(e) => {
+                    // Konva translates the Line node by the drag delta. Read
+                    // that delta, apply it to both endpoints, then zero the node
+                    // so our computed points stay authoritative (no double move).
+                    const dx = e.target.x();
+                    const dy = e.target.y();
+                    e.target.position({ x: 0, y: 0 });
+                    let ns = { x: w.start.x + dx, y: w.start.y + dy };
+                    let ne = { x: w.end.x + dx, y: w.end.y + dy };
+                    // Snap the start endpoint to nearby joints / grid, shift end by same delta.
+                    const snapped = snapEndpoint(ns, w.id);
+                    const sdx = snapped.x - ns.x;
+                    const sdy = snapped.y - ns.y;
+                    ns = { x: ns.x + sdx, y: ns.y + sdy };
+                    ne = { x: ne.x + sdx, y: ne.y + sdy };
+                    setWallEdit({ id: w.id, start: ns, end: ne });
+                  }}
+                  onDragEnd={(e) => {
+                    e.target.position({ x: 0, y: 0 });
+                    setWallEdit((cur) => {
+                      if (cur && cur.id === w.id) s.updateWall(w.id, { start: cur.start, end: cur.end });
+                      return null;
+                    });
+                  }}
                 />
-                {/* endpoints */}
-                {sel && (
+                {/* endpoint handles + length label */}
+                {editing && (
                   <>
-                    <Circle x={w.start.x} y={w.start.y} radius={7 / zoom} fill="#fff" stroke="var(--accent)" strokeWidth={2 / zoom} />
-                    <Circle x={w.end.x} y={w.end.y} radius={7 / zoom} fill="#fff" stroke="var(--accent)" strokeWidth={2 / zoom} />
+                    <WallEndpointHandle
+                      x={start.x}
+                      y={start.y}
+                      r={hr}
+                      zoom={zoom}
+                      onStart={() => setWallEdit({ id: w.id, start: w.start, end: w.end })}
+                      onMove={(p) => {
+                        const sp = snapEndpoint(p, w.id);
+                        setWallEdit((cur) => ({ id: w.id, start: sp, end: cur ? cur.end : w.end }));
+                        return sp;
+                      }}
+                      onEnd={() => {
+                        setWallEdit((cur) => {
+                          if (cur) s.updateWall(w.id, { start: cur.start, end: cur.end });
+                          return null;
+                        });
+                      }}
+                    />
+                    <WallEndpointHandle
+                      x={end.x}
+                      y={end.y}
+                      r={hr}
+                      zoom={zoom}
+                      onStart={() => setWallEdit({ id: w.id, start: w.start, end: w.end })}
+                      onMove={(p) => {
+                        const sp = snapEndpoint(p, w.id);
+                        setWallEdit((cur) => ({ id: w.id, start: cur ? cur.start : w.start, end: sp }));
+                        return sp;
+                      }}
+                      onEnd={() => {
+                        setWallEdit((cur) => {
+                          if (cur) s.updateWall(w.id, { start: cur.start, end: cur.end });
+                          return null;
+                        });
+                      }}
+                    />
                     <Text
-                      x={midpoint(w.start, w.end).x}
-                      y={midpoint(w.start, w.end).y - 22 / zoom}
-                      text={fmtLen(dist(w.start, w.end))}
+                      x={midpoint(start, end).x}
+                      y={midpoint(start, end).y - 22 / zoom}
+                      text={fmtLen(dist(start, end))}
                       fontSize={13 / zoom}
                       fill="#fff"
                       listening={false}
@@ -508,11 +617,19 @@ export default function Canvas2D() {
             const wall = walls.find((w) => w.id === o.wallId);
             if (!wall) return null;
             const len = dist(wall.start, wall.end) || 1;
-            const c = lerp(wall.start, wall.end, o.offset / len);
-            const ang = angleDeg(wall.start, wall.end);
             const sel = selection.kind === 'opening' && selection.id === o.id;
+            const live = openEdit && openEdit.id === o.id ? openEdit : null;
+            const offset = live ? live.offset : o.offset;
+            const c = lerp(wall.start, wall.end, offset / len);
+            const ang = angleDeg(wall.start, wall.end);
             const t = wall.thickness;
             const wd = o.width;
+            const editing = sel && tool === 'select';
+            // Unit vector along the wall (for projecting the drag handle).
+            const ux = (wall.end.x - wall.start.x) / len;
+            const uy = (wall.end.y - wall.start.y) / len;
+            const half = wd / 2;
+            const clampOffset = (off: number) => Math.max(half, Math.min(len - half, off));
             return (
               <Group
                 key={o.id}
@@ -553,6 +670,64 @@ export default function Canvas2D() {
                     <Line points={[-wd / 2, 0, wd / 2, 0]} stroke="#7fb8d8" strokeWidth={1.5 / zoom} />
                   </>
                 )}
+                {/* drag-along-wall handle (slides the opening's offset) */}
+                {editing && (
+                  <Circle
+                    x={0}
+                    y={0}
+                    radius={8 / zoom}
+                    fill={HANDLE_FILL}
+                    stroke={HANDLE_STROKE}
+                    strokeWidth={2 / zoom}
+                    draggable
+                    onMouseEnter={(e) => {
+                      const st = e.target.getStage();
+                      if (st) st.container().style.cursor = 'ew-resize';
+                    }}
+                    onMouseLeave={(e) => {
+                      const st = e.target.getStage();
+                      if (st) st.container().style.cursor = 'default';
+                    }}
+                    onDragStart={() => {
+                      s.select({ kind: 'opening', id: o.id });
+                      setOpenEdit({ id: o.id, offset: o.offset });
+                    }}
+                    onDragMove={(e) => {
+                      // Project the handle's world position onto the wall axis.
+                      const ap = e.target.getAbsolutePosition();
+                      const st = e.target.getStage();
+                      if (!st) return;
+                      const wx = (ap.x - pan.x) / zoom;
+                      const wy = (ap.y - pan.y) / zoom;
+                      const proj = (wx - wall.start.x) * ux + (wy - wall.start.y) * uy;
+                      const noff = clampOffset(proj);
+                      setOpenEdit({ id: o.id, offset: noff });
+                      // Keep the handle pinned to local origin; offset drives position.
+                      e.target.position({ x: 0, y: 0 });
+                    }}
+                    onDragEnd={() => {
+                      setOpenEdit((cur) => {
+                        if (cur) s.updateOpening(o.id, { offset: clampOffset(cur.offset) });
+                        return null;
+                      });
+                    }}
+                  />
+                )}
+                {/* offset label while dragging (counter-rotated to stay upright) */}
+                {editing && live && (
+                  <Group rotation={-ang}>
+                    <Text
+                      x={-30 / zoom}
+                      y={-t / 2 - 26 / zoom}
+                      width={60 / zoom}
+                      align="center"
+                      text={fmtLen(offset)}
+                      fontSize={13 / zoom}
+                      fill="#fff"
+                      listening={false}
+                    />
+                  </Group>
+                )}
               </Group>
             );
           })}
@@ -561,49 +736,103 @@ export default function Canvas2D() {
           {furniture.map((f) => {
             const sel = selection.kind === 'furniture' && selection.id === f.id;
             const entry = CATALOG_BY_TYPE[f.type];
+            // Live dimensions/rotation while resizing or rotating this item.
+            const live = furnEdit && furnEdit.id === f.id ? furnEdit : null;
+            const position = live ? live.position : f.position;
+            const rotation = live ? live.rotation : f.rotation;
+            const width = live ? live.width : f.width;
+            const depth = live ? live.depth : f.depth;
+            const editing = sel && tool === 'select';
             return (
-              <Group
-                key={f.id}
-                x={f.position.x}
-                y={f.position.y}
-                rotation={f.rotation}
-                draggable={tool === 'select'}
-                onMouseDown={() => tool === 'select' && s.select({ kind: 'furniture', id: f.id })}
-                onDragMove={(e) => {
-                  const np = snapToGrid({ x: e.target.x(), y: e.target.y() }, showGrid ? gridSize / 2 : 1);
-                  e.target.position(np);
-                }}
-                onDragEnd={(e) => {
-                  s.updateFurniture(f.id, { position: { x: e.target.x(), y: e.target.y() } });
-                }}
-              >
-                <Rect
-                  x={-f.width / 2}
-                  y={-f.depth / 2}
-                  width={f.width}
-                  height={f.depth}
-                  fill={f.color}
-                  opacity={0.92}
-                  cornerRadius={Math.min(f.width, f.depth) * 0.08}
-                  stroke={sel ? 'var(--accent)' : '#00000033'}
-                  strokeWidth={(sel ? 3 : 1) / zoom}
-                />
-                {/* direction notch */}
-                <Line
-                  points={[0, 0, 0, -f.depth / 2]}
-                  stroke={sel ? 'var(--accent)' : '#ffffff66'}
-                  strokeWidth={2 / zoom}
-                  listening={false}
-                />
-                <Text
-                  x={-f.width / 2}
-                  y={-7 / zoom}
-                  width={f.width}
-                  align="center"
-                  text={entry?.icon ?? '▭'}
-                  fontSize={Math.min(f.width, f.depth) * 0.5}
-                  listening={false}
-                />
+              <Group key={f.id}>
+                <Group
+                  x={position.x}
+                  y={position.y}
+                  rotation={rotation}
+                  draggable={tool === 'select'}
+                  onMouseDown={() => tool === 'select' && s.select({ kind: 'furniture', id: f.id })}
+                  onDragStart={() =>
+                    setFurnEdit({ id: f.id, position: f.position, rotation: f.rotation, width: f.width, depth: f.depth })
+                  }
+                  onDragMove={(e) => {
+                    const np = snapToGrid({ x: e.target.x(), y: e.target.y() }, showGrid ? gridSize / 2 : 1);
+                    e.target.position(np);
+                    // Drive selection handles to follow during the move.
+                    setFurnEdit({ id: f.id, position: np, rotation: f.rotation, width: f.width, depth: f.depth });
+                  }}
+                  onDragEnd={(e) => {
+                    const np = { x: e.target.x(), y: e.target.y() };
+                    s.updateFurniture(f.id, { position: np });
+                    setFurnEdit(null);
+                  }}
+                >
+                  <Rect
+                    x={-width / 2}
+                    y={-depth / 2}
+                    width={width}
+                    height={depth}
+                    fill={f.color}
+                    opacity={0.92}
+                    cornerRadius={Math.min(width, depth) * 0.08}
+                    stroke={sel ? 'var(--accent)' : '#00000033'}
+                    strokeWidth={(sel ? 3 : 1) / zoom}
+                  />
+                  {/* direction notch */}
+                  <Line
+                    points={[0, 0, 0, -depth / 2]}
+                    stroke={sel ? 'var(--accent)' : '#ffffff66'}
+                    strokeWidth={2 / zoom}
+                    listening={false}
+                  />
+                  <Text
+                    x={-width / 2}
+                    y={-7 / zoom}
+                    width={width}
+                    align="center"
+                    text={entry?.icon ?? '▭'}
+                    fontSize={Math.min(width, depth) * 0.5}
+                    listening={false}
+                  />
+                </Group>
+                {editing && (
+                  <FurnitureHandles
+                    box={{ position, width, depth }}
+                    rotation={rotation}
+                    zoom={zoom}
+                    pan={pan}
+                    onResizeStart={() =>
+                      setFurnEdit({ id: f.id, position, rotation, width, depth })
+                    }
+                    onResize={(b) =>
+                      setFurnEdit({
+                        id: f.id,
+                        position: b.position,
+                        rotation,
+                        width: b.width,
+                        depth: b.depth,
+                      })
+                    }
+                    onRotateStart={() =>
+                      setFurnEdit({ id: f.id, position, rotation, width, depth })
+                    }
+                    onRotate={(deg) =>
+                      setFurnEdit({ id: f.id, position, rotation: deg, width, depth })
+                    }
+                    onCommit={() => {
+                      setFurnEdit((cur) => {
+                        if (cur && cur.id === f.id) {
+                          s.updateFurniture(f.id, {
+                            position: cur.position,
+                            rotation: norm360(cur.rotation),
+                            width: cur.width,
+                            depth: cur.depth,
+                          });
+                        }
+                        return null;
+                      });
+                    }}
+                  />
+                )}
               </Group>
             );
           })}
@@ -648,6 +877,195 @@ function DraftView({
           fill="#fff"
         />
       )}
+    </Group>
+  );
+}
+
+// ---- Wall endpoint handle ----
+// A draggable round handle that reports its Layer-local (cm) position.
+function WallEndpointHandle({
+  x, y, r, zoom, onStart, onMove, onEnd,
+}: {
+  x: number;
+  y: number;
+  r: number;
+  zoom: number;
+  onStart: () => void;
+  onMove: (p: Point) => Point;
+  onEnd: () => void;
+}) {
+  return (
+    <Circle
+      x={x}
+      y={y}
+      radius={r}
+      fill={HANDLE_FILL}
+      stroke={HANDLE_STROKE}
+      strokeWidth={2 / zoom}
+      draggable
+      onMouseEnter={(e) => {
+        const st = e.target.getStage();
+        if (st) st.container().style.cursor = 'move';
+      }}
+      onMouseLeave={(e) => {
+        const st = e.target.getStage();
+        if (st) st.container().style.cursor = 'default';
+      }}
+      onDragStart={(e) => {
+        e.cancelBubble = true;
+        onStart();
+      }}
+      onDragMove={(e) => {
+        e.cancelBubble = true;
+        // Snap the dragged endpoint and pin the handle to the snapped spot so
+        // the visual handle and the wall endpoint stay locked together.
+        const snapped = onMove({ x: e.target.x(), y: e.target.y() });
+        e.target.position(snapped);
+      }}
+      onDragEnd={(e) => {
+        e.cancelBubble = true;
+        onEnd();
+      }}
+    />
+  );
+}
+
+// ---- Furniture resize + rotate handles ----
+// Rendered in a group at the item's center, rotated to its local frame, so the
+// four corner handles and the rotation stalk track the (possibly rotated) box.
+function FurnitureHandles({
+  box, rotation, zoom, pan, onResizeStart, onResize, onRotateStart, onRotate, onCommit,
+}: {
+  box: Box;
+  rotation: number;
+  zoom: number;
+  pan: Point;
+  onResizeStart: () => void;
+  onResize: (b: Box) => void;
+  onRotateStart: () => void;
+  onRotate: (deg: number) => void;
+  onCommit: () => void;
+}) {
+  const hr = 7 / zoom; // corner handle radius (cm)
+  const { width, depth, position } = box;
+  const corners: Point[] = [
+    { x: -width / 2, y: -depth / 2 },
+    { x: width / 2, y: -depth / 2 },
+    { x: width / 2, y: depth / 2 },
+    { x: -width / 2, y: depth / 2 },
+  ];
+  const stalk = 28 / zoom; // rotation stalk length above the top edge (cm)
+  const rotPos: Point = { x: 0, y: -depth / 2 - stalk };
+
+  // Convert a Konva drag event's absolute position to world (cm).
+  const evtWorld = (e: Konva.KonvaEventObject<DragEvent>): Point => {
+    const ap = e.target.getAbsolutePosition();
+    return { x: (ap.x - pan.x) / zoom, y: (ap.y - pan.y) / zoom };
+  };
+
+  return (
+    <Group x={position.x} y={position.y} rotation={rotation}>
+      {/* selection bounding box */}
+      <Rect
+        x={-width / 2}
+        y={-depth / 2}
+        width={width}
+        height={depth}
+        stroke="var(--accent)"
+        strokeWidth={1.5 / zoom}
+        dash={[6 / zoom, 4 / zoom]}
+        listening={false}
+      />
+      {/* rotation stalk + handle */}
+      <Line
+        points={[0, -depth / 2, rotPos.x, rotPos.y]}
+        stroke="var(--accent)"
+        strokeWidth={1.5 / zoom}
+        listening={false}
+      />
+      <Circle
+        x={rotPos.x}
+        y={rotPos.y}
+        radius={hr}
+        fill={HANDLE_FILL}
+        stroke={HANDLE_STROKE}
+        strokeWidth={2 / zoom}
+        draggable
+        onMouseEnter={(e) => {
+          const st = e.target.getStage();
+          if (st) st.container().style.cursor = 'grab';
+        }}
+        onMouseLeave={(e) => {
+          const st = e.target.getStage();
+          if (st) st.container().style.cursor = 'default';
+        }}
+        onDragStart={(e) => {
+          e.cancelBubble = true;
+          onRotateStart();
+        }}
+        onDragMove={(e) => {
+          e.cancelBubble = true;
+          const w = evtWorld(e);
+          // Angle from center to pointer; the stalk points "up" (-90°) at 0 rot.
+          const deg = (Math.atan2(w.y - position.y, w.x - position.x) * 180) / Math.PI + 90;
+          onRotate(snapAngleTo(deg, 15, 5));
+          // Pin handle back to its local slot; rotation drives the group.
+          e.target.position(rotPos);
+        }}
+        onDragEnd={(e) => {
+          e.cancelBubble = true;
+          onCommit();
+        }}
+      />
+      {/* corner resize handles (circles so their absolute position is the
+          corner center — no offset correction needed) */}
+      {corners.map((c, i) => (
+        <Circle
+          key={i}
+          x={c.x}
+          y={c.y}
+          radius={hr}
+          fill={HANDLE_FILL}
+          stroke={HANDLE_STROKE}
+          strokeWidth={2 / zoom}
+          draggable
+          onMouseEnter={(e) => {
+            const st = e.target.getStage();
+            if (st) st.container().style.cursor = i === 0 || i === 2 ? 'nwse-resize' : 'nesw-resize';
+          }}
+          onMouseLeave={(e) => {
+            const st = e.target.getStage();
+            if (st) st.container().style.cursor = 'default';
+          }}
+          onDragStart={(e) => {
+            e.cancelBubble = true;
+            onResizeStart();
+          }}
+          onDragMove={(e) => {
+            e.cancelBubble = true;
+            const w = evtWorld(e);
+            const nb = resizeBox(box, i, w, rotation, 10);
+            onResize(nb);
+          }}
+          onDragEnd={(e) => {
+            e.cancelBubble = true;
+            onCommit();
+          }}
+        />
+      ))}
+      {/* size label (counter-rotated to stay upright) */}
+      <Group rotation={-rotation}>
+        <Text
+          x={-40 / zoom}
+          y={depth / 2 + 10 / zoom}
+          width={80 / zoom}
+          align="center"
+          text={`${Math.round(width)} × ${Math.round(depth)} cm`}
+          fontSize={12 / zoom}
+          fill="#fff"
+          listening={false}
+        />
+      </Group>
     </Group>
   );
 }
