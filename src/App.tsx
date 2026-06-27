@@ -20,6 +20,7 @@ export default function App() {
   const [photoMode, setPhotoMode] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => shouldWelcome());
+  const [drawer, setDrawer] = useState<null | 'catalog' | 'props'>(null);
 
   // Keep latest UI state for the hardware back-button handler.
   const stateRef = useRef({ photoMode, showImport });
@@ -72,7 +73,7 @@ export default function App() {
     <div className="app">
       <Toolbar onImport={() => setShowImport(true)} />
       <div className="body">
-        {view === '2d' && <CatalogSidebar />}
+        {view === '2d' && <CatalogSidebar open={drawer === 'catalog'} />}
         <div className="stage-wrap">
           {view === '2d' ? <Canvas2D /> : <Scene3D />}
 
@@ -84,6 +85,7 @@ export default function App() {
                 <button onClick={() => setZoom(zoom / 1.2)} title="Zoom out">−</button>
                 <span>{Math.round(zoom * 100)}%</span>
                 <button onClick={() => setZoom(zoom * 1.2)} title="Zoom in">+</button>
+                <button onClick={() => useDesign.getState().requestFit()} title="Fit to view">⤢</button>
               </div>
               <div className="pill">
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
@@ -126,7 +128,25 @@ export default function App() {
             </>
           )}
         </div>
-        <PropertiesPanel />
+        <PropertiesPanel open={drawer === 'props'} />
+
+        {drawer && <div className="drawer-backdrop" onClick={() => setDrawer(null)} />}
+        <div className="mobile-tabs">
+          {view === '2d' && (
+            <button
+              className={drawer === 'catalog' ? 'active' : ''}
+              onClick={() => setDrawer(drawer === 'catalog' ? null : 'catalog')}
+            >
+              🛋️ Objects
+            </button>
+          )}
+          <button
+            className={drawer === 'props' ? 'active' : ''}
+            onClick={() => setDrawer(drawer === 'props' ? null : 'props')}
+          >
+            ⚙️ Edit
+          </button>
+        </div>
       </div>
 
       {showWelcome && (

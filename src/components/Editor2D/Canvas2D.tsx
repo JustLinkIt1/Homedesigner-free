@@ -13,6 +13,7 @@ import {
   snapToEndpoints,
   pointToSegment,
   polygonCentroid,
+  boundsOf,
 } from '../../lib/geometry';
 import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
 import type { Point } from '../../types';
@@ -54,6 +55,27 @@ export default function Canvas2D() {
   useEffect(() => {
     setDraft([]);
   }, [tool]);
+
+  // Frame the whole design when asked (after load / import) once size is known.
+  const lastFit = useRef(0);
+  useEffect(() => {
+    if (s.fitRequest === 0 || s.fitRequest === lastFit.current || size.w === 0) return;
+    lastFit.current = s.fitRequest;
+    const pts = [
+      ...walls.flatMap((w) => [w.start, w.end]),
+      ...rooms.flatMap((r) => r.points),
+      ...furniture.map((f) => f.position),
+    ];
+    if (pts.length === 0) return;
+    const { min, max } = boundsOf(pts);
+    const bw = Math.max(1, max.x - min.x);
+    const bh = Math.max(1, max.y - min.y);
+    const pad = 90;
+    const z = Math.max(0.05, Math.min(2, Math.min(size.w / (bw + pad * 2), size.h / (bh + pad * 2))));
+    s.setZoom(z);
+    s.setPan({ x: size.w / 2 - ((min.x + max.x) / 2) * z, y: size.h / 2 - ((min.y + max.y) / 2) * z });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.fitRequest, size.w, size.h]);
 
   // Keyboard: Enter/Escape to finish, Delete to remove, undo/redo.
   useEffect(() => {
@@ -98,6 +120,15 @@ export default function Canvas2D() {
     return out;
   };
 
+  const twoFinger = (t: TouchList) => {
+    const a = t[0];
+    const b = t[1];
+    return {
+      dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+      center: { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 },
+    };
+  };
+
   // ---- interaction handlers ----
   const onWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
@@ -114,22 +145,12 @@ export default function Canvas2D() {
     s.setZoom(newZoom);
   };
 
-  const onMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    const isMiddle = e.evt.button === 1;
-    const p = worldPointer();
-    if (!p) return;
-
-    if (tool === 'pan' || isMiddle || e.evt.button === 2) {
-      setIsPanning(true);
-      return;
-    }
-
+  // Core place/draw/select action at a world point — shared by mouse & touch.
+  const actAt = (p: Point) => {
     const snapped = applySnaps(p);
-
     if (tool === 'wall') {
       setDraft((d) => [...d, snapped]);
     } else if (tool === 'room') {
-      // Close polygon if clicking near the first point.
       if (draft.length >= 3 && dist(snapped, draft[0]) < 25 / zoom) {
         s.addRoom(draft);
         setDraft([]);
@@ -139,7 +160,6 @@ export default function Canvas2D() {
     } else if (tool === 'furniture' && s.pendingFurnitureType) {
       const type = s.pendingFurnitureType;
       if (type === 'door' || type === 'window') {
-        // Attach the opening to the nearest wall instead of placing a box.
         const hit = nearestWall(p);
         if (hit && hit.dist < Math.max(hit.wall.thickness * 1.5, 40 / zoom)) {
           const len = dist(hit.wall.start, hit.wall.end);
@@ -156,6 +176,77 @@ export default function Canvas2D() {
       hitTest(p);
     } else if (tool === 'erase') {
       eraseAt(p);
+    }
+  };
+
+  const onMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    const isMiddle = e.evt.button === 1;
+    const p = worldPointer();
+    if (!p) return;
+    if (tool === 'pan' || isMiddle || e.evt.button === 2) {
+      setIsPanning(true);
+      return;
+    }
+    actAt(p);
+  };
+
+  // ---- touch: tap to act, two-finger pinch to zoom & pan ----
+  const pinch = useRef<{ dist: number; center: Point } | null>(null);
+  const touchMoved = useRef(false);
+
+  const onTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
+    const t = e.evt.touches;
+    if (t.length === 2) {
+      e.evt.preventDefault();
+      pinch.current = twoFinger(t);
+      touchMoved.current = true; // suppress tap
+    } else if (t.length === 1) {
+      touchMoved.current = false;
+      if (tool === 'pan') {
+        setIsPanning(true);
+        lastPan.current = { x: t[0].clientX, y: t[0].clientY };
+      }
+    }
+  };
+
+  const onTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
+    const t = e.evt.touches;
+    if (t.length === 2 && pinch.current) {
+      e.evt.preventDefault();
+      const stage = stageRef.current;
+      if (!stage) return;
+      const rect = stage.container().getBoundingClientRect();
+      const next = twoFinger(t);
+      const sc = { x: next.center.x - rect.left, y: next.center.y - rect.top };
+      const { zoom: z, pan: pn } = useDesign.getState();
+      const scale = next.dist / (pinch.current.dist || next.dist);
+      const newZoom = Math.max(0.05, Math.min(4, z * scale));
+      const wx = (sc.x - pn.x) / z;
+      const wy = (sc.y - pn.y) / z;
+      // zoom around the pinch centre and pan with finger movement
+      const prevSc = { x: pinch.current.center.x - rect.left, y: pinch.current.center.y - rect.top };
+      s.setPan({ x: sc.x - wx * newZoom + (sc.x - prevSc.x), y: sc.y - wy * newZoom + (sc.y - prevSc.y) });
+      s.setZoom(newZoom);
+      pinch.current = next;
+    } else if (t.length === 1) {
+      touchMoved.current = true;
+      if (isPanning && lastPan.current) {
+        const cur = { x: t[0].clientX, y: t[0].clientY };
+        const { pan: pn } = useDesign.getState();
+        s.setPan({ x: pn.x + (cur.x - lastPan.current.x), y: pn.y + (cur.y - lastPan.current.y) });
+        lastPan.current = cur;
+      }
+    }
+  };
+
+  const onTouchEnd = (e: Konva.KonvaEventObject<TouchEvent>) => {
+    if (e.evt.touches.length === 0) {
+      if (!touchMoved.current && tool !== 'pan') {
+        const p = worldPointer();
+        if (p) actAt(p);
+      }
+      pinch.current = null;
+      endPan();
     }
   };
 
@@ -314,6 +405,9 @@ export default function Canvas2D() {
         onMouseMove={onStageMouseMove}
         onMouseUp={endPan}
         onMouseLeave={endPan}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
         onContextMenu={(e) => e.evt.preventDefault()}
         style={{ cursor: cursorStyle, background: 'var(--canvas-bg)' }}
       >

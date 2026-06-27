@@ -37,6 +37,7 @@ interface DesignState extends DesignSnapshot {
   defaultWallHeight: number;
   defaultWallThickness: number;
   pendingFurnitureType: string | null;
+  fitRequest: number; // bump to ask the 2D canvas to frame the design
 
   // history
   _past: DesignSnapshot[];
@@ -49,6 +50,7 @@ interface DesignState extends DesignSnapshot {
   setPan: (p: Point) => void;
   setShowGrid: (b: boolean) => void;
   setDollhouse: (b: boolean) => void;
+  requestFit: () => void;
   select: (sel: Selection) => void;
   clearSelection: () => void;
   setPendingFurniture: (type: string | null) => void;
@@ -148,6 +150,7 @@ export const useDesign = create<DesignState>((set, get) => {
     defaultWallHeight: 270,
     defaultWallThickness: 12,
     pendingFurnitureType: null,
+    fitRequest: 0,
     _past: [],
     _future: [],
 
@@ -158,6 +161,7 @@ export const useDesign = create<DesignState>((set, get) => {
     setPan: (p) => set({ pan: p }),
     setShowGrid: (b) => set({ showGrid: b }),
     setDollhouse: (b) => set({ dollhouse: b }),
+    requestFit: () => set((st) => ({ fitRequest: st.fitRequest + 1 })),
     select: (sel) => set({ selection: sel }),
     clearSelection: () => set({ selection: { kind: null, id: null } }),
     setPendingFurniture: (type) =>
@@ -332,7 +336,14 @@ export const useDesign = create<DesignState>((set, get) => {
     loadSample: () => {
       const snap = sampleProject();
       persist(snap);
-      set({ ...snap, selection: { kind: null, id: null }, _past: [], _future: [], view: '2d' });
+      set((st) => ({
+        ...snap,
+        selection: { kind: null, id: null },
+        _past: [],
+        _future: [],
+        view: '2d',
+        fitRequest: st.fitRequest + 1,
+      }));
     },
 
     loadSnapshot: (snap) => {
@@ -345,7 +356,13 @@ export const useDesign = create<DesignState>((set, get) => {
         background: snap.background ?? null,
       };
       persist(full);
-      set({ ...full, selection: { kind: null, id: null }, _past: [], _future: [] });
+      set((st) => ({
+        ...full,
+        selection: { kind: null, id: null },
+        _past: [],
+        _future: [],
+        fitRequest: st.fitRequest + 1,
+      }));
     },
 
     undo: () => {

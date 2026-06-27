@@ -2,7 +2,7 @@ import { useDesign } from '../store/designStore';
 import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
 import { dist, polygonArea } from '../lib/geometry';
 
-export default function PropertiesPanel() {
+export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   const s = useDesign();
   const { selection } = s;
 
@@ -14,7 +14,7 @@ export default function PropertiesPanel() {
     selection.kind === 'opening' ? s.openings.find((o) => o.id === selection.id) : null;
 
   return (
-    <aside className="sidebar right">
+    <aside className={`sidebar right ${open ? 'open' : ''}`}>
       <div className="sidebar-head">Properties</div>
       <div className="sidebar-scroll">
         {!selection.id && (

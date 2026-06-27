@@ -90,6 +90,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     }
     s.importWalls(walls, replace);
     s.detectRoomsFromWalls(); // auto-create floors from the traced walls
+    s.requestFit();
     s.setView('2d');
     onClose();
   };
@@ -102,6 +103,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     });
     s.importWalls(res.walls, true);
     s.detectRoomsFromWalls(); // auto-create floors from the imported walls
+    s.requestFit();
     s.setView('2d');
     onClose();
   };

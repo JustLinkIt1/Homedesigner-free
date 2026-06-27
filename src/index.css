@@ -691,3 +691,94 @@ button {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* ---------- Mobile / responsive ---------- */
+.mobile-tabs {
+  display: none;
+}
+.drawer-backdrop {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .toolbar {
+    gap: 2px;
+    padding: 0 6px;
+    overflow-x: auto;
+  }
+  .brand span:not(.logo):not(.free) {
+    display: none; /* keep just the logo + FREE badge */
+  }
+  .tbtn span:not(.ico) {
+    display: none; /* icon-only buttons to save space */
+  }
+  .tool-group {
+    padding: 0 3px;
+  }
+  .view-toggle button {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  /* Sidebars become slide-in drawers (fixed so they fully clear the viewport). */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 82vw;
+    max-width: 320px;
+    z-index: 30;
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+    box-shadow: var(--shadow);
+  }
+  .sidebar.right {
+    left: auto;
+    right: 0;
+    transform: translateX(110%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 25;
+  }
+
+  .mobile-tabs {
+    display: flex;
+    position: absolute;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    right: 14px;
+    gap: 8px;
+    z-index: 40; /* above the drawer + backdrop so it always toggles */
+  }
+  .mobile-tabs button {
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 22px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: var(--shadow);
+  }
+  .mobile-tabs button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .render-actions {
+    top: 8px;
+    right: 8px;
+  }
+  .render-btn span:not(.spin) {
+    font-size: 12px;
+  }
+}

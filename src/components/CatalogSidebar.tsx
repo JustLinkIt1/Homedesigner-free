@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useDesign } from '../store/designStore';
 import { FURNITURE_CATALOG } from '../data/furnitureCatalog';
 
-export default function CatalogSidebar() {
+export default function CatalogSidebar({ open = false }: { open?: boolean }) {
   const { pendingFurnitureType, setPendingFurniture } = useDesign();
 
   const byCategory = useMemo(() => {
@@ -16,7 +16,7 @@ export default function CatalogSidebar() {
   }, []);
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="sidebar-head">Furniture &amp; Objects</div>
       <div className="sidebar-scroll">
         {byCategory.map(([cat, items]) => (
