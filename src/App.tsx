@@ -14,8 +14,11 @@ import { initNative } from './lib/native';
 const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
 
 export default function App() {
-  const { view, tool, zoom, showGrid, setZoom, setShowGrid, dollhouse, setDollhouse, walkMode, setWalkMode, pendingFurnitureType } =
-    useDesign();
+  const {
+    view, tool, zoom, showGrid, setZoom, setShowGrid,
+    showDimensions, setShowDimensions, dollhouse, setDollhouse,
+    walkMode, setWalkMode, pendingFurnitureType,
+  } = useDesign();
   const [showImport, setShowImport] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
   const [rendering, setRendering] = useState(false);
@@ -104,6 +107,16 @@ export default function App() {
                     onChange={(e) => setShowGrid(e.target.checked)}
                   />
                   Grid &amp; snap
+                </label>
+              </div>
+              <div className="pill">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={showDimensions}
+                    onChange={(e) => setShowDimensions(e.target.checked)}
+                  />
+                  📐 Dimensions
                 </label>
               </div>
             </div>

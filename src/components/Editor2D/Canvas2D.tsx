@@ -16,6 +16,7 @@ import {
   boundsOf,
 } from '../../lib/geometry';
 import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
+import DimensionsLayer from './DimensionsLayer';
 import type { Point } from '../../types';
 
 const fmtLen = (cm: number) =>
@@ -29,7 +30,7 @@ export default function Canvas2D() {
   const s = useDesign();
   const {
     walls, rooms, furniture, openings, background,
-    tool, zoom, pan, showGrid, gridSize, selection,
+    tool, zoom, pan, showGrid, gridSize, selection, showDimensions,
   } = s;
 
   const bgImage = useHtmlImage(background?.src);
@@ -498,6 +499,9 @@ export default function Canvas2D() {
               </Group>
             );
           })}
+
+          {/* Dimension annotations */}
+          {showDimensions && <DimensionsLayer zoom={zoom} />}
 
           {/* Openings (doors & windows) */}
           {openings.map((o) => {
