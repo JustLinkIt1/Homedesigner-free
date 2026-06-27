@@ -14,7 +14,7 @@ import { initNative } from './lib/native';
 const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
 
 export default function App() {
-  const { view, tool, zoom, showGrid, setZoom, setShowGrid, dollhouse, setDollhouse, pendingFurnitureType } =
+  const { view, tool, zoom, showGrid, setZoom, setShowGrid, dollhouse, setDollhouse, walkMode, setWalkMode, pendingFurnitureType } =
     useDesign();
   const [showImport, setShowImport] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
@@ -23,12 +23,21 @@ export default function App() {
   const [drawer, setDrawer] = useState<null | 'catalog' | 'props'>(null);
 
   // Keep latest UI state for the hardware back-button handler.
-  const stateRef = useRef({ photoMode, showImport });
-  stateRef.current = { photoMode, showImport };
+  const stateRef = useRef({ photoMode, showImport, walkMode });
+  stateRef.current = { photoMode, showImport, walkMode };
+
+  // Leaving the 3D view always exits walk mode (e.g. switching to 2D).
+  useEffect(() => {
+    if (view !== '3d' && walkMode) setWalkMode(false);
+  }, [view, walkMode, setWalkMode]);
 
   useEffect(() => {
     initNative(() => {
       const st = stateRef.current;
+      if (st.walkMode) {
+        setWalkMode(false);
+        return true;
+      }
       if (st.photoMode) {
         setPhotoMode(false);
         return true;
@@ -100,7 +109,7 @@ export default function App() {
             </div>
           )}
 
-          {view === '3d' && (
+          {view === '3d' && !walkMode && (
             <>
               <div className="hud">
                 <div className="pill">Drag to orbit · scroll to zoom · right-drag to pan</div>
@@ -114,6 +123,9 @@ export default function App() {
                     🏠 Dollhouse
                   </label>
                 </div>
+                <button className="pill walk-toggle" onClick={() => setWalkMode(true)}>
+                  🚶 Walk through
+                </button>
               </div>
               <div className="render-actions">
                 <button className="render-btn" onClick={handleRender} disabled={rendering}>

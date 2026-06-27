@@ -4,9 +4,16 @@ import { OrbitControls, Grid, SoftShadows, Environment, Lightformer } from '@rea
 import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import DesignScene, { useDesignBounds } from './DesignScene';
+import WalkControls, { WalkTouchControls } from './WalkControls';
 import { sceneCapture } from '../../lib/renderBridge';
 import { saveImage } from '../../lib/native';
 import { useDesign } from '../../store/designStore';
+
+/** Coarse pointer (no hover) → treat as touch and show on-screen controls. */
+const IS_TOUCH =
+  typeof window !== 'undefined' &&
+  window.matchMedia &&
+  window.matchMedia('(pointer: coarse)').matches;
 
 /** Soft, fully-offline image-based lighting (no CDN HDR fetch). */
 function StudioEnvironment() {
@@ -52,8 +59,15 @@ export default function Scene3D() {
   const { center, radius } = useDesignBounds();
   const composerRef = useRef<any>(null);
   const dollhouse = useDesign((s) => s.dollhouse);
+  const walkMode = useDesign((s) => s.walkMode);
+  const setWalkMode = useDesign((s) => s.setWalkMode);
+
+  // Touch input state shared between the HTML overlay and the in-Canvas controller.
+  const moveRef = useRef({ x: 0, y: 0 });
+  const lookRef = useRef({ x: 0, y: 0 });
 
   return (
+    <>
     <Canvas
       flat // composer's ToneMapping owns tone mapping; avoid double-applying
       shadows
@@ -98,7 +112,8 @@ export default function Scene3D() {
         infiniteGrid
       />
 
-      <DesignScene interactive dollhouse={dollhouse} />
+      {/* Force solid walls while walking so the real interior is visible. */}
+      <DesignScene interactive dollhouse={walkMode ? false : dollhouse} />
 
       <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
         <N8AO aoRadius={0.7} intensity={2.2} distanceFalloff={1} halfRes />
@@ -108,13 +123,33 @@ export default function Scene3D() {
 
       <CaptureBridge composerRef={composerRef} />
 
-      <OrbitControls
-        target={center}
-        maxPolarAngle={Math.PI / 2.05}
-        minDistance={2}
-        maxDistance={radius * 8 + 20}
-        makeDefault
-      />
+      {walkMode ? (
+        <WalkControls isTouch={IS_TOUCH} moveRef={moveRef} lookRef={lookRef} />
+      ) : (
+        <OrbitControls
+          target={center}
+          maxPolarAngle={Math.PI / 2.05}
+          minDistance={2}
+          maxDistance={radius * 8 + 20}
+          makeDefault
+        />
+      )}
     </Canvas>
+
+    {/* Walk-mode HUD: hint, exit, and (on touch) on-screen movement controls. */}
+    {walkMode && (
+      <>
+        <div className="walk-hint">
+          {IS_TOUCH
+            ? 'Left stick to move · drag the right side to look · Exit to leave'
+            : 'Click to look · WASD / arrows to move · Shift to run · Esc to exit'}
+        </div>
+        <button className="walk-exit" onClick={() => setWalkMode(false)}>
+          ✕ Exit walk
+        </button>
+        {IS_TOUCH && <WalkTouchControls moveRef={moveRef} lookRef={lookRef} />}
+      </>
+    )}
+    </>
   );
 }
