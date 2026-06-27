@@ -1,4 +1,5 @@
 import { useDesign } from '../store/designStore';
+import { exportProject, openProjectFile } from '../lib/projectIO';
 import type { ToolMode } from '../types';
 
 const TOOLS: { id: ToolMode; icon: string; label: string }[] = [
@@ -47,6 +48,31 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
         <button className="tbtn ghost" onClick={onImport} title="Import a 2D plan (PDF / DXF / image)">
           <span className="ico">📐</span>
           <span>Import plan</span>
+        </button>
+        <button
+          className="tbtn"
+          title="Open a saved project (.json)"
+          onClick={async () => {
+            const snap = await openProjectFile();
+            if (snap) s.loadSnapshot(snap);
+          }}
+        >
+          <span className="ico">📂</span>
+        </button>
+        <button
+          className="tbtn"
+          title="Save project to a file"
+          onClick={() =>
+            exportProject({
+              walls: s.walls,
+              rooms: s.rooms,
+              furniture: s.furniture,
+              openings: s.openings,
+              background: s.background,
+            })
+          }
+        >
+          <span className="ico">💾</span>
         </button>
         <button
           className="tbtn"

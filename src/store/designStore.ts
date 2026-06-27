@@ -13,6 +13,7 @@ import type {
 import { uid } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
+import { sampleProject } from '../data/sampleProject';
 
 /** The serializable part of the design (what we save / load / undo). */
 export interface DesignSnapshot {
@@ -69,6 +70,7 @@ interface DesignState extends DesignSnapshot {
   updateBackground: (patch: Partial<BackgroundPlan>) => void;
 
   newProject: () => void;
+  loadSample: () => void;
   loadSnapshot: (s: DesignSnapshot) => void;
 
   undo: () => void;
@@ -327,9 +329,23 @@ export const useDesign = create<DesignState>((set, get) => {
       });
     },
 
-    loadSnapshot: (snap) => {
+    loadSample: () => {
+      const snap = sampleProject();
       persist(snap);
-      set({ ...snap, selection: { kind: null, id: null }, _past: [], _future: [] });
+      set({ ...snap, selection: { kind: null, id: null }, _past: [], _future: [], view: '2d' });
+    },
+
+    loadSnapshot: (snap) => {
+      // Tolerate older saves that predate some fields.
+      const full: DesignSnapshot = {
+        walls: snap.walls ?? [],
+        rooms: snap.rooms ?? [],
+        furniture: snap.furniture ?? [],
+        openings: snap.openings ?? [],
+        background: snap.background ?? null,
+      };
+      persist(full);
+      set({ ...full, selection: { kind: null, id: null }, _past: [], _future: [] });
     },
 
     undo: () => {

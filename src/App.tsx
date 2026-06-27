@@ -5,6 +5,7 @@ import PropertiesPanel from './components/PropertiesPanel';
 import Canvas2D from './components/Editor2D/Canvas2D';
 import Scene3D from './components/Viewer3D/Scene3D';
 import ImportDialog from './components/ImportDialog';
+import WelcomeModal, { shouldWelcome } from './components/WelcomeModal';
 import { useDesign } from './store/designStore';
 import { sceneCapture } from './lib/renderBridge';
 import { initNative } from './lib/native';
@@ -18,6 +19,7 @@ export default function App() {
   const [showImport, setShowImport] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
   const [rendering, setRendering] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => shouldWelcome());
 
   // Keep latest UI state for the hardware back-button handler.
   const stateRef = useRef({ photoMode, showImport });
@@ -126,6 +128,13 @@ export default function App() {
         </div>
         <PropertiesPanel />
       </div>
+
+      {showWelcome && (
+        <WelcomeModal
+          onImport={() => setShowImport(true)}
+          onClose={() => setShowWelcome(false)}
+        />
+      )}
 
       {showImport && <ImportDialog onClose={() => setShowImport(false)} />}
 
