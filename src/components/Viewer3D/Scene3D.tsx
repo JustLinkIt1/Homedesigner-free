@@ -76,8 +76,8 @@ export default function Scene3D() {
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => useDesign.getState().clearSelection()}
     >
-      <color attach="background" args={['#0c0e13']} />
-      <fog attach="fog" args={['#0c0e13', radius * 3, radius * 9]} />
+      <color attach="background" args={['#eceef1']} />
+      <fog attach="fog" args={['#eceef1', radius * 4, radius * 11]} />
       <SoftShadows size={24} samples={12} />
 
       <ambientLight intensity={0.32} />
@@ -114,15 +114,15 @@ export default function Scene3D() {
       {/* Ground + grid */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center[0], -0.01, center[2]]} receiveShadow>
         <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#15171d" roughness={1} />
+        <meshStandardMaterial color="#e6e8eb" roughness={1} />
       </mesh>
       <Grid
         position={[center[0], 0, center[2]]}
         args={[120, 120]}
         cellSize={1}
-        cellColor="#23262e"
+        cellColor="#dadce0"
         sectionSize={5}
-        sectionColor="#2e3340"
+        sectionColor="#c6c9ce"
         fadeDistance={radius * 6}
         infiniteGrid
       />

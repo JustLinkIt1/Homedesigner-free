@@ -1,3 +1,4 @@
+import { Home, Sofa, Ruler, PenTool } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 
 const WELCOMED_KEY = 'homedesigner.welcomed';
@@ -35,7 +36,9 @@ export default function WelcomeModal({
     <div className="modal-backdrop" onMouseDown={dismiss}>
       <div className="welcome" onMouseDown={(e) => e.stopPropagation()}>
         <div className="welcome-hero">
-          <div className="welcome-logo">🏠</div>
+          <div className="welcome-logo">
+            <Home className="icon" />
+          </div>
           <h1>
             HomeDesigner <span className="free">FREE</span>
           </h1>
@@ -49,7 +52,7 @@ export default function WelcomeModal({
               dismiss();
             }}
           >
-            <span className="wc-ico">🛋️</span>
+            <span className="wc-ico"><Sofa className="icon" /></span>
             <span className="wc-title">Open the sample home</span>
             <span className="wc-sub">A furnished 2-bed apartment to explore</span>
           </button>
@@ -60,7 +63,7 @@ export default function WelcomeModal({
               onImport();
             }}
           >
-            <span className="wc-ico">📐</span>
+            <span className="wc-ico"><Ruler className="icon" /></span>
             <span className="wc-title">Import a 2D plan</span>
             <span className="wc-sub">PDF / image / DXF — walls traced automatically</span>
           </button>
@@ -71,7 +74,7 @@ export default function WelcomeModal({
               dismiss();
             }}
           >
-            <span className="wc-ico">✏️</span>
+            <span className="wc-ico"><PenTool className="icon" /></span>
             <span className="wc-title">Start from scratch</span>
             <span className="wc-sub">Draw walls and rooms yourself</span>
           </button>

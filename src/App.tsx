@@ -1,5 +1,19 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import {
+  Minus,
+  Plus,
+  Maximize2,
+  Grid3x3,
+  Ruler,
+  House,
+  Footprints,
+  Image as ImageIcon,
+  Camera,
+  Sofa,
+  SlidersHorizontal,
+} from 'lucide-react';
 import Toolbar from './components/Toolbar';
+import ToolDock from './components/ToolDock';
 import CatalogSidebar from './components/CatalogSidebar';
 import PropertiesPanel from './components/PropertiesPanel';
 import Canvas2D from './components/Editor2D/Canvas2D';
@@ -89,34 +103,25 @@ export default function App() {
         <div className="stage-wrap">
           {view === '2d' ? <Canvas2D /> : <Scene3D />}
 
+          {view === '2d' && <ToolDock />}
           {view === '2d' && tip && <div className="tip">{tip}</div>}
 
           {view === '2d' && (
             <div className="hud">
               <div className="pill">
-                <button onClick={() => setZoom(zoom / 1.2)} title="Zoom out">−</button>
-                <span>{Math.round(zoom * 100)}%</span>
-                <button onClick={() => setZoom(zoom * 1.2)} title="Zoom in">+</button>
-                <button onClick={() => useDesign.getState().requestFit()} title="Fit to view">⤢</button>
+                <button onClick={() => setZoom(zoom / 1.2)} title="Zoom out"><Minus className="icon" style={{ width: 16, height: 16 }} /></button>
+                <span className="val">{Math.round(zoom * 100)}%</span>
+                <button onClick={() => setZoom(zoom * 1.2)} title="Zoom in"><Plus className="icon" style={{ width: 16, height: 16 }} /></button>
+                <button onClick={() => useDesign.getState().requestFit()} title="Fit to view"><Maximize2 className="icon" style={{ width: 15, height: 15 }} /></button>
               </div>
               <div className="pill">
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={showGrid}
-                    onChange={(e) => setShowGrid(e.target.checked)}
-                  />
-                  Grid &amp; snap
+                <label className="toggle">
+                  <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
+                  <Grid3x3 className="icon" style={{ width: 15, height: 15 }} /> Grid
                 </label>
-              </div>
-              <div className="pill">
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={showDimensions}
-                    onChange={(e) => setShowDimensions(e.target.checked)}
-                  />
-                  📐 Dimensions
+                <label className="toggle">
+                  <input type="checkbox" checked={showDimensions} onChange={(e) => setShowDimensions(e.target.checked)} />
+                  <Ruler className="icon" style={{ width: 15, height: 15 }} /> Dimensions
                 </label>
               </div>
             </div>
@@ -125,28 +130,23 @@ export default function App() {
           {view === '3d' && !walkMode && (
             <>
               <div className="hud">
-                <div className="pill">Drag to orbit · scroll to zoom · right-drag to pan</div>
                 <div className="pill">
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={dollhouse}
-                      onChange={(e) => setDollhouse(e.target.checked)}
-                    />
-                    🏠 Dollhouse
+                  <label className="toggle">
+                    <input type="checkbox" checked={dollhouse} onChange={(e) => setDollhouse(e.target.checked)} />
+                    <House className="icon" style={{ width: 15, height: 15 }} /> Dollhouse
                   </label>
+                  <button className="toggle" onClick={() => setWalkMode(true)} style={{ fontWeight: 600 }}>
+                    <Footprints className="icon" style={{ width: 16, height: 16 }} /> Walk through
+                  </button>
                 </div>
-                <button className="pill walk-toggle" onClick={() => setWalkMode(true)}>
-                  🚶 Walk through
-                </button>
               </div>
               <div className="render-actions">
                 <button className="render-btn" onClick={handleRender} disabled={rendering}>
-                  {rendering ? <span className="spin" /> : '🖼️'}
+                  {rendering ? <span className="spin" /> : <ImageIcon className="icon" />}
                   <span>{rendering ? 'Rendering…' : 'Render image'}</span>
                 </button>
                 <button className="render-btn photo" onClick={() => setPhotoMode(true)}>
-                  <span>📷</span>
+                  <Camera className="icon" />
                   <span>Photo mode</span>
                 </button>
               </div>
@@ -162,14 +162,14 @@ export default function App() {
               className={drawer === 'catalog' ? 'active' : ''}
               onClick={() => setDrawer(drawer === 'catalog' ? null : 'catalog')}
             >
-              🛋️ Objects
+              <Sofa className="icon" /> Objects
             </button>
           )}
           <button
             className={drawer === 'props' ? 'active' : ''}
             onClick={() => setDrawer(drawer === 'props' ? null : 'props')}
           >
-            ⚙️ Edit
+            <SlidersHorizontal className="icon" /> Edit
           </button>
         </div>
       </div>

@@ -160,6 +160,23 @@ export function getFloorTexture(kind: FloorKind, color: string): THREE.CanvasTex
   return tex;
 }
 
+const thumbCache = new Map<string, string>();
+
+/** A small PNG data URL of the real material — for swatches in the UI. */
+export function floorThumbnail(kind: FloorKind, color: string): string {
+  const key = `${kind}:${color}`;
+  const hit = thumbCache.get(key);
+  if (hit) return hit;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d')!;
+  GENERATORS[kind](ctx, color);
+  const url = canvas.toDataURL('image/png');
+  thumbCache.set(key, url);
+  return url;
+}
+
 /** Reasonable roughness per material so reflections read correctly. */
 export const FLOOR_ROUGHNESS: Record<FloorKind, number> = {
   wood: 0.6,

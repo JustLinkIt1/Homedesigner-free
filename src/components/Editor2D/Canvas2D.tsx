@@ -30,7 +30,7 @@ const fmtLen = (cm: number) =>
 
 // Handle visuals (screen-space px; divided by zoom at render to stay constant).
 const HANDLE_FILL = '#ffffff';
-const HANDLE_STROKE = 'var(--accent)';
+const HANDLE_STROKE = '#3b63f6';
 
 export default function Canvas2D() {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -470,7 +470,7 @@ export default function Canvas2D() {
             <Line
               key={i}
               points={l.pts}
-              stroke={l.major ? '#2c333f' : '#1b2029'}
+              stroke={l.major ? '#d2d2c9' : '#e4e4dd'}
               strokeWidth={(l.major ? 1.4 : 0.8) / zoom}
               listening={false}
             />
@@ -488,7 +488,7 @@ export default function Canvas2D() {
                   closed
                   fill={fill}
                   opacity={0.55}
-                  stroke={sel ? 'var(--accent)' : 'transparent'}
+                  stroke={sel ? '#3b63f6' : 'transparent'}
                   strokeWidth={3 / zoom}
                   onMouseDown={() => tool === 'select' && s.select({ kind: 'room', id: r.id })}
                 />
@@ -520,7 +520,7 @@ export default function Canvas2D() {
               <Group key={w.id}>
                 <Line
                   points={[start.x, start.y, end.x, end.y]}
-                  stroke={sel ? 'var(--accent)' : w.color}
+                  stroke={sel ? '#3b63f6' : '#39414e'}
                   strokeWidth={w.thickness}
                   lineCap="round"
                   // Body drag translates both endpoints together.
@@ -639,10 +639,10 @@ export default function Canvas2D() {
                 onMouseDown={() => tool === 'select' && s.select({ kind: 'opening', id: o.id })}
               >
                 {/* cut the wall */}
-                <Rect x={-wd / 2} y={-t / 2 - 1} width={wd} height={t + 2} fill="#11141a" />
+                <Rect x={-wd / 2} y={-t / 2 - 1} width={wd} height={t + 2} fill="#f1f1ec" />
                 {o.type === 'door' ? (
                   <>
-                    <Line points={[-wd / 2, 0, -wd / 2, -wd]} stroke={sel ? 'var(--accent)' : '#cfd6e0'} strokeWidth={3 / zoom} />
+                    <Line points={[-wd / 2, 0, -wd / 2, -wd]} stroke={sel ? '#3b63f6' : '#cfd6e0'} strokeWidth={3 / zoom} />
                     <Arc
                       x={-wd / 2}
                       y={0}
@@ -650,7 +650,7 @@ export default function Canvas2D() {
                       outerRadius={wd}
                       angle={90}
                       rotation={270}
-                      stroke={sel ? 'var(--accent)' : '#6b7480'}
+                      stroke={sel ? '#3b63f6' : '#6b7480'}
                       strokeWidth={1.5 / zoom}
                     />
                     <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
@@ -663,8 +663,8 @@ export default function Canvas2D() {
                       y={-t / 2}
                       width={wd}
                       height={t}
-                      fill="#16222e"
-                      stroke={sel ? 'var(--accent)' : '#7fb8d8'}
+                      fill="#dcebf5"
+                      stroke={sel ? '#3b63f6' : '#6aa6cc'}
                       strokeWidth={2 / zoom}
                     />
                     <Line points={[-wd / 2, 0, wd / 2, 0]} stroke="#7fb8d8" strokeWidth={1.5 / zoom} />
@@ -774,13 +774,13 @@ export default function Canvas2D() {
                     fill={f.color}
                     opacity={0.92}
                     cornerRadius={Math.min(width, depth) * 0.08}
-                    stroke={sel ? 'var(--accent)' : '#00000033'}
+                    stroke={sel ? '#3b63f6' : '#00000033'}
                     strokeWidth={(sel ? 3 : 1) / zoom}
                   />
                   {/* direction notch */}
                   <Line
                     points={[0, 0, 0, -depth / 2]}
-                    stroke={sel ? 'var(--accent)' : '#ffffff66'}
+                    stroke={sel ? '#3b63f6' : '#ffffff66'}
                     strokeWidth={2 / zoom}
                     listening={false}
                   />
@@ -858,7 +858,7 @@ function DraftView({
       <Line
         points={flat}
         closed={tool === 'room'}
-        stroke="var(--accent)"
+        stroke="#3b63f6"
         strokeWidth={(tool === 'wall' ? 8 : 2) / zoom}
         lineCap="round"
         opacity={0.7}
@@ -866,7 +866,7 @@ function DraftView({
         fill={tool === 'room' ? 'rgba(76,141,255,0.12)' : undefined}
       />
       {draft.map((p, i) => (
-        <Circle key={i} x={p.x} y={p.y} radius={5 / zoom} fill="#fff" stroke="var(--accent)" strokeWidth={2 / zoom} />
+        <Circle key={i} x={p.x} y={p.y} radius={5 / zoom} fill="#fff" stroke="#3b63f6" strokeWidth={2 / zoom} />
       ))}
       {cursor && last && (
         <Text
@@ -971,7 +971,7 @@ function FurnitureHandles({
         y={-depth / 2}
         width={width}
         height={depth}
-        stroke="var(--accent)"
+        stroke="#3b63f6"
         strokeWidth={1.5 / zoom}
         dash={[6 / zoom, 4 / zoom]}
         listening={false}
@@ -979,7 +979,7 @@ function FurnitureHandles({
       {/* rotation stalk + handle */}
       <Line
         points={[0, -depth / 2, rotPos.x, rotPos.y]}
-        stroke="var(--accent)"
+        stroke="#3b63f6"
         strokeWidth={1.5 / zoom}
         listening={false}
       />

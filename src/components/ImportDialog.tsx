@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Ruler, UploadCloud } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { renderPlanFile, type RenderedPlan } from '../lib/pdfImport';
 import { importDxf } from '../lib/dxfImport';
@@ -112,7 +113,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          📐 Import a 2D plan
+          <Ruler className="icon" /> Import a 2D plan
         </div>
         <div className="modal-body">
           {stage === 'pick' && (
@@ -132,7 +133,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
                   if (f) handleFile(f);
                 }}
               >
-                <div className="big">⬆️</div>
+                <UploadCloud className="big" />
                 <p>
                   <strong>Drop a file here</strong> or click to browse
                 </p>
