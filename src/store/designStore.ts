@@ -33,6 +33,7 @@ interface DesignState extends DesignSnapshot {
   pan: Point; // px offset
   showGrid: boolean;
   gridSize: number; // cm
+  showDimensions: boolean; // 2D: architectural dimension annotations
   dollhouse: boolean; // 3D: fade walls between camera and interior
   defaultWallHeight: number;
   defaultWallThickness: number;
@@ -49,6 +50,7 @@ interface DesignState extends DesignSnapshot {
   setZoom: (z: number) => void;
   setPan: (p: Point) => void;
   setShowGrid: (b: boolean) => void;
+  setShowDimensions: (b: boolean) => void;
   setDollhouse: (b: boolean) => void;
   requestFit: () => void;
   select: (sel: Selection) => void;
@@ -146,6 +148,7 @@ export const useDesign = create<DesignState>((set, get) => {
     pan: { x: 400, y: 300 },
     showGrid: true,
     gridSize: 25,
+    showDimensions: true,
     dollhouse: true,
     defaultWallHeight: 270,
     defaultWallThickness: 12,
@@ -160,6 +163,7 @@ export const useDesign = create<DesignState>((set, get) => {
     setZoom: (z) => set({ zoom: Math.max(0.05, Math.min(4, z)) }),
     setPan: (p) => set({ pan: p }),
     setShowGrid: (b) => set({ showGrid: b }),
+    setShowDimensions: (b) => set({ showDimensions: b }),
     setDollhouse: (b) => set({ dollhouse: b }),
     requestFit: () => set((st) => ({ fitRequest: st.fitRequest + 1 })),
     select: (sel) => set({ selection: sel }),
