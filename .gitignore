@@ -11,3 +11,6 @@ yarn-error.log*
 
 # TS build info
 tsconfig.tsbuildinfo
+
+# Claude Code agent worktrees / local tool state
+.claude/
