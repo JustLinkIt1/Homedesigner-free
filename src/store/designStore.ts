@@ -34,6 +34,7 @@ interface DesignState extends DesignSnapshot {
   showGrid: boolean;
   gridSize: number; // cm
   dollhouse: boolean; // 3D: fade walls between camera and interior
+  walkMode: boolean; // 3D: first-person walk-through mode
   defaultWallHeight: number;
   defaultWallThickness: number;
   pendingFurnitureType: string | null;
@@ -50,6 +51,7 @@ interface DesignState extends DesignSnapshot {
   setPan: (p: Point) => void;
   setShowGrid: (b: boolean) => void;
   setDollhouse: (b: boolean) => void;
+  setWalkMode: (b: boolean) => void;
   requestFit: () => void;
   select: (sel: Selection) => void;
   clearSelection: () => void;
@@ -147,6 +149,7 @@ export const useDesign = create<DesignState>((set, get) => {
     showGrid: true,
     gridSize: 25,
     dollhouse: true,
+    walkMode: false,
     defaultWallHeight: 270,
     defaultWallThickness: 12,
     pendingFurnitureType: null,
@@ -161,6 +164,7 @@ export const useDesign = create<DesignState>((set, get) => {
     setPan: (p) => set({ pan: p }),
     setShowGrid: (b) => set({ showGrid: b }),
     setDollhouse: (b) => set({ dollhouse: b }),
+    setWalkMode: (b) => set({ walkMode: b }),
     requestFit: () => set((st) => ({ fitRequest: st.fitRequest + 1 })),
     select: (sel) => set({ selection: sel }),
     clearSelection: () => set({ selection: { kind: null, id: null } }),

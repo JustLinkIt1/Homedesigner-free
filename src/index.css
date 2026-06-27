@@ -531,6 +531,92 @@ button {
   background: linear-gradient(135deg, #c46fff, #7c6fff);
 }
 
+/* ---------- Walk-through (first-person) mode ---------- */
+.walk-toggle {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+}
+.walk-toggle:hover {
+  background: var(--panel-3);
+}
+.walk-hint {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(24, 27, 34, 0.9);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text);
+  z-index: 7;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  text-align: center;
+}
+.walk-exit {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 8;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(24, 27, 34, 0.9);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(6px);
+}
+.walk-exit:hover {
+  background: var(--panel-3);
+}
+/* Touch movement overlay: left joystick + right look-drag zone. */
+.walk-touch {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  touch-action: none;
+}
+.walk-joystick {
+  position: absolute;
+  left: 28px;
+  bottom: 32px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(24, 27, 34, 0.55);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.walk-joystick-knob {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+.walk-look {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 55%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
 /* ---------- Photo (path-traced) overlay ---------- */
 .photo-overlay {
   position: fixed;
