@@ -15,7 +15,28 @@ export type Shape3D =
   | 'toilet'
   | 'bathtub'
   | 'door'
-  | 'window';
+  | 'window'
+  // newly added richer shapes
+  | 'bookshelf'
+  | 'pendant'
+  | 'ceiling_light'
+  | 'mirror'
+  | 'curtains'
+  | 'stove'
+  | 'sink'
+  | 'cabinets'
+  | 'dishwasher'
+  | 'washer'
+  | 'shower'
+  | 'vanity'
+  | 'stairs'
+  | 'ottoman'
+  | 'side_table'
+  | 'crib'
+  | 'monitor'
+  | 'desk_lamp'
+  | 'wall_art'
+  | 'stool';
 
 export interface CatalogEntry {
   type: string;
@@ -38,7 +59,11 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'tv_stand', name: 'TV', category: 'Living', width: 130, depth: 12, height: 75, color: '#1c1c22', shape: 'tv', icon: '📺' },
   { type: 'rug', name: 'Rug', category: 'Living', width: 200, depth: 140, height: 1, color: '#c98f6a', shape: 'rug', icon: '🟫' },
   { type: 'plant', name: 'Plant', category: 'Living', width: 40, depth: 40, height: 120, color: '#3f7d4f', shape: 'plant', icon: '🪴' },
-  { type: 'floor_lamp', name: 'Floor Lamp', category: 'Living', width: 35, depth: 35, height: 160, color: '#d9c27a', shape: 'lamp', icon: '🛋️' },
+  { type: 'floor_lamp', name: 'Floor Lamp', category: 'Living', width: 35, depth: 35, height: 160, color: '#d9c27a', shape: 'lamp', icon: '💡' },
+  { type: 'bookshelf', name: 'Bookshelf', category: 'Living', width: 90, depth: 30, height: 200, color: '#8a5a30', shape: 'bookshelf', icon: '📚' },
+  { type: 'ottoman', name: 'Ottoman', category: 'Living', width: 70, depth: 70, height: 42, color: '#7d8aa0', shape: 'ottoman', icon: '🟦' },
+  { type: 'side_table', name: 'Side Table', category: 'Living', width: 45, depth: 45, height: 55, color: '#9c6b3f', shape: 'side_table', icon: '🛋️' },
+  { type: 'console', name: 'Console Table', category: 'Living', width: 120, depth: 35, height: 80, color: '#7a5a3a', shape: 'table', icon: '🪵' },
 
   // Bedroom
   { type: 'bed_double', name: 'Double Bed', category: 'Bedroom', width: 160, depth: 210, height: 50, color: '#b6a98f', shape: 'bed', icon: '🛏️' },
@@ -46,6 +71,9 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'nightstand', name: 'Nightstand', category: 'Bedroom', width: 45, depth: 40, height: 50, color: '#9c6b3f', shape: 'box', icon: '🗄️' },
   { type: 'wardrobe', name: 'Wardrobe', category: 'Bedroom', width: 150, depth: 60, height: 210, color: '#7a5a3a', shape: 'box', icon: '🚪' },
   { type: 'dresser', name: 'Dresser', category: 'Bedroom', width: 120, depth: 50, height: 80, color: '#9c6b3f', shape: 'box', icon: '🗄️' },
+  { type: 'crib', name: 'Crib', category: 'Bedroom', width: 75, depth: 130, height: 95, color: '#e3d8c4', shape: 'crib', icon: '👶' },
+  { type: 'mirror', name: 'Wall Mirror', category: 'Bedroom', width: 70, depth: 4, height: 120, color: '#cfe6ef', shape: 'mirror', icon: '🪞' },
+  { type: 'curtains', name: 'Curtains', category: 'Bedroom', width: 140, depth: 12, height: 220, color: '#cdb89a', shape: 'curtains', icon: '🪟' },
 
   // Dining / Kitchen
   { type: 'dining_table', name: 'Dining Table', category: 'Dining', width: 160, depth: 90, height: 75, color: '#8a5a30', shape: 'table', icon: '🍽️' },
@@ -53,16 +81,44 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'fridge', name: 'Refrigerator', category: 'Kitchen', width: 70, depth: 70, height: 180, color: '#d6d9dd', shape: 'fridge', icon: '🧊' },
   { type: 'counter', name: 'Counter', category: 'Kitchen', width: 200, depth: 60, height: 90, color: '#cfd2d6', shape: 'box', icon: '🍳' },
   { type: 'island', name: 'Kitchen Island', category: 'Kitchen', width: 180, depth: 90, height: 90, color: '#bfc3c8', shape: 'box', icon: '🍳' },
+  { type: 'stove', name: 'Stove / Oven', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cdd0d4', shape: 'stove', icon: '🍳' },
+  { type: 'kitchen_sink', name: 'Kitchen Sink', category: 'Kitchen', width: 90, depth: 60, height: 90, color: '#cfd2d6', shape: 'sink', icon: '🚰' },
+  { type: 'cabinets', name: 'Kitchen Cabinets', category: 'Kitchen', width: 120, depth: 35, height: 70, color: '#e6e2da', shape: 'cabinets', icon: '🗄️' },
+  { type: 'dishwasher', name: 'Dishwasher', category: 'Kitchen', width: 60, depth: 60, height: 85, color: '#c9cdd2', shape: 'dishwasher', icon: '🧼' },
+  { type: 'bar_stool', name: 'Bar Stool', category: 'Kitchen', width: 38, depth: 38, height: 75, color: '#4a3a28', shape: 'stool', icon: '🪑' },
 
   // Bathroom
   { type: 'toilet', name: 'Toilet', category: 'Bathroom', width: 40, depth: 65, height: 75, color: '#f2f4f6', shape: 'toilet', icon: '🚽' },
   { type: 'bathtub', name: 'Bathtub', category: 'Bathroom', width: 170, depth: 75, height: 55, color: '#eef1f4', shape: 'bathtub', icon: '🛁' },
-  { type: 'sink', name: 'Sink', category: 'Bathroom', width: 60, depth: 45, height: 85, color: '#f2f4f6', shape: 'box', icon: '🚰' },
+  { type: 'sink', name: 'Sink', category: 'Bathroom', width: 60, depth: 45, height: 85, color: '#f2f4f6', shape: 'sink', icon: '🚰' },
+  { type: 'shower', name: 'Shower', category: 'Bathroom', width: 90, depth: 90, height: 200, color: '#d4e6ee', shape: 'shower', icon: '🚿' },
+  { type: 'vanity', name: 'Sink Vanity', category: 'Bathroom', width: 90, depth: 50, height: 85, color: '#7a5a3a', shape: 'vanity', icon: '🪞' },
+  { type: 'washer', name: 'Washing Machine', category: 'Bathroom', width: 60, depth: 60, height: 85, color: '#e6e8ea', shape: 'washer', icon: '🧺' },
 
   // Office
   { type: 'desk', name: 'Desk', category: 'Office', width: 140, depth: 70, height: 75, color: '#7a5a3a', shape: 'table', icon: '🖥️' },
   { type: 'office_chair', name: 'Office Chair', category: 'Office', width: 60, depth: 60, height: 110, color: '#2c2c33', shape: 'chair', icon: '🪑' },
-  { type: 'bookshelf', name: 'Bookshelf', category: 'Office', width: 90, depth: 30, height: 200, color: '#8a5a30', shape: 'box', icon: '📚' },
+  { type: 'office_bookshelf', name: 'Office Shelf', category: 'Office', width: 90, depth: 30, height: 200, color: '#8a5a30', shape: 'bookshelf', icon: '📚' },
+  { type: 'monitor', name: 'Monitor', category: 'Office', width: 60, depth: 18, height: 40, color: '#15151a', shape: 'monitor', icon: '🖥️' },
+  { type: 'desk_lamp', name: 'Desk Lamp', category: 'Office', width: 18, depth: 18, height: 45, color: '#2c2c33', shape: 'desk_lamp', icon: '💡' },
+  { type: 'filing_cabinet', name: 'Filing Cabinet', category: 'Office', width: 45, depth: 55, height: 110, color: '#9aa0a6', shape: 'box', icon: '🗄️' },
+
+  // Lighting
+  { type: 'pendant', name: 'Pendant Light', category: 'Lighting', width: 30, depth: 30, height: 40, color: '#3a3a40', shape: 'pendant', icon: '💡' },
+  { type: 'ceiling_light', name: 'Ceiling Light', category: 'Lighting', width: 50, depth: 50, height: 12, color: '#f4f0e4', shape: 'ceiling_light', icon: '💡' },
+  { type: 'table_lamp', name: 'Table Lamp', category: 'Lighting', width: 28, depth: 28, height: 55, color: '#e8d49a', shape: 'desk_lamp', icon: '💡' },
+
+  // Decor
+  { type: 'wall_art', name: 'Wall Art', category: 'Decor', width: 80, depth: 4, height: 60, color: '#b0795a', shape: 'wall_art', icon: '🖼️' },
+  { type: 'floor_mirror', name: 'Floor Mirror', category: 'Decor', width: 60, depth: 5, height: 170, color: '#cfe6ef', shape: 'mirror', icon: '🪞' },
+  { type: 'large_plant', name: 'Large Plant', category: 'Decor', width: 55, depth: 55, height: 170, color: '#346b41', shape: 'plant', icon: '🪴' },
+  { type: 'round_rug', name: 'Round Rug', category: 'Decor', width: 160, depth: 160, height: 1, color: '#c0738f', shape: 'rug', icon: '🟣' },
+
+  // Outdoor
+  { type: 'patio_table', name: 'Patio Table', category: 'Outdoor', width: 90, depth: 90, height: 72, color: '#6f7d6a', shape: 'table', icon: '🪑' },
+  { type: 'patio_chair', name: 'Patio Chair', category: 'Outdoor', width: 55, depth: 55, height: 85, color: '#6f7d6a', shape: 'chair', icon: '🪑' },
+  { type: 'bench', name: 'Garden Bench', category: 'Outdoor', width: 150, depth: 50, height: 80, color: '#6e5236', shape: 'sofa', icon: '🪑' },
+  { type: 'stairs', name: 'Stairs', category: 'Outdoor', width: 100, depth: 250, height: 280, color: '#9aa0a6', shape: 'stairs', icon: '🪜' },
 
   // Openings (placed on walls)
   { type: 'door', name: 'Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#a9744f', shape: 'door', icon: '🚪' },
