@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type {
   BackgroundPlan,
   FurnitureItem,
+  Opening,
   Point,
   Room,
   Selection,
@@ -11,12 +12,14 @@ import type {
 } from '../types';
 import { uid } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
+import { detectRooms, roomMatches } from '../lib/roomDetection';
 
 /** The serializable part of the design (what we save / load / undo). */
 export interface DesignSnapshot {
   walls: Wall[];
   rooms: Room[];
   furniture: FurnitureItem[];
+  openings: Opening[];
   background: BackgroundPlan | null;
 }
 
@@ -55,10 +58,13 @@ interface DesignState extends DesignSnapshot {
   updateRoom: (id: string, patch: Partial<Room>) => void;
   addFurniture: (type: string, position: Point) => string;
   updateFurniture: (id: string, patch: Partial<FurnitureItem>) => void;
+  addOpening: (wallId: string, offset: number, type: 'door' | 'window') => string;
+  updateOpening: (id: string, patch: Partial<Opening>) => void;
   deleteSelected: () => void;
   deleteById: (kind: Selection['kind'], id: string | null) => void;
 
   importWalls: (walls: Wall[], replace?: boolean) => void;
+  detectRoomsFromWalls: () => number;
   setBackground: (bg: BackgroundPlan | null) => void;
   updateBackground: (patch: Partial<BackgroundPlan>) => void;
 
@@ -77,6 +83,7 @@ const emptySnapshot = (): DesignSnapshot => ({
   walls: [],
   rooms: [],
   furniture: [],
+  openings: [],
   background: null,
 });
 
@@ -84,6 +91,7 @@ const snapshotOf = (s: DesignState): DesignSnapshot => ({
   walls: s.walls,
   rooms: s.rooms,
   furniture: s.furniture,
+  openings: s.openings,
   background: s.background,
 });
 
@@ -113,6 +121,7 @@ export const useDesign = create<DesignState>((set, get) => {
       walls: [...prev.walls],
       rooms: [...prev.rooms],
       furniture: [...prev.furniture],
+      openings: [...prev.openings],
       background: prev.background,
     };
     mutate(next);
@@ -221,12 +230,39 @@ export const useDesign = create<DesignState>((set, get) => {
         if (i >= 0) d.furniture[i] = { ...d.furniture[i], ...patch };
       }),
 
+    addOpening: (wallId, offset, type) => {
+      const id = uid();
+      const entry = CATALOG_BY_TYPE[type];
+      commit((d) => {
+        d.openings.push({
+          id,
+          wallId,
+          type,
+          offset,
+          width: entry?.width ?? (type === 'door' ? 90 : 120),
+          height: entry?.height ?? (type === 'door' ? 205 : 120),
+          sill: type === 'door' ? 0 : 90,
+        });
+      });
+      return id;
+    },
+
+    updateOpening: (id, patch) =>
+      commit((d) => {
+        const i = d.openings.findIndex((o) => o.id === id);
+        if (i >= 0) d.openings[i] = { ...d.openings[i], ...patch };
+      }),
+
     deleteById: (kind, id) => {
       if (!kind || !id) return;
       commit((d) => {
-        if (kind === 'wall') d.walls = d.walls.filter((w) => w.id !== id);
+        if (kind === 'wall') {
+          d.walls = d.walls.filter((w) => w.id !== id);
+          d.openings = d.openings.filter((o) => o.wallId !== id); // openings can't outlive their wall
+        }
         if (kind === 'room') d.rooms = d.rooms.filter((r) => r.id !== id);
         if (kind === 'furniture') d.furniture = d.furniture.filter((f) => f.id !== id);
+        if (kind === 'opening') d.openings = d.openings.filter((o) => o.id !== id);
       });
       const sel = get().selection;
       if (sel.id === id) set({ selection: { kind: null, id: null } });
@@ -239,9 +275,36 @@ export const useDesign = create<DesignState>((set, get) => {
 
     importWalls: (walls, replace = false) =>
       commit((d) => {
-        if (replace) d.walls = [];
+        if (replace) {
+          d.walls = [];
+          d.openings = [];
+        }
         d.walls.push(...walls);
       }),
+
+    detectRoomsFromWalls: () => {
+      const polys = detectRooms(get().walls);
+      let added = 0;
+      commit((d) => {
+        // Drop previously auto-generated rooms, keep manually drawn ones.
+        d.rooms = d.rooms.filter((r) => !r.auto);
+        const palette = ['oak', 'carpet_grey', 'tile_white', 'walnut', 'tile_grey', 'concrete'];
+        for (const poly of polys) {
+          // Skip if a manual room already covers this area.
+          if (d.rooms.some((r) => roomMatches(poly, r.points))) continue;
+          added++;
+          d.rooms.push({
+            id: uid(),
+            name: `Room ${d.rooms.length + 1}`,
+            points: poly,
+            floorMaterial: palette[(added - 1) % palette.length],
+            color: '#f3ede2',
+            auto: true,
+          });
+        }
+      });
+      return added;
+    },
 
     setBackground: (bg) =>
       commit((d) => {

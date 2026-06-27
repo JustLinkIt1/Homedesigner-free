@@ -25,6 +25,23 @@ export interface Room {
   points: Point[];
   floorMaterial: string;
   color: string;
+  /** True when created by automatic room detection (so re-detection can refresh it). */
+  auto?: boolean;
+}
+
+/** A door or window cut into a wall. */
+export interface Opening {
+  id: string;
+  wallId: string;
+  type: 'door' | 'window';
+  /** Distance of the opening centre from the wall's start point, in cm. */
+  offset: number;
+  /** Opening width along the wall (cm). */
+  width: number;
+  /** Opening height (cm). */
+  height: number;
+  /** Height of the sill above the floor (cm) — 0 for doors. */
+  sill: number;
 }
 
 export interface FurnitureItem {
@@ -71,6 +88,6 @@ export type ToolMode =
 export type ViewMode = '2d' | '3d';
 
 export interface Selection {
-  kind: 'wall' | 'room' | 'furniture' | null;
+  kind: 'wall' | 'room' | 'furniture' | 'opening' | null;
   id: string | null;
 }

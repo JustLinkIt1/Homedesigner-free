@@ -10,18 +10,36 @@ export default function PropertiesPanel() {
   const room = selection.kind === 'room' ? s.rooms.find((r) => r.id === selection.id) : null;
   const item =
     selection.kind === 'furniture' ? s.furniture.find((f) => f.id === selection.id) : null;
+  const opening =
+    selection.kind === 'opening' ? s.openings.find((o) => o.id === selection.id) : null;
 
   return (
     <aside className="sidebar right">
       <div className="sidebar-head">Properties</div>
       <div className="sidebar-scroll">
+        {!selection.id && (
+          <div className="props" style={{ paddingBottom: 4 }}>
+            <button
+              className="btn primary"
+              style={{ width: '100%' }}
+              onClick={() => {
+                const n = s.detectRoomsFromWalls();
+                if (n === 0) alert('No new enclosed rooms found. Make sure walls form closed loops.');
+              }}
+            >
+              ✨ Auto-detect rooms
+            </button>
+          </div>
+        )}
+
         {!selection.id && !s.background && (
           <div className="empty-hint">
             Select an element to edit it.
             <br />
             <br />
             <strong>Tip:</strong> use <em>Import plan</em> to load a PDF or DXF and auto-trace the
-            walls, or pick the <em>Wall</em> tool and draw.
+            walls, then <em>Auto-detect rooms</em> to create floors. Add doors &amp; windows from the
+            catalog and click a wall to place them.
           </div>
         )}
 
@@ -153,6 +171,61 @@ export default function PropertiesPanel() {
             </div>
             <button className="btn-danger" onClick={() => s.deleteById('furniture', item.id)}>
               Delete object
+            </button>
+          </div>
+        )}
+
+        {opening && (
+          <div className="props">
+            <div className="prop-row">
+              <label>Type</label>
+              <select
+                value={opening.type}
+                onChange={(e) => {
+                  const type = e.target.value as 'door' | 'window';
+                  s.updateOpening(opening.id, {
+                    type,
+                    sill: type === 'door' ? 0 : 90,
+                    height: type === 'door' ? 205 : 120,
+                  });
+                }}
+              >
+                <option value="door">Door</option>
+                <option value="window">Window</option>
+              </select>
+            </div>
+            <NumberRow
+              label="Width (cm)"
+              value={opening.width}
+              min={40}
+              max={400}
+              onChange={(v) => s.updateOpening(opening.id, { width: v })}
+            />
+            <NumberRow
+              label="Height (cm)"
+              value={opening.height}
+              min={40}
+              max={300}
+              onChange={(v) => s.updateOpening(opening.id, { height: v })}
+            />
+            {opening.type === 'window' && (
+              <NumberRow
+                label="Sill height (cm)"
+                value={opening.sill}
+                min={0}
+                max={200}
+                onChange={(v) => s.updateOpening(opening.id, { sill: v })}
+              />
+            )}
+            <NumberRow
+              label="Position (cm)"
+              value={opening.offset}
+              min={0}
+              max={2000}
+              onChange={(v) => s.updateOpening(opening.id, { offset: v })}
+            />
+            <button className="btn-danger" onClick={() => s.deleteById('opening', opening.id)}>
+              Delete {opening.type}
             </button>
           </div>
         )}

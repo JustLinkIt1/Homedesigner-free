@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Stage, Layer, Line, Rect, Group, Text, Circle, Image as KImage } from 'react-konva';
+import { Stage, Layer, Line, Rect, Group, Text, Circle, Arc, Image as KImage } from 'react-konva';
 import type Konva from 'konva';
 import { useDesign } from '../../store/designStore';
 import { useHtmlImage } from '../../lib/useHtmlImage';
@@ -7,6 +7,7 @@ import {
   dist,
   midpoint,
   angleDeg,
+  lerp,
   snapToGrid,
   snapAngle,
   snapToEndpoints,
@@ -26,7 +27,7 @@ export default function Canvas2D() {
 
   const s = useDesign();
   const {
-    walls, rooms, furniture, background,
+    walls, rooms, furniture, openings, background,
     tool, zoom, pan, showGrid, gridSize, selection,
   } = s;
 
@@ -136,8 +137,21 @@ export default function Canvas2D() {
         setDraft((d) => [...d, snapped]);
       }
     } else if (tool === 'furniture' && s.pendingFurnitureType) {
-      const id = s.addFurniture(s.pendingFurnitureType, snapped);
-      s.select({ kind: 'furniture', id });
+      const type = s.pendingFurnitureType;
+      if (type === 'door' || type === 'window') {
+        // Attach the opening to the nearest wall instead of placing a box.
+        const hit = nearestWall(p);
+        if (hit && hit.dist < Math.max(hit.wall.thickness * 1.5, 40 / zoom)) {
+          const len = dist(hit.wall.start, hit.wall.end);
+          const half = (type === 'door' ? 90 : 120) / 2;
+          const offset = Math.max(half, Math.min(len - half, hit.t * len));
+          const id = s.addOpening(hit.wall.id, offset, type);
+          s.select({ kind: 'opening', id });
+        }
+      } else {
+        const id = s.addFurniture(type, snapped);
+        s.select({ kind: 'furniture', id });
+      }
     } else if (tool === 'select') {
       hitTest(p);
     } else if (tool === 'erase') {
@@ -176,7 +190,33 @@ export default function Canvas2D() {
     setDraft([]);
   };
 
+  // Nearest wall to a point, with the parametric position along it.
+  const nearestWall = (p: Point): { wall: (typeof walls)[number]; t: number; dist: number } | null => {
+    let best: { wall: (typeof walls)[number]; t: number; dist: number } | null = null;
+    for (const w of walls) {
+      const r = pointToSegment(p, w.start, w.end);
+      if (!best || r.dist < best.dist) best = { wall: w, t: r.t, dist: r.dist };
+    }
+    return best;
+  };
+
+  // World-space centre point of an opening (on its wall).
+  const openingPoint = (o: (typeof openings)[number]): { pt: Point; wall: (typeof walls)[number] } | null => {
+    const wall = walls.find((w) => w.id === o.wallId);
+    if (!wall) return null;
+    const len = dist(wall.start, wall.end) || 1;
+    return { pt: lerp(wall.start, wall.end, o.offset / len), wall };
+  };
+
   const hitTest = (p: Point) => {
+    // Openings (clickable along their wall).
+    for (const o of openings) {
+      const op = openingPoint(o);
+      if (op && dist(p, op.pt) <= Math.max(o.width / 2, 16 / zoom)) {
+        s.select({ kind: 'opening', id: o.id });
+        return;
+      }
+    }
     // Furniture (top-most first).
     for (let i = furniture.length - 1; i >= 0; i--) {
       const f = furniture[i];
@@ -209,6 +249,13 @@ export default function Canvas2D() {
   };
 
   const eraseAt = (p: Point) => {
+    for (const o of openings) {
+      const op = openingPoint(o);
+      if (op && dist(p, op.pt) <= Math.max(o.width / 2, 16 / zoom)) {
+        s.deleteById('opening', o.id);
+        return;
+      }
+    }
     for (let i = furniture.length - 1; i >= 0; i--) {
       const f = furniture[i];
       if (dist(p, f.position) <= Math.max(f.width, f.depth) / 2) {
@@ -352,6 +399,60 @@ export default function Canvas2D() {
                       fill="#fff"
                       listening={false}
                     />
+                  </>
+                )}
+              </Group>
+            );
+          })}
+
+          {/* Openings (doors & windows) */}
+          {openings.map((o) => {
+            const wall = walls.find((w) => w.id === o.wallId);
+            if (!wall) return null;
+            const len = dist(wall.start, wall.end) || 1;
+            const c = lerp(wall.start, wall.end, o.offset / len);
+            const ang = angleDeg(wall.start, wall.end);
+            const sel = selection.kind === 'opening' && selection.id === o.id;
+            const t = wall.thickness;
+            const wd = o.width;
+            return (
+              <Group
+                key={o.id}
+                x={c.x}
+                y={c.y}
+                rotation={ang}
+                onMouseDown={() => tool === 'select' && s.select({ kind: 'opening', id: o.id })}
+              >
+                {/* cut the wall */}
+                <Rect x={-wd / 2} y={-t / 2 - 1} width={wd} height={t + 2} fill="#11141a" />
+                {o.type === 'door' ? (
+                  <>
+                    <Line points={[-wd / 2, 0, -wd / 2, -wd]} stroke={sel ? 'var(--accent)' : '#cfd6e0'} strokeWidth={3 / zoom} />
+                    <Arc
+                      x={-wd / 2}
+                      y={0}
+                      innerRadius={wd}
+                      outerRadius={wd}
+                      angle={90}
+                      rotation={270}
+                      stroke={sel ? 'var(--accent)' : '#6b7480'}
+                      strokeWidth={1.5 / zoom}
+                    />
+                    <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                    <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                  </>
+                ) : (
+                  <>
+                    <Rect
+                      x={-wd / 2}
+                      y={-t / 2}
+                      width={wd}
+                      height={t}
+                      fill="#16222e"
+                      stroke={sel ? 'var(--accent)' : '#7fb8d8'}
+                      strokeWidth={2 / zoom}
+                    />
+                    <Line points={[-wd / 2, 0, wd / 2, 0]} stroke="#7fb8d8" strokeWidth={1.5 / zoom} />
                   </>
                 )}
               </Group>
