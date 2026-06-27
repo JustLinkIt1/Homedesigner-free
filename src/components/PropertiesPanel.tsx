@@ -2,6 +2,20 @@ import { useDesign } from '../store/designStore';
 import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
 import { dist, polygonArea } from '../lib/geometry';
 
+// Curated interior wall paint presets (best-in-class quick recolor).
+const WALL_PAINTS: Array<{ name: string; color: string }> = [
+  { name: 'Pure White', color: '#f5f4f0' },
+  { name: 'Warm Cream', color: '#efe7d6' },
+  { name: 'Soft Greige', color: '#d9d2c5' },
+  { name: 'Pale Grey', color: '#cfd2d4' },
+  { name: 'Sage Green', color: '#a7b6a0' },
+  { name: 'Sea Blue', color: '#8fb0c2' },
+  { name: 'Navy', color: '#384a63' },
+  { name: 'Terracotta', color: '#c08461' },
+  { name: 'Dusty Rose', color: '#cda9a3' },
+  { name: 'Charcoal', color: '#41454b' },
+];
+
 export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   const s = useDesign();
   const { selection } = s;
@@ -73,6 +87,48 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 onChange={(e) => s.updateWall(wall.id, { color: e.target.value })}
               />
             </div>
+            <div style={{ marginBottom: 6 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 600 }}>
+                Paint presets
+              </label>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 6,
+                marginBottom: 10,
+              }}
+            >
+              {WALL_PAINTS.map((p) => (
+                <button
+                  key={p.color}
+                  onClick={() => s.updateWall(wall.id, { color: p.color })}
+                  title={p.name}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    background: p.color,
+                    border:
+                      wall.color.toLowerCase() === p.color.toLowerCase()
+                        ? '2px solid var(--accent, #4c8dff)'
+                        : '1px solid rgba(0,0,0,0.2)',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                />
+              ))}
+            </div>
+            <button
+              className="btn"
+              style={{ width: '100%', marginBottom: 8 }}
+              onClick={() => {
+                for (const w of s.walls) s.updateWall(w.id, { color: wall.color });
+              }}
+            >
+              Apply color to all walls
+            </button>
             <button className="btn-danger" onClick={() => s.deleteById('wall', wall.id)}>
               Delete wall
             </button>
