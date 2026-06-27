@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
+import { getFloorTexture, FLOOR_ROUGHNESS } from '../../lib/textures';
 import { dist, boundsOf } from '../../lib/geometry';
 import Furniture3D from './Furniture3D';
 import type { Opening, Room, Wall } from '../../types';
@@ -224,10 +225,19 @@ function FloorMesh({ room }: { room: Room }) {
     return new THREE.ShapeGeometry(shape);
   }, [room.points]);
 
-  const color = FLOOR_BY_ID[room.floorMaterial]?.color ?? room.color;
+  const mat = FLOOR_BY_ID[room.floorMaterial];
+  const kind = mat?.kind ?? 'wood';
+  const color = mat?.color ?? room.color;
+  const texture = useMemo(() => getFloorTexture(kind, color), [kind, color]);
+
   return (
     <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.002, 0]} receiveShadow>
-      <meshStandardMaterial color={color} roughness={0.85} side={THREE.DoubleSide} />
+      <meshStandardMaterial
+        map={texture}
+        roughness={FLOOR_ROUGHNESS[kind]}
+        metalness={kind === 'marble' || kind === 'tile' ? 0.08 : 0}
+        side={THREE.DoubleSide}
+      />
     </mesh>
   );
 }

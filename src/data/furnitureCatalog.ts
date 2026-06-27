@@ -73,16 +73,25 @@ export const CATALOG_BY_TYPE: Record<string, CatalogEntry> = Object.fromEntries(
   FURNITURE_CATALOG.map((e) => [e.type, e]),
 );
 
-export const FLOOR_MATERIALS: { id: string; name: string; color: string }[] = [
-  { id: 'oak', name: 'Oak Wood', color: '#c9a36b' },
-  { id: 'walnut', name: 'Walnut', color: '#6f4b2e' },
-  { id: 'tile_white', name: 'White Tile', color: '#e8e8ea' },
-  { id: 'tile_grey', name: 'Grey Tile', color: '#b9bcc0' },
-  { id: 'concrete', name: 'Concrete', color: '#9a9ca0' },
-  { id: 'carpet_beige', name: 'Beige Carpet', color: '#d8cab0' },
-  { id: 'carpet_grey', name: 'Grey Carpet', color: '#9c9ea3' },
-  { id: 'marble', name: 'Marble', color: '#eceef0' },
+export type FloorKind = 'wood' | 'tile' | 'carpet' | 'concrete' | 'marble';
+
+export interface FloorMaterial {
+  id: string;
+  name: string;
+  color: string;
+  kind: FloorKind;
+}
+
+export const FLOOR_MATERIALS: FloorMaterial[] = [
+  { id: 'oak', name: 'Oak Wood', color: '#c9a36b', kind: 'wood' },
+  { id: 'walnut', name: 'Walnut', color: '#6f4b2e', kind: 'wood' },
+  { id: 'tile_white', name: 'White Tile', color: '#e8e8ea', kind: 'tile' },
+  { id: 'tile_grey', name: 'Grey Tile', color: '#b9bcc0', kind: 'tile' },
+  { id: 'concrete', name: 'Concrete', color: '#9a9ca0', kind: 'concrete' },
+  { id: 'carpet_beige', name: 'Beige Carpet', color: '#d8cab0', kind: 'carpet' },
+  { id: 'carpet_grey', name: 'Grey Carpet', color: '#9c9ea3', kind: 'carpet' },
+  { id: 'marble', name: 'Marble', color: '#eceef0', kind: 'marble' },
 ];
 
-export const FLOOR_BY_ID: Record<string, { id: string; name: string; color: string }> =
+export const FLOOR_BY_ID: Record<string, FloorMaterial> =
   Object.fromEntries(FLOOR_MATERIALS.map((m) => [m.id, m]));
