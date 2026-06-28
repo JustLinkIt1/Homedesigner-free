@@ -1,5 +1,6 @@
 import type { DesignSnapshot } from '../store/designStore';
 import { saveText } from './native';
+import { toast } from './ui';
 
 /** Download the current design as a portable .json project file. */
 export async function exportProject(snapshot: DesignSnapshot): Promise<void> {
@@ -20,15 +21,20 @@ export function openProjectFile(): Promise<DesignSnapshot | null> {
       try {
         const text = await file.text();
         const obj = JSON.parse(text);
-        resolve({
-          walls: obj.walls ?? [],
-          rooms: obj.rooms ?? [],
-          furniture: obj.furniture ?? [],
-          openings: obj.openings ?? [],
+        const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+        const snap: DesignSnapshot = {
+          walls: arr(obj.walls),
+          rooms: arr(obj.rooms),
+          furniture: arr(obj.furniture),
+          openings: arr(obj.openings),
           background: obj.background ?? null,
-        });
+        };
+        // Drop openings whose wall no longer exists.
+        const wallIds = new Set(snap.walls.map((w) => w.id));
+        snap.openings = snap.openings.filter((o) => wallIds.has(o.wallId));
+        resolve(snap);
       } catch {
-        alert('That file could not be read as a HomeDesigner project.');
+        toast.error('That file could not be read as a HomeDesigner project.');
         resolve(null);
       }
     };

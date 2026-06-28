@@ -25,7 +25,7 @@ export function segmentsToWalls(
       // Use detected band thickness when it looks sane, else default.
       thickness: clamp(s.thickness * cmPerPx, 6, 40) || defaults.thickness,
       height: defaults.height,
-      color: '#d7dade',
+      color: '#ece6db',
     });
   }
   return walls;

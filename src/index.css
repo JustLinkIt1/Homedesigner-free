@@ -765,6 +765,52 @@ select {
   max-width: 80vw;
 }
 
+/* ---------- Active-drawing affordance ---------- */
+.draw-affordance {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  z-index: 7;
+  white-space: nowrap;
+}
+.finish-btn {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+}
+.finish-btn:hover {
+  background: var(--brand-600);
+}
+.cancel-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-weight: 700;
+  font-size: 12px;
+}
+.cancel-btn:hover {
+  background: var(--surface-3);
+}
+
 /* ---------- Render actions (3D) ---------- */
 .render-actions {
   position: absolute;
@@ -1250,8 +1296,116 @@ select {
   }
 }
 
+/* ---------- Toasts ---------- */
+.toaster {
+  position: fixed;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 200;
+  pointer-events: none;
+  width: max-content;
+  max-width: 92vw;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px 11px 14px;
+  background: var(--text);
+  color: #fff;
+  border-radius: var(--r);
+  box-shadow: var(--shadow-lg);
+  font-size: 13.5px;
+  font-weight: 600;
+  pointer-events: auto;
+  animation: toast-in 0.18s ease;
+}
+.toast .icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.toast.success .icon {
+  color: #4ade80;
+}
+.toast.error .icon {
+  color: #fb7185;
+}
+.toast.info .icon {
+  color: var(--brand-soft-2);
+  color: #93b4ff;
+}
+.toast button {
+  margin-left: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+.toast button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ---------- Confirm dialog ---------- */
+.confirm {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  width: 420px;
+  max-width: 100%;
+  padding: 24px;
+  box-shadow: var(--shadow-lg);
+}
+.confirm h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.confirm p {
+  margin: 0 0 20px;
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.confirm-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.btn.danger-solid {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.btn.danger-solid:hover {
+  filter: brightness(0.95);
+}
+
 /* Edge-to-edge safe areas (Android) */
 .app {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Visible keyboard focus everywhere (a11y) */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+button:focus:not(:focus-visible) {
+  outline: none;
 }

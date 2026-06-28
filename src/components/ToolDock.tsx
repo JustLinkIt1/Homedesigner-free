@@ -20,8 +20,10 @@ export default function ToolDock() {
         return (
           <div key={t.id} style={{ display: 'contents' }}>
             <button
-              className={`dock-btn ${tool === t.id && !(t.id === 'furniture') ? 'active' : ''}`}
+              className={`dock-btn ${tool === t.id ? 'active' : ''}`}
               data-tip={t.label}
+              aria-label={t.label}
+              aria-pressed={tool === t.id}
               onClick={() => setTool(t.id)}
             >
               <Icon className="icon" />
@@ -34,6 +36,8 @@ export default function ToolDock() {
       <button
         className={`dock-btn ${pendingFurnitureType === 'door' ? 'active' : ''}`}
         data-tip="Add door"
+        aria-label="Add door"
+        aria-pressed={pendingFurnitureType === 'door'}
         onClick={() => setPendingFurniture(pendingFurnitureType === 'door' ? null : 'door')}
       >
         <DoorOpen className="icon" />

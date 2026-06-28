@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
+import { confirmDialog, toast } from '../lib/ui';
 
 export default function Toolbar({ onImport }: { onImport: () => void }) {
   const s = useDesign();
@@ -29,10 +30,10 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
       </div>
 
       <div className="tool-group">
-        <button className="tbtn icon-only" disabled={!s.canUndo()} onClick={() => s.undo()} title="Undo (⌘Z)">
+        <button className="tbtn icon-only" disabled={!s.canUndo()} onClick={() => s.undo()} title="Undo (⌘Z)" aria-label="Undo">
           <Undo2 className="icon" />
         </button>
-        <button className="tbtn icon-only" disabled={!s.canRedo()} onClick={() => s.redo()} title="Redo (⇧⌘Z)">
+        <button className="tbtn icon-only" disabled={!s.canRedo()} onClick={() => s.redo()} title="Redo (⇧⌘Z)" aria-label="Redo">
           <Redo2 className="icon" />
         </button>
       </div>
@@ -45,9 +46,13 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
         <button
           className="tbtn icon-only"
           title="Open a saved project"
+          aria-label="Open a saved project"
           onClick={async () => {
             const snap = await openProjectFile();
-            if (snap) s.loadSnapshot(snap);
+            if (snap) {
+              s.loadSnapshot(snap);
+              toast.success('Project opened');
+            }
           }}
         >
           <FolderOpen className="icon" />
@@ -55,23 +60,34 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
         <button
           className="tbtn icon-only"
           title="Save project to a file"
-          onClick={() =>
-            exportProject({
+          aria-label="Save project to a file"
+          onClick={async () => {
+            await exportProject({
               walls: s.walls,
               rooms: s.rooms,
               furniture: s.furniture,
               openings: s.openings,
               background: s.background,
-            })
-          }
+            });
+            toast.success('Project saved');
+          }}
         >
           <Save className="icon" />
         </button>
         <button
           className="tbtn icon-only"
           title="New project"
-          onClick={() => {
-            if (confirm('Start a new empty project? This clears the current design.')) s.newProject();
+          aria-label="New project"
+          onClick={async () => {
+            const ok = await confirmDialog(
+              'Start a new project?',
+              'This clears the current design. Save it first if you want to keep it.',
+              { confirmLabel: 'New project', danger: true },
+            );
+            if (ok) {
+              s.newProject();
+              toast.info('Started a new project');
+            }
           }}
         >
           <FilePlus2 className="icon" />

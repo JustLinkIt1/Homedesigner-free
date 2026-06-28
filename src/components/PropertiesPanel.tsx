@@ -2,6 +2,7 @@ import { SlidersHorizontal, Sparkles, Trash2, MousePointer2 } from 'lucide-react
 import { useDesign } from '../store/designStore';
 import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
 import { floorThumbnail } from '../lib/textures';
+import { toast } from '../lib/ui';
 import { dist, polygonArea } from '../lib/geometry';
 
 const WALL_PAINTS = [
@@ -31,7 +32,8 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 className="btn primary block"
                 onClick={() => {
                   const n = s.detectRoomsFromWalls();
-                  if (n === 0) alert('No new enclosed rooms found. Make sure walls form closed loops.');
+                  if (n === 0) toast.info('No new enclosed rooms found — make sure walls form closed loops.');
+                  else toast.success(`Added ${n} room${n > 1 ? 's' : ''}`);
                 }}
               >
                 <Sparkles className="icon" /> Auto-detect rooms

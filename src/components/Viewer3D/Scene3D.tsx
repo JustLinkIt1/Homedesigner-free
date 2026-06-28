@@ -76,8 +76,8 @@ export default function Scene3D() {
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => useDesign.getState().clearSelection()}
     >
-      <color attach="background" args={['#eceef1']} />
-      <fog attach="fog" args={['#eceef1', radius * 4, radius * 11]} />
+      <color attach="background" args={['#e3e6ea']} />
+      <fog attach="fog" args={['#e3e6ea', radius * 4, radius * 11]} />
       <SoftShadows size={24} samples={12} />
 
       <ambientLight intensity={0.32} />
@@ -85,10 +85,10 @@ export default function Scene3D() {
       {/* Warm key light (sun) for an inviting, rendered interior look. */}
       <directionalLight
         position={[center[0] + 12, 22, center[2] + 8]}
-        intensity={1.45}
+        intensity={1.55}
         color="#fff3e2"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0004}
         shadow-camera-left={-radius * 2}
         shadow-camera-right={radius * 2}
@@ -131,7 +131,7 @@ export default function Scene3D() {
       <DesignScene interactive dollhouse={walkMode ? false : dollhouse} />
 
       <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
-        <N8AO aoRadius={0.7} intensity={2.2} distanceFalloff={1} halfRes />
+        <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />
         <Bloom mipmapBlur intensity={0.18} luminanceThreshold={1.0} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       </EffectComposer>

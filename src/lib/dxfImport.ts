@@ -82,7 +82,7 @@ export function importDxf(
       end: b,
       thickness: opts.wallThickness,
       height: opts.wallHeight,
-      color: '#d7dade',
+      color: '#ece6db',
     });
   }
   return { walls, unitScale, segmentCount: segs.length };

@@ -185,7 +185,7 @@ export const useDesign = create<DesignState>((set, get) => {
           end,
           thickness: defaultWallThickness,
           height: defaultWallHeight,
-          color: '#d7dade',
+          color: '#ece6db',
         });
       });
       return id;

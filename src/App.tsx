@@ -20,8 +20,10 @@ import Canvas2D from './components/Editor2D/Canvas2D';
 import Scene3D from './components/Viewer3D/Scene3D';
 import ImportDialog from './components/ImportDialog';
 import WelcomeModal, { shouldWelcome } from './components/WelcomeModal';
+import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
 import { sceneCapture } from './lib/renderBridge';
+import { useDraw, drawBridge } from './lib/ui';
 import { initNative } from './lib/native';
 
 // Path tracer + its shaders are heavy — only load when Photo mode opens.
@@ -38,6 +40,7 @@ export default function App() {
   const [rendering, setRendering] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => shouldWelcome());
   const [drawer, setDrawer] = useState<null | 'catalog' | 'props'>(null);
+  const drawing = useDraw((s) => s.active);
 
   // Keep latest UI state for the hardware back-button handler.
   const stateRef = useRef({ photoMode, showImport, walkMode });
@@ -84,16 +87,17 @@ export default function App() {
     }
   };
 
-  const tip =
-    tool === 'wall'
-      ? 'Click to add wall points · they chain together · Enter to finish · Esc to cancel'
-      : tool === 'room'
-      ? 'Click corners to outline a room · click the first point to close it'
-      : tool === 'furniture' && pendingFurnitureType
-      ? 'Click in the plan to place the object · switch to Select to move & rotate it'
-      : tool === 'erase'
-      ? 'Click any wall, room or object to delete it'
-      : null;
+  const tip = drawing
+    ? null // the Finish affordance takes over while actively drawing
+    : tool === 'wall'
+    ? 'Click to add wall points — they chain together'
+    : tool === 'room'
+    ? 'Click corners to outline a room · click the first point to close it'
+    : tool === 'furniture' && pendingFurnitureType
+    ? 'Click in the plan to place it · switch to Select to move & rotate'
+    : tool === 'erase'
+    ? 'Click any wall, room or object to delete it'
+    : null;
 
   return (
     <div className="app">
@@ -105,6 +109,17 @@ export default function App() {
 
           {view === '2d' && <ToolDock />}
           {view === '2d' && tip && <div className="tip">{tip}</div>}
+          {view === '2d' && drawing && (
+            <div className="draw-affordance">
+              <span>{tool === 'room' ? 'Click the first point or' : 'Double-click or'} press Enter to finish</span>
+              <button className="finish-btn" onClick={() => drawBridge.finish?.()}>
+                ✓ Finish
+              </button>
+              <button className="cancel-btn" onClick={() => drawBridge.cancel?.()} aria-label="Cancel drawing">
+                Esc
+              </button>
+            </div>
+          )}
 
           {view === '2d' && (
             <div className="hud">
@@ -194,6 +209,9 @@ export default function App() {
           <PhotoMode onClose={() => setPhotoMode(false)} />
         </Suspense>
       )}
+
+      <Toaster />
+      <ConfirmHost />
     </div>
   );
 }

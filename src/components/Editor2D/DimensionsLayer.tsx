@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Group, Line, Text } from 'react-konva';
 import { useDesign } from '../../store/designStore';
-import { dist, midpoint, boundsOf, polygonArea } from '../../lib/geometry';
+import { dist, midpoint, boundsOf, polygonArea, polygonCentroid } from '../../lib/geometry';
 import type { Point, Wall, Room } from '../../types';
 
 /**
@@ -13,9 +13,10 @@ import type { Point, Wall, Room } from '../../types';
  * value maps to the right number of cm at the current scale.
  */
 
-const COLOR = '#8a93a6';
-const TEXT_COLOR = '#aeb6c6';
-const OVERALL_COLOR = '#b9c2d4';
+// Legible on the light canvas (#f1f1ec).
+const COLOR = '#7c8493';
+const TEXT_COLOR = '#3f4753';
+const OVERALL_COLOR = '#2b3340';
 
 const fmtLen = (cm: number): string =>
   cm >= 100 ? `${(cm / 100).toFixed(2)} m` : `${Math.round(cm)} cm`;
@@ -33,25 +34,32 @@ export default function DimensionsLayer({ zoom }: Props) {
   // Screen-space sizes expressed in cm at the current zoom.
   const px = (n: number) => n / zoom;
 
-  // Centre of the whole building — dimension lines push to the side away from it.
-  const center = useMemo<Point | null>(() => {
+  // Building bounds — used to centre dimension lines and to skip per-wall
+  // dimensions that merely duplicate the overall building dimension.
+  const bounds = useMemo(() => {
     const pts = walls.flatMap((w) => [w.start, w.end]);
     if (pts.length === 0) return null;
-    const { min, max } = boundsOf(pts);
-    return { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2 };
+    return boundsOf(pts);
   }, [walls]);
 
   if (walls.length === 0 && rooms.length === 0) return null;
+  const center = bounds
+    ? { x: (bounds.min.x + bounds.max.x) / 2, y: (bounds.min.y + bounds.max.y) / 2 }
+    : null;
 
   return (
     <Group listening={false}>
-      {/* Per-wall dimensions */}
+      {/* Per-wall dimensions (skips perimeter walls that duplicate the overall,
+          and walls too short to label legibly at the current zoom). */}
       {center &&
-        walls.map((w) => (
-          <WallDimension key={w.id} wall={w} center={center} px={px} />
-        ))}
+        bounds &&
+        walls.map((w) => {
+          if (dist(w.start, w.end) * zoom < 30) return null;
+          if (isPerimeterDuplicate(w, bounds)) return null;
+          return <WallDimension key={w.id} wall={w} center={center} px={px} />;
+        })}
 
-      {/* Per-room overall size + area */}
+      {/* Per-room area label (sizes come from wall/overall dims) */}
       {rooms.map((r) => (
         <RoomDimension key={r.id} room={r} px={px} />
       ))}
@@ -61,6 +69,29 @@ export default function DimensionsLayer({ zoom }: Props) {
     </Group>
   );
 }
+
+/** True when an axis-aligned wall runs along an outer edge for ~the full extent
+ *  (so its length already shows in the overall building dimension). */
+function isPerimeterDuplicate(
+  w: Wall,
+  bounds: { min: Point; max: Point },
+): boolean {
+  const tol = 6; // cm
+  const fullW = bounds.max.x - bounds.min.x;
+  const fullH = bounds.max.y - bounds.min.y;
+  const horiz = Math.abs(w.start.y - w.end.y) < tol;
+  const vert = Math.abs(w.start.x - w.end.x) < tol;
+  const span = (a: number, b: number) => Math.abs(a - b);
+  if (horiz && (near(w.start.y, bounds.min.y, tol) || near(w.start.y, bounds.max.y, tol))) {
+    return span(w.start.x, w.end.x) > fullW * 0.92;
+  }
+  if (vert && (near(w.start.x, bounds.min.x, tol) || near(w.start.x, bounds.max.x, tol))) {
+    return span(w.start.y, w.end.y) > fullH * 0.92;
+  }
+  return false;
+}
+
+const near = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
 
 /** A dimension line offset just outside a single wall. */
 function WallDimension({
@@ -156,65 +187,23 @@ function WallDimension({
   );
 }
 
-/** Overall bounding width × height + area for a single room. */
+/** A single, legible area label placed just below the room name. */
 function RoomDimension({ room, px }: { room: Room; px: (n: number) => number }) {
   if (room.points.length < 3) return null;
-  const { min, max } = boundsOf(room.points);
-  const w = max.x - min.x;
-  const h = max.y - min.y;
-  const cx = (min.x + max.x) / 2;
-  const fs = px(11);
-
-  // Width dimension just inside the top edge, height just inside the left edge.
-  const inset = px(14);
-  const topY = min.y + inset;
-  const leftX = min.x + inset;
-  const cy = (min.y + max.y) / 2;
-
-  // Area label below the room name (centroid-ish, kept simple via bbox centre).
-  const areaY = cy + fs;
-
+  const c = polygonCentroid(room.points);
+  const fs = px(12.5);
+  // The room name is drawn ~at the centroid in Canvas2D; sit the area below it.
   return (
-    <Group>
-      {/* width across the top */}
-      <Line points={[min.x, topY, max.x, topY]} stroke={COLOR} strokeWidth={px(0.7)} dash={[px(5), px(4)]} />
-      <Text
-        x={cx}
-        y={topY - px(2)}
-        text={fmtLen(w)}
-        fontSize={fs}
-        fill={TEXT_COLOR}
-        offsetX={px(28)}
-        offsetY={fs + px(2)}
-        width={px(56)}
-        align="center"
-      />
-      {/* height down the left, label rotated upright */}
-      <Line points={[leftX, min.y, leftX, max.y]} stroke={COLOR} strokeWidth={px(0.7)} dash={[px(5), px(4)]} />
-      <Text
-        x={leftX + px(2)}
-        y={cy}
-        text={fmtLen(h)}
-        fontSize={fs}
-        fill={TEXT_COLOR}
-        rotation={-90}
-        offsetX={px(28)}
-        offsetY={px(2)}
-        width={px(56)}
-        align="center"
-      />
-      {/* area beneath the room name */}
-      <Text
-        x={cx}
-        y={areaY}
-        text={fmtArea(polygonArea(room.points))}
-        fontSize={fs}
-        fill={TEXT_COLOR}
-        offsetX={px(40)}
-        width={px(80)}
-        align="center"
-      />
-    </Group>
+    <Text
+      x={c.x}
+      y={c.y + px(12)}
+      text={fmtArea(polygonArea(room.points))}
+      fontSize={fs}
+      fill={TEXT_COLOR}
+      offsetX={px(40)}
+      width={px(80)}
+      align="center"
+    />
   );
 }
 

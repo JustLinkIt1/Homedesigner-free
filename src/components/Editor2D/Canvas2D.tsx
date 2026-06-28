@@ -17,6 +17,7 @@ import {
 } from '../../lib/geometry';
 import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
 import DimensionsLayer from './DimensionsLayer';
+import { drawBridge, useDraw } from '../../lib/ui';
 import type { Point } from '../../types';
 import {
   resizeBox,
@@ -320,6 +321,20 @@ export default function Canvas2D() {
     setDraft([]);
   };
 
+  // Expose finish() + active state to the on-canvas "Finish" affordance.
+  useEffect(() => {
+    drawBridge.finish = finishDraft;
+    drawBridge.cancel = () => setDraft([]);
+    const min = tool === 'room' ? 3 : 2;
+    useDraw.getState().setActive((tool === 'wall' || tool === 'room') && draft.length >= min);
+    return () => {
+      drawBridge.finish = null;
+      drawBridge.cancel = null;
+      useDraw.getState().setActive(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, tool]);
+
   // Nearest wall to a point, with the parametric position along it.
   const nearestWall = (p: Point): { wall: (typeof walls)[number]; t: number; dist: number } | null => {
     let best: { wall: (typeof walls)[number]; t: number; dist: number } | null = null;
@@ -447,6 +462,7 @@ export default function Canvas2D() {
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        onDblClick={() => (tool === 'wall' || tool === 'room') && finishDraft()}
         onContextMenu={(e) => e.evt.preventDefault()}
         style={{ cursor: cursorStyle, background: 'var(--canvas-bg)' }}
       >
@@ -487,9 +503,12 @@ export default function Canvas2D() {
                   points={r.points.flatMap((p) => [p.x, p.y])}
                   closed
                   fill={fill}
-                  opacity={0.55}
+                  opacity={sel ? 0.7 : 0.55}
                   stroke={sel ? '#3b63f6' : 'transparent'}
-                  strokeWidth={3 / zoom}
+                  strokeWidth={(sel ? 4 : 3) / zoom}
+                  shadowColor={sel ? '#3b63f6' : undefined}
+                  shadowBlur={sel ? 14 / zoom : 0}
+                  shadowOpacity={sel ? 0.5 : 0}
                   onMouseDown={() => tool === 'select' && s.select({ kind: 'room', id: r.id })}
                 />
                 <Text
@@ -837,6 +856,20 @@ export default function Canvas2D() {
             );
           })}
 
+          {/* Ghost preview of the object about to be placed */}
+          {tool === 'furniture' &&
+            s.pendingFurnitureType &&
+            s.pendingFurnitureType !== 'door' &&
+            s.pendingFurnitureType !== 'window' &&
+            cursor &&
+            CATALOG_BY_TYPE[s.pendingFurnitureType] && (
+              <FurnitureGhost
+                entry={CATALOG_BY_TYPE[s.pendingFurnitureType]}
+                at={cursor}
+                zoom={zoom}
+              />
+            )}
+
           {/* Draft (in-progress wall/room) */}
           {draft.length > 0 && (
             <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} />
@@ -844,6 +877,41 @@ export default function Canvas2D() {
         </Layer>
       </Stage>
     </div>
+  );
+}
+
+/** Translucent footprint that follows the cursor before placing furniture. */
+function FurnitureGhost({
+  entry,
+  at,
+  zoom,
+}: {
+  entry: { width: number; depth: number; icon: string };
+  at: Point;
+  zoom: number;
+}) {
+  return (
+    <Group x={at.x} y={at.y} listening={false} opacity={0.75}>
+      <Rect
+        x={-entry.width / 2}
+        y={-entry.depth / 2}
+        width={entry.width}
+        height={entry.depth}
+        fill="rgba(59,99,246,0.14)"
+        stroke="#3b63f6"
+        strokeWidth={1.5 / zoom}
+        dash={[8 / zoom, 5 / zoom]}
+        cornerRadius={Math.min(entry.width, entry.depth) * 0.08}
+      />
+      <Text
+        x={-entry.width / 2}
+        y={-7 / zoom}
+        width={entry.width}
+        align="center"
+        text={entry.icon}
+        fontSize={Math.min(entry.width, entry.depth) * 0.5}
+      />
+    </Group>
   );
 }
 
