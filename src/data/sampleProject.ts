@@ -88,7 +88,7 @@ export function sampleProject(): DesignSnapshot {
     fur('fridge', 435, 340),
   ];
 
-  return { walls, rooms, furniture, openings, background: null };
+  return { walls, rooms, furniture, openings, background: null, projectName: 'Sample apartment' };
 }
 
 function rect(x0: number, y0: number, x1: number, y1: number) {

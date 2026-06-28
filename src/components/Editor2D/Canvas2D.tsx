@@ -41,8 +41,9 @@ export default function Canvas2D() {
   const s = useDesign();
   const {
     walls, rooms, furniture, openings, background,
-    tool, zoom, pan, showGrid, gridSize, selection, showDimensions,
+    tool, zoom, pan, showGrid, gridSize, selection, selectedIds, showDimensions,
   } = s;
+  const multi = selectedIds.length > 1;
 
   const bgImage = useHtmlImage(background?.src);
 
@@ -50,6 +51,9 @@ export default function Canvas2D() {
   const [draft, setDraft] = useState<Point[]>([]);
   const [cursor, setCursor] = useState<Point | null>(null);
   const [isPanning, setIsPanning] = useState(false);
+  const [menu, setMenu] = useState<{ x: number; y: number; kind: string; id: string } | null>(null);
+  const openMenu = (x: number, y: number, kind: string, id: string) => setMenu({ x, y, kind, id });
+  const closeMenu = () => setMenu(null);
 
   // Live drag-edit state for selection handles. While a handle is being
   // dragged we render from these locals and commit to the store exactly once
@@ -108,11 +112,22 @@ export default function Canvas2D() {
       } else if (e.key === 'Enter') {
         finishDraft();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selection.id) s.deleteSelected();
+        if (selection.id || s.selectedIds.length) s.deleteSelected();
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) s.redo();
         else s.undo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        s.duplicateSelection();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
+        s.copySelection();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        s.paste();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        s.setSelectedIds(s.furniture.map((f) => f.id));
       }
     };
     window.addEventListener('keydown', onKey);
@@ -353,6 +368,30 @@ export default function Canvas2D() {
     return { pt: lerp(wall.start, wall.end, o.offset / len), wall };
   };
 
+  // What sits under a world point (top-most first), without selecting.
+  const pickAt = (p: Point): { kind: string; id: string } | null => {
+    for (const o of openings) {
+      const op = openingPoint(o);
+      if (op && dist(p, op.pt) <= Math.max(o.width / 2, 16 / zoom)) return { kind: 'opening', id: o.id };
+    }
+    for (let i = furniture.length - 1; i >= 0; i--) {
+      const f = furniture[i];
+      const dx = p.x - f.position.x;
+      const dy = p.y - f.position.y;
+      const a = (-f.rotation * Math.PI) / 180;
+      const lx = dx * Math.cos(a) - dy * Math.sin(a);
+      const ly = dx * Math.sin(a) + dy * Math.cos(a);
+      if (Math.abs(lx) <= f.width / 2 && Math.abs(ly) <= f.depth / 2) return { kind: 'furniture', id: f.id };
+    }
+    for (const w of walls) {
+      if (pointToSegment(p, w.start, w.end).dist <= Math.max(w.thickness, 14 / zoom)) return { kind: 'wall', id: w.id };
+    }
+    for (const r of rooms) {
+      if (pointInPoly(p, r.points)) return { kind: 'room', id: r.id };
+    }
+    return null;
+  };
+
   const hitTest = (p: Point) => {
     // Openings (clickable along their wall).
     for (const o of openings) {
@@ -463,7 +502,20 @@ export default function Canvas2D() {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onDblClick={() => (tool === 'wall' || tool === 'room') && finishDraft()}
-        onContextMenu={(e) => e.evt.preventDefault()}
+        onContextMenu={(e) => {
+          e.evt.preventDefault();
+          const p = worldPointer();
+          if (!p) return;
+          const hit = pickAt(p);
+          if (hit) {
+            if (!(hit.kind === 'furniture' && selectedIds.includes(hit.id))) {
+              s.select({ kind: hit.kind as never, id: hit.id });
+            }
+            openMenu(e.evt.clientX, e.evt.clientY, hit.kind, hit.id);
+          } else {
+            openMenu(e.evt.clientX, e.evt.clientY, 'empty', '');
+          }
+        }}
         style={{ cursor: cursorStyle, background: 'var(--canvas-bg)' }}
       >
         <Layer x={pan.x} y={pan.y} scaleX={zoom} scaleY={zoom}>
@@ -769,19 +821,27 @@ export default function Canvas2D() {
                   y={position.y}
                   rotation={rotation}
                   draggable={tool === 'select'}
-                  onMouseDown={() => tool === 'select' && s.select({ kind: 'furniture', id: f.id })}
+                  onMouseDown={(e) => {
+                    if (tool !== 'select') return;
+                    e.cancelBubble = true; // don't let the stage re-select
+                    if (e.evt.shiftKey) s.toggleSelected(f.id);
+                    else if (!selectedIds.includes(f.id)) s.select({ kind: 'furniture', id: f.id });
+                  }}
                   onDragStart={() =>
                     setFurnEdit({ id: f.id, position: f.position, rotation: f.rotation, width: f.width, depth: f.depth })
                   }
                   onDragMove={(e) => {
                     const np = snapToGrid({ x: e.target.x(), y: e.target.y() }, showGrid ? gridSize / 2 : 1);
                     e.target.position(np);
-                    // Drive selection handles to follow during the move.
                     setFurnEdit({ id: f.id, position: np, rotation: f.rotation, width: f.width, depth: f.depth });
                   }}
                   onDragEnd={(e) => {
                     const np = { x: e.target.x(), y: e.target.y() };
-                    s.updateFurniture(f.id, { position: np });
+                    if (multi && selectedIds.includes(f.id)) {
+                      s.moveFurnitureGroup(selectedIds, np.x - f.position.x, np.y - f.position.y);
+                    } else {
+                      s.updateFurniture(f.id, { position: np });
+                    }
                     setFurnEdit(null);
                   }}
                 >
@@ -793,8 +853,8 @@ export default function Canvas2D() {
                     fill={f.color}
                     opacity={0.92}
                     cornerRadius={Math.min(width, depth) * 0.08}
-                    stroke={sel ? '#3b63f6' : '#00000033'}
-                    strokeWidth={(sel ? 3 : 1) / zoom}
+                    stroke={sel || selectedIds.includes(f.id) ? '#3b63f6' : '#00000033'}
+                    strokeWidth={(sel || selectedIds.includes(f.id) ? 3 : 1) / zoom}
                   />
                   {/* direction notch */}
                   <Line
@@ -876,6 +936,76 @@ export default function Canvas2D() {
           )}
         </Layer>
       </Stage>
+      {menu && <ContextMenu menu={menu} multi={multi} count={selectedIds.length} onClose={closeMenu} />}
+    </div>
+  );
+}
+
+/** Right-click context menu (HTML overlay, fixed to the pointer). */
+function ContextMenu({
+  menu,
+  multi,
+  count,
+  onClose,
+}: {
+  menu: { x: number; y: number; kind: string; id: string };
+  multi: boolean;
+  count: number;
+  onClose: () => void;
+}) {
+  const s = useDesign();
+  useEffect(() => {
+    const close = () => onClose();
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('wheel', close, { passive: true });
+    window.addEventListener('blur', close);
+    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onEsc);
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('wheel', close);
+      window.removeEventListener('blur', close);
+      window.removeEventListener('keydown', onEsc);
+    };
+  }, [onClose]);
+
+  const item = (label: string, fn: () => void, opts?: { danger?: boolean; sub?: string }) => (
+    <button
+      className={`ctx-item ${opts?.danger ? 'danger' : ''}`}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        fn();
+        onClose();
+      }}
+    >
+      <span>{label}</span>
+      {opts?.sub && <kbd>{opts.sub}</kbd>}
+    </button>
+  );
+
+  const noun = multi ? `${count} items` : menu.kind;
+  return (
+    <div className="ctx-menu" style={{ left: menu.x, top: menu.y }} onPointerDown={(e) => e.stopPropagation()}>
+      {menu.kind === 'empty' ? (
+        <>
+          {item('Paste', () => s.paste(), { sub: '⌘V' })}
+          {item('Select all', () => s.setSelectedIds(s.furniture.map((f) => f.id)), { sub: '⌘A' })}
+        </>
+      ) : (
+        <>
+          {(menu.kind === 'furniture' || menu.kind === 'wall' || menu.kind === 'opening') &&
+            item('Duplicate', () => s.duplicateSelection(), { sub: '⌘D' })}
+          {menu.kind === 'furniture' && item('Copy', () => s.copySelection(), { sub: '⌘C' })}
+          {menu.kind === 'furniture' && !multi && (
+            <>
+              {item('Bring to front', () => s.bringToFront(menu.id))}
+              {item('Send to back', () => s.sendToBack(menu.id))}
+            </>
+          )}
+          <div className="ctx-sep" />
+          {item(`Delete ${noun}`, () => s.deleteSelected(), { danger: true, sub: '⌫' })}
+        </>
+      )}
     </div>
   );
 }

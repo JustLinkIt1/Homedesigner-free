@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import {
   Home,
   Undo2,
@@ -8,10 +9,31 @@ import {
   FilePlus2,
   Grid3x3,
   Box,
+  Check,
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
 import { confirmDialog, toast } from '../lib/ui';
+
+function SavedBadge({ tick }: { tick: number }) {
+  const [saving, setSaving] = useState(false);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    setSaving(true);
+    const t = setTimeout(() => setSaving(false), 600);
+    return () => clearTimeout(t);
+  }, [tick]);
+  return (
+    <span className={`saved-badge ${saving ? 'saving' : ''}`}>
+      {saving ? <span className="spin" style={{ width: 12, height: 12 }} /> : <Check className="icon" style={{ width: 13, height: 13 }} />}
+      {saving ? 'Saving…' : 'Saved'}
+    </span>
+  );
+}
 
 export default function Toolbar({ onImport }: { onImport: () => void }) {
   const s = useDesign();
@@ -27,6 +49,18 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
           <span className="sub">Free home planner</span>
         </div>
         <span className="free">FREE</span>
+      </div>
+
+      <div className="project">
+        <input
+          className="project-name"
+          value={s.projectName}
+          onChange={(e) => s.setProjectName(e.target.value)}
+          onFocus={(e) => e.target.select()}
+          aria-label="Project name"
+          spellCheck={false}
+        />
+        <SavedBadge tick={s.savedTick} />
       </div>
 
       <div className="tool-group">
@@ -68,8 +102,9 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
               furniture: s.furniture,
               openings: s.openings,
               background: s.background,
+              projectName: s.projectName,
             });
-            toast.success('Project saved');
+            toast.success('Project file downloaded');
           }}
         >
           <Save className="icon" />

@@ -75,6 +75,8 @@ export function importDxf(
     // Translate to origin and scale to cm. DXF Y is up; our plan Y is down.
     const a: Point = { x: (s.a.x - min.x) * unitScale, y: -(s.a.y - min.y) * unitScale };
     const b: Point = { x: (s.b.x - min.x) * unitScale, y: -(s.b.y - min.y) * unitScale };
+    // Reject malformed (non-finite) coordinates from a corrupt DXF.
+    if (![a.x, a.y, b.x, b.y].every(Number.isFinite)) continue;
     if (dist(a, b) < minLen) continue;
     walls.push({
       id: uid(),

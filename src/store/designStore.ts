@@ -22,7 +22,11 @@ export interface DesignSnapshot {
   furniture: FurnitureItem[];
   openings: Opening[];
   background: BackgroundPlan | null;
+  projectName: string;
 }
+
+// Module-level furniture clipboard (copy/paste across the app).
+let clipboard: FurnitureItem[] = [];
 
 interface DesignState extends DesignSnapshot {
   // View / interaction state (not part of undo history).
@@ -40,6 +44,8 @@ interface DesignState extends DesignSnapshot {
   defaultWallThickness: number;
   pendingFurnitureType: string | null;
   fitRequest: number; // bump to ask the 2D canvas to frame the design
+  selectedIds: string[]; // multi-selected furniture ids
+  savedTick: number; // bumped after each autosave (for the "Saved" cue)
 
   // history
   _past: DesignSnapshot[];
@@ -70,6 +76,17 @@ interface DesignState extends DesignSnapshot {
   deleteSelected: () => void;
   deleteById: (kind: Selection['kind'], id: string | null) => void;
 
+  // multi-select + clipboard + arrange
+  setSelectedIds: (ids: string[]) => void;
+  toggleSelected: (id: string) => void;
+  moveFurnitureGroup: (ids: string[], dx: number, dy: number) => void;
+  duplicateSelection: () => void;
+  copySelection: () => void;
+  paste: () => void;
+  bringToFront: (id: string) => void;
+  sendToBack: (id: string) => void;
+  setProjectName: (name: string) => void;
+
   importWalls: (walls: Wall[], replace?: boolean) => void;
   detectRoomsFromWalls: () => number;
   setBackground: (bg: BackgroundPlan | null) => void;
@@ -93,6 +110,7 @@ const emptySnapshot = (): DesignSnapshot => ({
   furniture: [],
   openings: [],
   background: null,
+  projectName: 'Untitled home',
 });
 
 const snapshotOf = (s: DesignState): DesignSnapshot => ({
@@ -101,6 +119,7 @@ const snapshotOf = (s: DesignState): DesignSnapshot => ({
   furniture: s.furniture,
   openings: s.openings,
   background: s.background,
+  projectName: s.projectName,
 });
 
 const loadInitial = (): DesignSnapshot => {
@@ -131,6 +150,7 @@ export const useDesign = create<DesignState>((set, get) => {
       furniture: [...prev.furniture],
       openings: [...prev.openings],
       background: prev.background,
+      projectName: prev.projectName,
     };
     mutate(next);
     persist(next);
@@ -138,6 +158,7 @@ export const useDesign = create<DesignState>((set, get) => {
       ...next,
       _past: [...s._past, prev].slice(-100),
       _future: [],
+      savedTick: s.savedTick + 1,
     }));
   };
 
@@ -157,6 +178,8 @@ export const useDesign = create<DesignState>((set, get) => {
     defaultWallThickness: 12,
     pendingFurnitureType: null,
     fitRequest: 0,
+    selectedIds: [],
+    savedTick: 0,
     _past: [],
     _future: [],
 
@@ -170,8 +193,9 @@ export const useDesign = create<DesignState>((set, get) => {
     setDollhouse: (b) => set({ dollhouse: b }),
     setWalkMode: (b) => set({ walkMode: b }),
     requestFit: () => set((st) => ({ fitRequest: st.fitRequest + 1 })),
-    select: (sel) => set({ selection: sel }),
-    clearSelection: () => set({ selection: { kind: null, id: null } }),
+    select: (sel) =>
+      set({ selection: sel, selectedIds: sel.kind === 'furniture' && sel.id ? [sel.id] : [] }),
+    clearSelection: () => set({ selection: { kind: null, id: null }, selectedIds: [] }),
     setPendingFurniture: (type) =>
       set({ pendingFurnitureType: type, tool: type ? 'furniture' : get().tool }),
 
@@ -247,13 +271,17 @@ export const useDesign = create<DesignState>((set, get) => {
     addOpening: (wallId, offset, type) => {
       const id = uid();
       const entry = CATALOG_BY_TYPE[type];
+      const w = get().walls.find((x) => x.id === wallId);
+      const wallLen = w ? Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y) : Infinity;
+      const defW = entry?.width ?? (type === 'door' ? 90 : 120);
+      const width = Math.min(defW, Math.max(20, wallLen * 0.9)); // never wider than the wall
       commit((d) => {
         d.openings.push({
           id,
           wallId,
           type,
           offset,
-          width: entry?.width ?? (type === 'door' ? 90 : 120),
+          width,
           height: entry?.height ?? (type === 'door' ? 205 : 120),
           sill: type === 'door' ? 0 : 90,
         });
@@ -283,8 +311,112 @@ export const useDesign = create<DesignState>((set, get) => {
     },
 
     deleteSelected: () => {
-      const { selection, deleteById } = get();
+      const { selection, selectedIds, deleteById } = get();
+      if (selectedIds.length > 1) {
+        const ids = new Set(selectedIds);
+        commit((d) => {
+          d.furniture = d.furniture.filter((f) => !ids.has(f.id));
+        });
+        set({ selection: { kind: null, id: null }, selectedIds: [] });
+        return;
+      }
       deleteById(selection.kind, selection.id);
+    },
+
+    setSelectedIds: (ids) =>
+      set({
+        selectedIds: ids,
+        selection: ids.length ? { kind: 'furniture', id: ids[ids.length - 1] } : { kind: null, id: null },
+      }),
+
+    toggleSelected: (id) => {
+      const cur = get().selectedIds;
+      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+      set({
+        selectedIds: next,
+        selection: next.length ? { kind: 'furniture', id: next[next.length - 1] } : { kind: null, id: null },
+      });
+    },
+
+    moveFurnitureGroup: (ids, dx, dy) => {
+      const set2 = new Set(ids);
+      commit((d) => {
+        d.furniture = d.furniture.map((f) =>
+          set2.has(f.id) ? { ...f, position: { x: f.position.x + dx, y: f.position.y + dy } } : f,
+        );
+      });
+    },
+
+    duplicateSelection: () => {
+      const { selection, selectedIds, furniture, walls, openings } = get();
+      const ids = selectedIds.length ? selectedIds : selection.kind === 'furniture' && selection.id ? [selection.id] : [];
+      if (ids.length) {
+        const newIds: string[] = [];
+        commit((d) => {
+          for (const id of ids) {
+            const f = furniture.find((x) => x.id === id);
+            if (!f) continue;
+            const nid = uid();
+            newIds.push(nid);
+            d.furniture.push({ ...f, id: nid, position: { x: f.position.x + 30, y: f.position.y + 30 } });
+          }
+        });
+        if (newIds.length) set({ selectedIds: newIds, selection: { kind: 'furniture', id: newIds[newIds.length - 1] } });
+        return;
+      }
+      if (selection.kind === 'wall' && selection.id) {
+        const w = walls.find((x) => x.id === selection.id);
+        if (w) {
+          const nid = uid();
+          commit((d) => d.walls.push({ ...w, id: nid, start: { x: w.start.x + 30, y: w.start.y + 30 }, end: { x: w.end.x + 30, y: w.end.y + 30 } }));
+          set({ selection: { kind: 'wall', id: nid }, selectedIds: [] });
+        }
+      } else if (selection.kind === 'opening' && selection.id) {
+        const o = openings.find((x) => x.id === selection.id);
+        if (o) {
+          const nid = uid();
+          commit((d) => d.openings.push({ ...o, id: nid, offset: o.offset + o.width }));
+          set({ selection: { kind: 'opening', id: nid }, selectedIds: [] });
+        }
+      }
+    },
+
+    copySelection: () => {
+      const { selection, selectedIds, furniture } = get();
+      const ids = selectedIds.length ? selectedIds : selection.kind === 'furniture' && selection.id ? [selection.id] : [];
+      clipboard = furniture.filter((f) => ids.includes(f.id)).map((f) => ({ ...f }));
+    },
+
+    paste: () => {
+      if (clipboard.length === 0) return;
+      const newIds: string[] = [];
+      commit((d) => {
+        for (const f of clipboard) {
+          const nid = uid();
+          newIds.push(nid);
+          d.furniture.push({ ...f, id: nid, position: { x: f.position.x + 40, y: f.position.y + 40 } });
+        }
+      });
+      set({ selectedIds: newIds, selection: { kind: 'furniture', id: newIds[newIds.length - 1] } });
+    },
+
+    bringToFront: (id) =>
+      commit((d) => {
+        const i = d.furniture.findIndex((f) => f.id === id);
+        if (i >= 0) d.furniture.push(d.furniture.splice(i, 1)[0]);
+      }),
+
+    sendToBack: (id) =>
+      commit((d) => {
+        const i = d.furniture.findIndex((f) => f.id === id);
+        if (i >= 0) d.furniture.unshift(d.furniture.splice(i, 1)[0]);
+      }),
+
+    setProjectName: (name) => {
+      const s = get();
+      const snap = { ...snapshotOf(s), projectName: name || 'Untitled home' };
+      persist(snap);
+      set({ projectName: snap.projectName, savedTick: s.savedTick + 1 });
     },
 
     importWalls: (walls, replace = false) =>
@@ -327,7 +459,11 @@ export const useDesign = create<DesignState>((set, get) => {
 
     updateBackground: (patch) =>
       commit((d) => {
-        if (d.background) d.background = { ...d.background, ...patch };
+        if (!d.background) return;
+        const clean = { ...patch };
+        if (clean.scale !== undefined && !(clean.scale > 0 && clean.scale < 1000)) delete clean.scale;
+        if (clean.opacity !== undefined) clean.opacity = Math.max(0.05, Math.min(1, clean.opacity));
+        d.background = { ...d.background, ...clean };
       }),
 
     newProject: () => {
@@ -336,6 +472,7 @@ export const useDesign = create<DesignState>((set, get) => {
       set({
         ...empty,
         selection: { kind: null, id: null },
+        selectedIds: [],
         _past: [],
         _future: [],
       });
@@ -347,6 +484,7 @@ export const useDesign = create<DesignState>((set, get) => {
       set((st) => ({
         ...snap,
         selection: { kind: null, id: null },
+        selectedIds: [],
         _past: [],
         _future: [],
         view: '2d',
@@ -362,11 +500,13 @@ export const useDesign = create<DesignState>((set, get) => {
         furniture: snap.furniture ?? [],
         openings: snap.openings ?? [],
         background: snap.background ?? null,
+        projectName: snap.projectName ?? 'Imported home',
       };
       persist(full);
       set((st) => ({
         ...full,
         selection: { kind: null, id: null },
+        selectedIds: [],
         _past: [],
         _future: [],
         fitRequest: st.fitRequest + 1,

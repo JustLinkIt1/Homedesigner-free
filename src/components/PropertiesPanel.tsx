@@ -1,4 +1,4 @@
-import { SlidersHorizontal, Sparkles, Trash2, MousePointer2 } from 'lucide-react';
+import { SlidersHorizontal, Sparkles, Trash2, MousePointer2, Copy, Boxes } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
 import { floorThumbnail } from '../lib/textures';
@@ -14,10 +14,11 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   const s = useDesign();
   const { selection } = s;
 
-  const wall = selection.kind === 'wall' ? s.walls.find((w) => w.id === selection.id) : null;
-  const room = selection.kind === 'room' ? s.rooms.find((r) => r.id === selection.id) : null;
-  const item = selection.kind === 'furniture' ? s.furniture.find((f) => f.id === selection.id) : null;
-  const opening = selection.kind === 'opening' ? s.openings.find((o) => o.id === selection.id) : null;
+  const multi = s.selectedIds.length > 1;
+  const wall = !multi && selection.kind === 'wall' ? s.walls.find((w) => w.id === selection.id) : null;
+  const room = !multi && selection.kind === 'room' ? s.rooms.find((r) => r.id === selection.id) : null;
+  const item = !multi && selection.kind === 'furniture' ? s.furniture.find((f) => f.id === selection.id) : null;
+  const opening = !multi && selection.kind === 'opening' ? s.openings.find((o) => o.id === selection.id) : null;
 
   return (
     <aside className={`sidebar right ${open ? 'open' : ''}`}>
@@ -25,7 +26,22 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
         <SlidersHorizontal className="icon" /> Properties
       </div>
       <div className="sidebar-scroll">
-        {!selection.id && (
+        {multi && (
+          <div className="props">
+            <div className="prop-card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Boxes className="icon" style={{ color: 'var(--brand)' }} />
+              <strong>{s.selectedIds.length} objects selected</strong>
+            </div>
+            <button className="btn block" style={{ marginBottom: 8 }} onClick={() => s.duplicateSelection()}>
+              <Copy className="icon" /> Duplicate
+            </button>
+            <button className="btn-danger" onClick={() => s.deleteSelected()}>
+              <Trash2 className="icon" /> Delete {s.selectedIds.length} objects
+            </button>
+          </div>
+        )}
+
+        {!multi && !selection.id && (
           <>
             <div className="props" style={{ paddingBottom: 4 }}>
               <button
