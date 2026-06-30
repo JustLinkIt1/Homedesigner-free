@@ -14,6 +14,7 @@ import { uid } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { sampleProject } from '../data/sampleProject';
+import type { Units } from '../lib/units';
 
 /** The serializable part of the design (what we save / load / undo). */
 export interface DesignSnapshot {
@@ -46,6 +47,7 @@ interface DesignState extends DesignSnapshot {
   fitRequest: number; // bump to ask the 2D canvas to frame the design
   selectedIds: string[]; // multi-selected furniture ids
   savedTick: number; // bumped after each autosave (for the "Saved" cue)
+  units: Units; // display units (metric/imperial); not part of undo history
 
   // history
   _past: DesignSnapshot[];
@@ -58,6 +60,7 @@ interface DesignState extends DesignSnapshot {
   setPan: (p: Point) => void;
   setShowGrid: (b: boolean) => void;
   setShowDimensions: (b: boolean) => void;
+  setUnits: (u: Units) => void;
   setDollhouse: (b: boolean) => void;
   setWalkMode: (b: boolean) => void;
   requestFit: () => void;
@@ -103,6 +106,22 @@ interface DesignState extends DesignSnapshot {
 }
 
 const STORAGE_KEY = 'homedesigner.project.v1';
+const SETTINGS_KEY = 'homedesigner.settings.v1';
+
+/** Load persisted display settings (units) from their own key — kept out of
+ *  the undo snapshot so changing units never pollutes history. */
+const loadSettings = (): { units: Units } => {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s.units === 'metric' || s.units === 'imperial') return { units: s.units };
+    }
+  } catch {
+    /* ignore corrupt storage */
+  }
+  return { units: 'metric' };
+};
 
 const emptySnapshot = (): DesignSnapshot => ({
   walls: [],
@@ -180,6 +199,7 @@ export const useDesign = create<DesignState>((set, get) => {
     fitRequest: 0,
     selectedIds: [],
     savedTick: 0,
+    units: loadSettings().units,
     _past: [],
     _future: [],
 
@@ -190,6 +210,14 @@ export const useDesign = create<DesignState>((set, get) => {
     setPan: (p) => set({ pan: p }),
     setShowGrid: (b) => set({ showGrid: b }),
     setShowDimensions: (b) => set({ showDimensions: b }),
+    setUnits: (u) => {
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({ units: u }));
+      } catch {
+        /* storage may be full / unavailable */
+      }
+      set({ units: u });
+    },
     setDollhouse: (b) => set({ dollhouse: b }),
     setWalkMode: (b) => set({ walkMode: b }),
     requestFit: () => set((st) => ({ fitRequest: st.fitRequest + 1 })),

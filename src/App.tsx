@@ -17,8 +17,6 @@ import ToolDock from './components/ToolDock';
 import CatalogSidebar from './components/CatalogSidebar';
 import PropertiesPanel from './components/PropertiesPanel';
 import Canvas2D from './components/Editor2D/Canvas2D';
-import Scene3D from './components/Viewer3D/Scene3D';
-import ImportDialog from './components/ImportDialog';
 import WelcomeModal, { shouldWelcome } from './components/WelcomeModal';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
@@ -26,7 +24,12 @@ import { sceneCapture } from './lib/renderBridge';
 import { useDraw, drawBridge } from './lib/ui';
 import { initNative } from './lib/native';
 
-// Path tracer + its shaders are heavy — only load when Photo mode opens.
+// Heavy modules loaded on demand to keep the 2D-first experience light:
+//  - Scene3D pulls in three + drei + postprocessing
+//  - ImportDialog pulls in pdfjs (+ its worker) and dxf-parser
+//  - PhotoMode pulls in the GPU path tracer
+const Scene3D = lazy(() => import('./components/Viewer3D/Scene3D'));
+const ImportDialog = lazy(() => import('./components/ImportDialog'));
 const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
 
 export default function App() {
@@ -34,6 +37,7 @@ export default function App() {
     view, tool, zoom, showGrid, setZoom, setShowGrid,
     showDimensions, setShowDimensions, dollhouse, setDollhouse,
     walkMode, setWalkMode, pendingFurnitureType,
+    units, setUnits,
   } = useDesign();
   const [showImport, setShowImport] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
@@ -105,7 +109,13 @@ export default function App() {
       <div className="body">
         {view === '2d' && <CatalogSidebar open={drawer === 'catalog'} />}
         <div className="stage-wrap">
-          {view === '2d' ? <Canvas2D /> : <Scene3D />}
+          {view === '2d' ? (
+            <Canvas2D />
+          ) : (
+            <Suspense fallback={<div className="stage-loading"><span className="spin" /> Loading 3D…</div>}>
+              <Scene3D />
+            </Suspense>
+          )}
 
           {view === '2d' && <ToolDock />}
           {view === '2d' && tip && <div className="tip">{tip}</div>}
@@ -138,6 +148,24 @@ export default function App() {
                   <input type="checkbox" checked={showDimensions} onChange={(e) => setShowDimensions(e.target.checked)} />
                   <Ruler className="icon" style={{ width: 15, height: 15 }} /> Dimensions
                 </label>
+              </div>
+              <div className="pill units-pill" role="group" aria-label="Display units">
+                <button
+                  className={units === 'metric' ? 'unit active' : 'unit'}
+                  onClick={() => setUnits('metric')}
+                  aria-pressed={units === 'metric'}
+                  title="Metric (m / cm)"
+                >
+                  m
+                </button>
+                <button
+                  className={units === 'imperial' ? 'unit active' : 'unit'}
+                  onClick={() => setUnits('imperial')}
+                  aria-pressed={units === 'imperial'}
+                  title="Imperial (ft / in)"
+                >
+                  ft
+                </button>
               </div>
             </div>
           )}
@@ -196,7 +224,11 @@ export default function App() {
         />
       )}
 
-      {showImport && <ImportDialog onClose={() => setShowImport(false)} />}
+      {showImport && (
+        <Suspense fallback={null}>
+          <ImportDialog onClose={() => setShowImport(false)} />
+        </Suspense>
+      )}
 
       {photoMode && (
         <Suspense

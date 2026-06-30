@@ -10,9 +10,13 @@ import {
   Grid3x3,
   Box,
   Check,
+  Download,
+  FileImage,
+  FileText,
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
+import { exportPlanPNG, exportPlanPDF } from '../lib/planExport';
 import { confirmDialog, toast } from '../lib/ui';
 
 function SavedBadge({ tick }: { tick: number }) {
@@ -37,6 +41,33 @@ function SavedBadge({ tick }: { tick: number }) {
 
 export default function Toolbar({ onImport }: { onImport: () => void }) {
   const s = useDesign();
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  // Close the export menu on any outside click.
+  useEffect(() => {
+    if (!exportOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [exportOpen]);
+
+  const runExport = async (kind: 'png' | 'pdf') => {
+    setExportOpen(false);
+    // Clear selection so editing handles don't appear in the export, then let
+    // React drop those nodes before we rasterise the stage.
+    s.clearSelection();
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    try {
+      const ok = kind === 'png' ? await exportPlanPNG(s.projectName) : await exportPlanPDF(s.projectName);
+      if (ok) toast.success(kind === 'png' ? 'Plan exported as PNG' : 'Plan exported as PDF');
+      else toast.info('Nothing to export yet — add walls or rooms first');
+    } catch {
+      toast.error('Export failed');
+    }
+  };
 
   return (
     <div className="toolbar">
@@ -127,6 +158,30 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
         >
           <FilePlus2 className="icon" />
         </button>
+        {s.view === '2d' && (
+          <div className="export-wrap" ref={exportRef}>
+            <button
+              className="tbtn ghost"
+              title="Export the 2D plan as PNG or PDF"
+              aria-haspopup="menu"
+              aria-expanded={exportOpen}
+              onClick={() => setExportOpen((o) => !o)}
+            >
+              <Download className="icon" />
+              <span>Export</span>
+            </button>
+            {exportOpen && (
+              <div className="export-menu" role="menu">
+                <button role="menuitem" onClick={() => runExport('png')}>
+                  <FileImage className="icon" /> PNG image
+                </button>
+                <button role="menuitem" onClick={() => runExport('pdf')}>
+                  <FileText className="icon" /> PDF document
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="spacer" />

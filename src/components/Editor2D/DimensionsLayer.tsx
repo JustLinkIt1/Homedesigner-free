@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Group, Line, Text } from 'react-konva';
 import { useDesign } from '../../store/designStore';
 import { dist, midpoint, boundsOf, polygonArea, polygonCentroid } from '../../lib/geometry';
+import { formatLength, formatArea, type Units } from '../../lib/units';
 import type { Point, Wall, Room } from '../../types';
 
 /**
@@ -18,11 +19,6 @@ const COLOR = '#7c8493';
 const TEXT_COLOR = '#3f4753';
 const OVERALL_COLOR = '#2b3340';
 
-const fmtLen = (cm: number): string =>
-  cm >= 100 ? `${(cm / 100).toFixed(2)} m` : `${Math.round(cm)} cm`;
-
-const fmtArea = (cm2: number): string => `${(Math.abs(cm2) / 10000).toFixed(2)} m²`;
-
 interface Props {
   zoom: number;
 }
@@ -30,6 +26,7 @@ interface Props {
 export default function DimensionsLayer({ zoom }: Props) {
   const walls = useDesign((s) => s.walls);
   const rooms = useDesign((s) => s.rooms);
+  const units = useDesign((s) => s.units);
 
   // Screen-space sizes expressed in cm at the current zoom.
   const px = (n: number) => n / zoom;
@@ -56,16 +53,16 @@ export default function DimensionsLayer({ zoom }: Props) {
         walls.map((w) => {
           if (dist(w.start, w.end) * zoom < 30) return null;
           if (isPerimeterDuplicate(w, bounds)) return null;
-          return <WallDimension key={w.id} wall={w} center={center} px={px} />;
+          return <WallDimension key={w.id} wall={w} center={center} px={px} units={units} />;
         })}
 
       {/* Per-room area label (sizes come from wall/overall dims) */}
       {rooms.map((r) => (
-        <RoomDimension key={r.id} room={r} px={px} />
+        <RoomDimension key={r.id} room={r} px={px} units={units} />
       ))}
 
       {/* Building overall dimensions (top + left exterior) */}
-      <OverallDimension walls={walls} px={px} />
+      <OverallDimension walls={walls} px={px} units={units} />
     </Group>
   );
 }
@@ -98,10 +95,12 @@ function WallDimension({
   wall,
   center,
   px,
+  units,
 }: {
   wall: Wall;
   center: Point;
   px: (n: number) => number;
+  units: Units;
 }) {
   const a = wall.start;
   const b = wall.end;
@@ -174,7 +173,7 @@ function WallDimension({
       <Text
         x={lp.x}
         y={lp.y}
-        text={fmtLen(len)}
+        text={formatLength(len, units)}
         fontSize={fs}
         fill={TEXT_COLOR}
         rotation={rot}
@@ -188,7 +187,7 @@ function WallDimension({
 }
 
 /** A single, legible area label placed just below the room name. */
-function RoomDimension({ room, px }: { room: Room; px: (n: number) => number }) {
+function RoomDimension({ room, px, units }: { room: Room; px: (n: number) => number; units: Units }) {
   if (room.points.length < 3) return null;
   const c = polygonCentroid(room.points);
   const fs = px(12.5);
@@ -197,7 +196,7 @@ function RoomDimension({ room, px }: { room: Room; px: (n: number) => number }) 
     <Text
       x={c.x}
       y={c.y + px(12)}
-      text={fmtArea(polygonArea(room.points))}
+      text={formatArea(polygonArea(room.points), units)}
       fontSize={fs}
       fill={TEXT_COLOR}
       offsetX={px(40)}
@@ -208,7 +207,7 @@ function RoomDimension({ room, px }: { room: Room; px: (n: number) => number }) 
 }
 
 /** Exterior overall width (top) and height (left) for the whole building. */
-function OverallDimension({ walls, px }: { walls: Wall[]; px: (n: number) => number }) {
+function OverallDimension({ walls, px, units }: { walls: Wall[]; px: (n: number) => number; units: Units }) {
   if (walls.length === 0) return null;
   const pts = walls.flatMap((w) => [w.start, w.end]);
   const { min, max } = boundsOf(pts);
@@ -242,7 +241,7 @@ function OverallDimension({ walls, px }: { walls: Wall[]; px: (n: number) => num
       <Text
         x={(min.x + max.x) / 2}
         y={topY - px(4)}
-        text={fmtLen(w)}
+        text={formatLength(w, units)}
         fontSize={fs}
         fill={OVERALL_COLOR}
         fontStyle="bold"
@@ -260,7 +259,7 @@ function OverallDimension({ walls, px }: { walls: Wall[]; px: (n: number) => num
       <Text
         x={leftX - px(4)}
         y={(min.y + max.y) / 2}
-        text={fmtLen(h)}
+        text={formatLength(h, units)}
         fontSize={fs}
         fill={OVERALL_COLOR}
         fontStyle="bold"

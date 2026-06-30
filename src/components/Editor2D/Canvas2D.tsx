@@ -18,6 +18,8 @@ import {
 import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
 import DimensionsLayer from './DimensionsLayer';
 import { drawBridge, useDraw } from '../../lib/ui';
+import { planCapture } from '../../lib/renderBridge';
+import { formatLength, type Units } from '../../lib/units';
 import type { Point } from '../../types';
 import {
   resizeBox,
@@ -26,9 +28,6 @@ import {
   type Box,
 } from './editHandles';
 
-const fmtLen = (cm: number) =>
-  cm >= 100 ? `${(cm / 100).toFixed(2)} m` : `${Math.round(cm)} cm`;
-
 // Handle visuals (screen-space px; divided by zoom at render to stay constant).
 const HANDLE_FILL = '#ffffff';
 const HANDLE_STROKE = '#3b63f6';
@@ -36,14 +35,16 @@ const HANDLE_STROKE = '#3b63f6';
 export default function Canvas2D() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
+  const gridRef = useRef<Konva.Group>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
 
   const s = useDesign();
   const {
     walls, rooms, furniture, openings, background,
-    tool, zoom, pan, showGrid, gridSize, selection, selectedIds, showDimensions,
+    tool, zoom, pan, showGrid, gridSize, selection, selectedIds, showDimensions, units,
   } = s;
   const multi = selectedIds.length > 1;
+  const fmtLen = (cm: number) => formatLength(cm, units);
 
   const bgImage = useHtmlImage(background?.src);
 
@@ -101,6 +102,46 @@ export default function Canvas2D() {
     s.setPan({ x: size.w / 2 - ((min.x + max.x) / 2) * z, y: size.h / 2 - ((min.y + max.y) / 2) * z });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.fitRequest, size.w, size.h]);
+
+  // Expose a framed PNG export of the whole plan (grid hidden) to the toolbar.
+  // Reads live store state so the closure never goes stale.
+  useEffect(() => {
+    planCapture.current = () => {
+      const stage = stageRef.current;
+      if (!stage) return null;
+      const st = useDesign.getState();
+      const pts = [
+        ...st.walls.flatMap((w) => [w.start, w.end]),
+        ...st.rooms.flatMap((r) => r.points),
+        ...st.furniture.map((f) => f.position),
+      ];
+      if (pts.length === 0) return null;
+      const { min, max } = boundsOf(pts);
+      const padCm = 70; // breathing room around the design (cm)
+      const z = st.zoom;
+      const rx = (min.x - padCm) * z + st.pan.x;
+      const ry = (min.y - padCm) * z + st.pan.y;
+      const rw = (max.x - min.x + padCm * 2) * z;
+      const rh = (max.y - min.y + padCm * 2) * z;
+      // Upscale toward ~2200px on the long edge for a crisp export.
+      const pixelRatio = Math.max(0.5, Math.min(4, 2200 / Math.max(rw, rh)));
+      const grid = gridRef.current;
+      const gridWasVisible = grid?.visible() ?? false;
+      if (grid) grid.visible(false);
+      stage.draw();
+      let url: string | null = null;
+      try {
+        url = stage.toDataURL({ x: rx, y: ry, width: rw, height: rh, pixelRatio, mimeType: 'image/png' });
+      } finally {
+        if (grid && gridWasVisible) grid.visible(true);
+        stage.draw();
+      }
+      return url;
+    };
+    return () => {
+      planCapture.current = null;
+    };
+  }, []);
 
   // Keyboard: Enter/Escape to finish, Delete to remove, undo/redo.
   useEffect(() => {
@@ -534,15 +575,17 @@ export default function Canvas2D() {
           )}
 
           {/* Grid */}
-          {gridLines.map((l, i) => (
-            <Line
-              key={i}
-              points={l.pts}
-              stroke={l.major ? '#d2d2c9' : '#e4e4dd'}
-              strokeWidth={(l.major ? 1.4 : 0.8) / zoom}
-              listening={false}
-            />
-          ))}
+          <Group ref={gridRef}>
+            {gridLines.map((l, i) => (
+              <Line
+                key={i}
+                points={l.pts}
+                stroke={l.major ? '#d2d2c9' : '#e4e4dd'}
+                strokeWidth={(l.major ? 1.4 : 0.8) / zoom}
+                listening={false}
+              />
+            ))}
+          </Group>
 
           {/* Rooms (floors) */}
           {rooms.map((r) => {
@@ -932,7 +975,7 @@ export default function Canvas2D() {
 
           {/* Draft (in-progress wall/room) */}
           {draft.length > 0 && (
-            <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} />
+            <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} units={units} />
           )}
         </Layer>
       </Stage>
@@ -1046,8 +1089,8 @@ function FurnitureGhost({
 }
 
 function DraftView({
-  draft, cursor, tool, zoom,
-}: { draft: Point[]; cursor: Point | null; tool: string; zoom: number }) {
+  draft, cursor, tool, zoom, units,
+}: { draft: Point[]; cursor: Point | null; tool: string; zoom: number; units: Units }) {
   const pts = cursor ? [...draft, cursor] : draft;
   const flat = pts.flatMap((p) => [p.x, p.y]);
   const last = draft[draft.length - 1];
@@ -1070,7 +1113,7 @@ function DraftView({
         <Text
           x={midpoint(last, cursor).x}
           y={midpoint(last, cursor).y - 20 / zoom}
-          text={`${fmtLen(dist(last, cursor))}  ·  ${Math.round(((angleDeg(last, cursor) % 360) + 360) % 360)}°`}
+          text={`${formatLength(dist(last, cursor), units)}  ·  ${Math.round(((angleDeg(last, cursor) % 360) + 360) % 360)}°`}
           fontSize={13 / zoom}
           fill="#fff"
         />

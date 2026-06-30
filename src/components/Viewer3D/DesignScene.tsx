@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
@@ -47,16 +47,27 @@ function wallSpans(wall: Wall, openings: Opening[]): Span[] {
   return spans;
 }
 
+/** Per-wall fade data shared with the single dollhouse useFrame loop. */
+export interface WallFade {
+  mat: THREE.MeshStandardMaterial;
+  nx: number;
+  nz: number;
+  mx: number;
+  mz: number;
+}
+
 function WallMesh({
   wall,
   openings,
   center,
-  dollhouse,
+  register,
+  unregister,
 }: {
   wall: Wall;
   openings: Opening[];
   center: [number, number, number];
-  dollhouse: boolean;
+  register: (id: string, f: WallFade) => void;
+  unregister: (id: string) => void;
 }) {
   const dxCm = wall.end.x - wall.start.x;
   const dzCm = wall.end.y - wall.start.y;
@@ -65,8 +76,13 @@ function WallMesh({
   const mx = ((wall.start.x + wall.end.x) / 2) * M;
   const mz = ((wall.start.y + wall.end.y) / 2) * M;
 
-  const matRef = useRef<THREE.MeshStandardMaterial>(null);
   const spans = useMemo(() => wallSpans(wall, openings), [wall, openings]);
+
+  // One material shared by every span of this wall (no per-span clones).
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: wall.color, roughness: 0.92, metalness: 0 }),
+    [wall.color],
+  );
 
   // Outward-facing horizontal normal (points away from the building centre).
   const normal = useMemo(() => {
@@ -82,47 +98,29 @@ function WallMesh({
     return { nx, nz };
   }, [dxCm, dzCm, mx, mz, center]);
 
-  // Dollhouse: fade walls the camera is "outside" of so interiors stay visible.
-  useFrame(({ camera }) => {
-    const m = matRef.current;
-    if (!m) return;
-    if (!dollhouse) {
-      if (m.opacity !== 1) {
-        m.opacity = 1;
-        m.transparent = false;
-        m.depthWrite = true;
-      }
-      return;
-    }
-    const camDot = normal.nx * (camera.position.x - mx) + normal.nz * (camera.position.z - mz);
-    const target = camDot > 0.25 ? 0.1 : 1;
-    m.transparent = true;
-    m.opacity += (target - m.opacity) * 0.2;
-    m.depthWrite = m.opacity > 0.85;
-  });
+  // Register fade data with the parent's single loop; dispose material on unmount.
+  useEffect(() => {
+    register(wall.id, { mat, nx: normal.nx, nz: normal.nz, mx, mz });
+    return () => {
+      unregister(wall.id);
+      mat.dispose();
+    };
+  }, [wall.id, mat, normal, mx, mz, register, unregister]);
 
   return (
     <group position={[wall.start.x * M, 0, wall.start.y * M]} rotation={[0, angleY, 0]}>
-      {/* Solid wall body (one shared, dollhouse-fadeable material) */}
-      {spans.map((s, i) => {
-        const L = (s.b - s.a) * M;
-        const Hp = (s.y1 - s.y0) * M;
-        return (
-          <mesh
-            key={i}
-            position={[((s.a + s.b) / 2) * M, ((s.y0 + s.y1) / 2) * M, 0]}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[L, Hp, t]} />
-            {i === 0 ? (
-              <meshStandardMaterial ref={matRef} color={wall.color} roughness={0.92} metalness={0} />
-            ) : (
-              <MatClone source={matRef} color={wall.color} />
-            )}
-          </mesh>
-        );
-      })}
+      {/* Solid wall body — all spans share one fadeable material */}
+      {spans.map((s, i) => (
+        <mesh
+          key={i}
+          position={[((s.a + s.b) / 2) * M, ((s.y0 + s.y1) / 2) * M, 0]}
+          material={mat}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[(s.b - s.a) * M, (s.y1 - s.y0) * M, t]} />
+        </mesh>
+      ))}
       {/* Baseboards on floor-level spans (skip headers; breaks at doors). */}
       {spans
         .filter((s) => s.y0 <= 0.01 && s.b - s.a > 1)
@@ -137,26 +135,6 @@ function WallMesh({
       ))}
     </group>
   );
-}
-
-/** Mirrors the lead segment's material so every span fades together. */
-function MatClone({
-  source,
-  color,
-}: {
-  source: React.RefObject<THREE.MeshStandardMaterial>;
-  color: string;
-}) {
-  const ref = useRef<THREE.MeshStandardMaterial>(null);
-  useFrame(() => {
-    const src = source.current;
-    const m = ref.current;
-    if (!src || !m) return;
-    m.opacity = src.opacity;
-    m.transparent = src.transparent;
-    m.depthWrite = src.depthWrite;
-  });
-  return <meshStandardMaterial ref={ref} color={color} roughness={0.92} metalness={0} transparent />;
 }
 
 /** Door leaf or window glass + frame, in wall-local coordinates. */
@@ -293,6 +271,30 @@ export default function DesignScene({
     }
     return m;
   }, [openings]);
+
+  // One place computes the dollhouse fade for every wall, each frame.
+  const fades = useRef(new Map<string, WallFade>());
+  const register = useCallback((id: string, f: WallFade) => fades.current.set(id, f), []);
+  const unregister = useCallback((id: string) => fades.current.delete(id), []);
+  useFrame(({ camera }) => {
+    fades.current.forEach((w) => {
+      const m = w.mat;
+      if (!dollhouse) {
+        if (m.opacity !== 1) {
+          m.opacity = 1;
+          m.transparent = false;
+          m.depthWrite = true;
+        }
+        return;
+      }
+      const camDot = w.nx * (camera.position.x - w.mx) + w.nz * (camera.position.z - w.mz);
+      const target = camDot > 0.25 ? 0.1 : 1;
+      m.transparent = true;
+      m.opacity += (target - m.opacity) * 0.2;
+      m.depthWrite = m.opacity > 0.85;
+    });
+  });
+
   return (
     <>
       {rooms.map((r) => (
@@ -304,7 +306,8 @@ export default function DesignScene({
           wall={w}
           openings={openingsByWall.get(w.id) ?? []}
           center={center}
-          dollhouse={dollhouse}
+          register={register}
+          unregister={unregister}
         />
       ))}
       {furniture.map((f) => (

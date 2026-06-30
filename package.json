@@ -23,6 +23,7 @@
     "@react-three/gpu-pathtracer": "^0.3.2",
     "@react-three/postprocessing": "2.19.1",
     "dxf-parser": "^1.1.2",
+    "jspdf": "^4.2.1",
     "konva": "^9.3.16",
     "lucide-react": "^1.21.0",
     "pdfjs-dist": "^4.7.76",

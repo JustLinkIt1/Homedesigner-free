@@ -6,3 +6,8 @@ type CaptureFn = (scale?: number) => Promise<void> | void;
 
 export const sceneCapture: { current: CaptureFn | null } = { current: null };
 export const photoCapture: { current: CaptureFn | null } = { current: null };
+
+// 2D plan export: Canvas2D registers a function returning a framed PNG data URL
+// of the whole design (grid hidden), or null if there's nothing to export.
+type PlanCaptureFn = () => string | null;
+export const planCapture: { current: PlanCaptureFn | null } = { current: null };

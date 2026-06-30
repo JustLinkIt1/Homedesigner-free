@@ -4,6 +4,7 @@ import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
 import { floorThumbnail } from '../lib/textures';
 import { toast } from '../lib/ui';
 import { dist, polygonArea } from '../lib/geometry';
+import { formatLength, formatArea } from '../lib/units';
 
 const WALL_PAINTS = [
   '#f5f4f0', '#efe7d6', '#d9d2c5', '#cfd2d4', '#a7b6a0',
@@ -77,7 +78,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
             <div className="prop-card">
               <div className="prop-row">
                 <label>Length</label>
-                <span className="field-val">{(dist(wall.start, wall.end) / 100).toFixed(2)} m</span>
+                <span className="field-val">{formatLength(dist(wall.start, wall.end), s.units)}</span>
               </div>
               <NumberRow label="Thickness (cm)" value={wall.thickness} min={4} max={50}
                 onChange={(v) => s.updateWall(wall.id, { thickness: v })} />
@@ -120,7 +121,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               </div>
               <div className="prop-row">
                 <label>Floor area</label>
-                <span className="field-val">{(Math.abs(polygonArea(room.points)) / 10000).toFixed(2)} m²</span>
+                <span className="field-val">{formatArea(polygonArea(room.points), s.units)}</span>
               </div>
             </div>
             <div className="prop-card">
