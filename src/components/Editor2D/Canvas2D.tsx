@@ -19,6 +19,7 @@ import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
 import DimensionsLayer from './DimensionsLayer';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { planCapture } from '../../lib/renderBridge';
+import { buildSnapElements, nearestSnap, type SnapKind, type GuideLine } from '../../lib/snapping';
 import { formatLength, type Units } from '../../lib/units';
 import type { Point } from '../../types';
 import {
@@ -55,7 +56,9 @@ export default function Canvas2D() {
   const [measureA, setMeasureA] = useState<Point | null>(null);
   const [measureSeg, setMeasureSeg] = useState<{ a: Point; b: Point } | null>(null);
   const [realInput, setRealInput] = useState(''); // real-world length for calibration
-  const [snapKind, setSnapKind] = useState<'point' | 'angle' | 'axis' | 'free'>('free');
+  const [snapKind, setSnapKind] = useState<SnapKind | 'free'>('free');
+  const [snapGuide, setSnapGuide] = useState<GuideLine | null>(null);
+  const snapGuideRef = useRef<GuideLine | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number; kind: string; id: string } | null>(null);
   const openMenu = (x: number, y: number, kind: string, id: string) => setMenu({ x, y, kind, id });
@@ -214,80 +217,32 @@ export default function Canvas2D() {
   };
 
   // Records what kind of inference the last applySnaps() landed on, for the
-  // on-canvas snap indicator. 'point' = locked onto an existing/clicked point.
-  const snapKindRef = useRef<'point' | 'angle' | 'axis' | 'free'>('free');
+  // on-canvas snap indicator.
+  const snapKindRef = useRef<SnapKind | 'free'>('free');
 
   /**
-   * SketchUp-style snapping while drawing walls/rooms:
-   *  1. Lock onto a nearby existing endpoint OR a point already clicked in this
-   *     draft (so corners close and joints meet).
-   *  2. Soft angle lock — only snap to 0/45/90/… when within a few degrees, so
-   *     skewed walls can be drawn at any free angle.
-   *  3. Axis inference — line up with the x or y of an existing/clicked point.
-   *  4. Grid only when the grid is on and there's no plan to trace over.
+   * CAD-style snapping while drawing walls/rooms, via the prioritized snap
+   * engine (point > midpoint > guide > segment): locks onto existing/clicked
+   * points, wall midpoints, axis/extension/parallel/perpendicular guide lines,
+   * and wall bodies (T-junctions). Falls back to the grid when nothing is near
+   * and there's no plan to trace over.
    */
   const applySnaps = (p: Point): Point => {
-    const tol = 14 / zoom;
-    const chaining = (tool === 'wall' || tool === 'room') && draft.length > 0;
-    const candidates: Point[] = [...walls.flatMap((w) => [w.start, w.end]), ...draft];
-
-    // 1) exact point snap (highest priority)
-    let best: Point | null = null;
-    let bestD = tol;
-    for (const c of candidates) {
-      const d = dist(p, c);
-      if (d < bestD) {
-        bestD = d;
-        best = c;
+    const radius = 14 / zoom;
+    if (tool === 'wall' || tool === 'room') {
+      const prev = draft.length > 0 ? draft[draft.length - 1] : null;
+      const els = buildSnapElements({ walls, draft, prev, radius, guides: true });
+      const snap = nearestSnap(els, p);
+      if (snap) {
+        snapKindRef.current = snap.kind;
+        snapGuideRef.current = snap.guide ?? null;
+        return snap.point;
       }
     }
-    if (best) {
-      snapKindRef.current = 'point';
-      return { x: best.x, y: best.y };
-    }
-
-    if (chaining) {
-      const prev = draft[draft.length - 1];
-      // 2) soft angle lock (45° increments, only when close)
-      const d = dist(prev, p);
-      if (d > 1) {
-        const deg = (Math.atan2(p.y - prev.y, p.x - prev.x) * 180) / Math.PI;
-        const nearest = Math.round(deg / 45) * 45;
-        let diff = Math.abs(deg - nearest);
-        if (diff > 180) diff = 360 - diff;
-        if (diff <= 6) {
-          const ra = (nearest * Math.PI) / 180;
-          snapKindRef.current = 'angle';
-          return { x: prev.x + Math.cos(ra) * d, y: prev.y + Math.sin(ra) * d };
-        }
-      }
-      // 3) axis inference: align to an existing/clicked point's x or y
-      let ax = p.x;
-      let ay = p.y;
-      let hit = false;
-      for (const c of candidates) {
-        if (Math.abs(c.x - p.x) < tol) {
-          ax = c.x;
-          hit = true;
-          break;
-        }
-      }
-      for (const c of candidates) {
-        if (Math.abs(c.y - p.y) < tol) {
-          ay = c.y;
-          hit = true;
-          break;
-        }
-      }
-      if (hit) {
-        snapKindRef.current = 'axis';
-        return { x: ax, y: ay };
-      }
-    }
-
-    // 4) grid — skip while tracing over a background so free angles aren't fought
+    snapGuideRef.current = null;
+    // Grid — skipped while tracing over a background so free angles aren't fought.
     if (showGrid && !background) {
-      snapKindRef.current = 'free';
+      snapKindRef.current = 'grid';
       return snapToGrid(p, gridSize);
     }
     snapKindRef.current = 'free';
@@ -440,6 +395,7 @@ export default function Canvas2D() {
     if (!p) return;
     setCursor(applySnaps(p));
     setSnapKind(snapKindRef.current);
+    setSnapGuide(snapGuideRef.current);
   };
 
   // Pan by tracking raw pointer deltas.
@@ -1084,9 +1040,26 @@ export default function Canvas2D() {
             <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} units={units} />
           )}
 
-          {/* Snap indicator while drawing: shows when the cursor is inferring a
-              point (magenta), or an axis/angle lock (green). */}
-          {(tool === 'wall' || tool === 'room') && cursor && snapKind !== 'free' && (
+          {/* Inference guide line (axis / extension / parallel / perpendicular). */}
+          {(tool === 'wall' || tool === 'room') && snapKind === 'guide' && snapGuide && (
+            <Line
+              points={[
+                snapGuide.x0 - snapGuide.dx * 100000,
+                snapGuide.y0 - snapGuide.dy * 100000,
+                snapGuide.x0 + snapGuide.dx * 100000,
+                snapGuide.y0 + snapGuide.dy * 100000,
+              ]}
+              stroke="#1f9d55"
+              strokeWidth={1 / zoom}
+              dash={[6 / zoom, 6 / zoom]}
+              listening={false}
+              opacity={0.7}
+            />
+          )}
+
+          {/* Snap indicator while drawing: a point/midpoint lock (magenta), or a
+              guide/segment inference (green/blue). */}
+          {(tool === 'wall' || tool === 'room') && cursor && snapKind !== 'free' && snapKind !== 'grid' && (
             <SnapIndicator at={cursor} kind={snapKind} zoom={zoom} />
           )}
 
@@ -1290,27 +1263,27 @@ function MeasureView({ a, b, zoom, units }: { a: Point; b: Point; zoom: number; 
   );
 }
 
-/** Inference marker at the cursor: a point lock (magenta square) or an
- *  axis/angle lock (green ring), à la SketchUp. */
-function SnapIndicator({ at, kind, zoom }: { at: Point; kind: 'point' | 'angle' | 'axis'; zoom: number }) {
+/** Inference marker at the cursor: a point/midpoint lock (magenta square) or a
+ *  guide/segment inference (green/blue ring), à la SketchUp/CAD tools. */
+function SnapIndicator({ at, kind, zoom }: { at: Point; kind: SnapKind; zoom: number }) {
   const r = 7 / zoom;
-  if (kind === 'point') {
+  if (kind === 'point' || kind === 'midpoint') {
+    const color = kind === 'midpoint' ? '#1f9d55' : '#e0299b';
     return (
-      <Group listening={false}>
-        <Rect
-          x={at.x - r}
-          y={at.y - r}
-          width={r * 2}
-          height={r * 2}
-          stroke="#e0299b"
-          strokeWidth={2 / zoom}
-          fill="rgba(224,41,155,0.18)"
-          rotation={0}
-        />
-      </Group>
+      <Rect
+        x={at.x - r}
+        y={at.y - r}
+        width={r * 2}
+        height={r * 2}
+        stroke={color}
+        strokeWidth={2 / zoom}
+        fill={`${color}2e`}
+        cornerRadius={kind === 'midpoint' ? r : 0}
+        listening={false}
+      />
     );
   }
-  const color = kind === 'angle' ? '#1f9d55' : '#2f7ed8';
+  const color = kind === 'segment' ? '#2f7ed8' : '#1f9d55';
   return (
     <Circle x={at.x} y={at.y} radius={r} stroke={color} strokeWidth={2 / zoom} fill={`${color}22`} listening={false} />
   );
