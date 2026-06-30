@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { CATALOG_BY_TYPE, type Shape3D } from '../../data/furnitureCatalog';
+import GltfFurniture, { hasModel } from './GltfFurniture';
 import type { FurnitureItem } from '../../types';
 
 const M = 0.01; // cm -> m
@@ -47,7 +48,14 @@ export default function Furniture3D({
           <meshBasicMaterial color="#4c8dff" wireframe transparent opacity={0.7} />
         </mesh>
       )}
-      <ShapeMesh shape={shape} w={w} d={d} h={h} color={color} />
+      {hasModel(item.type) ? (
+        // Real model loads lazily; show the procedural mesh until it arrives.
+        <Suspense fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} />}>
+          <GltfFurniture item={item} />
+        </Suspense>
+      ) : (
+        <ShapeMesh shape={shape} w={w} d={d} h={h} color={color} />
+      )}
     </group>
   );
 }
