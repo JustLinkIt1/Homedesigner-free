@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type {
   BackgroundPlan,
+  FloorGeom,
+  FloorInfo,
   FurnitureItem,
   Opening,
   Point,
@@ -16,8 +18,16 @@ import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { sampleProject } from '../data/sampleProject';
 import type { Units } from '../lib/units';
 
-/** The serializable part of the design (what we save / load / undo). */
-export interface DesignSnapshot {
+/**
+ * The serializable part of the design (what we save / load / undo).
+ *
+ * Multi-floor model: the top-level walls/rooms/furniture/openings/background
+ * always mirror the ACTIVE floor, so every component can keep reading them
+ * directly. `floorGeom` holds the geometry for every storey (including the
+ * active one, kept in sync by `commit`); `floors` is the ordered storey list.
+ */
+/** The geometry of a single storey plus the project name (no floor metadata). */
+export interface GeomSnapshot {
   walls: Wall[];
   rooms: Room[];
   furniture: FurnitureItem[];
@@ -25,6 +35,33 @@ export interface DesignSnapshot {
   background: BackgroundPlan | null;
   projectName: string;
 }
+
+export interface DesignSnapshot extends GeomSnapshot {
+  floors: FloorInfo[];
+  floorGeom: Record<string, FloorGeom>;
+  activeFloorId: string;
+}
+
+/** A snapshot that may or may not yet carry multi-floor metadata. */
+export type MaybeFloored = GeomSnapshot & Partial<Pick<DesignSnapshot, 'floors' | 'floorGeom' | 'activeFloorId'>>;
+
+const STOREY_HEIGHT = 282; // default storey-to-storey rise in cm (wall + slab)
+
+const emptyGeom = (): FloorGeom => ({
+  walls: [],
+  rooms: [],
+  furniture: [],
+  openings: [],
+  background: null,
+});
+
+const geomOf = (s: DesignSnapshot): FloorGeom => ({
+  walls: s.walls,
+  rooms: s.rooms,
+  furniture: s.furniture,
+  openings: s.openings,
+  background: s.background,
+});
 
 // Module-level furniture clipboard (copy/paste across the app).
 let clipboard: FurnitureItem[] = [];
@@ -90,6 +127,12 @@ interface DesignState extends DesignSnapshot {
   sendToBack: (id: string) => void;
   setProjectName: (name: string) => void;
 
+  // multi-floor (storeys)
+  setActiveFloor: (id: string) => void;
+  addFloor: () => void;
+  removeFloor: (id: string) => void;
+  renameFloor: (id: string, name: string) => void;
+
   importWalls: (walls: Wall[], replace?: boolean) => void;
   detectRoomsFromWalls: () => number;
   setBackground: (bg: BackgroundPlan | null) => void;
@@ -97,7 +140,7 @@ interface DesignState extends DesignSnapshot {
 
   newProject: () => void;
   loadSample: () => void;
-  loadSnapshot: (s: DesignSnapshot) => void;
+  loadSnapshot: (s: MaybeFloored) => void;
 
   undo: () => void;
   redo: () => void;
@@ -123,14 +166,20 @@ const loadSettings = (): { units: Units } => {
   return { units: 'metric' };
 };
 
-const emptySnapshot = (): DesignSnapshot => ({
-  walls: [],
-  rooms: [],
-  furniture: [],
-  openings: [],
-  background: null,
-  projectName: 'Untitled home',
-});
+const emptySnapshot = (): DesignSnapshot => {
+  const id = uid();
+  return {
+    walls: [],
+    rooms: [],
+    furniture: [],
+    openings: [],
+    background: null,
+    projectName: 'Untitled home',
+    floors: [{ id, name: 'Ground floor', elevation: 0 }],
+    floorGeom: { [id]: emptyGeom() },
+    activeFloorId: id,
+  };
+};
 
 const snapshotOf = (s: DesignState): DesignSnapshot => ({
   walls: s.walls,
@@ -139,12 +188,38 @@ const snapshotOf = (s: DesignState): DesignSnapshot => ({
   openings: s.openings,
   background: s.background,
   projectName: s.projectName,
+  floors: s.floors,
+  floorGeom: s.floorGeom,
+  activeFloorId: s.activeFloorId,
 });
+
+/** Fill in multi-floor fields for saves that predate storeys. */
+const withFloors = (snap: MaybeFloored): DesignSnapshot => {
+  if (snap.floors && snap.floors.length && snap.activeFloorId && snap.floorGeom?.[snap.activeFloorId]) {
+    const active = snap.floorGeom[snap.activeFloorId];
+    // Trust the stored floors; make the top-level mirror the active storey.
+    return {
+      ...snap,
+      ...active,
+      projectName: snap.projectName,
+      floors: snap.floors,
+      floorGeom: snap.floorGeom,
+      activeFloorId: snap.activeFloorId,
+    };
+  }
+  const id = uid();
+  return {
+    ...snap,
+    floors: [{ id, name: 'Ground floor', elevation: 0 }],
+    floorGeom: { [id]: { walls: snap.walls, rooms: snap.rooms, furniture: snap.furniture, openings: snap.openings, background: snap.background } },
+    activeFloorId: id,
+  };
+};
 
 const loadInitial = (): DesignSnapshot => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...emptySnapshot(), ...JSON.parse(raw) };
+    if (raw) return withFloors({ ...emptySnapshot(), ...JSON.parse(raw) });
   } catch {
     /* ignore corrupt storage */
   }
@@ -170,8 +245,14 @@ export const useDesign = create<DesignState>((set, get) => {
       openings: [...prev.openings],
       background: prev.background,
       projectName: prev.projectName,
+      floors: prev.floors,
+      floorGeom: prev.floorGeom,
+      activeFloorId: prev.activeFloorId,
     };
     mutate(next);
+    // Keep the active floor's stored geometry in sync with the top-level mirror
+    // so every storey stays current for saving, undo and 3D stacking.
+    next.floorGeom = { ...next.floorGeom, [next.activeFloorId]: geomOf(next) };
     persist(next);
     set((s) => ({
       ...next,
@@ -447,6 +528,68 @@ export const useDesign = create<DesignState>((set, get) => {
       set({ projectName: snap.projectName, savedTick: s.savedTick + 1 });
     },
 
+    // ---- storeys (multi-floor) ----
+    setActiveFloor: (id) => {
+      const st = get();
+      if (id === st.activeFloorId || !st.floorGeom[id]) return;
+      // The active floor's geometry is always synced into floorGeom by commit,
+      // so we can just load the target floor into the top-level mirror.
+      const g = st.floorGeom[id];
+      const next: DesignSnapshot = { ...snapshotOf(st), ...g, activeFloorId: id };
+      persist(next);
+      set((s) => ({
+        ...next,
+        selection: { kind: null, id: null },
+        selectedIds: [],
+        fitRequest: s.fitRequest + 1,
+      }));
+    },
+
+    addFloor: () => {
+      const id = uid();
+      const top = Math.max(...get().floors.map((f) => f.elevation), 0);
+      const name = `Floor ${get().floors.length}`;
+      // Adding a floor also switches to it (empty top-level mirror).
+      commit((d) => {
+        d.floors = [...d.floors, { id, name, elevation: top + STOREY_HEIGHT }];
+        d.floorGeom = { ...d.floorGeom, [id]: emptyGeom() };
+        d.activeFloorId = id;
+        d.walls = [];
+        d.rooms = [];
+        d.furniture = [];
+        d.openings = [];
+        d.background = null;
+      });
+      set({ selection: { kind: null, id: null }, selectedIds: [] });
+    },
+
+    removeFloor: (id) => {
+      const st = get();
+      if (st.floors.length <= 1) return; // always keep at least one storey
+      const remaining = st.floors.filter((f) => f.id !== id);
+      const fallback = remaining[0].id;
+      const becomesActive = st.activeFloorId === id ? fallback : st.activeFloorId;
+      commit((d) => {
+        d.floors = remaining;
+        const geom = { ...d.floorGeom };
+        delete geom[id];
+        d.floorGeom = geom;
+        d.activeFloorId = becomesActive;
+        const g = geom[becomesActive];
+        d.walls = g.walls;
+        d.rooms = g.rooms;
+        d.furniture = g.furniture;
+        d.openings = g.openings;
+        d.background = g.background;
+      });
+      set({ selection: { kind: null, id: null }, selectedIds: [], fitRequest: get().fitRequest + 1 });
+    },
+
+    renameFloor: (id, name) =>
+      commit((d) => {
+        d.floors = d.floors.map((f) => (f.id === id ? { ...f, name: name || f.name } : f));
+      }),
+
     importWalls: (walls, replace = false) =>
       commit((d) => {
         if (replace) {
@@ -507,7 +650,7 @@ export const useDesign = create<DesignState>((set, get) => {
     },
 
     loadSample: () => {
-      const snap = sampleProject();
+      const snap = withFloors(sampleProject());
       persist(snap);
       set((st) => ({
         ...snap,
@@ -521,15 +664,18 @@ export const useDesign = create<DesignState>((set, get) => {
     },
 
     loadSnapshot: (snap) => {
-      // Tolerate older saves that predate some fields.
-      const full: DesignSnapshot = {
+      // Tolerate older saves that predate some fields, and lift to multi-floor.
+      const full = withFloors({
         walls: snap.walls ?? [],
         rooms: snap.rooms ?? [],
         furniture: snap.furniture ?? [],
         openings: snap.openings ?? [],
         background: snap.background ?? null,
         projectName: snap.projectName ?? 'Imported home',
-      };
+        floors: snap.floors,
+        floorGeom: snap.floorGeom,
+        activeFloorId: snap.activeFloorId,
+      });
       persist(full);
       set((st) => ({
         ...full,

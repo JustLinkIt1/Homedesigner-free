@@ -1,4 +1,4 @@
-import type { DesignSnapshot } from '../store/designStore';
+import type { GeomSnapshot } from '../store/designStore';
 import type { FurnitureItem, Opening, Wall } from '../types';
 import { CATALOG_BY_TYPE } from './furnitureCatalog';
 
@@ -39,7 +39,7 @@ const opening = (
 ): Opening => ({ id: id('o'), wallId, type, offset, width, height, sill });
 
 /** A furnished two-bedroom apartment shown on first run and via "Load sample". */
-export function sampleProject(): DesignSnapshot {
+export function sampleProject(): GeomSnapshot {
   n = 0;
   const w1 = wall([0, 0], [700, 0]); // top
   const w2 = wall([700, 0], [700, 500]); // right

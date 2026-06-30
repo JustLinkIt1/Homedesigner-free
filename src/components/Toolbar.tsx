@@ -134,6 +134,9 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
               openings: s.openings,
               background: s.background,
               projectName: s.projectName,
+              floors: s.floors,
+              floorGeom: s.floorGeom,
+              activeFloorId: s.activeFloorId,
             });
             toast.success('Project file downloaded');
           }}

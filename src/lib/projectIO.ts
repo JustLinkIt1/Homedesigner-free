@@ -1,4 +1,4 @@
-import type { DesignSnapshot } from '../store/designStore';
+import type { DesignSnapshot, MaybeFloored } from '../store/designStore';
 import { saveText } from './native';
 import { toast } from './ui';
 
@@ -10,7 +10,7 @@ export async function exportProject(snapshot: DesignSnapshot): Promise<void> {
 }
 
 /** Prompt for a .json project file and parse it into a snapshot. */
-export function openProjectFile(): Promise<DesignSnapshot | null> {
+export function openProjectFile(): Promise<MaybeFloored | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -22,13 +22,17 @@ export function openProjectFile(): Promise<DesignSnapshot | null> {
         const text = await file.text();
         const obj = JSON.parse(text);
         const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
-        const snap: DesignSnapshot = {
+        const snap: MaybeFloored = {
           walls: arr(obj.walls),
           rooms: arr(obj.rooms),
           furniture: arr(obj.furniture),
           openings: arr(obj.openings),
           background: obj.background ?? null,
           projectName: typeof obj.projectName === 'string' ? obj.projectName : 'Imported home',
+          // Preserve multi-floor data when the file has it.
+          floors: Array.isArray(obj.floors) ? obj.floors : undefined,
+          floorGeom: obj.floorGeom && typeof obj.floorGeom === 'object' ? obj.floorGeom : undefined,
+          activeFloorId: typeof obj.activeFloorId === 'string' ? obj.activeFloorId : undefined,
         };
         // Drop openings whose wall no longer exists.
         const wallIds = new Set(snap.walls.map((w) => w.id));

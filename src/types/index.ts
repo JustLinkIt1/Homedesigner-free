@@ -86,6 +86,23 @@ export type ToolMode =
   | 'erase'
   | 'measure';
 
+/** A storey: its own walls/rooms/furniture, stacked at `elevation` (cm). */
+export interface FloorInfo {
+  id: string;
+  name: string;
+  /** Base height of this storey above ground, in cm. */
+  elevation: number;
+}
+
+/** The editable geometry that belongs to a single storey. */
+export interface FloorGeom {
+  walls: Wall[];
+  rooms: Room[];
+  furniture: FurnitureItem[];
+  openings: Opening[];
+  background: BackgroundPlan | null;
+}
+
 export type ViewMode = '2d' | '3d';
 
 export interface Selection {

@@ -864,6 +864,99 @@ select {
 .units-pill .unit.active:hover {
   background: var(--brand);
 }
+
+/* Storey switcher — floats bottom-left over the stage */
+.floor-switcher {
+  position: absolute;
+  left: 16px;
+  bottom: 18px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 150px;
+}
+.floor-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: var(--brand);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+.floor-add:hover {
+  background: var(--brand-600);
+}
+.floor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: var(--shadow-sm);
+}
+.floor-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.floor-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-align: left;
+  min-width: 0;
+}
+.floor-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.floor-btn:hover {
+  background: var(--surface-2);
+}
+.floor-row.active .floor-btn {
+  background: var(--brand-50, #eef2ff);
+  color: var(--brand);
+}
+.floor-row.active .floor-btn .icon {
+  color: var(--brand);
+}
+.floor-del {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 30px;
+  border-radius: 7px;
+  color: var(--text-3, #9aa0aa);
+}
+.floor-del:hover {
+  background: var(--danger-bg, #fdecea);
+  color: var(--danger, #d8412f);
+}
+.floor-edit {
+  flex: 1;
+  padding: 7px 9px;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+  outline: none;
+}
 .tip {
   position: absolute;
   top: 16px;

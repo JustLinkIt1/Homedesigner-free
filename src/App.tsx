@@ -17,6 +17,7 @@ import ToolDock from './components/ToolDock';
 import CatalogSidebar from './components/CatalogSidebar';
 import PropertiesPanel from './components/PropertiesPanel';
 import Canvas2D from './components/Editor2D/Canvas2D';
+import FloorSwitcher from './components/FloorSwitcher';
 import WelcomeModal, { shouldWelcome } from './components/WelcomeModal';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
@@ -197,6 +198,8 @@ export default function App() {
               </div>
             </>
           )}
+
+          {!walkMode && <FloorSwitcher />}
         </div>
         <PropertiesPanel open={drawer === 'props'} />
 

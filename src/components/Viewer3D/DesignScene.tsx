@@ -6,7 +6,7 @@ import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
 import { getFloorTexture, FLOOR_ROUGHNESS } from '../../lib/textures';
 import { dist, boundsOf } from '../../lib/geometry';
 import Furniture3D from './Furniture3D';
-import type { Opening, Room, Wall } from '../../types';
+import type { FloorGeom, Opening, Room, Wall } from '../../types';
 
 export const M = 0.01; // cm -> m
 
@@ -229,29 +229,95 @@ function FloorMesh({ room }: { room: Room }) {
   );
 }
 
-/** Camera framing derived from everything in the design. */
+/** Camera framing derived from every storey in the design. */
 export function useDesignBounds() {
-  const { walls, rooms, furniture } = useDesign();
+  const floors = useDesign((s) => s.floors);
+  const floorGeom = useDesign((s) => s.floorGeom);
   return useMemo(() => {
-    const pts = [
-      ...walls.flatMap((w) => [w.start, w.end]),
-      ...rooms.flatMap((r) => r.points),
-      ...furniture.map((f) => f.position),
-    ];
+    const pts = [];
+    let topElevation = 0;
+    for (const f of floors) {
+      const g = floorGeom[f.id];
+      if (!g) continue;
+      topElevation = Math.max(topElevation, f.elevation);
+      pts.push(
+        ...g.walls.flatMap((w) => [w.start, w.end]),
+        ...g.rooms.flatMap((r) => r.points),
+        ...g.furniture.map((fi) => fi.position),
+      );
+    }
     if (pts.length === 0) {
       return { center: [0, 0, 0] as [number, number, number], radius: 8 };
     }
     const { min, max } = boundsOf(pts);
     const cx = ((min.x + max.x) / 2) * M;
     const cz = ((min.y + max.y) / 2) * M;
-    const r = (Math.max(max.x - min.x, max.y - min.y) * M) / 2 + 4;
-    return { center: [cx, 0, cz] as [number, number, number], radius: r };
-  }, [walls, rooms, furniture]);
+    // Frame the whole stack: half-extent plus padding, with extra for storeys.
+    const plan = (Math.max(max.x - min.x, max.y - min.y) * M) / 2 + 4;
+    const r = plan + topElevation * M * 0.6;
+    return { center: [cx, topElevation * M * 0.5, cz] as [number, number, number], radius: r };
+  }, [floors, floorGeom]);
+}
+
+/** Walls + floors + furniture for one storey, positioned at its elevation. */
+function FloorContent({
+  geom,
+  elevation,
+  interactive,
+  center,
+  register,
+  unregister,
+}: {
+  geom: FloorGeom;
+  elevation: number;
+  interactive: boolean;
+  center: [number, number, number];
+  register: (id: string, f: WallFade) => void;
+  unregister: (id: string) => void;
+}) {
+  const selection = useDesign((s) => s.selection);
+  const select = useDesign((s) => s.select);
+  const openingsByWall = useMemo(() => {
+    const m = new Map<string, Opening[]>();
+    for (const o of geom.openings) {
+      const arr = m.get(o.wallId) ?? [];
+      arr.push(o);
+      m.set(o.wallId, arr);
+    }
+    return m;
+  }, [geom.openings]);
+
+  return (
+    <group position={[0, elevation * M, 0]}>
+      {geom.rooms.map((r) => (
+        <FloorMesh key={r.id} room={r} />
+      ))}
+      {geom.walls.map((w) => (
+        <WallMesh
+          key={w.id}
+          wall={w}
+          openings={openingsByWall.get(w.id) ?? []}
+          center={center}
+          register={register}
+          unregister={unregister}
+        />
+      ))}
+      {geom.furniture.map((f) => (
+        <Furniture3D
+          key={f.id}
+          item={f}
+          selected={interactive && selection.kind === 'furniture' && selection.id === f.id}
+          onSelect={() => interactive && select({ kind: 'furniture', id: f.id })}
+        />
+      ))}
+    </group>
+  );
 }
 
 /**
- * The actual home geometry (walls, floors, furniture). Shared by the live
- * editor view and the path-traced Photo mode so both render the same design.
+ * The actual home geometry for every storey, stacked at their elevations.
+ * Shared by the live editor view and the path-traced Photo mode so both render
+ * the same design. Only the active storey's furniture is interactive.
  */
 export default function DesignScene({
   interactive = true,
@@ -260,19 +326,12 @@ export default function DesignScene({
   interactive?: boolean;
   dollhouse?: boolean;
 }) {
-  const { walls, rooms, furniture, openings, selection, select } = useDesign();
+  const floors = useDesign((s) => s.floors);
+  const floorGeom = useDesign((s) => s.floorGeom);
+  const activeFloorId = useDesign((s) => s.activeFloorId);
   const { center } = useDesignBounds();
-  const openingsByWall = useMemo(() => {
-    const m = new Map<string, Opening[]>();
-    for (const o of openings) {
-      const arr = m.get(o.wallId) ?? [];
-      arr.push(o);
-      m.set(o.wallId, arr);
-    }
-    return m;
-  }, [openings]);
 
-  // One place computes the dollhouse fade for every wall, each frame.
+  // One place computes the dollhouse fade for every wall (all storeys), per frame.
   const fades = useRef(new Map<string, WallFade>());
   const register = useCallback((id: string, f: WallFade) => fades.current.set(id, f), []);
   const unregister = useCallback((id: string) => fades.current.delete(id), []);
@@ -297,27 +356,21 @@ export default function DesignScene({
 
   return (
     <>
-      {rooms.map((r) => (
-        <FloorMesh key={r.id} room={r} />
-      ))}
-      {walls.map((w) => (
-        <WallMesh
-          key={w.id}
-          wall={w}
-          openings={openingsByWall.get(w.id) ?? []}
-          center={center}
-          register={register}
-          unregister={unregister}
-        />
-      ))}
-      {furniture.map((f) => (
-        <Furniture3D
-          key={f.id}
-          item={f}
-          selected={interactive && selection.kind === 'furniture' && selection.id === f.id}
-          onSelect={() => interactive && select({ kind: 'furniture', id: f.id })}
-        />
-      ))}
+      {floors.map((f) => {
+        const geom = floorGeom[f.id];
+        if (!geom) return null;
+        return (
+          <FloorContent
+            key={f.id}
+            geom={geom}
+            elevation={f.elevation}
+            interactive={interactive && f.id === activeFloorId}
+            center={center}
+            register={register}
+            unregister={unregister}
+          />
+        );
+      })}
     </>
   );
 }
