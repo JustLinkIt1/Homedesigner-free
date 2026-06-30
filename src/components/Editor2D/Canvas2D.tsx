@@ -68,6 +68,8 @@ export default function Canvas2D() {
   // dragged we render from these locals and commit to the store exactly once
   // on drag end, so each gesture is a single undo step.
   const [wallEdit, setWallEdit] = useState<{ id: string; start: Point; end: Point } | null>(null);
+  // Dragging a shared corner: every wall endpoint at `from` previews at `to`.
+  const [cornerDrag, setCornerDrag] = useState<{ from: Point; to: Point } | null>(null);
   const [furnEdit, setFurnEdit] = useState<
     { id: string; position: Point; rotation: number; width: number; depth: number } | null
   >(null);
@@ -214,6 +216,26 @@ export default function Canvas2D() {
     }
     if (best) return best;
     return showGrid ? snapToGrid(p, gridSize) : p;
+  };
+
+  // Snap target while dragging a shared corner: snap to OTHER corners (to merge
+  // them) but ignore the endpoints belonging to the corner being dragged, which
+  // would otherwise magnetize it back to its origin.
+  const snapCornerTarget = (p: Point, from: Point): Point => {
+    let best: Point | null = null;
+    let bestD = 18 / zoom;
+    for (const w of walls) {
+      for (const e of [w.start, w.end]) {
+        if (dist(e, from) <= 3) continue; // skip the corner being moved
+        const d = dist(p, e);
+        if (d < bestD) {
+          bestD = d;
+          best = e;
+        }
+      }
+    }
+    if (best) return best;
+    return showGrid && !background ? snapToGrid(p, gridSize) : p;
   };
 
   // Records what kind of inference the last applySnaps() landed on, for the
@@ -683,13 +705,21 @@ export default function Canvas2D() {
             );
           })}
 
-          {/* Walls */}
-          {walls.map((w) => {
+          {/* Walls — selected one drawn last so its handles sit above every
+              other wall body (otherwise an adjoining wall covers the corner). */}
+          {[...walls]
+            .sort((a, b) => (a.id === selection.id ? 1 : 0) - (b.id === selection.id ? 1 : 0))
+            .map((w) => {
             const sel = selection.kind === 'wall' && selection.id === w.id;
             // Use live edit positions for the wall being dragged.
             const live = wallEdit && wallEdit.id === w.id ? wallEdit : null;
-            const start = live ? live.start : w.start;
-            const end = live ? live.end : w.end;
+            let start = live ? live.start : w.start;
+            let end = live ? live.end : w.end;
+            // Preview a shared-corner drag across every wall touching that corner.
+            if (cornerDrag) {
+              if (dist(start, cornerDrag.from) <= 3) start = cornerDrag.to;
+              if (dist(end, cornerDrag.from) <= 3) end = cornerDrag.to;
+            }
             const editing = sel && tool === 'select';
             const hr = 8 / zoom; // handle radius (cm)
             return (
@@ -740,15 +770,15 @@ export default function Canvas2D() {
                       y={start.y}
                       r={hr}
                       zoom={zoom}
-                      onStart={() => setWallEdit({ id: w.id, start: w.start, end: w.end })}
+                      onStart={() => setCornerDrag({ from: w.start, to: w.start })}
                       onMove={(p) => {
-                        const sp = snapEndpoint(p, w.id);
-                        setWallEdit((cur) => ({ id: w.id, start: sp, end: cur ? cur.end : w.end }));
+                        const sp = snapCornerTarget(p, w.start);
+                        setCornerDrag({ from: w.start, to: sp });
                         return sp;
                       }}
                       onEnd={() => {
-                        setWallEdit((cur) => {
-                          if (cur) s.updateWall(w.id, { start: cur.start, end: cur.end });
+                        setCornerDrag((cur) => {
+                          if (cur) s.moveCorner(cur.from, cur.to);
                           return null;
                         });
                       }}
@@ -758,15 +788,15 @@ export default function Canvas2D() {
                       y={end.y}
                       r={hr}
                       zoom={zoom}
-                      onStart={() => setWallEdit({ id: w.id, start: w.start, end: w.end })}
+                      onStart={() => setCornerDrag({ from: w.end, to: w.end })}
                       onMove={(p) => {
-                        const sp = snapEndpoint(p, w.id);
-                        setWallEdit((cur) => ({ id: w.id, start: cur ? cur.start : w.start, end: sp }));
+                        const sp = snapCornerTarget(p, w.end);
+                        setCornerDrag({ from: w.end, to: sp });
                         return sp;
                       }}
                       onEnd={() => {
-                        setWallEdit((cur) => {
-                          if (cur) s.updateWall(w.id, { start: cur.start, end: cur.end });
+                        setCornerDrag((cur) => {
+                          if (cur) s.moveCorner(cur.from, cur.to);
                           return null;
                         });
                       }}

@@ -12,7 +12,7 @@ import type {
   ViewMode,
   Wall,
 } from '../types';
-import { uid } from '../lib/geometry';
+import { uid, dist } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { sampleProject } from '../data/sampleProject';
@@ -129,6 +129,8 @@ interface DesignState extends DesignSnapshot {
 
   /** Uniformly scale the whole drawing's plan geometry (for calibration). */
   scaleDesign: (factor: number) => void;
+  /** Move every wall endpoint at `from` to `to` (a shared corner moves together). */
+  moveCorner: (from: Point, to: Point, tol?: number) => void;
 
   // multi-floor (storeys)
   setActiveFloor: (id: string) => void;
@@ -559,6 +561,15 @@ export const useDesign = create<DesignState>((set, get) => {
       });
       set((s) => ({ selection: { kind: null, id: null }, selectedIds: [], fitRequest: s.fitRequest + 1 }));
     },
+
+    moveCorner: (from, to, tol = 4) =>
+      commit((d) => {
+        d.walls = d.walls.map((w) => {
+          const ns = dist(w.start, from) <= tol ? { x: to.x, y: to.y } : w.start;
+          const ne = dist(w.end, from) <= tol ? { x: to.x, y: to.y } : w.end;
+          return ns === w.start && ne === w.end ? w : { ...w, start: ns, end: ne };
+        });
+      }),
 
     // ---- storeys (multi-floor) ----
     setActiveFloor: (id) => {
