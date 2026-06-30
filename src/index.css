@@ -1058,6 +1058,55 @@ select {
   display: block;
   margin: 0 auto;
 }
+/* Live wall-detection preview: SVG overlay sits exactly over the image. */
+.trace-preview {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
+.trace-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.trace-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 4px;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.auto-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 6px 0;
+  font-size: 13.5px;
+  color: var(--text);
+  cursor: pointer;
+}
+.auto-row input {
+  accent-color: var(--brand);
+  width: 16px;
+  height: 16px;
+}
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 0;
+  margin-bottom: 4px;
+}
+.link-btn:hover {
+  text-decoration: underline;
+}
 .muted {
   color: var(--text-2);
   font-size: 13px;

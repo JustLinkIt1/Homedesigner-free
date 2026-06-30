@@ -28,7 +28,69 @@ export function segmentsToWalls(
       color: '#ece6db',
     });
   }
+  snapCorners(walls, /*tolCm*/ Math.max(18, 8 * cmPerPx));
   return walls;
+}
+
+/**
+ * Pull near-coincident wall endpoints together and extend axis-aligned walls
+ * to meet a crossing wall, so traced corners actually close. Clean corners are
+ * what let room auto-detection find enclosed areas (CubiCasa-style cleanup,
+ * done with simple snapping rather than an ML model).
+ */
+function snapCorners(walls: Wall[], tol: number): void {
+  const endpoints: Point[] = [];
+  for (const w of walls) endpoints.push(w.start, w.end);
+
+  // 1) Cluster endpoints that are within tolerance and move them to the mean.
+  const clusters: Point[][] = [];
+  for (const p of endpoints) {
+    let placed = false;
+    for (const c of clusters) {
+      if (dist(c[0], p) <= tol) {
+        c.push(p);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) clusters.push([p]);
+  }
+  for (const c of clusters) {
+    if (c.length < 2) continue;
+    const cx = c.reduce((a, p) => a + p.x, 0) / c.length;
+    const cy = c.reduce((a, p) => a + p.y, 0) / c.length;
+    for (const p of c) {
+      p.x = cx;
+      p.y = cy;
+    }
+  }
+
+  // 2) Extend an endpoint to land exactly on a near-perpendicular wall it
+  //    almost touches (a T-junction the raster trace stopped short of).
+  for (const w of walls) {
+    for (const ep of [w.start, w.end]) {
+      for (const other of walls) {
+        if (other === w) continue;
+        const proj = projectOnSegment(ep, other.start, other.end);
+        if (proj && proj.dist <= tol && proj.dist > 0.01) {
+          ep.x = proj.point.x;
+          ep.y = proj.point.y;
+        }
+      }
+    }
+  }
+}
+
+/** Closest point on segment a–b to p, with the distance, or null if degenerate. */
+function projectOnSegment(p: Point, a: Point, b: Point): { point: Point; dist: number } | null {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1e-6) return null;
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const point = { x: a.x + t * dx, y: a.y + t * dy };
+  return { point, dist: dist(p, point) };
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));

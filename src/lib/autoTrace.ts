@@ -39,6 +39,56 @@ interface Binary {
   scale: number; // source px per processed px
 }
 
+/**
+ * Otsu's method: pick the luminance threshold that best separates dark "ink"
+ * from the light background by maximising between-class variance over the
+ * image histogram. This is what lets auto-trace work without the user fiddling
+ * a sensitivity slider — the plan's own contrast chooses the cutoff.
+ */
+export function autoThreshold(img: ImageData, maxDim = 700): number {
+  const scale = Math.max(1, Math.max(img.width, img.height) / maxDim);
+  const w = Math.round(img.width / scale);
+  const h = Math.round(img.height / scale);
+  const hist = new Array(256).fill(0);
+  let total = 0;
+  const src = img.data;
+  for (let y = 0; y < h; y++) {
+    const sy = Math.min(img.height - 1, Math.floor(y * scale));
+    for (let x = 0; x < w; x++) {
+      const sx = Math.min(img.width - 1, Math.floor(x * scale));
+      const i = (sy * img.width + sx) * 4;
+      if (src[i + 3] < 10) continue; // skip transparent
+      const lum = Math.round(0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2]);
+      hist[lum]++;
+      total++;
+    }
+  }
+  if (total === 0) return DEFAULT_TRACE.threshold;
+
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  let sumB = 0;
+  let wB = 0;
+  let maxVar = -1;
+  let threshold = DEFAULT_TRACE.threshold;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > maxVar) {
+      maxVar = between;
+      threshold = t;
+    }
+  }
+  // Bias slightly toward the dark side so faint background texture isn't ink.
+  return Math.max(60, Math.min(210, threshold - 6));
+}
+
 /** Downscale to a manageable size and binarize using a luminance threshold. */
 function binarize(img: ImageData, threshold: number, maxDim = 1100): Binary {
   const scale = Math.max(1, Math.max(img.width, img.height) / maxDim);
