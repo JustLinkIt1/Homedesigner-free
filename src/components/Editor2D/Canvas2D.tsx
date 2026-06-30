@@ -17,7 +17,7 @@ import {
 } from '../../lib/geometry';
 import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
 import DimensionsLayer from './DimensionsLayer';
-import { drawBridge, useDraw } from '../../lib/ui';
+import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { planCapture } from '../../lib/renderBridge';
 import { formatLength, type Units } from '../../lib/units';
 import type { Point } from '../../types';
@@ -54,6 +54,7 @@ export default function Canvas2D() {
   // Tape-measure tool: first click sets A, second click freezes the A–B span.
   const [measureA, setMeasureA] = useState<Point | null>(null);
   const [measureSeg, setMeasureSeg] = useState<{ a: Point; b: Point } | null>(null);
+  const [realInput, setRealInput] = useState(''); // real-world length for calibration
   const [isPanning, setIsPanning] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number; kind: string; id: string } | null>(null);
   const openMenu = (x: number, y: number, kind: string, id: string) => setMenu({ x, y, kind, id });
@@ -282,6 +283,9 @@ export default function Canvas2D() {
       } else {
         setMeasureSeg({ a: measureA, b: snapped });
         setMeasureA(null);
+        // Pre-fill the calibration field with the current measured length.
+        const cm = dist(measureA, snapped);
+        setRealInput(units === 'imperial' ? (cm / 30.48).toFixed(2) : (cm / 100).toFixed(2));
       }
     } else if (tool === 'select') {
       hitTest(p);
@@ -542,6 +546,22 @@ export default function Canvas2D() {
   const cursorStyle =
     tool === 'pan' || isPanning ? 'grabbing' :
     tool === 'select' ? 'default' : 'crosshair';
+
+  // Calibrate the whole drawing from one measured wall: factor = real / drawn.
+  const applyScale = () => {
+    if (!measureSeg) return;
+    const measured = dist(measureSeg.a, measureSeg.b);
+    const val = parseFloat(realInput);
+    if (!(val > 0) || !(measured > 0)) {
+      toast.error('Enter the real length of the measured wall');
+      return;
+    }
+    const realCm = units === 'imperial' ? val * 30.48 : val * 100;
+    s.scaleDesign(realCm / measured);
+    setMeasureSeg(null);
+    setMeasureA(null);
+    toast.success(`Drawing scaled — that wall is now ${formatLength(realCm, units)}`);
+  };
 
   return (
     <div ref={wrapRef} style={{ position: 'absolute', inset: 0 }}>
@@ -1005,6 +1025,41 @@ export default function Canvas2D() {
         </Layer>
       </Stage>
       {menu && <ContextMenu menu={menu} multi={multi} count={selectedIds.length} onClose={closeMenu} />}
+
+      {/* Scale-from-wall calibration card (after a measurement is frozen). */}
+      {tool === 'measure' && measureSeg && (
+        <div className="measure-card">
+          <div className="mc-title">Set scale from this wall</div>
+          <div className="mc-sub">Measured: {formatLength(dist(measureSeg.a, measureSeg.b), units)}</div>
+          <div className="mc-row">
+            <span>Real length</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={realInput}
+              autoFocus
+              onChange={(e) => setRealInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applyScale();
+              }}
+            />
+            <span className="mc-unit">{units === 'imperial' ? 'ft' : 'm'}</span>
+          </div>
+          <div className="mc-actions">
+            <button className="mc-apply" onClick={applyScale}>Scale drawing</button>
+            <button
+              className="mc-dismiss"
+              onClick={() => {
+                setMeasureSeg(null);
+                setMeasureA(null);
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

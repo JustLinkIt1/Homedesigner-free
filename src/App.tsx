@@ -103,7 +103,7 @@ export default function App() {
     : tool === 'erase'
     ? 'Click any wall, room or object to delete it'
     : tool === 'measure'
-    ? 'Click two points to measure the distance between them · Esc to clear'
+    ? 'Measure a wall, then enter its real length to scale the whole drawing · Esc to clear'
     : null;
 
   return (

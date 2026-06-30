@@ -127,6 +127,9 @@ interface DesignState extends DesignSnapshot {
   sendToBack: (id: string) => void;
   setProjectName: (name: string) => void;
 
+  /** Uniformly scale the whole drawing's plan geometry (for calibration). */
+  scaleDesign: (factor: number) => void;
+
   // multi-floor (storeys)
   setActiveFloor: (id: string) => void;
   addFloor: () => void;
@@ -526,6 +529,35 @@ export const useDesign = create<DesignState>((set, get) => {
       const snap = { ...snapshotOf(s), projectName: name || 'Untitled home' };
       persist(snap);
       set({ projectName: snap.projectName, savedTick: s.savedTick + 1 });
+    },
+
+    scaleDesign: (factor) => {
+      if (!(factor > 0) || Math.abs(factor - 1) < 1e-6) return;
+      const f = factor;
+      const sp = (p: Point): Point => ({ x: p.x * f, y: p.y * f });
+      const scaleGeom = (g: FloorGeom): FloorGeom => ({
+        // Horizontal plan scales; vertical sizes (wall height, opening height,
+        // sill, furniture dimensions) are real-world values and stay put.
+        walls: g.walls.map((w) => ({ ...w, start: sp(w.start), end: sp(w.end), thickness: w.thickness * f })),
+        rooms: g.rooms.map((r) => ({ ...r, points: r.points.map(sp) })),
+        furniture: g.furniture.map((fi) => ({ ...fi, position: sp(fi.position) })),
+        openings: g.openings.map((o) => ({ ...o, offset: o.offset * f, width: o.width * f })),
+        background: g.background
+          ? { ...g.background, x: g.background.x * f, y: g.background.y * f, scale: g.background.scale * f }
+          : null,
+      });
+      commit((d) => {
+        const next: Record<string, FloorGeom> = {};
+        for (const id in d.floorGeom) next[id] = scaleGeom(d.floorGeom[id]);
+        d.floorGeom = next;
+        const a = next[d.activeFloorId];
+        d.walls = a.walls;
+        d.rooms = a.rooms;
+        d.furniture = a.furniture;
+        d.openings = a.openings;
+        d.background = a.background;
+      });
+      set((s) => ({ selection: { kind: null, id: null }, selectedIds: [], fitRequest: s.fitRequest + 1 }));
     },
 
     // ---- storeys (multi-floor) ----

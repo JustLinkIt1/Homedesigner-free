@@ -865,6 +865,83 @@ select {
   background: var(--brand);
 }
 
+/* Scale-from-wall calibration card */
+.measure-card {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: 260px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg, 0 14px 40px rgba(0, 0, 0, 0.18));
+  padding: 13px 14px;
+}
+.measure-card .mc-title {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.measure-card .mc-sub {
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.measure-card .mc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 11px 0 12px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.measure-card .mc-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  outline: none;
+}
+.measure-card .mc-row input:focus {
+  border-color: var(--brand);
+}
+.measure-card .mc-unit {
+  font-weight: 700;
+  color: var(--text);
+}
+.measure-card .mc-actions {
+  display: flex;
+  gap: 8px;
+}
+.measure-card .mc-apply {
+  flex: 1;
+  padding: 9px;
+  background: var(--brand);
+  color: #fff;
+  border-radius: 9px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.measure-card .mc-apply:hover {
+  background: var(--brand-600);
+}
+.measure-card .mc-dismiss {
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.measure-card .mc-dismiss:hover {
+  background: var(--surface-2);
+}
+
 /* Storey switcher — floats bottom-left over the stage */
 .floor-switcher {
   position: absolute;

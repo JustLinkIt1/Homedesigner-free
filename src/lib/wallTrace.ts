@@ -353,6 +353,62 @@ function mergeColinear(segs: Seg2[], angleTol: number, perpTol: number, gapTol: 
   return out;
 }
 
+/** Perpendicular distance from a point to a segment (clamped to its extent). */
+function pointToSeg(px: number, py: number, s: Seg2): number {
+  const dx = s.x2 - s.x1;
+  const dy = s.y2 - s.y1;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1e-6) return Math.hypot(px - s.x1, py - s.y1);
+  let t = ((px - s.x1) * dx + (py - s.y1) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (s.x1 + t * dx), py - (s.y1 + t * dy));
+}
+
+/**
+ * Keep the main wall network and discard small disconnected islands. Walls form
+ * one big connected component (perimeter + interior all meet); furniture, label
+ * text and stray dimension marks form their own little clusters that don't touch
+ * the walls. Group segments by touch, then keep the component with the most
+ * total length, plus any individually long segment (a lone long wall).
+ */
+function networkCleanup(segs: Seg2[], tol: number, keepLong: number): Seg2[] {
+  const n = segs.length;
+  if (n === 0) return segs;
+  const parent = Array.from({ length: n }, (_, i) => i);
+  const find = (a: number): number => {
+    while (parent[a] !== a) {
+      parent[a] = parent[parent[a]];
+      a = parent[a];
+    }
+    return a;
+  };
+  const touch = (a: Seg2, b: Seg2): boolean =>
+    pointToSeg(a.x1, a.y1, b) <= tol ||
+    pointToSeg(a.x2, a.y2, b) <= tol ||
+    pointToSeg(b.x1, b.y1, a) <= tol ||
+    pointToSeg(b.x2, b.y2, a) <= tol;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (find(i) !== find(j) && touch(segs[i], segs[j])) parent[find(i)] = find(j);
+    }
+  }
+  // Total length per component; pick the heaviest as the wall network.
+  const lenByRoot = new Map<number, number>();
+  for (let i = 0; i < n; i++) {
+    const r = find(i);
+    lenByRoot.set(r, (lenByRoot.get(r) ?? 0) + segLen(segs[i]));
+  }
+  let bestRoot = -1;
+  let bestLen = -1;
+  for (const [r, l] of lenByRoot) {
+    if (l > bestLen) {
+      bestLen = l;
+      bestRoot = r;
+    }
+  }
+  return segs.filter((s, i) => find(i) === bestRoot || segLen(s) >= keepLong);
+}
+
 /** Detect wall segments (any angle) in a raster plan. Coords in source px. */
 export function traceWallsV2(img: ImageData, options: Partial<TraceConfig> = {}): PixelSegment[] {
   const cfg = { ...DEFAULT_CONFIG, ...options };
@@ -368,7 +424,11 @@ export function traceWallsV2(img: ImageData, options: Partial<TraceConfig> = {})
   const gapTol = Math.max(cfg.minLength, 26 * bin.scale);
   let merged = mergeColinear(raw, angleTol, perpTol, gapTol);
   merged = mergeColinear(merged, angleTol, perpTol, gapTol);
-  return merged.filter((s) => segLen(s) >= cfg.minLength);
+  merged = merged.filter((s) => segLen(s) >= cfg.minLength);
+  // Remove furniture / label / dimension leftovers: short + isolated strokes.
+  const joinTol = Math.max(cfg.minLength * 0.8, 22 * bin.scale);
+  const keepLong = cfg.minLength * 3;
+  return networkCleanup(merged, joinTol, keepLong);
 }
 
 /** Auto-pick the threshold then trace. */
