@@ -3,7 +3,8 @@ import { Ruler, UploadCloud, Wand2, SlidersHorizontal } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { renderPlanFile, type RenderedPlan } from '../lib/pdfImport';
 import { importDxf } from '../lib/dxfImport';
-import { traceWalls, autoThreshold, type PixelSegment } from '../lib/autoTrace';
+import { autoThreshold, type PixelSegment } from '../lib/autoTrace';
+import { traceWallsV2 } from '../lib/wallTrace';
 import { segmentsToWalls } from '../lib/wallBuilder';
 
 type Stage = 'pick' | 'raster' | 'dxf' | 'busy';
@@ -40,7 +41,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
   // Recompute the live wall preview whenever inputs change.
   useEffect(() => {
     if (stage !== 'raster' || !rendered) return;
-    const segs = traceWalls(rendered.imageData, {
+    const segs = traceWallsV2(rendered.imageData, {
       threshold: effThreshold,
       minLength: minLenCm / cmPerPx,
     });
@@ -103,7 +104,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
   const runTrace = (replace: boolean) => {
     if (!rendered) return;
     recalibrate();
-    const segs = traceWalls(rendered.imageData, {
+    const segs = traceWallsV2(rendered.imageData, {
       threshold: effThreshold,
       minLength: minLenCm / cmPerPx,
     });
