@@ -1,4 +1,4 @@
-import { MousePointer2, PenTool, Square, DoorOpen, Eraser, Hand } from 'lucide-react';
+import { MousePointer2, PenTool, Square, DoorOpen, Eraser, Hand, Ruler } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import type { ToolMode } from '../types';
 
@@ -6,6 +6,7 @@ const TOOLS: { id: ToolMode; icon: typeof MousePointer2; label: string }[] = [
   { id: 'select', icon: MousePointer2, label: 'Select & move' },
   { id: 'wall', icon: PenTool, label: 'Draw walls' },
   { id: 'room', icon: Square, label: 'Draw room' },
+  { id: 'measure', icon: Ruler, label: 'Measure distance' },
   { id: 'erase', icon: Eraser, label: 'Erase' },
   { id: 'pan', icon: Hand, label: 'Pan' },
 ];

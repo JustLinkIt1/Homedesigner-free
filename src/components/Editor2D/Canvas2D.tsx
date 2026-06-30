@@ -51,6 +51,9 @@ export default function Canvas2D() {
   // Draft state for in-progress drawing.
   const [draft, setDraft] = useState<Point[]>([]);
   const [cursor, setCursor] = useState<Point | null>(null);
+  // Tape-measure tool: first click sets A, second click freezes the A–B span.
+  const [measureA, setMeasureA] = useState<Point | null>(null);
+  const [measureSeg, setMeasureSeg] = useState<{ a: Point; b: Point } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number; kind: string; id: string } | null>(null);
   const openMenu = (x: number, y: number, kind: string, id: string) => setMenu({ x, y, kind, id });
@@ -77,9 +80,11 @@ export default function Canvas2D() {
     return () => ro.disconnect();
   }, []);
 
-  // Reset draft when tool changes.
+  // Reset draft + measurement when tool changes.
   useEffect(() => {
     setDraft([]);
+    setMeasureA(null);
+    setMeasureSeg(null);
   }, [tool]);
 
   // Frame the whole design when asked (after load / import) once size is known.
@@ -149,6 +154,8 @@ export default function Canvas2D() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
       if (e.key === 'Escape') {
         setDraft([]);
+        setMeasureA(null);
+        setMeasureSeg(null);
         s.clearSelection();
       } else if (e.key === 'Enter') {
         finishDraft();
@@ -267,6 +274,14 @@ export default function Canvas2D() {
       } else {
         const id = s.addFurniture(type, snapped);
         s.select({ kind: 'furniture', id });
+      }
+    } else if (tool === 'measure') {
+      if (!measureA) {
+        setMeasureA(snapped);
+        setMeasureSeg(null);
+      } else {
+        setMeasureSeg({ a: measureA, b: snapped });
+        setMeasureA(null);
       }
     } else if (tool === 'select') {
       hitTest(p);
@@ -977,6 +992,16 @@ export default function Canvas2D() {
           {draft.length > 0 && (
             <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} units={units} />
           )}
+
+          {/* Tape measure (live A→cursor, or frozen A→B) */}
+          {tool === 'measure' && (measureSeg || (measureA && cursor)) && (
+            <MeasureView
+              a={measureSeg ? measureSeg.a : (measureA as Point)}
+              b={measureSeg ? measureSeg.b : (cursor as Point)}
+              zoom={zoom}
+              units={units}
+            />
+          )}
         </Layer>
       </Stage>
       {menu && <ContextMenu menu={menu} multi={multi} count={selectedIds.length} onClose={closeMenu} />}
@@ -1083,6 +1108,51 @@ function FurnitureGhost({
         align="center"
         text={entry.icon}
         fontSize={Math.min(entry.width, entry.depth) * 0.5}
+      />
+    </Group>
+  );
+}
+
+// Tape-measure overlay: a dashed line between two points with end ticks and a
+// pill-backed distance label at the midpoint (respects the units toggle).
+function MeasureView({ a, b, zoom, units }: { a: Point; b: Point; zoom: number; units: Units }) {
+  const len = dist(a, b);
+  const mid = midpoint(a, b);
+  const dx = (b.x - a.x) / (len || 1);
+  const dy = (b.y - a.y) / (len || 1);
+  const nx = -dy;
+  const ny = dx;
+  const tick = 7 / zoom;
+  const label = formatLength(len, units);
+  const fs = 13 / zoom;
+  const padX = 7 / zoom;
+  const boxW = label.length * fs * 0.62 + padX * 2;
+  const boxH = fs + 9 / zoom;
+  const ACCENT = '#e0533d'; // warm, distinct from the blue draw colour
+  return (
+    <Group listening={false}>
+      <Line points={[a.x, a.y, b.x, b.y]} stroke={ACCENT} strokeWidth={1.6 / zoom} dash={[9 / zoom, 6 / zoom]} />
+      <Line points={[a.x - nx * tick, a.y - ny * tick, a.x + nx * tick, a.y + ny * tick]} stroke={ACCENT} strokeWidth={1.6 / zoom} />
+      <Line points={[b.x - nx * tick, b.y - ny * tick, b.x + nx * tick, b.y + ny * tick]} stroke={ACCENT} strokeWidth={1.6 / zoom} />
+      <Circle x={a.x} y={a.y} radius={3 / zoom} fill={ACCENT} />
+      <Circle x={b.x} y={b.y} radius={3 / zoom} fill={ACCENT} />
+      <Rect
+        x={mid.x - boxW / 2 + nx * (14 / zoom)}
+        y={mid.y - boxH / 2 + ny * (14 / zoom)}
+        width={boxW}
+        height={boxH}
+        fill={ACCENT}
+        cornerRadius={boxH / 2}
+      />
+      <Text
+        x={mid.x - boxW / 2 + nx * (14 / zoom)}
+        y={mid.y - fs / 2 + ny * (14 / zoom) - 1 / zoom}
+        width={boxW}
+        align="center"
+        text={label}
+        fontSize={fs}
+        fontStyle="bold"
+        fill="#fff"
       />
     </Group>
   );

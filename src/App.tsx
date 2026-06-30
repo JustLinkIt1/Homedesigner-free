@@ -101,6 +101,8 @@ export default function App() {
     ? 'Click in the plan to place it · switch to Select to move & rotate'
     : tool === 'erase'
     ? 'Click any wall, room or object to delete it'
+    : tool === 'measure'
+    ? 'Click two points to measure the distance between them · Esc to clear'
     : null;
 
   return (

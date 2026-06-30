@@ -83,7 +83,8 @@ export type ToolMode =
   | 'room'
   | 'furniture'
   | 'pan'
-  | 'erase';
+  | 'erase'
+  | 'measure';
 
 export type ViewMode = '2d' | '3d';
 
