@@ -56,6 +56,10 @@ export default function Canvas2D() {
   const [measureA, setMeasureA] = useState<Point | null>(null);
   const [measureSeg, setMeasureSeg] = useState<{ a: Point; b: Point } | null>(null);
   const [realInput, setRealInput] = useState(''); // real-world length for calibration
+  // Type-a-length while chaining walls/rooms (SketchUp-style): digits typed
+  // while a draft is in progress lock the next point's distance from the last
+  // point along the current cursor direction; Enter commits it.
+  const [lengthInput, setLengthInput] = useState('');
   const [snapKind, setSnapKind] = useState<SnapKind | 'free'>('free');
   const [snapGuide, setSnapGuide] = useState<GuideLine | null>(null);
   const snapGuideRef = useRef<GuideLine | null>(null);
@@ -92,6 +96,7 @@ export default function Canvas2D() {
     setDraft([]);
     setMeasureA(null);
     setMeasureSeg(null);
+    setLengthInput('');
   }, [tool]);
 
   // Frame the whole design when asked (after load / import) once size is known.
@@ -159,15 +164,28 @@ export default function Canvas2D() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+      const chaining = (tool === 'wall' || tool === 'room') && draft.length > 0;
       if (e.key === 'Escape') {
+        if (lengthInput) {
+          setLengthInput('');
+          return;
+        }
         setDraft([]);
         setMeasureA(null);
         setMeasureSeg(null);
         s.clearSelection();
       } else if (e.key === 'Enter') {
-        finishDraft();
+        if (chaining && lengthInput) commitTypedLength();
+        else finishDraft();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selection.id || s.selectedIds.length) s.deleteSelected();
+        if (chaining && lengthInput) {
+          e.preventDefault();
+          setLengthInput((v) => v.slice(0, -1));
+        } else if (selection.id || s.selectedIds.length) {
+          s.deleteSelected();
+        }
+      } else if (chaining && /^[0-9.]$/.test(e.key)) {
+        setLengthInput((v) => (v.length < 8 ? v + e.key : v));
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) s.redo();
@@ -188,7 +206,7 @@ export default function Canvas2D() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, draft, tool]);
+  }, [selection, draft, tool, lengthInput, cursor, units]);
 
   // ---- coordinate helpers ----
   const worldPointer = (): Point | null => {
@@ -351,6 +369,27 @@ export default function Canvas2D() {
       return;
     }
     actAt(p);
+  };
+
+  // Commit a typed length: places the next draft point at that distance from
+  // the last point, along the direction toward the current cursor (so angle
+  // snapping/guides still apply — only the distance is overridden).
+  const commitTypedLength = () => {
+    const val = parseFloat(lengthInput);
+    setLengthInput('');
+    if (!(val > 0) || draft.length === 0 || !cursor) return;
+    const last = draft[draft.length - 1];
+    const lenCm = units === 'imperial' ? val * 30.48 : val * 100;
+    const dx = cursor.x - last.x;
+    const dy = cursor.y - last.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const next = { x: last.x + (dx / d) * lenCm, y: last.y + (dy / d) * lenCm };
+    if (tool === 'room' && draft.length >= 3 && dist(next, draft[0]) < 25 / zoom) {
+      s.addRoom(draft);
+      setDraft([]);
+    } else {
+      setDraft((d2) => [...d2, next]);
+    }
   };
 
   // ---- touch: tap to act, two-finger pinch to zoom & pan ----
@@ -1068,7 +1107,7 @@ export default function Canvas2D() {
 
           {/* Draft (in-progress wall/room) */}
           {draft.length > 0 && (
-            <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} units={units} />
+            <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} units={units} lengthInput={lengthInput} />
           )}
 
           {/* Inference guide line (axis / extension / parallel / perpendicular). */}
@@ -1321,11 +1360,23 @@ function SnapIndicator({ at, kind, zoom }: { at: Point; kind: SnapKind; zoom: nu
 }
 
 function DraftView({
-  draft, cursor, tool, zoom, units,
-}: { draft: Point[]; cursor: Point | null; tool: string; zoom: number; units: Units }) {
-  const pts = cursor ? [...draft, cursor] : draft;
-  const flat = pts.flatMap((p) => [p.x, p.y]);
+  draft, cursor, tool, zoom, units, lengthInput,
+}: { draft: Point[]; cursor: Point | null; tool: string; zoom: number; units: Units; lengthInput: string }) {
   const last = draft[draft.length - 1];
+  // While typing a length, lock the ghost segment's endpoint to that distance
+  // (direction still follows the mouse — angle/guide snapping still applies).
+  const typedVal = parseFloat(lengthInput);
+  const typing = lengthInput.length > 0 && cursor && last;
+  let previewEnd = cursor;
+  if (typing && typedVal > 0) {
+    const lenCm = units === 'imperial' ? typedVal * 30.48 : typedVal * 100;
+    const dx = cursor.x - last.x;
+    const dy = cursor.y - last.y;
+    const d = Math.hypot(dx, dy) || 1;
+    previewEnd = { x: last.x + (dx / d) * lenCm, y: last.y + (dy / d) * lenCm };
+  }
+  const pts = previewEnd ? [...draft, previewEnd] : draft;
+  const flat = pts.flatMap((p) => [p.x, p.y]);
   return (
     <Group listening={false}>
       <Line
@@ -1343,11 +1394,16 @@ function DraftView({
       ))}
       {cursor && last && (
         <Text
-          x={midpoint(last, cursor).x}
-          y={midpoint(last, cursor).y - 20 / zoom}
-          text={`${formatLength(dist(last, cursor), units)}  ·  ${Math.round(((angleDeg(last, cursor) % 360) + 360) % 360)}°`}
+          x={midpoint(last, previewEnd ?? cursor).x}
+          y={midpoint(last, previewEnd ?? cursor).y - 20 / zoom}
+          text={
+            lengthInput
+              ? `${lengthInput}${units === 'imperial' ? ' ft' : ' m'} ▏ Enter to confirm`
+              : `${formatLength(dist(last, cursor), units)}  ·  ${Math.round(((angleDeg(last, cursor) % 360) + 360) % 360)}°`
+          }
           fontSize={13 / zoom}
-          fill="#fff"
+          fill={lengthInput ? '#ffd94a' : '#fff'}
+          fontStyle={lengthInput ? 'bold' : 'normal'}
         />
       )}
     </Group>
