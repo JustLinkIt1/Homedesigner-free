@@ -20,6 +20,7 @@ import DimensionsLayer from './DimensionsLayer';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { planCapture } from '../../lib/renderBridge';
 import { buildSnapElements, nearestSnap, type SnapKind, type GuideLine } from '../../lib/snapping';
+import { computeWallPolygons } from '../../lib/wallGeometry';
 import { formatLength, type Units } from '../../lib/units';
 import type { Point } from '../../types';
 import {
@@ -651,6 +652,22 @@ export default function Canvas2D() {
     toast.success(`Drawing scaled — that wall is now ${formatLength(realCm, units)}`);
   };
 
+  // Mitered wall-body polygons, recomputed from the live (drag-preview)
+  // positions so corners stay mitered while dragging a wall or a shared corner.
+  const liveWalls = useMemo(() => {
+    if (!wallEdit && !cornerDrag) return walls;
+    return walls.map((w) => {
+      let start = wallEdit && wallEdit.id === w.id ? wallEdit.start : w.start;
+      let end = wallEdit && wallEdit.id === w.id ? wallEdit.end : w.end;
+      if (cornerDrag) {
+        if (dist(start, cornerDrag.from) <= 3) start = cornerDrag.to;
+        if (dist(end, cornerDrag.from) <= 3) end = cornerDrag.to;
+      }
+      return start === w.start && end === w.end ? w : { ...w, start, end };
+    });
+  }, [walls, wallEdit, cornerDrag]);
+  const wallPolys = useMemo(() => computeWallPolygons(liveWalls), [liveWalls]);
+
   return (
     <div ref={wrapRef} style={{ position: 'absolute', inset: 0 }}>
       <Stage
@@ -763,11 +780,24 @@ export default function Canvas2D() {
             const hr = 8 / zoom; // handle radius (cm)
             return (
               <Group key={w.id}>
+                {/* Mitered visual body: a filled polygon whose corners are
+                    true-mitered against whatever wall shares that endpoint,
+                    so skewed/non-orthogonal corners read cleanly instead of
+                    the round-cap blobs a stroked line leaves. */}
+                <Line
+                  points={(wallPolys.get(w.id) ?? [start, end, end, start]).flatMap((p) => [p.x, p.y])}
+                  closed
+                  fill={sel ? '#3b63f6' : '#39414e'}
+                  listening={false}
+                />
+                {/* Invisible hit/drag target — unchanged interaction, just no
+                    longer responsible for the visible wall body. */}
                 <Line
                   points={[start.x, start.y, end.x, end.y]}
-                  stroke={sel ? '#3b63f6' : '#39414e'}
+                  stroke="#000"
                   strokeWidth={w.thickness}
                   lineCap="round"
+                  opacity={0}
                   // Body drag translates both endpoints together.
                   draggable={editing}
                   hitStrokeWidth={Math.max(w.thickness, 16 / zoom)}
