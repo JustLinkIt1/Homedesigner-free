@@ -28,7 +28,13 @@ export function segmentsToWalls(
       color: '#ece6db',
     });
   }
-  snapCorners(walls, /*tolCm*/ Math.max(18, 8 * cmPerPx));
+  // Hough-detected endpoints commonly land tens of cm short of the true
+  // corner (each wall's exact end depends on where votes ran out, and a wall
+  // that stops at a door/window opening leaves a real, door-sized gap to the
+  // next wall). A tight tolerance leaves most corners open and room
+  // auto-detection finds nothing. Real corners are metres apart, so a
+  // generous tolerance here is still safe.
+  snapCorners(walls, /*tolCm*/ Math.max(90, 45 * cmPerPx));
   return walls;
 }
 
@@ -39,10 +45,29 @@ export function segmentsToWalls(
  * done with simple snapping rather than an ML model).
  */
 function snapCorners(walls: Wall[], tol: number): void {
+  // Two rounds: clustering closes point-to-point gaps, projection closes
+  // T-junctions (an endpoint stopping just short of another wall's body).
+  // A second round catches corners that only line up after the first fixes
+  // a neighbouring joint — common on traced plans where several endpoints
+  // near the same corner are each a little off in a different direction.
+  for (let round = 0; round < 2; round++) {
+    clusterEndpoints(walls, tol);
+    projectOntoWalls(walls, tol);
+  }
+  clusterEndpoints(walls, tol);
+}
+
+/** Seed-based clustering: each cluster is anchored to the first point placed
+ *  in it, and only takes in points within `tol` of THAT seed (not of other
+ *  members). This bounds every cluster to radius `tol` around its seed —
+ *  unlike transitive (union-find) clustering, which can chain two points
+ *  that are each close to a shared neighbour but far from one another,
+ *  silently collapsing unrelated corners on opposite sides of the plan into
+ *  one averaged point once the tolerance is large enough to bridge a
+ *  door/window gap. */
+function clusterEndpoints(walls: Wall[], tol: number): void {
   const endpoints: Point[] = [];
   for (const w of walls) endpoints.push(w.start, w.end);
-
-  // 1) Cluster endpoints that are within tolerance and move them to the mean.
   const clusters: Point[][] = [];
   for (const p of endpoints) {
     let placed = false;
@@ -64,18 +89,24 @@ function snapCorners(walls: Wall[], tol: number): void {
       p.y = cy;
     }
   }
+}
 
-  // 2) Extend an endpoint to land exactly on a near-perpendicular wall it
-  //    almost touches (a T-junction the raster trace stopped short of).
+/** Extend an endpoint to land exactly on a near-perpendicular wall it almost
+ *  touches (a T-junction the raster trace stopped short of). */
+function projectOntoWalls(walls: Wall[], tol: number): void {
   for (const w of walls) {
     for (const ep of [w.start, w.end]) {
+      let best: { point: Point; dist: number } | null = null;
       for (const other of walls) {
         if (other === w) continue;
         const proj = projectOnSegment(ep, other.start, other.end);
-        if (proj && proj.dist <= tol && proj.dist > 0.01) {
-          ep.x = proj.point.x;
-          ep.y = proj.point.y;
+        if (proj && proj.dist <= tol && proj.dist > 0.01 && (!best || proj.dist < best.dist)) {
+          best = proj;
         }
+      }
+      if (best) {
+        ep.x = best.point.x;
+        ep.y = best.point.y;
       }
     }
   }

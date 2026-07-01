@@ -22,7 +22,8 @@ export interface TraceConfig {
   threshold: number;
   /** Minimum wall length in source px. */
   minLength: number;
-  /** Minimum wall HALF-thickness in processed px (rejects thin furniture). */
+  /** Minimum wall HALF-thickness in source px (rejects thin furniture/lines).
+   *  Lower this for plans that draw exterior walls as a thin single stroke. */
   minHalfThickness: number;
   /** Largest processed dimension; the image is downscaled to this. */
   maxDim: number;
@@ -409,26 +410,40 @@ function networkCleanup(segs: Seg2[], tol: number, keepLong: number): Seg2[] {
   return segs.filter((s, i) => find(i) === bestRoot || segLen(s) >= keepLong);
 }
 
-/** Detect wall segments (any angle) in a raster plan. Coords in source px. */
-export function traceWallsV2(img: ImageData, options: Partial<TraceConfig> = {}): PixelSegment[] {
+/**
+ * Run the pipeline and return every intermediate stage (not just the final
+ * result) — useful for diagnosing why a specific wall on a hard plan didn't
+ * survive tracing (which stage dropped it).
+ */
+export function traceWallsStages(img: ImageData, options: Partial<TraceConfig> = {}) {
   const cfg = { ...DEFAULT_CONFIG, ...options };
   const bin = binarize(img, cfg.threshold, cfg.maxDim);
   const dist = distanceTransform(bin);
-  const mask = thickMask(bin, dist, cfg.minHalfThickness);
+  // minHalfThickness is specified in source px; convert to the downscaled
+  // processed-px units the distance transform works in.
+  const mask = thickMask(bin, dist, cfg.minHalfThickness / bin.scale);
   const raw = houghSegments(mask, bin.w, bin.h, bin.scale, cfg);
   // Merge fragments/edges into clean centrelines. perpTol must be wide enough to
   // fuse the two faces of a thick wall, but below the spacing of parallel walls;
-  // gapTol bridges door/window breaks along a wall. Both scale with image size.
+  // gapTol bridges door/window breaks along a wall — real plans interrupt the
+  // wall's ink at every opening, and doors/patio windows commonly span
+  // 70-200cm, so this needs to be generous (still far below a room's size).
   const angleTol = (10 * Math.PI) / 180;
   const perpTol = Math.max(14, 13 * bin.scale);
-  const gapTol = Math.max(cfg.minLength, 26 * bin.scale);
-  let merged = mergeColinear(raw, angleTol, perpTol, gapTol);
-  merged = mergeColinear(merged, angleTol, perpTol, gapTol);
-  merged = merged.filter((s) => segLen(s) >= cfg.minLength);
+  const gapTol = Math.max(cfg.minLength, 70 * bin.scale);
+  const merged1 = mergeColinear(raw, angleTol, perpTol, gapTol);
+  const merged2 = mergeColinear(merged1, angleTol, perpTol, gapTol);
+  const lenFiltered = merged2.filter((s) => segLen(s) >= cfg.minLength);
   // Remove furniture / label / dimension leftovers: short + isolated strokes.
   const joinTol = Math.max(cfg.minLength * 0.8, 22 * bin.scale);
   const keepLong = cfg.minLength * 3;
-  return networkCleanup(merged, joinTol, keepLong);
+  const final = networkCleanup(lenFiltered, joinTol, keepLong);
+  return { cfg, bin, raw, merged1, merged2, lenFiltered, final };
+}
+
+/** Detect wall segments (any angle) in a raster plan. Coords in source px. */
+export function traceWallsV2(img: ImageData, options: Partial<TraceConfig> = {}): PixelSegment[] {
+  return traceWallsStages(img, options).final;
 }
 
 /** Auto-pick the threshold then trace. */
