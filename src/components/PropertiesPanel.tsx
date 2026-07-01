@@ -20,6 +20,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   const room = !multi && selection.kind === 'room' ? s.rooms.find((r) => r.id === selection.id) : null;
   const item = !multi && selection.kind === 'furniture' ? s.furniture.find((f) => f.id === selection.id) : null;
   const opening = !multi && selection.kind === 'opening' ? s.openings.find((o) => o.id === selection.id) : null;
+  // Opening offset is a 0..1 fraction; show/edit its position in cm via the wall length.
+  const openingWall = opening ? s.walls.find((w) => w.id === opening.wallId) : null;
+  const openingWallLen = openingWall ? dist(openingWall.start, openingWall.end) : 0;
 
   return (
     <aside className={`sidebar right ${open ? 'open' : ''}`}>
@@ -195,7 +198,13 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               {opening.type === 'window' && (
                 <NumberRow label="Sill height (cm)" value={opening.sill} min={0} max={200} onChange={(v) => s.updateOpening(opening.id, { sill: v })} />
               )}
-              <NumberRow label="Position (cm)" value={opening.offset} min={0} max={2000} onChange={(v) => s.updateOpening(opening.id, { offset: v })} />
+              <NumberRow
+                label="Position (cm)"
+                value={Math.round(opening.offset * openingWallLen)}
+                min={0}
+                max={Math.round(openingWallLen)}
+                onChange={(v) => openingWallLen > 0 && s.updateOpening(opening.id, { offset: Math.max(0, Math.min(1, v / openingWallLen)) })}
+              />
             </div>
             <button className="btn-danger" onClick={() => s.deleteById('opening', opening.id)}>
               <Trash2 className="icon" /> Delete {opening.type}

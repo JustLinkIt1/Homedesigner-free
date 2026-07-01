@@ -34,7 +34,9 @@ export interface Opening {
   id: string;
   wallId: string;
   type: 'door' | 'window';
-  /** Distance of the opening centre from the wall's start point, in cm. */
+  /** Position of the opening centre along the wall as a 0..1 fraction
+   *  (start→end). Stored relative so it survives wall moves, reversals and
+   *  scaling. */
   offset: number;
   /** Opening width along the wall (cm). */
   width: number;

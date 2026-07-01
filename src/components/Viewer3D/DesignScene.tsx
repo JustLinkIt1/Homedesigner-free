@@ -23,7 +23,7 @@ function wallSpans(wall: Wall, openings: Opening[]): Span[] {
   const t = wall.thickness;
   const H = wall.height;
   const ops = openings
-    .map((o) => ({ ...o, s: Math.max(0, o.offset - o.width / 2), e: Math.min(len, o.offset + o.width / 2) }))
+    .map((o) => ({ ...o, s: Math.max(0, o.offset * len - o.width / 2), e: Math.min(len, o.offset * len + o.width / 2) }))
     .filter((o) => o.e > o.s)
     .sort((p, q) => p.s - q.s);
 
@@ -131,30 +131,31 @@ function WallMesh({
           </mesh>
         ))}
       {openings.map((o) => (
-        <OpeningMesh key={o.id} opening={o} thickness={t} />
+        <OpeningMesh key={o.id} opening={o} thickness={t} len={dist(wall.start, wall.end)} />
       ))}
     </group>
   );
 }
 
 /** Door leaf or window glass + frame, in wall-local coordinates. */
-function OpeningMesh({ opening: o, thickness }: { opening: Opening; thickness: number }) {
-  const cx = o.offset * M;
+function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickness: number; len: number }) {
+  const centreCm = o.offset * len; // offset is a 0..1 fraction along the wall
+  const cx = centreCm * M;
   const w = o.width * M;
   const h = o.height * M;
   const sill = o.sill * M;
 
   if (o.type === 'door') {
     const leafLen = w * 0.94;
-    const hingeX = (o.offset - o.width / 2) * M;
+    const hingeX = (centreCm - o.width / 2) * M;
     return (
       <group>
         {/* jambs */}
-        <mesh position={[(o.offset - o.width / 2) * M, h / 2, 0]} castShadow>
+        <mesh position={[(centreCm - o.width / 2) * M, h / 2, 0]} castShadow>
           <boxGeometry args={[0.04, h, thickness * 1.05]} />
           <meshStandardMaterial color="#e6e8ea" roughness={0.8} />
         </mesh>
-        <mesh position={[(o.offset + o.width / 2) * M, h / 2, 0]} castShadow>
+        <mesh position={[(centreCm + o.width / 2) * M, h / 2, 0]} castShadow>
           <boxGeometry args={[0.04, h, thickness * 1.05]} />
           <meshStandardMaterial color="#e6e8ea" roughness={0.8} />
         </mesh>

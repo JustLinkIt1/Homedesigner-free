@@ -313,10 +313,11 @@ export default function Canvas2D() {
       if (type === 'door' || type === 'window') {
         const hit = nearestWall(p);
         if (hit && hit.dist < Math.max(hit.wall.thickness * 1.5, 40 / zoom)) {
-          const len = dist(hit.wall.start, hit.wall.end);
+          const len = dist(hit.wall.start, hit.wall.end) || 1;
           const half = (type === 'door' ? 90 : 120) / 2;
-          const offset = Math.max(half, Math.min(len - half, hit.t * len));
-          const id = s.addOpening(hit.wall.id, offset, type);
+          // Pass a 0..1 fraction; the store clamps it so the opening fits.
+          const frac = Math.max(half / len, Math.min(1 - half / len, hit.t));
+          const id = s.addOpening(hit.wall.id, frac, type);
           s.select({ kind: 'opening', id });
         }
       } else {
@@ -473,8 +474,7 @@ export default function Canvas2D() {
   const openingPoint = (o: (typeof openings)[number]): { pt: Point; wall: (typeof walls)[number] } | null => {
     const wall = walls.find((w) => w.id === o.wallId);
     if (!wall) return null;
-    const len = dist(wall.start, wall.end) || 1;
-    return { pt: lerp(wall.start, wall.end, o.offset / len), wall };
+    return { pt: lerp(wall.start, wall.end, o.offset), wall };
   };
 
   // What sits under a world point (top-most first), without selecting.
@@ -825,8 +825,9 @@ export default function Canvas2D() {
             const len = dist(wall.start, wall.end) || 1;
             const sel = selection.kind === 'opening' && selection.id === o.id;
             const live = openEdit && openEdit.id === o.id ? openEdit : null;
-            const offset = live ? live.offset : o.offset;
-            const c = lerp(wall.start, wall.end, offset / len);
+            // openEdit.offset is kept in cm while dragging; o.offset is a fraction.
+            const offsetCm = live ? live.offset : o.offset * len;
+            const c = lerp(wall.start, wall.end, offsetCm / len);
             const ang = angleDeg(wall.start, wall.end);
             const t = wall.thickness;
             const wd = o.width;
@@ -896,7 +897,7 @@ export default function Canvas2D() {
                     }}
                     onDragStart={() => {
                       s.select({ kind: 'opening', id: o.id });
-                      setOpenEdit({ id: o.id, offset: o.offset });
+                      setOpenEdit({ id: o.id, offset: o.offset * len });
                     }}
                     onDragMove={(e) => {
                       // Project the handle's world position onto the wall axis.
@@ -913,7 +914,7 @@ export default function Canvas2D() {
                     }}
                     onDragEnd={() => {
                       setOpenEdit((cur) => {
-                        if (cur) s.updateOpening(o.id, { offset: clampOffset(cur.offset) });
+                        if (cur) s.updateOpening(o.id, { offset: clampOffset(cur.offset) / len });
                         return null;
                       });
                     }}
@@ -927,7 +928,7 @@ export default function Canvas2D() {
                       y={-t / 2 - 26 / zoom}
                       width={60 / zoom}
                       align="center"
-                      text={fmtLen(offset)}
+                      text={fmtLen(offsetCm)}
                       fontSize={13 / zoom}
                       fill="#fff"
                       listening={false}

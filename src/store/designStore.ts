@@ -198,12 +198,28 @@ const snapshotOf = (s: DesignState): DesignSnapshot => ({
   activeFloorId: s.activeFloorId,
 });
 
-/** Fill in multi-floor fields for saves that predate storeys. */
+/** Migrate legacy openings whose offset was an absolute cm value (> 1) to the
+ *  new 0..1 fraction along their wall. New saves are already fractions. */
+const fixOpenings = (g: FloorGeom): FloorGeom => {
+  if (!g.openings.some((o) => o.offset > 1)) return g;
+  return {
+    ...g,
+    openings: g.openings.map((o) => {
+      if (o.offset <= 1) return o;
+      const w = g.walls.find((x) => x.id === o.wallId);
+      const len = w ? Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y) : 0;
+      return len > 0 ? { ...o, offset: Math.max(0, Math.min(1, o.offset / len)) } : o;
+    }),
+  };
+};
+
+/** Fill in multi-floor fields for saves that predate storeys + fix openings. */
 const withFloors = (snap: MaybeFloored): DesignSnapshot => {
+  let result: DesignSnapshot;
   if (snap.floors && snap.floors.length && snap.activeFloorId && snap.floorGeom?.[snap.activeFloorId]) {
     const active = snap.floorGeom[snap.activeFloorId];
     // Trust the stored floors; make the top-level mirror the active storey.
-    return {
+    result = {
       ...snap,
       ...active,
       projectName: snap.projectName,
@@ -211,14 +227,19 @@ const withFloors = (snap: MaybeFloored): DesignSnapshot => {
       floorGeom: snap.floorGeom,
       activeFloorId: snap.activeFloorId,
     };
+  } else {
+    const id = uid();
+    result = {
+      ...snap,
+      floors: [{ id, name: 'Ground floor', elevation: 0 }],
+      floorGeom: { [id]: { walls: snap.walls, rooms: snap.rooms, furniture: snap.furniture, openings: snap.openings, background: snap.background } },
+      activeFloorId: id,
+    };
   }
-  const id = uid();
-  return {
-    ...snap,
-    floors: [{ id, name: 'Ground floor', elevation: 0 }],
-    floorGeom: { [id]: { walls: snap.walls, rooms: snap.rooms, furniture: snap.furniture, openings: snap.openings, background: snap.background } },
-    activeFloorId: id,
-  };
+  const floorGeom: Record<string, FloorGeom> = {};
+  for (const fid in result.floorGeom) floorGeom[fid] = fixOpenings(result.floorGeom[fid]);
+  const active = floorGeom[result.activeFloorId];
+  return { ...result, floorGeom, openings: active ? active.openings : result.openings };
 };
 
 const loadInitial = (): DesignSnapshot => {
@@ -389,12 +410,15 @@ export const useDesign = create<DesignState>((set, get) => {
       const wallLen = w ? Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y) : Infinity;
       const defW = entry?.width ?? (type === 'door' ? 90 : 120);
       const width = Math.min(defW, Math.max(20, wallLen * 0.9)); // never wider than the wall
+      // `offset` is a 0..1 fraction of the wall length; clamp so the opening fits.
+      const halfFrac = wallLen > 0 && isFinite(wallLen) ? width / 2 / wallLen : 0.1;
+      const off = Math.max(halfFrac, Math.min(1 - halfFrac, offset));
       commit((d) => {
         d.openings.push({
           id,
           wallId,
           type,
-          offset,
+          offset: off,
           width,
           height: entry?.height ?? (type === 'door' ? 205 : 120),
           sill: type === 'door' ? 0 : 90,
@@ -489,7 +513,7 @@ export const useDesign = create<DesignState>((set, get) => {
         const o = openings.find((x) => x.id === selection.id);
         if (o) {
           const nid = uid();
-          commit((d) => d.openings.push({ ...o, id: nid, offset: o.offset + o.width }));
+          commit((d) => d.openings.push({ ...o, id: nid, offset: Math.min(0.95, o.offset + 0.12) }));
           set({ selection: { kind: 'opening', id: nid }, selectedIds: [] });
         }
       }
@@ -543,7 +567,8 @@ export const useDesign = create<DesignState>((set, get) => {
         walls: g.walls.map((w) => ({ ...w, start: sp(w.start), end: sp(w.end), thickness: w.thickness * f })),
         rooms: g.rooms.map((r) => ({ ...r, points: r.points.map(sp) })),
         furniture: g.furniture.map((fi) => ({ ...fi, position: sp(fi.position) })),
-        openings: g.openings.map((o) => ({ ...o, offset: o.offset * f, width: o.width * f })),
+        // offset is a 0..1 fraction (scale-invariant); only the width scales.
+        openings: g.openings.map((o) => ({ ...o, width: o.width * f })),
         background: g.background
           ? { ...g.background, x: g.background.x * f, y: g.background.y * f, scale: g.background.scale * f }
           : null,
