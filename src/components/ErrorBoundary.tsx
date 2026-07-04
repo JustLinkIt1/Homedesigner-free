@@ -20,7 +20,13 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
 
   private downloadBackup = () => {
     try {
-      const raw = localStorage.getItem('homedesigner.project.v1');
+      // Prefer the active project's slot; fall back to the legacy single-slot
+      // key from pre-multi-project releases. Keys are read directly rather
+      // than through lib/projects so a crash there can't break the rescue.
+      const activeId = localStorage.getItem('homedesigner.activeProject.v1');
+      const raw =
+        (activeId && localStorage.getItem(`homedesigner.project.${activeId}`)) ||
+        localStorage.getItem('homedesigner.project.v1');
       if (!raw) return;
       const a = document.createElement('a');
       a.href = `data:application/json;charset=utf-8,${encodeURIComponent(raw)}`;

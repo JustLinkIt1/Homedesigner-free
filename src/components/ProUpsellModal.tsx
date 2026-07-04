@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Crown, Layers, FileText, Sofa, FolderOpen, Sparkles, Check } from 'lucide-react';
 import { useProStore } from '../store/proStore';
@@ -38,7 +39,18 @@ const BENEFITS = [
 /** Feature-triggered Pro purchase sheet (Play billing on Android, Play link on web). */
 export default function ProUpsellModal() {
   const { upsellFeature, closeUpsell, purchase, restore, busy, priceLabel, isPro } = useProStore();
-  if (!upsellFeature || isPro) return null;
+
+  const open = !!upsellFeature && !isPro;
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeUpsell();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, closeUpsell]);
+
+  if (!open) return null;
 
   const native = Capacitor.isNativePlatform();
   const copy = FEATURE_COPY[upsellFeature];

@@ -17,6 +17,7 @@ import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { sampleProject } from '../data/sampleProject';
 import { toast } from '../lib/ui';
+import * as projects from '../lib/projects';
 import type { Units } from '../lib/units';
 
 /**
@@ -155,7 +156,6 @@ interface DesignState extends DesignSnapshot {
   canRedo: () => boolean;
 }
 
-const STORAGE_KEY = 'homedesigner.project.v1';
 const SETTINGS_KEY = 'homedesigner.settings.v1';
 
 /** Load persisted display settings (units) from their own key — kept out of
@@ -246,8 +246,8 @@ const withFloors = (snap: MaybeFloored): DesignSnapshot => {
 
 const loadInitial = (): DesignSnapshot => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return withFloors({ ...emptySnapshot(), ...JSON.parse(raw) });
+    const raw = projects.loadActive();
+    if (raw) return withFloors({ ...emptySnapshot(), ...(raw as Partial<DesignSnapshot>) });
   } catch {
     /* ignore corrupt storage */
   }
@@ -259,9 +259,8 @@ const loadInitial = (): DesignSnapshot => {
 // edit, one toast per minute is plenty).
 let lastPersistWarning = 0;
 const persist = (snap: DesignSnapshot) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
-  } catch {
+  const ok = projects.saveActive(snap);
+  if (!ok) {
     const now = Date.now();
     if (now - lastPersistWarning > 60_000) {
       lastPersistWarning = now;

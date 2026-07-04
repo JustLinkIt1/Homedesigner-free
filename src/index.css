@@ -123,6 +123,19 @@ select {
   padding-right: 14px;
   margin-right: 2px;
   height: 100%;
+  text-align: left;
+}
+/* In the editor toolbar the brand doubles as the "back to projects" button. */
+button.brand {
+  border-radius: 10px;
+  padding-left: 6px;
+  margin-left: -6px;
+}
+button.brand:hover .brand-mark {
+  filter: brightness(1.08);
+}
+button.brand:hover .brand-name {
+  color: var(--brand);
 }
 .brand-mark {
   width: 34px;
@@ -1578,50 +1591,192 @@ select {
   }
 }
 
-/* ---------- Welcome ---------- */
-.welcome {
-  background: var(--surface);
-  border-radius: 24px;
-  width: 760px;
-  max-width: 100%;
-  box-shadow: var(--shadow-lg);
+/* ---------- Projects home ---------- */
+.projects-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   overflow: hidden;
+  background: var(--bg);
 }
-.welcome-hero {
+.ps-head {
+  display: flex;
+  align-items: center;
+  height: 58px;
+  padding: 0 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.ps-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 26px 26px 60px;
+}
+.ps-welcome {
+  max-width: 860px;
+  margin: 6vh auto 0;
   text-align: center;
-  padding: 44px 28px 26px;
-  background: radial-gradient(130% 130% at 50% -10%, var(--brand-soft), transparent 55%);
 }
-.welcome-logo {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 16px;
-  border-radius: 20px;
-  background: linear-gradient(150deg, var(--brand), #6d7cff);
-  display: grid;
-  place-items: center;
-  color: #fff;
-  box-shadow: var(--shadow-md);
-}
-.welcome-logo .icon {
-  width: 34px;
-  height: 34px;
-}
-.welcome-hero h1 {
+.ps-welcome h1 {
   margin: 0 0 8px;
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
 }
-.welcome-hero p {
-  margin: 0;
+.ps-welcome p {
+  margin: 0 0 26px;
   color: var(--text-2);
   font-size: 15.5px;
 }
+.ps-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  max-width: 1060px;
+  margin: 0 auto 18px;
+}
+.ps-toolbar h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.ps-actions {
+  display: flex;
+  gap: 8px;
+}
+.ps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  max-width: 1060px;
+  margin: 0 auto;
+}
+.ps-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+}
+.ps-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.ps-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: #f6f5f2;
+  border-bottom: 1px solid var(--border);
+}
+.ps-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ps-thumb-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+}
+.ps-thumb-empty .icon {
+  width: 34px;
+  height: 34px;
+}
+.ps-open {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px 4px 10px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.12s, transform 0.12s;
+  pointer-events: none;
+}
+.ps-open .icon {
+  width: 14px;
+  height: 14px;
+}
+.ps-card:hover .ps-open,
+.ps-thumb:focus-visible .ps-open {
+  opacity: 1;
+  transform: none;
+}
+.ps-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 4px;
+  min-width: 0;
+}
+.ps-name {
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ps-date {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.ps-rename {
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 2px 6px;
+  margin-left: -7px;
+  border: 1px solid var(--brand);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+.ps-card-actions {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px 8px;
+}
+.ps-card-actions button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--text-2);
+}
+.ps-card-actions button:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.ps-card-actions button.danger:hover {
+  background: var(--danger-soft, #fdecec);
+  color: var(--danger, #d43c3c);
+}
+.ps-card-actions .icon {
+  width: 15px;
+  height: 15px;
+}
+
 .welcome-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

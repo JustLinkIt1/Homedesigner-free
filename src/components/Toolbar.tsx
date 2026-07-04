@@ -6,7 +6,6 @@ import {
   Import,
   FolderOpen,
   Save,
-  FilePlus2,
   Grid3x3,
   Box,
   Check,
@@ -19,7 +18,7 @@ import {
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
 import { exportPlanPNG, exportPlanPDF } from '../lib/planExport';
-import { confirmDialog, toast } from '../lib/ui';
+import { toast } from '../lib/ui';
 import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { requirePro } from '../lib/pro';
 import { useProStore } from '../store/proStore';
@@ -48,10 +47,12 @@ export default function Toolbar({
   onImport,
   onAbout,
   onHelp,
+  onHome,
 }: {
   onImport: () => void;
   onAbout: () => void;
   onHelp: () => void;
+  onHome: () => void;
 }) {
   const s = useDesign();
   const isPro = useProStore((st) => st.isPro);
@@ -87,7 +88,7 @@ export default function Toolbar({
 
   return (
     <div className="toolbar">
-      <div className="brand">
+      <button className="brand" onClick={onHome} title="Back to my projects" aria-label="Back to my projects">
         <div className="brand-mark">
           <Home className="icon" />
         </div>
@@ -95,7 +96,7 @@ export default function Toolbar({
           {APP_NAME}
           <span className="sub">{APP_TAGLINE}</span>
         </div>
-      </div>
+      </button>
 
       <div className="project">
         <input
@@ -157,24 +158,6 @@ export default function Toolbar({
           }}
         >
           <Save className="icon" />
-        </button>
-        <button
-          className="tbtn icon-only"
-          title="New project"
-          aria-label="New project"
-          onClick={async () => {
-            const ok = await confirmDialog(
-              'Start a new project?',
-              'This clears the current design. Save it first if you want to keep it.',
-              { confirmLabel: 'New project', danger: true },
-            );
-            if (ok) {
-              s.newProject();
-              toast.info('Started a new project');
-            }
-          }}
-        >
-          <FilePlus2 className="icon" />
         </button>
         <button className="tbtn icon-only" title="Tips & shortcuts" aria-label="Tips and shortcuts" onClick={onHelp}>
           <CircleHelp className="icon" />

@@ -21,14 +21,15 @@ import FloorSwitcher from './components/FloorSwitcher';
 import AboutDialog from './components/AboutDialog';
 import HelpPanel from './components/HelpPanel';
 import ProUpsellModal from './components/ProUpsellModal';
+import ProjectsScreen from './components/ProjectsScreen';
 import { useProStore } from './store/proStore';
-import WelcomeModal, { shouldWelcome } from './components/WelcomeModal';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
-import { sceneCapture } from './lib/renderBridge';
+import { sceneCapture, planCapture } from './lib/renderBridge';
 import { useDraw, drawBridge } from './lib/ui';
 import { initNative } from './lib/native';
 import { isWebGLAvailable } from './lib/webgl';
+import * as projects from './lib/projects';
 
 // Heavy modules loaded on demand to keep the 2D-first experience light:
 //  - Scene3D pulls in three + drei + postprocessing
@@ -51,13 +52,43 @@ export default function App() {
   const [photoMode, setPhotoMode] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderScale, setRenderScale] = useState(3); // supersample factor for captures
-  const [showWelcome, setShowWelcome] = useState(() => shouldWelcome());
   const [drawer, setDrawer] = useState<null | 'catalog' | 'props'>(null);
+  // Projects home first — the editor opens a specific project.
+  const [screen, setScreen] = useState<'projects' | 'editor'>('projects');
   const drawing = useDraw((s) => s.active);
 
   // Keep latest UI state for the hardware back-button handler.
-  const stateRef = useRef({ photoMode, showImport, walkMode });
-  stateRef.current = { photoMode, showImport, walkMode };
+  const stateRef = useRef({ photoMode, showImport, walkMode, screen });
+  stateRef.current = { photoMode, showImport, walkMode, screen };
+
+  // Going home: snapshot a small thumbnail of the plan for the project card.
+  // Awaited so the card already has its image when the projects screen mounts.
+  const goHome = async () => {
+    try {
+      const id = projects.getActiveId();
+      const full = planCapture.current?.();
+      if (id && full) {
+        const img = new Image();
+        img.src = full;
+        await img.decode();
+        const w = 240;
+        const h = Math.max(1, Math.round((img.height / img.width) * w));
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#f6f5f2';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          projects.setThumbnail(id, c.toDataURL('image/jpeg', 0.6));
+        }
+      }
+    } catch {
+      /* thumbnails are best-effort */
+    }
+    setScreen('projects');
+  };
 
   // Leaving the 3D view always exits walk mode (e.g. switching to 2D).
   useEffect(() => {
@@ -82,6 +113,11 @@ export default function App() {
       const sel = useDesign.getState().selection;
       if (sel.id) {
         useDesign.getState().clearSelection();
+        return true;
+      }
+      if (st.screen === 'editor') {
+        // Editor → projects home instead of exiting the app.
+        goHome();
         return true;
       }
       return false;
@@ -116,12 +152,29 @@ export default function App() {
     ? 'Measure a wall, then enter its real length to scale the whole drawing · Esc to clear'
     : null;
 
+  if (screen === 'projects') {
+    return (
+      <div className="app">
+        <ProjectsScreen onOpenEditor={() => setScreen('editor')} onImport={() => setShowImport(true)} />
+        {showImport && (
+          <Suspense fallback={null}>
+            <ImportDialog onClose={() => setShowImport(false)} />
+          </Suspense>
+        )}
+        <ProUpsellModal />
+        <Toaster />
+        <ConfirmHost />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <Toolbar
         onImport={() => setShowImport(true)}
         onAbout={() => setShowAbout(true)}
         onHelp={() => setShowHelp(true)}
+        onHome={goHome}
       />
       <div className="body">
         {view === '2d' && <CatalogSidebar open={drawer === 'catalog'} />}
@@ -253,13 +306,6 @@ export default function App() {
           </button>
         </div>
       </div>
-
-      {showWelcome && (
-        <WelcomeModal
-          onImport={() => setShowImport(true)}
-          onClose={() => setShowWelcome(false)}
-        />
-      )}
 
       {showImport && (
         <Suspense fallback={null}>
