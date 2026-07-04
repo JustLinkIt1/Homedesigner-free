@@ -9,6 +9,8 @@ import { photoCapture } from '../../lib/renderBridge';
 import { saveImage } from '../../lib/native';
 import { slugify } from '../../lib/appInfo';
 import { useDesign } from '../../store/designStore';
+import { useProStore } from '../../store/proStore';
+import { applyWatermark } from '../../lib/watermark';
 
 const MAX_SAMPLES = 400;
 
@@ -44,7 +46,8 @@ function PathtracedContent({
   // Expose a save-to-PNG action for the toolbar / overlay button.
   useEffect(() => {
     photoCapture.current = async () => {
-      const dataUrl = gl.domElement.toDataURL('image/png');
+      let dataUrl = gl.domElement.toDataURL('image/png');
+      if (!useProStore.getState().isPro) dataUrl = await applyWatermark(dataUrl);
       await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-photo.png`);
     };
     return () => {

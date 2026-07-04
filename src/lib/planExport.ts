@@ -4,6 +4,8 @@
 import { planCapture } from './renderBridge';
 import { saveImage } from './native';
 import { slugify as slug } from './appInfo';
+import { applyWatermark } from './watermark';
+import { useProStore } from '../store/proStore';
 
 /** Capture the current design as a framed PNG data URL (null if empty). */
 export function capturePlanDataUrl(): string | null {
@@ -12,8 +14,9 @@ export function capturePlanDataUrl(): string | null {
 
 /** Save the framed plan as a PNG (web download / Android share). */
 export async function exportPlanPNG(projectName: string): Promise<boolean> {
-  const url = capturePlanDataUrl();
+  let url = capturePlanDataUrl();
   if (!url) return false;
+  if (!useProStore.getState().isPro) url = await applyWatermark(url);
   await saveImage(url, `${slug(projectName)}-plan.png`);
   return true;
 }

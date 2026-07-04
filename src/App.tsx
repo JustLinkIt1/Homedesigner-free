@@ -20,6 +20,8 @@ import Canvas2D from './components/Editor2D/Canvas2D';
 import FloorSwitcher from './components/FloorSwitcher';
 import AboutDialog from './components/AboutDialog';
 import HelpPanel from './components/HelpPanel';
+import ProUpsellModal from './components/ProUpsellModal';
+import { useProStore } from './store/proStore';
 import WelcomeModal, { shouldWelcome } from './components/WelcomeModal';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
@@ -84,6 +86,8 @@ export default function App() {
       }
       return false;
     });
+    // Resolve the Pro entitlement (billing on Android, mock on web).
+    useProStore.getState().refresh();
   }, []);
 
   const handleRender = async () => {
@@ -278,6 +282,7 @@ export default function App() {
         </Suspense>
       )}
 
+      <ProUpsellModal />
       <Toaster />
       <ConfirmHost />
     </div>

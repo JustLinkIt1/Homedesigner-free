@@ -499,6 +499,44 @@ select {
 .cat-item.active .ci-symbol {
   color: var(--brand);
 }
+.cat-item {
+  position: relative;
+}
+.cat-item .ci-lock {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: linear-gradient(160deg, #2b3040, #3b63f6);
+  color: #fff;
+}
+.cat-item .ci-lock .icon {
+  width: 10px;
+  height: 10px;
+}
+.cat-item.locked .ci-symbol {
+  opacity: 0.55;
+}
+
+/* Small PRO tag on gated menu items + the crown on "+ Floor" */
+.pro-tag {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: linear-gradient(160deg, #2b3040, #3b63f6);
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+.floor-add .pro-pill {
+  color: #ffd94a;
+  margin-left: 2px;
+}
 .cat-item .label {
   font-size: 11.5px;
   color: var(--text);
@@ -1241,6 +1279,106 @@ select {
   font-weight: 600;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
+}
+
+/* Pro upsell */
+.modal.pro-upsell {
+  max-width: 400px;
+  overflow: hidden;
+}
+.pro-hero {
+  text-align: center;
+  padding: 26px 24px 18px;
+  background: linear-gradient(160deg, #2b3040 0%, #3b63f6 130%);
+  color: #fff;
+}
+.pro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.16);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.pro-badge .icon {
+  width: 13px;
+  height: 13px;
+  color: #ffd94a;
+}
+.pro-hero-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 16px auto 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.pro-hero-icon .icon {
+  width: 26px;
+  height: 26px;
+}
+.pro-hero h2 {
+  font-size: 19px;
+  margin-bottom: 6px;
+}
+.pro-hero p {
+  font-size: 13.5px;
+  line-height: 1.55;
+  opacity: 0.86;
+}
+.pro-benefits {
+  list-style: none;
+  margin: 0;
+  padding: 18px 26px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pro-benefits li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.pro-benefits .icon {
+  width: 15px;
+  height: 15px;
+  color: var(--ok);
+  flex: none;
+}
+.pro-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 16px 22px 20px;
+}
+.pro-buy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 14.5px;
+  border-radius: 12px;
+}
+.pro-restore,
+.pro-later {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 6px;
+}
+.pro-restore:hover,
+.pro-later:hover {
+  color: var(--text);
 }
 
 /* Help panel */

@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Plus, Layers, X } from 'lucide-react';
+import { Plus, Layers, X, Crown } from 'lucide-react';
 import { useDesign } from '../store/designStore';
+import { useProStore } from '../store/proStore';
+import { requirePro } from '../lib/pro';
 import { confirmDialog, toast } from '../lib/ui';
 
 /**
@@ -15,16 +17,25 @@ export default function FloorSwitcher() {
   const addFloor = useDesign((s) => s.addFloor);
   const removeFloor = useDesign((s) => s.removeFloor);
   const renameFloor = useDesign((s) => s.renameFloor);
+  const isPro = useProStore((s) => s.isPro);
   const [editing, setEditing] = useState<string | null>(null);
 
   if (floors.length === 0) return null;
   // Highest storey at the top of the list.
   const ordered = [...floors].sort((a, b) => b.elevation - a.elevation);
 
+  // Gate CREATION of extra storeys only — existing multi-floor designs stay
+  // fully switchable/editable/renderable regardless of entitlement.
+  const handleAdd = () => {
+    if (floors.length >= 1 && !requirePro('multiFloor')) return;
+    addFloor();
+  };
+
   return (
     <div className="floor-switcher" aria-label="Storeys">
-      <button className="floor-add" onClick={addFloor} title="Add a floor above">
+      <button className="floor-add" onClick={handleAdd} title="Add a floor above">
         <Plus className="icon" style={{ width: 14, height: 14 }} /> Floor
+        {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
       </button>
       <div className="floor-list">
         {ordered.map((f) => {

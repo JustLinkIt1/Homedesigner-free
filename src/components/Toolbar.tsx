@@ -21,6 +21,8 @@ import { exportProject, openProjectFile } from '../lib/projectIO';
 import { exportPlanPNG, exportPlanPDF } from '../lib/planExport';
 import { confirmDialog, toast } from '../lib/ui';
 import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
+import { requirePro } from '../lib/pro';
+import { useProStore } from '../store/proStore';
 
 function SavedBadge({ tick }: { tick: number }) {
   const [saving, setSaving] = useState(false);
@@ -52,6 +54,7 @@ export default function Toolbar({
   onHelp: () => void;
 }) {
   const s = useDesign();
+  const isPro = useProStore((st) => st.isPro);
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +70,8 @@ export default function Toolbar({
 
   const runExport = async (kind: 'png' | 'pdf') => {
     setExportOpen(false);
+    // PDF export is a Pro feature (PNG stays free).
+    if (kind === 'pdf' && !requirePro('pdfExport')) return;
     // Clear selection so editing handles don't appear in the export, then let
     // React drop those nodes before we rasterise the stage.
     s.clearSelection();
@@ -196,6 +201,7 @@ export default function Toolbar({
                 </button>
                 <button role="menuitem" onClick={() => runExport('pdf')}>
                   <FileText className="icon" /> PDF document
+                  {!isPro && <span className="pro-tag">PRO</span>}
                 </button>
               </div>
             )}

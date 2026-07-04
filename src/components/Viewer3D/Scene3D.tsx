@@ -8,6 +8,8 @@ import WalkControls, { WalkTouchControls } from './WalkControls';
 import { sceneCapture } from '../../lib/renderBridge';
 import { saveImage } from '../../lib/native';
 import { useDesign } from '../../store/designStore';
+import { useProStore } from '../../store/proStore';
+import { applyWatermark } from '../../lib/watermark';
 import { slugify } from '../../lib/appInfo';
 
 /** Coarse pointer (no hover) → treat as touch and show on-screen controls. */
@@ -41,12 +43,14 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
       const composer = composerRef.current;
       composer?.setSize(width * scale, height * scale);
       composer?.render();
-      const dataUrl = gl.domElement.toDataURL('image/png');
+      let dataUrl = gl.domElement.toDataURL('image/png');
       // Restore the live view exactly.
       gl.setPixelRatio(dpr);
       gl.setSize(width, height, false);
       composer?.setSize(width, height);
       composer?.render();
+      // Free tier ships a small corner ribbon; Pro exports clean.
+      if (!useProStore.getState().isPro) dataUrl = await applyWatermark(dataUrl);
       await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-render.png`);
     };
     return () => {
