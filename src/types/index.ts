@@ -29,11 +29,17 @@ export interface Room {
   auto?: boolean;
 }
 
+/** Visual/behavioural variant of an opening. */
+export type OpeningStyle = 'single' | 'double' | 'sliding' | 'standard' | 'french';
+
 /** A door or window cut into a wall. */
 export interface Opening {
   id: string;
   wallId: string;
   type: 'door' | 'window';
+  /** Variant: doors are single (default) / double / sliding; windows are
+   *  standard (default) / french (full-height). */
+  style?: OpeningStyle;
   /** Position of the opening centre along the wall as a 0..1 fraction
    *  (start→end). Stored relative so it survives wall moves, reversals and
    *  scaling. */

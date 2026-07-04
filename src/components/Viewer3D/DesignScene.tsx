@@ -146,21 +146,73 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
   const sill = o.sill * M;
 
   if (o.type === 'door') {
+    const leftX = (centreCm - o.width / 2) * M;
+    const rightX = (centreCm + o.width / 2) * M;
+    const jambs = (
+      <>
+        <mesh position={[leftX, h / 2, 0]} castShadow>
+          <boxGeometry args={[0.04, h, thickness * 1.05]} />
+          <meshStandardMaterial color="#e6e8ea" roughness={0.8} />
+        </mesh>
+        <mesh position={[rightX, h / 2, 0]} castShadow>
+          <boxGeometry args={[0.04, h, thickness * 1.05]} />
+          <meshStandardMaterial color="#e6e8ea" roughness={0.8} />
+        </mesh>
+      </>
+    );
+
+    if (o.style === 'sliding') {
+      // Two glazed panels in the wall plane; one slid half-open.
+      const pw = w * 0.55;
+      return (
+        <group>
+          {jambs}
+          {[0, 1].map((i) => (
+            <group key={i}>
+              <mesh position={[cx + (i === 0 ? -w * 0.22 : w * 0.1), h / 2, (i === 0 ? -1 : 1) * thickness * 0.18]} castShadow>
+                <boxGeometry args={[pw, h * 0.98, 0.035]} />
+                <meshStandardMaterial color="#c9d6de" roughness={0.4} metalness={0.15} />
+              </mesh>
+              <mesh position={[cx + (i === 0 ? -w * 0.22 : w * 0.1), h / 2, (i === 0 ? -1 : 1) * thickness * 0.18]}>
+                <boxGeometry args={[pw * 0.86, h * 0.86, 0.02]} />
+                <meshStandardMaterial color="#bfe3f2" transparent opacity={0.35} roughness={0.05} metalness={0.1} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      );
+    }
+
+    if (o.style === 'double') {
+      // Two half-width leaves, hinged at each jamb, both swung open.
+      const leafLen = (w / 2) * 0.94;
+      return (
+        <group>
+          {jambs}
+          <group position={[leftX, 0, 0]} rotation={[0, -Math.PI / 2.6, 0]}>
+            <mesh position={[leafLen / 2, h / 2, 0]} castShadow>
+              <boxGeometry args={[leafLen, h * 0.99, 0.04]} />
+              <meshStandardMaterial color="#a9744f" roughness={0.6} />
+            </mesh>
+          </group>
+          {/* right leaf: local +x points at the centre when closed (yaw PI),
+              then swings open by the same angle in the opposite sense */}
+          <group position={[rightX, 0, 0]} rotation={[0, Math.PI + Math.PI / 2.6, 0]}>
+            <mesh position={[leafLen / 2, h / 2, 0]} castShadow>
+              <boxGeometry args={[leafLen, h * 0.99, 0.04]} />
+              <meshStandardMaterial color="#a9744f" roughness={0.6} />
+            </mesh>
+          </group>
+        </group>
+      );
+    }
+
     const leafLen = w * 0.94;
-    const hingeX = (centreCm - o.width / 2) * M;
     return (
       <group>
-        {/* jambs */}
-        <mesh position={[(centreCm - o.width / 2) * M, h / 2, 0]} castShadow>
-          <boxGeometry args={[0.04, h, thickness * 1.05]} />
-          <meshStandardMaterial color="#e6e8ea" roughness={0.8} />
-        </mesh>
-        <mesh position={[(centreCm + o.width / 2) * M, h / 2, 0]} castShadow>
-          <boxGeometry args={[0.04, h, thickness * 1.05]} />
-          <meshStandardMaterial color="#e6e8ea" roughness={0.8} />
-        </mesh>
+        {jambs}
         {/* swung-open leaf, hinged at one jamb */}
-        <group position={[hingeX, 0, 0]} rotation={[0, -Math.PI / 2.6, 0]}>
+        <group position={[leftX, 0, 0]} rotation={[0, -Math.PI / 2.6, 0]}>
           <mesh position={[leafLen / 2, h / 2, 0]} castShadow>
             <boxGeometry args={[leafLen, h * 0.99, 0.04]} />
             <meshStandardMaterial color="#a9744f" roughness={0.6} />
@@ -196,7 +248,55 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
         <boxGeometry args={[fr, h, td]} />
         <meshStandardMaterial color="#eef0f2" roughness={0.7} />
       </mesh>
+      {/* French window: vertical mullions splitting the glazing into panes */}
+      {o.style === 'french' &&
+        [-w / 6, w / 6].map((mx, i) => (
+          <mesh key={i} position={[cx + mx, sill + h / 2, 0]} castShadow>
+            <boxGeometry args={[fr * 0.7, h, td * 0.9]} />
+            <meshStandardMaterial color="#eef0f2" roughness={0.7} />
+          </mesh>
+        ))}
     </group>
+  );
+}
+
+const SLAB_T = 0.22; // structural slab thickness between storeys (m)
+
+/** Shared shape builder: a room polygon as a THREE.Shape in plan meters. */
+function roomShape(room: Room): THREE.Shape {
+  const shape = new THREE.Shape();
+  room.points.forEach((p, i) => {
+    if (i === 0) shape.moveTo(p.x * M, p.y * M);
+    else shape.lineTo(p.x * M, p.y * M);
+  });
+  shape.closePath();
+  return shape;
+}
+
+/**
+ * Structural slab rendered under an upper storey (its downside is the ceiling
+ * of the storey below) — without it, stacked floors float and you see clean
+ * through between storeys.
+ */
+function SlabMesh({ room }: { room: Room }) {
+  const geometry = useMemo(() => {
+    const geo = new THREE.ExtrudeGeometry(roomShape(room), { depth: SLAB_T, bevelEnabled: false });
+    return geo;
+  }, [room.points]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]} castShadow receiveShadow>
+      <meshStandardMaterial color="#ded9cf" roughness={0.9} metalness={0} />
+    </mesh>
+  );
+}
+
+/** Flat ceiling over a room at the given height (m), shown when not in dollhouse. */
+function CeilingMesh({ room, height }: { room: Room; height: number }) {
+  const geometry = useMemo(() => new THREE.ShapeGeometry(roomShape(room)), [room.points]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, height, 0]} receiveShadow>
+      <meshStandardMaterial color="#f4f1ea" roughness={0.95} metalness={0} side={THREE.DoubleSide} />
+    </mesh>
   );
 }
 
@@ -265,6 +365,8 @@ function FloorContent({
   geom,
   elevation,
   interactive,
+  isTop,
+  dollhouse,
   center,
   register,
   unregister,
@@ -272,6 +374,8 @@ function FloorContent({
   geom: FloorGeom;
   elevation: number;
   interactive: boolean;
+  isTop: boolean;
+  dollhouse: boolean;
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
   unregister: (id: string) => void;
@@ -288,8 +392,17 @@ function FloorContent({
     return m;
   }, [geom.openings]);
 
+  // Ceiling only matters for the top storey (lower storeys get the slab of
+  // the storey above); hidden in dollhouse so you can look inside from above.
+  const ceilingHeight =
+    (geom.walls.reduce((m, w) => Math.max(m, w.height), 0) || 270) * M;
+
   return (
     <group position={[0, elevation * M, 0]}>
+      {elevation > 0 && geom.rooms.map((r) => <SlabMesh key={`slab-${r.id}`} room={r} />)}
+      {isTop && !dollhouse && geom.rooms.map((r) => (
+        <CeilingMesh key={`ceil-${r.id}`} room={r} height={ceilingHeight} />
+      ))}
       {geom.rooms.map((r) => (
         <FloorMesh key={r.id} room={r} />
       ))}
@@ -360,12 +473,15 @@ export default function DesignScene({
       {floors.map((f) => {
         const geom = floorGeom[f.id];
         if (!geom) return null;
+        const topElevation = Math.max(...floors.map((x) => x.elevation));
         return (
           <FloorContent
             key={f.id}
             geom={geom}
             elevation={f.elevation}
             interactive={interactive && f.id === activeFloorId}
+            isTop={f.elevation >= topElevation}
+            dollhouse={dollhouse}
             center={center}
             register={register}
             unregister={unregister}

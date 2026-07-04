@@ -81,6 +81,21 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: 'M12,12 A80,80 0 0 1 92,92', sw: 2 },
   ],
   window: [{ d: 'M4,36 H96 M4,50 H96 M4,64 H96', sw: 2.5 }],
+  door_double: [
+    { d: 'M4,92 V46' },
+    { d: 'M4,46 A46,46 0 0 1 50,92', sw: 2 },
+    { d: 'M96,92 V46' },
+    { d: 'M96,46 A46,46 0 0 0 50,92', sw: 2 },
+  ],
+  door_sliding: [
+    { d: rect(4, 36, 58, 13) },
+    { d: rect(38, 54, 58, 13) },
+    { d: 'M14,86 H50 M14,86 L22,80 M14,86 L22,92', sw: 2 },
+  ],
+  window_french: [
+    { d: 'M4,34 H96 M4,66 H96', sw: 2.5 },
+    { d: 'M33,34 V66 M50,34 V66 M67,34 V66', sw: 2 },
+  ],
   bookshelf: [
     { d: rect(4, 8, 92, 84) },
     { d: 'M20,8 V92 M36,8 V92 M52,8 V92 M68,8 V92 M84,8 V92', sw: 2 },

@@ -112,7 +112,8 @@ interface DesignState extends DesignSnapshot {
   updateRoom: (id: string, patch: Partial<Room>) => void;
   addFurniture: (type: string, position: Point) => string;
   updateFurniture: (id: string, patch: Partial<FurnitureItem>) => void;
-  addOpening: (wallId: string, offset: number, type: 'door' | 'window') => string;
+  /** `type` is a catalog key (door, double_door, sliding_door, window, french_window…). */
+  addOpening: (wallId: string, offset: number, type: string) => string;
   updateOpening: (id: string, patch: Partial<Opening>) => void;
   deleteSelected: () => void;
   deleteById: (kind: Selection['kind'], id: string | null) => void;
@@ -415,9 +416,12 @@ export const useDesign = create<DesignState>((set, get) => {
     addOpening: (wallId, offset, type) => {
       const id = uid();
       const entry = CATALOG_BY_TYPE[type];
+      // `type` is a catalog key (door, double_door, french_window, …) whose
+      // `opening` block gives the stored kind/style/sill.
+      const def = entry?.opening ?? { kind: type as 'door' | 'window', style: undefined, sill: type === 'door' ? 0 : 90 };
       const w = get().walls.find((x) => x.id === wallId);
       const wallLen = w ? Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y) : Infinity;
-      const defW = entry?.width ?? (type === 'door' ? 90 : 120);
+      const defW = entry?.width ?? (def.kind === 'door' ? 90 : 120);
       const width = Math.min(defW, Math.max(20, wallLen * 0.9)); // never wider than the wall
       // `offset` is a 0..1 fraction of the wall length; clamp so the opening fits.
       const halfFrac = wallLen > 0 && isFinite(wallLen) ? width / 2 / wallLen : 0.1;
@@ -426,11 +430,12 @@ export const useDesign = create<DesignState>((set, get) => {
         d.openings.push({
           id,
           wallId,
-          type,
+          type: def.kind,
+          style: def.style,
           offset: off,
           width,
-          height: entry?.height ?? (type === 'door' ? 205 : 120),
-          sill: type === 'door' ? 0 : 90,
+          height: entry?.height ?? (def.kind === 'door' ? 205 : 120),
+          sill: def.sill,
         });
       });
       return id;

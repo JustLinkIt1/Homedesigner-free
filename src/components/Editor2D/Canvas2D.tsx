@@ -31,6 +31,11 @@ import {
   type Box,
 } from './editHandles';
 
+// Touch devices need ~44px targets; mouse pointers stay precise at 16px.
+const IS_COARSE =
+  typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+const HANDLE_R = IS_COARSE ? 14 : 8; // radius in screen px (÷ zoom at render)
+
 // Handle visuals (screen-space px; divided by zoom at render to stay constant).
 const HANDLE_FILL = '#ffffff';
 const HANDLE_STROKE = '#3b63f6';
@@ -330,11 +335,12 @@ export default function Canvas2D() {
       }
     } else if (tool === 'furniture' && s.pendingFurnitureType) {
       const type = s.pendingFurnitureType;
-      if (type === 'door' || type === 'window') {
+      const catalogEntry = CATALOG_BY_TYPE[type];
+      if (catalogEntry?.opening) {
         const hit = nearestWall(p);
         if (hit && hit.dist < Math.max(hit.wall.thickness * 1.5, 40 / zoom)) {
           const len = dist(hit.wall.start, hit.wall.end) || 1;
-          const half = (type === 'door' ? 90 : 120) / 2;
+          const half = catalogEntry.width / 2;
           // Pass a 0..1 fraction; the store clamps it so the opening fits.
           const frac = Math.max(half / len, Math.min(1 - half / len, hit.t));
           const id = s.addOpening(hit.wall.id, frac, type);
@@ -397,6 +403,14 @@ export default function Canvas2D() {
   // ---- touch: tap to act, two-finger pinch to zoom & pan ----
   const pinch = useRef<{ dist: number; center: Point } | null>(null);
   const touchMoved = useRef(false);
+  const longPress = useRef<number | null>(null);
+  const longPressFired = useRef(false);
+  const cancelLongPress = () => {
+    if (longPress.current !== null) {
+      window.clearTimeout(longPress.current);
+      longPress.current = null;
+    }
+  };
 
   const onTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
     const t = e.evt.touches;
@@ -404,11 +418,32 @@ export default function Canvas2D() {
       e.evt.preventDefault();
       pinch.current = twoFinger(t);
       touchMoved.current = true; // suppress tap
+      cancelLongPress();
     } else if (t.length === 1) {
       touchMoved.current = false;
       if (tool === 'pan') {
         setIsPanning(true);
         lastPan.current = { x: t[0].clientX, y: t[0].clientY };
+      } else if (tool === 'select') {
+        // Long-press = right-click on touch: opens the same context menu
+        // (copy/duplicate/z-order are otherwise unreachable on phones).
+        const cx = t[0].clientX;
+        const cy = t[0].clientY;
+        const wp = worldPointer();
+        longPress.current = window.setTimeout(() => {
+          longPress.current = null;
+          if (touchMoved.current || !wp) return;
+          longPressFired.current = true;
+          const hit = pickAt(wp);
+          if (hit) {
+            if (!(hit.kind === 'furniture' && selectedIds.includes(hit.id))) {
+              s.select({ kind: hit.kind as never, id: hit.id });
+            }
+            openMenu(cx, cy, hit.kind, hit.id);
+          } else {
+            openMenu(cx, cy, 'empty', '');
+          }
+        }, 500);
       }
     }
   };
@@ -434,6 +469,7 @@ export default function Canvas2D() {
       pinch.current = next;
     } else if (t.length === 1) {
       touchMoved.current = true;
+      cancelLongPress();
       if (isPanning && lastPan.current) {
         const cur = { x: t[0].clientX, y: t[0].clientY };
         const { pan: pn } = useDesign.getState();
@@ -445,7 +481,11 @@ export default function Canvas2D() {
 
   const onTouchEnd = (e: Konva.KonvaEventObject<TouchEvent>) => {
     if (e.evt.touches.length === 0) {
-      if (!touchMoved.current && tool !== 'pan') {
+      cancelLongPress();
+      if (longPressFired.current) {
+        // The long-press already opened the context menu — swallow the tap.
+        longPressFired.current = false;
+      } else if (!touchMoved.current && tool !== 'pan') {
         const p = worldPointer();
         if (p) actAt(p);
       }
@@ -778,7 +818,7 @@ export default function Canvas2D() {
               if (dist(end, cornerDrag.from) <= 3) end = cornerDrag.to;
             }
             const editing = sel && tool === 'select';
-            const hr = 8 / zoom; // handle radius (cm)
+            const hr = HANDLE_R / zoom; // handle radius (cm)
             return (
               <Group key={w.id}>
                 {/* Mitered visual body: a filled polygon whose corners are
@@ -917,7 +957,25 @@ export default function Canvas2D() {
               >
                 {/* cut the wall */}
                 <Rect x={-wd / 2} y={-t / 2 - 1} width={wd} height={t + 2} fill="#f1f1ec" />
-                {o.type === 'door' ? (
+                {o.type === 'door' && o.style === 'double' ? (
+                  <>
+                    {/* two leaves hinged at each jamb, swinging to the centre */}
+                    <Line points={[-wd / 2, 0, -wd / 2, -wd / 2]} stroke={sel ? '#3b63f6' : '#cfd6e0'} strokeWidth={3 / zoom} />
+                    <Arc x={-wd / 2} y={0} innerRadius={wd / 2} outerRadius={wd / 2} angle={90} rotation={270} stroke={sel ? '#3b63f6' : '#6b7480'} strokeWidth={1.5 / zoom} />
+                    <Line points={[wd / 2, 0, wd / 2, -wd / 2]} stroke={sel ? '#3b63f6' : '#cfd6e0'} strokeWidth={3 / zoom} />
+                    <Arc x={wd / 2} y={0} innerRadius={wd / 2} outerRadius={wd / 2} angle={90} rotation={180} stroke={sel ? '#3b63f6' : '#6b7480'} strokeWidth={1.5 / zoom} />
+                    <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                    <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                  </>
+                ) : o.type === 'door' && o.style === 'sliding' ? (
+                  <>
+                    {/* two offset panels, no swing */}
+                    <Rect x={-wd / 2} y={-t * 0.45} width={wd * 0.55} height={t * 0.35} fill={sel ? '#3b63f6' : '#9db4c4'} />
+                    <Rect x={-wd * 0.05} y={t * 0.1} width={wd * 0.55} height={t * 0.35} fill={sel ? '#3b63f6' : '#c3d2dc'} />
+                    <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                    <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                  </>
+                ) : o.type === 'door' ? (
                   <>
                     <Line points={[-wd / 2, 0, -wd / 2, -wd]} stroke={sel ? '#3b63f6' : '#cfd6e0'} strokeWidth={3 / zoom} />
                     <Arc
@@ -945,6 +1003,13 @@ export default function Canvas2D() {
                       strokeWidth={2 / zoom}
                     />
                     <Line points={[-wd / 2, 0, wd / 2, 0]} stroke="#7fb8d8" strokeWidth={1.5 / zoom} />
+                    {o.style === 'french' && (
+                      <Line
+                        points={[-wd / 6, -t / 2, -wd / 6, t / 2, 0, t / 2, 0, -t / 2, wd / 6, -t / 2, wd / 6, t / 2]}
+                        stroke="#7fb8d8"
+                        strokeWidth={1.2 / zoom}
+                      />
+                    )}
                   </>
                 )}
                 {/* drag-along-wall handle (slides the opening's offset) */}
@@ -952,7 +1017,7 @@ export default function Canvas2D() {
                   <Circle
                     x={0}
                     y={0}
-                    radius={8 / zoom}
+                    radius={HANDLE_R / zoom}
                     fill={HANDLE_FILL}
                     stroke={HANDLE_STROKE}
                     strokeWidth={2 / zoom}

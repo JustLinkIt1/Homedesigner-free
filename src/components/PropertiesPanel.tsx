@@ -186,12 +186,44 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                   value={opening.type}
                   onChange={(e) => {
                     const type = e.target.value as 'door' | 'window';
-                    s.updateOpening(opening.id, { type, sill: type === 'door' ? 0 : 90, height: type === 'door' ? 205 : 120 });
+                    s.updateOpening(opening.id, {
+                      type,
+                      style: type === 'door' ? 'single' : 'standard',
+                      sill: type === 'door' ? 0 : 90,
+                      height: type === 'door' ? 205 : 120,
+                    });
                   }}
                 >
                   <option value="door">Door</option>
                   <option value="window">Window</option>
                 </select>
+              </div>
+              <div className="prop-row">
+                <label>Style</label>
+                {opening.type === 'door' ? (
+                  <select
+                    value={opening.style ?? 'single'}
+                    onChange={(e) => s.updateOpening(opening.id, { style: e.target.value as never })}
+                  >
+                    <option value="single">Single</option>
+                    <option value="double">Double</option>
+                    <option value="sliding">Sliding</option>
+                  </select>
+                ) : (
+                  <select
+                    value={opening.style ?? 'standard'}
+                    onChange={(e) => {
+                      const style = e.target.value as 'standard' | 'french';
+                      s.updateOpening(opening.id, {
+                        style,
+                        ...(style === 'french' ? { sill: 0, height: 220 } : {}),
+                      });
+                    }}
+                  >
+                    <option value="standard">Standard</option>
+                    <option value="french">French (full height)</option>
+                  </select>
+                )}
               </div>
               <NumberRow label="Width (cm)" value={opening.width} min={40} max={400} onChange={(v) => s.updateOpening(opening.id, { width: v })} />
               <NumberRow label="Height (cm)" value={opening.height} min={40} max={300} onChange={(v) => s.updateOpening(opening.id, { height: v })} />

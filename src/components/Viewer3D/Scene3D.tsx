@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows } from '@react-three/drei';
+import { OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Sky } from '@react-three/drei';
 import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import DesignScene, { useDesignBounds } from './DesignScene';
@@ -77,8 +77,18 @@ export default function Scene3D() {
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => useDesign.getState().clearSelection()}
     >
-      <color attach="background" args={['#e3e6ea']} />
-      <fog attach="fog" args={['#e3e6ea', radius * 4, radius * 11]} />
+      {/* Soft daytime sky + gentle distance fog: gives renders a horizon and
+          natural light falloff instead of a flat grey void. */}
+      {/* Dome radius must sit inside the camera far plane (default 1000). */}
+      <Sky
+        distance={700}
+        sunPosition={[60, 38, 25]}
+        turbidity={5}
+        rayleigh={1.6}
+        mieCoefficient={0.004}
+        mieDirectionalG={0.8}
+      />
+      <fog attach="fog" args={['#dfe6ee', radius * 5, radius * 14]} />
       <SoftShadows size={24} samples={12} />
 
       <ambientLight intensity={0.32} />

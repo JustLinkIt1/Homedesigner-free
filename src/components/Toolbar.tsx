@@ -14,6 +14,7 @@ import {
   FileImage,
   FileText,
   Info,
+  CircleHelp,
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
@@ -41,7 +42,15 @@ function SavedBadge({ tick }: { tick: number }) {
   );
 }
 
-export default function Toolbar({ onImport, onAbout }: { onImport: () => void; onAbout: () => void }) {
+export default function Toolbar({
+  onImport,
+  onAbout,
+  onHelp,
+}: {
+  onImport: () => void;
+  onAbout: () => void;
+  onHelp: () => void;
+}) {
   const s = useDesign();
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -161,6 +170,9 @@ export default function Toolbar({ onImport, onAbout }: { onImport: () => void; o
           }}
         >
           <FilePlus2 className="icon" />
+        </button>
+        <button className="tbtn icon-only" title="Tips & shortcuts" aria-label="Tips and shortcuts" onClick={onHelp}>
+          <CircleHelp className="icon" />
         </button>
         <button className="tbtn icon-only" title="About" aria-label="About" onClick={onAbout}>
           <Info className="icon" />

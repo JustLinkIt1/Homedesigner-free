@@ -36,7 +36,11 @@ export type Shape3D =
   | 'monitor'
   | 'desk_lamp'
   | 'wall_art'
-  | 'stool';
+  | 'stool'
+  // opening variants (sidebar icons / ghosts only — they place wall openings)
+  | 'door_double'
+  | 'door_sliding'
+  | 'window_french';
 
 export interface CatalogEntry {
   type: string;
@@ -49,6 +53,8 @@ export interface CatalogEntry {
   color: string;
   shape: Shape3D;
   icon: string; // emoji used in the 2D palette / sidebar
+  /** Present when this entry places a wall opening instead of furniture. */
+  opening?: { kind: 'door' | 'window'; style: import('../types').OpeningStyle; sill: number };
 }
 
 export const FURNITURE_CATALOG: CatalogEntry[] = [
@@ -121,8 +127,11 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'stairs', name: 'Stairs', category: 'Outdoor', width: 100, depth: 250, height: 280, color: '#9aa0a6', shape: 'stairs', icon: '🪜' },
 
   // Openings (placed on walls)
-  { type: 'door', name: 'Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#a9744f', shape: 'door', icon: '🚪' },
-  { type: 'window', name: 'Window', category: 'Openings', width: 120, depth: 12, height: 120, color: '#bfe3f2', shape: 'window', icon: '🪟' },
+  { type: 'door', name: 'Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#a9744f', shape: 'door', icon: '🚪', opening: { kind: 'door', style: 'single', sill: 0 } },
+  { type: 'double_door', name: 'Double Door', category: 'Openings', width: 160, depth: 12, height: 205, color: '#a9744f', shape: 'door_double', icon: '🚪', opening: { kind: 'door', style: 'double', sill: 0 } },
+  { type: 'sliding_door', name: 'Sliding Door', category: 'Openings', width: 180, depth: 12, height: 210, color: '#9db4c4', shape: 'door_sliding', icon: '🚪', opening: { kind: 'door', style: 'sliding', sill: 0 } },
+  { type: 'window', name: 'Window', category: 'Openings', width: 120, depth: 12, height: 120, color: '#bfe3f2', shape: 'window', icon: '🪟', opening: { kind: 'window', style: 'standard', sill: 90 } },
+  { type: 'french_window', name: 'French Window', category: 'Openings', width: 180, depth: 12, height: 220, color: '#bfe3f2', shape: 'window_french', icon: '🪟', opening: { kind: 'window', style: 'french', sill: 0 } },
 ];
 
 export const CATALOG_BY_TYPE: Record<string, CatalogEntry> = Object.fromEntries(

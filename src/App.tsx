@@ -19,6 +19,7 @@ import PropertiesPanel from './components/PropertiesPanel';
 import Canvas2D from './components/Editor2D/Canvas2D';
 import FloorSwitcher from './components/FloorSwitcher';
 import AboutDialog from './components/AboutDialog';
+import HelpPanel from './components/HelpPanel';
 import WelcomeModal, { shouldWelcome } from './components/WelcomeModal';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
@@ -44,8 +45,10 @@ export default function App() {
   } = useDesign();
   const [showImport, setShowImport] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
   const [rendering, setRendering] = useState(false);
+  const [renderScale, setRenderScale] = useState(3); // supersample factor for captures
   const [showWelcome, setShowWelcome] = useState(() => shouldWelcome());
   const [drawer, setDrawer] = useState<null | 'catalog' | 'props'>(null);
   const drawing = useDraw((s) => s.active);
@@ -89,7 +92,7 @@ export default function App() {
     // Let the spinner paint before the synchronous high-res render blocks.
     await new Promise((r) => setTimeout(r, 30));
     try {
-      await sceneCapture.current(3);
+      await sceneCapture.current(renderScale);
     } finally {
       setRendering(false);
     }
@@ -98,7 +101,7 @@ export default function App() {
   const tip = drawing
     ? null // the Finish affordance takes over while actively drawing
     : tool === 'wall'
-    ? 'Click to add wall points — they chain together'
+    ? 'Click to add wall points — or type a length (e.g. 4.5) and press Enter for exact walls'
     : tool === 'room'
     ? 'Click corners to outline a room · click the first point to close it'
     : tool === 'furniture' && pendingFurnitureType
@@ -111,7 +114,11 @@ export default function App() {
 
   return (
     <div className="app">
-      <Toolbar onImport={() => setShowImport(true)} onAbout={() => setShowAbout(true)} />
+      <Toolbar
+        onImport={() => setShowImport(true)}
+        onAbout={() => setShowAbout(true)}
+        onHelp={() => setShowHelp(true)}
+      />
       <div className="body">
         {view === '2d' && <CatalogSidebar open={drawer === 'catalog'} />}
         <div className="stage-wrap">
@@ -197,6 +204,17 @@ export default function App() {
                 </div>
               </div>
               <div className="render-actions">
+                <select
+                  className="render-scale"
+                  value={renderScale}
+                  onChange={(e) => setRenderScale(Number(e.target.value))}
+                  aria-label="Render quality"
+                  title="Render quality"
+                >
+                  <option value={2}>Standard</option>
+                  <option value={3}>High</option>
+                  <option value={4}>Ultra</option>
+                </select>
                 <button className="render-btn" onClick={handleRender} disabled={rendering}>
                   {rendering ? <span className="spin" /> : <ImageIcon className="icon" />}
                   <span>{rendering ? 'Rendering…' : 'Render image'}</span>
@@ -246,6 +264,7 @@ export default function App() {
       )}
 
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
+      {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
       {photoMode && isWebGLAvailable() && (
         <Suspense
