@@ -8,6 +8,7 @@ import WalkControls, { WalkTouchControls } from './WalkControls';
 import { sceneCapture } from '../../lib/renderBridge';
 import { saveImage } from '../../lib/native';
 import { useDesign } from '../../store/designStore';
+import { slugify } from '../../lib/appInfo';
 
 /** Coarse pointer (no hover) → treat as touch and show on-screen controls. */
 const IS_TOUCH =
@@ -46,7 +47,7 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
       gl.setSize(width, height, false);
       composer?.setSize(width, height);
       composer?.render();
-      await saveImage(dataUrl, `homedesign-${Date.now()}.png`);
+      await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-render.png`);
     };
     return () => {
       sceneCapture.current = null;

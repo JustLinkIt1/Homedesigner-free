@@ -13,11 +13,13 @@ import {
   Download,
   FileImage,
   FileText,
+  Info,
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
 import { exportPlanPNG, exportPlanPDF } from '../lib/planExport';
 import { confirmDialog, toast } from '../lib/ui';
+import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 
 function SavedBadge({ tick }: { tick: number }) {
   const [saving, setSaving] = useState(false);
@@ -39,7 +41,7 @@ function SavedBadge({ tick }: { tick: number }) {
   );
 }
 
-export default function Toolbar({ onImport }: { onImport: () => void }) {
+export default function Toolbar({ onImport, onAbout }: { onImport: () => void; onAbout: () => void }) {
   const s = useDesign();
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -76,10 +78,9 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
           <Home className="icon" />
         </div>
         <div className="brand-name">
-          HomeDesigner
-          <span className="sub">Free home planner</span>
+          {APP_NAME}
+          <span className="sub">{APP_TAGLINE}</span>
         </div>
-        <span className="free">FREE</span>
       </div>
 
       <div className="project">
@@ -160,6 +161,9 @@ export default function Toolbar({ onImport }: { onImport: () => void }) {
           }}
         >
           <FilePlus2 className="icon" />
+        </button>
+        <button className="tbtn icon-only" title="About" aria-label="About" onClick={onAbout}>
+          <Info className="icon" />
         </button>
         {s.view === '2d' && (
           <div className="export-wrap" ref={exportRef}>

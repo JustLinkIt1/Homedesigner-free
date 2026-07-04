@@ -2,6 +2,7 @@
 // On native we save renders/projects to the device and offer a share sheet;
 // on the web we fall back to a normal browser download.
 import { Capacitor } from '@capacitor/core';
+import { APP_NAME } from './appInfo';
 
 export const isNative = () => Capacitor.isNativePlatform();
 
@@ -39,7 +40,7 @@ export async function saveImage(dataUrl: string, filename: string): Promise<void
   });
   const { uri } = await Filesystem.getUri({ path, directory: Directory.Documents });
   try {
-    await Share.share({ title: 'Home Designer render', url: uri });
+    await Share.share({ title: `${APP_NAME} render`, url: uri });
   } catch {
     /* user dismissed the share sheet — file is still saved */
   }

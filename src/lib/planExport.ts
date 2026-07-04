@@ -3,16 +3,7 @@
 // lays that image on an auto-oriented A4 page with the project name as a title.
 import { planCapture } from './renderBridge';
 import { saveImage } from './native';
-
-/** Filesystem-safe slug for export filenames. */
-function slug(name: string): string {
-  const s = (name || 'home-plan')
-    .trim()
-    .replace(/[^\w-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .toLowerCase();
-  return s || 'home-plan';
-}
+import { slugify as slug } from './appInfo';
 
 /** Capture the current design as a framed PNG data URL (null if empty). */
 export function capturePlanDataUrl(): string | null {

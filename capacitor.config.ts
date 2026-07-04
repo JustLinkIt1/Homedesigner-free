@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.nathanjoppich.homedesigner',
-  appName: 'Home Designer',
+  appName: 'HomeDesigner',
   webDir: 'dist',
   server: {
     // Keep the default https scheme: a stable origin so localStorage / saved
@@ -12,7 +12,8 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 1200,
-      backgroundColor: '#0f1115',
+      // Matches the app's light UI + web theme-color so launch doesn't flash dark.
+      backgroundColor: '#f6f5f2',
       showSpinner: false,
     },
   },

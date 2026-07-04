@@ -152,16 +152,6 @@ select {
   letter-spacing: 0.01em;
   margin-top: 2px;
 }
-.free {
-  font-size: 10px;
-  font-weight: 800;
-  color: #fff;
-  background: var(--ok);
-  padding: 3px 7px;
-  border-radius: 999px;
-  letter-spacing: 0.04em;
-}
-
 .project {
   display: flex;
   align-items: center;
@@ -1181,6 +1171,39 @@ select {
   gap: 10px;
   background: var(--surface-2);
 }
+
+/* About dialog */
+.modal.about {
+  max-width: 440px;
+}
+.about-title {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.about-credits-head {
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.about-credits {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.about-credits a,
+.modal.about a {
+  color: var(--brand);
+  text-decoration: none;
+}
+.about-credits a:hover,
+.modal.about a:hover {
+  text-decoration: underline;
+}
 .dropzone {
   border: 2px dashed var(--border-strong);
   border-radius: var(--r-lg);
@@ -1531,8 +1554,7 @@ select {
   .brand {
     padding-right: 8px;
   }
-  .brand-name,
-  .free {
+  .brand-name {
     display: none;
   }
   .project {

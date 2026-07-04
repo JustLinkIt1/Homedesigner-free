@@ -2,6 +2,7 @@
   "name": "homedesigner-free",
   "private": true,
   "version": "0.1.0",
+  "license": "UNLICENSED",
   "type": "module",
   "description": "Free Planner5D-style home design app: import a 2D plan (PDF/DXF), auto-trace walls, and design in 2D & 3D.",
   "scripts": {

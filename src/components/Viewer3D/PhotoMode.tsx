@@ -7,6 +7,8 @@ import * as THREE from 'three';
 import DesignScene, { useDesignBounds } from './DesignScene';
 import { photoCapture } from '../../lib/renderBridge';
 import { saveImage } from '../../lib/native';
+import { slugify } from '../../lib/appInfo';
+import { useDesign } from '../../store/designStore';
 
 const MAX_SAMPLES = 400;
 
@@ -43,7 +45,7 @@ function PathtracedContent({
   useEffect(() => {
     photoCapture.current = async () => {
       const dataUrl = gl.domElement.toDataURL('image/png');
-      await saveImage(dataUrl, `homedesign-photo-${Date.now()}.png`);
+      await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-photo.png`);
     };
     return () => {
       photoCapture.current = null;

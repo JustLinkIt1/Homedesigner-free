@@ -1,12 +1,13 @@
 import type { DesignSnapshot, MaybeFloored } from '../store/designStore';
 import { saveText } from './native';
 import { toast } from './ui';
+import { slugify } from './appInfo';
 
 /** Download the current design as a portable .json project file. */
 export async function exportProject(snapshot: DesignSnapshot): Promise<void> {
+  // `app` tag kept as-is: existing exported files carry it, and import matches on it loosely.
   const data = JSON.stringify({ app: 'homedesigner-free', version: 1, ...snapshot }, null, 2);
-  const slug = (snapshot.projectName || 'home').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'home';
-  await saveText(data, `${slug}.json`);
+  await saveText(data, `${slugify(snapshot.projectName)}.json`);
 }
 
 /** Prompt for a .json project file and parse it into a snapshot. */

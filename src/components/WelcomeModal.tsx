@@ -1,5 +1,6 @@
 import { Home, Sofa, Ruler, PenTool } from 'lucide-react';
 import { useDesign } from '../store/designStore';
+import { APP_NAME } from '../lib/appInfo';
 
 const WELCOMED_KEY = 'homedesigner.welcomed';
 
@@ -39,9 +40,7 @@ export default function WelcomeModal({
           <div className="welcome-logo">
             <Home className="icon" />
           </div>
-          <h1>
-            HomeDesigner <span className="free">FREE</span>
-          </h1>
+          <h1>{APP_NAME}</h1>
           <p>Design your home in 2D, walk through it in 3D, and render it beautifully.</p>
         </div>
         <div className="welcome-cards">

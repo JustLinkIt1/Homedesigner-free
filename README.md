@@ -144,4 +144,4 @@ capacitor.config.ts           Capacitor configuration
 
 ---
 
-Built as a free, open starting point — contributions and ideas welcome.
+HomeDesigner is a proprietary app with a free tier; see LICENSE for terms.

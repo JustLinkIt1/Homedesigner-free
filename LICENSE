@@ -1,0 +1,16 @@
+Copyright (c) 2026 Nathan Joppich. All rights reserved.
+
+This software and its source code are proprietary. No permission is granted
+to use, copy, modify, distribute, or sell this software or any part of it,
+except as expressly authorized in writing by the copyright holder.
+
+Third-party components bundled with this software are used under their own
+licenses; see the in-app About screen for attributions, including:
+
+- "Glam Velvet Sofa" 3D model — (c) 2021 Wayfair LLC, by Eric Chadwick,
+  licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/),
+  from the Khronos glTF Sample Assets collection.
+- "Sheen Chair" 3D model — Wayfair LLC, by Eric Chadwick, dedicated to the
+  public domain under CC0 1.0.
+
+Open-source npm dependencies remain under their respective licenses.

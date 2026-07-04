@@ -18,6 +18,7 @@ import CatalogSidebar from './components/CatalogSidebar';
 import PropertiesPanel from './components/PropertiesPanel';
 import Canvas2D from './components/Editor2D/Canvas2D';
 import FloorSwitcher from './components/FloorSwitcher';
+import AboutDialog from './components/AboutDialog';
 import WelcomeModal, { shouldWelcome } from './components/WelcomeModal';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
@@ -41,6 +42,7 @@ export default function App() {
     units, setUnits,
   } = useDesign();
   const [showImport, setShowImport] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => shouldWelcome());
@@ -108,7 +110,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Toolbar onImport={() => setShowImport(true)} />
+      <Toolbar onImport={() => setShowImport(true)} onAbout={() => setShowAbout(true)} />
       <div className="body">
         {view === '2d' && <CatalogSidebar open={drawer === 'catalog'} />}
         <div className="stage-wrap">
@@ -234,6 +236,8 @@ export default function App() {
           <ImportDialog onClose={() => setShowImport(false)} />
         </Suspense>
       )}
+
+      {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
 
       {photoMode && (
         <Suspense

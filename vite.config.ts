@@ -1,11 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import pkg from './package.json';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   // Relative asset URLs so the build also runs inside the Capacitor
   // Android bundle (file/https origin) — harmless for the web deployment.
   base: './',
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [react()],
   resolve: {
     // A single three instance is essential — three-mesh-bvh / the path tracer
