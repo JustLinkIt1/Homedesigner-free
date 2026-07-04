@@ -1172,6 +1172,60 @@ select {
   background: var(--surface-2);
 }
 
+.webgl-missing {
+  max-width: 380px;
+  margin: 0 auto;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+/* Crash screen (error boundary) */
+.crash-screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--canvas-bg, #f1f1ec);
+  padding: 20px;
+  z-index: 1000;
+}
+.crash-card {
+  max-width: 460px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e2e2dc);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.14);
+}
+.crash-card h1 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+.crash-card p {
+  color: var(--text-2, #555);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.crash-detail {
+  margin: 14px 0;
+  padding: 10px 12px;
+  background: var(--surface-2, #f5f5f1);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-2, #666);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow: auto;
+}
+.crash-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
 /* About dialog */
 .modal.about {
   max-width: 440px;

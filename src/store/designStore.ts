@@ -16,6 +16,7 @@ import { uid, dist } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { sampleProject } from '../data/sampleProject';
+import { toast } from '../lib/ui';
 import type { Units } from '../lib/units';
 
 /**
@@ -252,11 +253,19 @@ const loadInitial = (): DesignSnapshot => {
   return emptySnapshot();
 };
 
+// Autosave failures used to be swallowed silently — a full/blocked storage
+// meant quietly losing work. Warn the user (throttled: persist runs on every
+// edit, one toast per minute is plenty).
+let lastPersistWarning = 0;
 const persist = (snap: DesignSnapshot) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
   } catch {
-    /* storage may be full / unavailable */
+    const now = Date.now();
+    if (now - lastPersistWarning > 60_000) {
+      lastPersistWarning = now;
+      toast.error("Couldn't autosave — device storage is full. Export your project to keep a copy.");
+    }
   }
 };
 

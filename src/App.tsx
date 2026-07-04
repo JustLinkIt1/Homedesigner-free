@@ -25,6 +25,7 @@ import { useDesign } from './store/designStore';
 import { sceneCapture } from './lib/renderBridge';
 import { useDraw, drawBridge } from './lib/ui';
 import { initNative } from './lib/native';
+import { isWebGLAvailable } from './lib/webgl';
 
 // Heavy modules loaded on demand to keep the 2D-first experience light:
 //  - Scene3D pulls in three + drei + postprocessing
@@ -116,6 +117,13 @@ export default function App() {
         <div className="stage-wrap">
           {view === '2d' ? (
             <Canvas2D />
+          ) : !isWebGLAvailable() ? (
+            <div className="stage-loading webgl-missing">
+              <p>
+                3D view isn't available on this device — it needs WebGL, which your
+                browser/graphics driver doesn't provide. The 2D editor still works fully.
+              </p>
+            </div>
           ) : (
             <Suspense fallback={<div className="stage-loading"><span className="spin" /> Loading 3D…</div>}>
               <Scene3D />
@@ -175,7 +183,7 @@ export default function App() {
             </div>
           )}
 
-          {view === '3d' && !walkMode && (
+          {view === '3d' && !walkMode && isWebGLAvailable() && (
             <>
               <div className="hud">
                 <div className="pill">
@@ -239,7 +247,7 @@ export default function App() {
 
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
 
-      {photoMode && (
+      {photoMode && isWebGLAvailable() && (
         <Suspense
           fallback={
             <div className="photo-overlay photo-loading">
