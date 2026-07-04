@@ -490,10 +490,14 @@ select {
   background: var(--brand-soft);
   box-shadow: 0 0 0 3px var(--brand-soft);
 }
-.cat-item .emoji {
-  font-size: 26px;
-  line-height: 1;
-  filter: saturate(1.05);
+.cat-item .ci-symbol {
+  width: 34px;
+  height: 34px;
+  color: var(--text-2);
+}
+.cat-item:hover .ci-symbol,
+.cat-item.active .ci-symbol {
+  color: var(--brand);
 }
 .cat-item .label {
   font-size: 11.5px;

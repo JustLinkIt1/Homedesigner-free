@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Search, Sofa } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { FURNITURE_CATALOG } from '../data/furnitureCatalog';
+import SymbolIcon from './SymbolIcon';
 
 export default function CatalogSidebar({ open = false }: { open?: boolean }) {
   const { pendingFurnitureType, setPendingFurniture } = useDesign();
@@ -71,7 +72,7 @@ export default function CatalogSidebar({ open = false }: { open?: boolean }) {
                   onClick={() => setPendingFurniture(pendingFurnitureType === e.type ? null : e.type)}
                   title={`Place ${e.name}`}
                 >
-                  <span className="emoji">{e.icon}</span>
+                  <SymbolIcon shape={e.shape} className="ci-symbol" />
                   <span className="label">{e.name}</span>
                 </button>
               ))}

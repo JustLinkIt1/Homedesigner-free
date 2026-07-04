@@ -19,6 +19,7 @@ import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
 import DimensionsLayer from './DimensionsLayer';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { planCapture } from '../../lib/renderBridge';
+import FurnitureSymbol from './FurnitureSymbol';
 import { buildSnapElements, nearestSnap, type SnapKind, type GuideLine } from '../../lib/snapping';
 import { computeWallPolygons } from '../../lib/wallGeometry';
 import { formatLength, type Units } from '../../lib/units';
@@ -1056,26 +1057,16 @@ export default function Canvas2D() {
                     width={width}
                     height={depth}
                     fill={f.color}
-                    opacity={0.92}
+                    opacity={0.55}
                     cornerRadius={Math.min(width, depth) * 0.08}
                     stroke={sel || selectedIds.includes(f.id) ? '#3b63f6' : '#00000033'}
                     strokeWidth={(sel || selectedIds.includes(f.id) ? 3 : 1) / zoom}
                   />
-                  {/* direction notch */}
-                  <Line
-                    points={[0, 0, 0, -depth / 2]}
-                    stroke={sel ? '#3b63f6' : '#ffffff66'}
-                    strokeWidth={2 / zoom}
-                    listening={false}
-                  />
-                  <Text
-                    x={-width / 2}
-                    y={-7 / zoom}
+                  <FurnitureSymbol
+                    shape={entry?.shape ?? 'box'}
                     width={width}
-                    align="center"
-                    text={entry?.icon ?? '▭'}
-                    fontSize={Math.min(width, depth) * 0.5}
-                    listening={false}
+                    depth={depth}
+                    color={sel ? '#3b63f6' : '#242a33'}
                   />
                 </Group>
                 {editing && (
@@ -1289,7 +1280,7 @@ function FurnitureGhost({
   at,
   zoom,
 }: {
-  entry: { width: number; depth: number; icon: string };
+  entry: { width: number; depth: number; shape: import('../../data/furnitureCatalog').Shape3D };
   at: Point;
   zoom: number;
 }) {
@@ -1306,14 +1297,7 @@ function FurnitureGhost({
         dash={[8 / zoom, 5 / zoom]}
         cornerRadius={Math.min(entry.width, entry.depth) * 0.08}
       />
-      <Text
-        x={-entry.width / 2}
-        y={-7 / zoom}
-        width={entry.width}
-        align="center"
-        text={entry.icon}
-        fontSize={Math.min(entry.width, entry.depth) * 0.5}
-      />
+      <FurnitureSymbol shape={entry.shape} width={entry.width} depth={entry.depth} color="#3b63f6" />
     </Group>
   );
 }
