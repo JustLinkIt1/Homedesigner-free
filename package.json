@@ -1,15 +1,17 @@
 {
   "name": "homedesigner-free",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "license": "UNLICENSED",
   "type": "module",
-  "description": "Free Planner5D-style home design app: import a 2D plan (PDF/DXF), auto-trace walls, and design in 2D & 3D.",
+  "description": "HomeDesigner: draw floor plans in 2D, furnish every room, and walk through your home in 3D. Import PDF/DXF/image plans with automatic wall tracing.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "sync-version": "node scripts/sync-version.mjs",
+    "screenshots": "node tools/screenshots.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
