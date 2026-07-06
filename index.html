@@ -4,7 +4,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="apple-touch-icon" href="./favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: draw edge-to-edge on notched devices (safe-area CSS
+         pads the UI); user-scalable=no: the editor has its own zoom controls,
+         page-level pinch would fight the canvas gestures. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
     <meta name="theme-color" content="#f6f5f2" />
     <meta
       name="description"
@@ -16,12 +22,8 @@
       content="Draw floor plans, trace imported PDF/image plans automatically, furnish every room, and walk through your home in realistic 3D."
     />
     <meta property="og:type" content="website" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Plus Jakarta Sans is self-hosted (public/fonts) so the Android bundle
+         renders identically offline with no CDN request on first paint. -->
     <title>HomeDesigner — Design your dream home in 2D & 3D</title>
   </head>
   <body>

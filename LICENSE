@@ -12,5 +12,7 @@ licenses; see the in-app About screen for attributions, including:
   from the Khronos glTF Sample Assets collection.
 - "Sheen Chair" 3D model — Wayfair LLC, by Eric Chadwick, dedicated to the
   public domain under CC0 1.0.
+- "Plus Jakarta Sans" typeface — Tokotype, licensed under the SIL Open Font
+  License 1.1 (https://openfontlicense.org), bundled as woff2 in public/fonts.
 
 Open-source npm dependencies remain under their respective licenses.

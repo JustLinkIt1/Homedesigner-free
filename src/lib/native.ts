@@ -70,7 +70,12 @@ export async function initNative(onBack: () => boolean): Promise<void> {
   if (!isNative()) return;
   try {
     const { StatusBar, Style } = await import('@capacitor/status-bar');
-    await StatusBar.setStyle({ style: Style.Dark });
+    // Style.Light = dark icons for our light UI (Style.Dark would render
+    // white icons on the near-white toolbar — invisible).
+    await StatusBar.setStyle({ style: Style.Light });
+    // Pre-Android-15 devices honour these; on 15+ they're no-ops and the
+    // edge-to-edge safe-area CSS takes over instead.
+    await StatusBar.setBackgroundColor({ color: '#f6f5f2' });
   } catch {
     /* status bar unavailable on some devices */
   }

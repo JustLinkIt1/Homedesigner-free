@@ -36,4 +36,9 @@ export const CREDITS: { name: string; license: string; url: string }[] = [
     license: 'CC0 1.0',
     url: 'https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SheenChair',
   },
+  {
+    name: 'Plus Jakarta Sans typeface — Tokotype',
+    license: 'SIL OFL 1.1',
+    url: 'https://github.com/tokotype/PlusJakartaSans',
+  },
 ];
