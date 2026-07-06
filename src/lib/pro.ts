@@ -30,6 +30,14 @@ class RevenueCatProvider implements ProProvider {
   private configured = false;
 
   private async sdk() {
+    // A build without the key must never reach the native SDK: RevenueCat
+    // throws IllegalArgumentException on a blank key, and Capacitor rethrows
+    // plugin exceptions as fatal RuntimeExceptions — i.e. the app crashes on
+    // launch. Rejecting here keeps the cached entitlement and disables
+    // purchasing gracefully instead.
+    if (!REVENUECAT_ANDROID_KEY) {
+      throw new Error('Billing is not available in this build (no RevenueCat key).');
+    }
     const { Purchases } = await import('@revenuecat/purchases-capacitor');
     if (!this.configured) {
       await Purchases.configure({ apiKey: REVENUECAT_ANDROID_KEY });
