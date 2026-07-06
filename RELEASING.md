@@ -4,7 +4,7 @@ Everything in this guide runs on **your machine** (it needs Android Studio /
 the Android SDK, your signing keystore, and your Play & RevenueCat accounts).
 The repo itself never contains keys or secrets.
 
-The app id is `com.nathanjoppich.homedesigner`. The one-time Pro unlock is a
+The app id is `com.homedesigner.app`. The one-time Pro unlock is a
 non-consumable in-app product with id **`pro_unlock`** ($6.99), delivered
 through RevenueCat as the entitlement **`pro`**.
 
@@ -65,7 +65,7 @@ only if App Signing was enabled from the first upload (it is by default).
 ## 3. One-time: RevenueCat
 
 1. Create a project at app.revenuecat.com → add an **Android (Play Store)**
-   app with package `com.nathanjoppich.homedesigner`.
+   app with package `com.homedesigner.app`.
 2. Connect Play: create a Google Cloud **service account** with the Play
    Android Publisher role, grant it access in Play Console → Users &
    permissions, and upload its JSON credentials to RevenueCat (their in-app

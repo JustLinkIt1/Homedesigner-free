@@ -1,4 +1,4 @@
-package com.nathanjoppich.homedesigner;
+package com.homedesigner.app;
 
 import com.getcapacitor.BridgeActivity;
 

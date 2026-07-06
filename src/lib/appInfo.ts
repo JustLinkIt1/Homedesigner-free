@@ -10,7 +10,7 @@ export const APP_VERSION: string =
   typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0-dev';
 
 export const PLAY_STORE_URL =
-  'https://play.google.com/store/apps/details?id=com.nathanjoppich.homedesigner';
+  'https://play.google.com/store/apps/details?id=com.homedesigner.app';
 
 export const PRIVACY_URL = 'https://justlinkit1.github.io/Homedesigner-free/privacy.html';
 

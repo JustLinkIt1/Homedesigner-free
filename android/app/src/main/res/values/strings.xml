@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">HomeDesigner</string>
     <string name="title_activity_main">HomeDesigner</string>
-    <string name="package_name">com.nathanjoppich.homedesigner</string>
-    <string name="custom_url_scheme">com.nathanjoppich.homedesigner</string>
+    <string name="package_name">com.homedesigner.app</string>
+    <string name="custom_url_scheme">com.homedesigner.app</string>
 </resources>

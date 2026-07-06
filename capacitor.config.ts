@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.nathanjoppich.homedesigner',
+  appId: 'com.homedesigner.app',
   appName: 'HomeDesigner',
   webDir: 'dist',
   server: {

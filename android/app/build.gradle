@@ -9,7 +9,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.nathanjoppich.homedesigner"
+    namespace = "com.homedesigner.app"
     compileSdk = rootProject.ext.compileSdkVersion
     signingConfigs {
         release {
@@ -22,7 +22,7 @@ android {
         }
     }
     defaultConfig {
-        applicationId "com.nathanjoppich.homedesigner"
+        applicationId "com.homedesigner.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 10000
