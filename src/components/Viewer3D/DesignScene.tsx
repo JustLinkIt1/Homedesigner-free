@@ -56,18 +56,23 @@ export interface WallFade {
   mz: number;
 }
 
+/** Screen-space tap on a paintable surface (wall body or room floor). */
+export type SurfaceTap = { kind: 'wall' | 'room'; id: string; x: number; y: number };
+
 function WallMesh({
   wall,
   openings,
   center,
   register,
   unregister,
+  onTap,
 }: {
   wall: Wall;
   openings: Opening[];
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
   unregister: (id: string) => void;
+  onTap?: (tap: SurfaceTap) => void;
 }) {
   const dxCm = wall.end.x - wall.start.x;
   const dzCm = wall.end.y - wall.start.y;
@@ -108,7 +113,22 @@ function WallMesh({
   }, [wall.id, mat, normal, mx, mz, register, unregister]);
 
   return (
-    <group position={[wall.start.x * M, 0, wall.start.y * M]} rotation={[0, angleY, 0]}>
+    <group
+      position={[wall.start.x * M, 0, wall.start.y * M]}
+      rotation={[0, angleY, 0]}
+      onClick={
+        onTap
+          ? (e) => {
+              if (e.delta > 4) return; // an orbit drag ending here is not a tap
+              // A dollhouse-faded wall is visually absent — let the tap fall
+              // through to the floor behind it instead of painting a ghost.
+              if (mat.opacity < 0.5) return;
+              e.stopPropagation();
+              onTap({ kind: 'wall', id: wall.id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY });
+            }
+          : undefined
+      }
+    >
       {/* Solid wall body — all spans share one fadeable material */}
       {spans.map((s, i) => (
         <mesh
@@ -300,7 +320,7 @@ function CeilingMesh({ room, height }: { room: Room; height: number }) {
   );
 }
 
-function FloorMesh({ room }: { room: Room }) {
+function FloorMesh({ room, onTap }: { room: Room; onTap?: (tap: SurfaceTap) => void }) {
   const geometry = useMemo(() => {
     const shape = new THREE.Shape();
     room.points.forEach((p, i) => {
@@ -319,7 +339,21 @@ function FloorMesh({ room }: { room: Room }) {
   const texture = useMemo(() => getFloorTexture(kind, color), [kind, color]);
 
   return (
-    <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.002, 0]} receiveShadow>
+    <mesh
+      geometry={geometry}
+      rotation={[Math.PI / 2, 0, 0]}
+      position={[0, 0.002, 0]}
+      receiveShadow
+      onClick={
+        onTap
+          ? (e) => {
+              if (e.delta > 4) return; // orbit drag, not a tap
+              e.stopPropagation();
+              onTap({ kind: 'room', id: room.id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY });
+            }
+          : undefined
+      }
+    >
       <meshStandardMaterial
         map={texture}
         roughness={FLOOR_ROUGHNESS[kind]}
@@ -370,6 +404,7 @@ function FloorContent({
   center,
   register,
   unregister,
+  onSurfaceTap,
 }: {
   geom: FloorGeom;
   elevation: number;
@@ -379,6 +414,7 @@ function FloorContent({
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
   unregister: (id: string) => void;
+  onSurfaceTap?: (tap: SurfaceTap) => void;
 }) {
   const selection = useDesign((s) => s.selection);
   const select = useDesign((s) => s.select);
@@ -404,7 +440,7 @@ function FloorContent({
         <CeilingMesh key={`ceil-${r.id}`} room={r} height={ceilingHeight} />
       ))}
       {geom.rooms.map((r) => (
-        <FloorMesh key={r.id} room={r} />
+        <FloorMesh key={r.id} room={r} onTap={interactive ? onSurfaceTap : undefined} />
       ))}
       {geom.walls.map((w) => (
         <WallMesh
@@ -414,6 +450,7 @@ function FloorContent({
           center={center}
           register={register}
           unregister={unregister}
+          onTap={interactive ? onSurfaceTap : undefined}
         />
       ))}
       {geom.furniture.map((f) => (
@@ -437,9 +474,11 @@ function FloorContent({
 export default function DesignScene({
   interactive = true,
   dollhouse = false,
+  onSurfaceTap,
 }: {
   interactive?: boolean;
   dollhouse?: boolean;
+  onSurfaceTap?: (tap: SurfaceTap) => void;
 }) {
   const floors = useDesign((s) => s.floors);
   const floorGeom = useDesign((s) => s.floorGeom);
@@ -484,6 +523,7 @@ export default function DesignScene({
             isTop={f.elevation >= topElevation}
             dollhouse={dollhouse}
             center={center}
+            onSurfaceTap={onSurfaceTap}
             register={register}
             unregister={unregister}
           />

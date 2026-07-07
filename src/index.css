@@ -2167,6 +2167,71 @@ button.brand:hover .brand-name {
   }
 }
 
+/* ---------- 3D decorate popover ---------- */
+.paint-pop {
+  position: fixed;
+  z-index: 40;
+  transform: translate(-50%, -100%);
+  width: 224px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 10px 12px 12px;
+  animation: ctx-in 0.12s ease;
+}
+.pp-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 9px;
+}
+.pp-head .icon {
+  width: 15px;
+  height: 15px;
+  color: var(--brand);
+}
+.pp-close {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  color: var(--text-3);
+}
+.pp-close:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.pp-close .icon {
+  width: 14px;
+  height: 14px;
+  color: inherit;
+}
+.pp-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+}
+.pp-swatch {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  border: 1px solid rgba(20, 26, 38, 0.18);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.pp-swatch:hover {
+  transform: scale(1.12);
+}
+.pp-swatch.on {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
 /* ---------- Context menu ---------- */
 .ctx-menu {
   position: fixed;

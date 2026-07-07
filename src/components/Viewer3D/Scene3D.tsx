@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Sky } from '@react-three/drei';
 import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
-import DesignScene, { useDesignBounds } from './DesignScene';
+import { Paintbrush, X } from 'lucide-react';
+import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
 import WalkControls, { WalkTouchControls } from './WalkControls';
 import { sceneCapture } from '../../lib/renderBridge';
 import { saveImage } from '../../lib/native';
@@ -11,6 +12,66 @@ import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
 import { slugify } from '../../lib/appInfo';
+import { FLOOR_MATERIALS } from '../../data/furnitureCatalog';
+
+/** Interior paint palette for walls (first entry is the default plaster). */
+const WALL_PAINTS = [
+  '#ece6db', '#ffffff', '#f5efe3', '#e9d8c3', '#dfe5dc', '#cfdce2',
+  '#d7c4b7', '#c9cdd4', '#b9c7b3', '#e6c9c9', '#f0d9a8', '#4a5568',
+];
+
+/**
+ * Planner-style decorate popover: tapping a wall or floor in 3D opens a tiny
+ * palette right at the tap point; picking a swatch repaints via the normal
+ * store commits (so paint jobs are undoable from the 2D editor).
+ */
+function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }) {
+  const current = useDesign((st) =>
+    tap.kind === 'wall'
+      ? st.walls.find((w) => w.id === tap.id)?.color
+      : st.rooms.find((r) => r.id === tap.id)?.floorMaterial,
+  );
+  // The tapped element may not exist anymore (undo, floor switch).
+  useEffect(() => {
+    if (current === undefined) onClose();
+  }, [current, onClose]);
+  if (current === undefined) return null;
+
+  const left = Math.min(Math.max(tap.x, 120), window.innerWidth - 120);
+  const top = Math.max(86, tap.y - 14);
+  return (
+    <div className="paint-pop" style={{ left, top }}>
+      <div className="pp-head">
+        <Paintbrush className="icon" />
+        {tap.kind === 'wall' ? 'Wall paint' : 'Flooring'}
+        <button className="pp-close" onClick={onClose} aria-label="Close">
+          <X className="icon" />
+        </button>
+      </div>
+      <div className="pp-swatches">
+        {tap.kind === 'wall'
+          ? WALL_PAINTS.map((c) => (
+              <button
+                key={c}
+                className={`pp-swatch ${current === c ? 'on' : ''}`}
+                style={{ background: c }}
+                title={c}
+                onClick={() => useDesign.getState().updateWall(tap.id, { color: c })}
+              />
+            ))
+          : FLOOR_MATERIALS.map((m) => (
+              <button
+                key={m.id}
+                className={`pp-swatch ${current === m.id ? 'on' : ''}`}
+                style={{ background: m.color }}
+                title={m.name}
+                onClick={() => useDesign.getState().updateRoom(tap.id, { floorMaterial: m.id })}
+              />
+            ))}
+      </div>
+    </div>
+  );
+}
 
 /** Coarse pointer (no hover) → treat as touch and show on-screen controls. */
 const IS_TOUCH =
@@ -71,6 +132,12 @@ export default function Scene3D() {
   const moveRef = useRef({ x: 0, y: 0 });
   const lookRef = useRef({ x: 0, y: 0 });
 
+  // Decorate popover state (tap a wall/floor to repaint it in place).
+  const [paintTap, setPaintTap] = useState<SurfaceTap | null>(null);
+  useEffect(() => {
+    if (walkMode) setPaintTap(null);
+  }, [walkMode]);
+
   return (
     <>
     <Canvas
@@ -79,7 +146,10 @@ export default function Scene3D() {
       gl={{ antialias: true, preserveDrawingBuffer: false }}
       camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
       style={{ position: 'absolute', inset: 0 }}
-      onPointerMissed={() => useDesign.getState().clearSelection()}
+      onPointerMissed={() => {
+        useDesign.getState().clearSelection();
+        setPaintTap(null);
+      }}
     >
       {/* Soft daytime sky + gentle distance fog: gives renders a horizon and
           natural light falloff instead of a flat grey void. */}
@@ -143,7 +213,11 @@ export default function Scene3D() {
       />
 
       {/* Force solid walls while walking so the real interior is visible. */}
-      <DesignScene interactive dollhouse={walkMode ? false : dollhouse} />
+      <DesignScene
+        interactive
+        dollhouse={walkMode ? false : dollhouse}
+        onSurfaceTap={walkMode ? undefined : setPaintTap}
+      />
 
       <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
         <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />
@@ -173,6 +247,9 @@ export default function Scene3D() {
         />
       )}
     </Canvas>
+
+    {/* Decorate popover, anchored at the tapped surface. */}
+    {paintTap && !walkMode && <PaintPopover tap={paintTap} onClose={() => setPaintTap(null)} />}
 
     {/* Walk-mode HUD: hint, exit, and (on touch) on-screen movement controls. */}
     {walkMode && (
