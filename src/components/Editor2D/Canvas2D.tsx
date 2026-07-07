@@ -1040,7 +1040,34 @@ export default function Canvas2D() {
               >
                 {/* cut the wall */}
                 <Rect x={-wd / 2} y={-t / 2 - 1} width={wd} height={t + 2} fill="#f1f1ec" />
-                {o.type === 'door' && o.style === 'double' ? (
+                {o.type === 'door' && (o.style === 'passage' || o.style === 'arch') ? (
+                  <>
+                    {/* doorless opening: jambs + dashed clear-width line;
+                        archways add a second dashed line for the header */}
+                    <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                    <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                    <Line points={[-wd / 2, 0, wd / 2, 0]} stroke={sel ? '#3b63f6' : '#aeb6c2'} strokeWidth={1.4 / zoom} dash={[6 / zoom, 5 / zoom]} />
+                    {o.style === 'arch' && (
+                      <Line points={[-wd / 2, -t / 4, wd / 2, -t / 4]} stroke={sel ? '#3b63f6' : '#aeb6c2'} strokeWidth={1.2 / zoom} dash={[3 / zoom, 4 / zoom]} />
+                    )}
+                  </>
+                ) : o.type === 'door' && o.style === 'pocket' ? (
+                  <>
+                    {/* leaf parked in the wall cavity + dashed track across */}
+                    <Rect x={-wd / 2 - wd * 0.55} y={-t * 0.28} width={wd * 0.55} height={t * 0.56} fill={sel ? '#3b63f6' : '#b9a58c'} />
+                    <Line points={[-wd / 2, 0, wd / 2, 0]} stroke={sel ? '#3b63f6' : '#aeb6c2'} strokeWidth={1.4 / zoom} dash={[6 / zoom, 5 / zoom]} />
+                    <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                    <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                  </>
+                ) : o.type === 'door' && o.style === 'bifold' ? (
+                  <>
+                    {/* folded leaves: the classic W chevron */}
+                    <Line points={[-wd / 2, 0, -wd / 4, -wd * 0.3, 0, 0]} stroke={sel ? '#3b63f6' : '#8a94a2'} strokeWidth={2 / zoom} />
+                    <Line points={[0, 0, wd / 4, -wd * 0.3, wd / 2, 0]} stroke={sel ? '#3b63f6' : '#8a94a2'} strokeWidth={2 / zoom} />
+                    <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                    <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
+                  </>
+                ) : o.type === 'door' && o.style === 'double' ? (
                   <>
                     {/* two leaves hinged at each jamb, swinging to the centre */}
                     <Line points={[-wd / 2, 0, -wd / 2, -wd / 2]} stroke={sel ? '#3b63f6' : '#cfd6e0'} strokeWidth={3 / zoom} />
@@ -1092,6 +1119,20 @@ export default function Canvas2D() {
                         stroke="#7fb8d8"
                         strokeWidth={1.2 / zoom}
                       />
+                    )}
+                    {o.style === 'sliding' && (
+                      <>
+                        {/* two offset sashes */}
+                        <Rect x={-wd / 2} y={-t * 0.38} width={wd * 0.55} height={t * 0.28} fill={sel ? '#3b63f6' : '#8fc3e0'} />
+                        <Rect x={-wd * 0.05} y={t * 0.1} width={wd * 0.55} height={t * 0.28} fill={sel ? '#3b63f6' : '#b7d9ec'} />
+                      </>
+                    )}
+                    {o.style === 'casement' && (
+                      <>
+                        {/* hinged sash swing, like a door but glazed */}
+                        <Line points={[-wd / 2, 0, -wd / 2, -wd * 0.7]} stroke={sel ? '#3b63f6' : '#7fb8d8'} strokeWidth={2 / zoom} />
+                        <Arc x={-wd / 2} y={0} innerRadius={wd * 0.7} outerRadius={wd * 0.7} angle={55} rotation={270} stroke="#7fb8d8" strokeWidth={1.2 / zoom} />
+                      </>
                     )}
                   </>
                 )}

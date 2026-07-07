@@ -40,7 +40,13 @@ export type Shape3D =
   // opening variants (sidebar icons / ghosts only — they place wall openings)
   | 'door_double'
   | 'door_sliding'
-  | 'window_french';
+  | 'door_pocket'
+  | 'door_bifold'
+  | 'door_passage'
+  | 'door_arch'
+  | 'window_french'
+  | 'window_sliding'
+  | 'window_casement';
 
 export interface CatalogEntry {
   type: string;
@@ -133,8 +139,14 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'door', name: 'Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#a9744f', shape: 'door', icon: '🚪', opening: { kind: 'door', style: 'single', sill: 0 } },
   { type: 'double_door', pro: true, name: 'Double Door', category: 'Openings', width: 160, depth: 12, height: 205, color: '#a9744f', shape: 'door_double', icon: '🚪', opening: { kind: 'door', style: 'double', sill: 0 } },
   { type: 'sliding_door', pro: true, name: 'Sliding Door', category: 'Openings', width: 180, depth: 12, height: 210, color: '#9db4c4', shape: 'door_sliding', icon: '🚪', opening: { kind: 'door', style: 'sliding', sill: 0 } },
+  { type: 'passage', name: 'Open Passage', category: 'Openings', width: 100, depth: 12, height: 205, color: '#e8e2d5', shape: 'door_passage', icon: '⬜', opening: { kind: 'door', style: 'passage', sill: 0 } },
+  { type: 'archway', pro: true, name: 'Archway', category: 'Openings', width: 120, depth: 12, height: 215, color: '#e8e2d5', shape: 'door_arch', icon: '⛩️', opening: { kind: 'door', style: 'arch', sill: 0 } },
+  { type: 'pocket_door', pro: true, name: 'Pocket Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#b9a58c', shape: 'door_pocket', icon: '🚪', opening: { kind: 'door', style: 'pocket', sill: 0 } },
+  { type: 'bifold_door', pro: true, name: 'Bifold Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#a9744f', shape: 'door_bifold', icon: '🚪', opening: { kind: 'door', style: 'bifold', sill: 0 } },
   { type: 'window', name: 'Window', category: 'Openings', width: 120, depth: 12, height: 120, color: '#bfe3f2', shape: 'window', icon: '🪟', opening: { kind: 'window', style: 'standard', sill: 90 } },
   { type: 'french_window', pro: true, name: 'French Window', category: 'Openings', width: 180, depth: 12, height: 220, color: '#bfe3f2', shape: 'window_french', icon: '🪟', opening: { kind: 'window', style: 'french', sill: 0 } },
+  { type: 'sliding_window', pro: true, name: 'Sliding Window', category: 'Openings', width: 150, depth: 12, height: 120, color: '#bfe3f2', shape: 'window_sliding', icon: '🪟', opening: { kind: 'window', style: 'sliding', sill: 90 } },
+  { type: 'casement_window', pro: true, name: 'Casement Window', category: 'Openings', width: 60, depth: 12, height: 120, color: '#bfe3f2', shape: 'window_casement', icon: '🪟', opening: { kind: 'window', style: 'casement', sill: 90 } },
 ];
 
 export const CATALOG_BY_TYPE: Record<string, CatalogEntry> = Object.fromEntries(

@@ -157,6 +157,17 @@ function WallMesh({
   );
 }
 
+// Unit quarter-fillet (radius 1, depth 1) shared by every archway; scaled per
+// instance so arch corners cost no per-opening geometry.
+const ARCH_FILLET_GEO = (() => {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0);
+  s.lineTo(0, -1);
+  s.absarc(1, -1, 1, Math.PI, Math.PI / 2, true);
+  s.lineTo(0, 0);
+  return new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false });
+})();
+
 /** Door leaf or window glass + frame, in wall-local coordinates. */
 function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickness: number; len: number }) {
   const centreCm = o.offset * len; // offset is a 0..1 fraction along the wall
@@ -180,6 +191,67 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
         </mesh>
       </>
     );
+
+    if (o.style === 'passage' || o.style === 'arch') {
+      // Doorless opening: cased jambs only; archways get rounded top corners.
+      const r = Math.min(w * 0.3, 0.45);
+      const td = thickness * 0.95;
+      return (
+        <group>
+          {jambs}
+          {o.style === 'arch' &&
+            [
+              { x: leftX, sx: r },
+              { x: rightX, sx: -r },
+            ].map((f, i) => (
+              <mesh key={i} geometry={ARCH_FILLET_GEO} position={[f.x, h, -td / 2]} scale={[f.sx, r, td]} castShadow>
+                <meshStandardMaterial color="#e6e8ea" roughness={0.8} side={THREE.DoubleSide} />
+              </mesh>
+            ))}
+        </group>
+      );
+    }
+
+    if (o.style === 'pocket') {
+      // Leaf peeking out of the wall cavity + overhead track.
+      const lw = w * 0.35;
+      return (
+        <group>
+          {jambs}
+          <mesh position={[cx, h + 0.02, 0]} castShadow>
+            <boxGeometry args={[w, 0.04, thickness * 0.5]} />
+            <meshStandardMaterial color="#c9cdd2" roughness={0.6} metalness={0.2} />
+          </mesh>
+          <mesh position={[leftX + lw / 2, h / 2, 0]} castShadow>
+            <boxGeometry args={[lw, h * 0.97, 0.035]} />
+            <meshStandardMaterial color="#b9a58c" roughness={0.6} />
+          </mesh>
+        </group>
+      );
+    }
+
+    if (o.style === 'bifold') {
+      // Two half-leaves folded into a V.
+      const seg = w / 2;
+      const fold = 0.85;
+      return (
+        <group>
+          {jambs}
+          <group position={[leftX, 0, 0]} rotation={[0, -fold, 0]}>
+            <mesh position={[(seg * 0.96) / 2, h / 2, 0]} castShadow>
+              <boxGeometry args={[seg * 0.96, h * 0.98, 0.035]} />
+              <meshStandardMaterial color="#a9744f" roughness={0.6} />
+            </mesh>
+          </group>
+          <group position={[rightX, 0, 0]} rotation={[0, Math.PI + fold, 0]}>
+            <mesh position={[(seg * 0.96) / 2, h / 2, 0]} castShadow>
+              <boxGeometry args={[seg * 0.96, h * 0.98, 0.035]} />
+              <meshStandardMaterial color="#96613f" roughness={0.6} />
+            </mesh>
+          </group>
+        </group>
+      );
+    }
 
     if (o.style === 'sliding') {
       // Two glazed panels in the wall plane; one slid half-open.
@@ -242,15 +314,39 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
     );
   }
 
-  // window: frame ring + glass pane
+  // window: frame ring + glazing (flat pane, sliding sashes, or open casement)
   const fr = 0.05; // frame section (m)
   const td = thickness * 0.6;
   return (
     <group>
-      <mesh position={[cx, sill + h / 2, 0]}>
-        <boxGeometry args={[w, h, td * 0.5]} />
-        <meshStandardMaterial color="#bfe3f2" transparent opacity={0.35} roughness={0.05} metalness={0.1} />
-      </mesh>
+      {o.style !== 'sliding' && o.style !== 'casement' && (
+        <mesh position={[cx, sill + h / 2, 0]}>
+          <boxGeometry args={[w, h, td * 0.5]} />
+          <meshStandardMaterial color="#bfe3f2" transparent opacity={0.35} roughness={0.05} metalness={0.1} />
+        </mesh>
+      )}
+      {o.style === 'sliding' &&
+        [0, 1].map((i) => (
+          <group key={i}>
+            <mesh position={[cx + (i === 0 ? -w * 0.24 : w * 0.24), sill + h / 2, (i === 0 ? -1 : 1) * thickness * 0.16]} castShadow>
+              <boxGeometry args={[w * 0.55, h * 0.94, 0.03]} />
+              <meshStandardMaterial color="#dfe3e6" roughness={0.5} metalness={0.1} />
+            </mesh>
+            <mesh position={[cx + (i === 0 ? -w * 0.24 : w * 0.24), sill + h / 2, (i === 0 ? -1 : 1) * thickness * 0.16]}>
+              <boxGeometry args={[w * 0.47, h * 0.82, 0.02]} />
+              <meshStandardMaterial color="#bfe3f2" transparent opacity={0.35} roughness={0.05} metalness={0.1} />
+            </mesh>
+          </group>
+        ))}
+      {o.style === 'casement' && (
+        // Sash hinged at the left jamb, swung open.
+        <group position={[cx - w / 2, 0, 0]} rotation={[0, -0.5, 0]}>
+          <mesh position={[(w * 0.96) / 2, sill + h / 2, 0]} castShadow>
+            <boxGeometry args={[w * 0.96, h * 0.94, 0.03]} />
+            <meshStandardMaterial color="#bfe3f2" transparent opacity={0.45} roughness={0.1} metalness={0.1} />
+          </mesh>
+        </group>
+      )}
       {/* frame: top, bottom, left, right */}
       <mesh position={[cx, sill + h, 0]} castShadow>
         <boxGeometry args={[w + fr, fr, td]} />

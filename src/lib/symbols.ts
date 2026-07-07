@@ -96,6 +96,35 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: 'M4,34 H96 M4,66 H96', sw: 2.5 },
     { d: 'M33,34 V66 M50,34 V66 M67,34 V66', sw: 2 },
   ],
+  door_passage: [
+    { d: 'M4,42 H24 M76,42 H96 M4,58 H24 M76,58 H96', sw: 3 },
+    { d: 'M30,50 H70', sw: 1.5 },
+  ],
+  door_arch: [
+    // Elevation view reads instantly as an arched opening.
+    { d: 'M22,92 V52 A28,28 0 0 1 78,52 V92', sw: 2.5 },
+    { d: 'M10,92 H90', sw: 2 },
+  ],
+  door_pocket: [
+    { d: rect(6, 42, 38, 16) }, // leaf tucked in the wall cavity
+    { d: 'M52,50 H88 M80,44 L88,50 L80,56', sw: 2 },
+    { d: 'M48,36 V64 M92,36 V64', sw: 2.5 },
+  ],
+  door_bifold: [
+    { d: 'M6,74 L28,42 L50,74 L72,42 L94,74', sw: 2.5 },
+    { d: 'M6,74 H94', sw: 1.5 },
+  ],
+  window_sliding: [
+    { d: 'M4,38 H96 M4,62 H96', sw: 2 },
+    { d: rect(8, 41, 50, 8) },
+    { d: rect(42, 51, 50, 8) },
+    { d: 'M32,82 H68 M60,76 L68,82 L60,88', sw: 2 },
+  ],
+  window_casement: [
+    { d: 'M4,50 H96', sw: 2.5 },
+    { d: 'M24,50 V22', sw: 2 },
+    { d: 'M24,22 A28,28 0 0 1 52,50', sw: 1.5 },
+  ],
   bookshelf: [
     { d: rect(4, 8, 92, 84) },
     { d: 'M20,8 V92 M36,8 V92 M52,8 V92 M68,8 V92 M84,8 V92', sw: 2 },

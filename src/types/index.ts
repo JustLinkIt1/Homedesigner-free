@@ -29,8 +29,21 @@ export interface Room {
   auto?: boolean;
 }
 
-/** Visual/behavioural variant of an opening. */
-export type OpeningStyle = 'single' | 'double' | 'sliding' | 'standard' | 'french';
+/** Visual/behavioural variant of an opening.
+ *  Doors: single (default) / double / sliding / pocket / bifold.
+ *  Doorless interior openings (kind 'door', no leaf): passage / arch.
+ *  Windows: standard (default) / french / casement; 'sliding' is shared. */
+export type OpeningStyle =
+  | 'single'
+  | 'double'
+  | 'sliding'
+  | 'pocket'
+  | 'bifold'
+  | 'passage'
+  | 'arch'
+  | 'standard'
+  | 'french'
+  | 'casement';
 
 /** A door or window cut into a wall. */
 export interface Opening {
