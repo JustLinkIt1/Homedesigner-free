@@ -139,6 +139,16 @@ function Box({
   );
 }
 
+/** A fixture light that only emits when artificial lighting is switched on.
+ *  Emissive geometry stays visible either way; only the cast light toggles. */
+function LampLight({
+  position, intensity, distance, color = '#ffe9c0', castShadow = false,
+}: { position: [number, number, number]; intensity: number; distance: number; color?: string; castShadow?: boolean }) {
+  const on = useDesign((s) => s.lightsOn);
+  if (!on) return null;
+  return <pointLight position={position} intensity={intensity} distance={distance} color={color} castShadow={castShadow} />;
+}
+
 /** Cylindrical leg / post helper. */
 function Leg({
   r, h, y, color = '#4a3a28', dx = 0, dz = 0,
@@ -266,7 +276,7 @@ function ShapeMesh({
             <coneGeometry args={[w * 0.6, h * 0.18, 16, 1, true]} />
             <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.4} />
           </mesh>
-          <pointLight position={[0, h * 0.95, 0]} intensity={6} distance={4} color="#ffe9c0" />
+          <LampLight position={[0, h * 0.95, 0]} intensity={6} distance={4} />
         </group>
       );
     case 'plant':
@@ -393,7 +403,7 @@ function ShapeMesh({
             <sphereGeometry args={[w * 0.16, 12, 12]} />
             <meshStandardMaterial color="#fff6d8" emissive="#ffe9b0" emissiveIntensity={1.4} />
           </mesh>
-          <pointLight position={[0, h * 0.25, 0]} intensity={8} distance={5} color="#ffe9c0" castShadow />
+          <LampLight position={[0, h * 0.25, 0]} intensity={8} distance={5} castShadow />
         </group>
       );
     case 'ceiling_light':
@@ -403,7 +413,7 @@ function ShapeMesh({
             <cylinderGeometry args={[w * 0.5, w * 0.5, h, 24]} />
             <meshStandardMaterial color={color} emissive="#fff4d6" emissiveIntensity={0.8} roughness={0.4} />
           </mesh>
-          <pointLight position={[0, 0, 0]} intensity={7} distance={6} color="#fff1d0" />
+          <LampLight position={[0, 0, 0]} intensity={7} distance={6} color="#fff1d0" />
         </group>
       );
     case 'desk_lamp':
@@ -424,9 +434,73 @@ function ShapeMesh({
             <coneGeometry args={[w * 0.45, h * 0.35, 16, 1, true]} />
             <meshStandardMaterial color={color} side={2} emissive="#ffe9b0" emissiveIntensity={0.5} roughness={0.5} />
           </mesh>
-          <pointLight position={[0, h * 0.8, d * 0.3]} intensity={3} distance={2.5} color="#ffe9c0" />
+          <LampLight position={[0, h * 0.8, d * 0.3]} intensity={3} distance={2.5} />
         </group>
       );
+    case 'led_strip': {
+      // A slim luminous bar (under-cabinet / shelf accent). `color` tints it.
+      const glow = color || '#ffd9a0';
+      return (
+        <group>
+          <mesh position={[0, h / 2, 0]}>
+            <boxGeometry args={[w, Math.max(h, 0.03), d * 0.5]} />
+            <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={2.2} />
+          </mesh>
+          <LampLight position={[0, -h, 0]} intensity={3} distance={Math.max(2, w * 3)} color={glow} />
+        </group>
+      );
+    }
+    case 'cove_light': {
+      // Niche / cove up-light: a recessed channel washing the wall above it.
+      const glow = color || '#ffe6c0';
+      return (
+        <group>
+          <mesh position={[0, h / 2, 0]}>
+            <boxGeometry args={[w, h, d]} />
+            <meshStandardMaterial color="#2a2c31" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, h * 0.9, d * 0.1]}>
+            <boxGeometry args={[w * 0.9, h * 0.25, d * 0.3]} />
+            <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={2.4} />
+          </mesh>
+          <LampLight position={[0, h * 2, 0]} intensity={5} distance={Math.max(3, w * 4)} color={glow} />
+        </group>
+      );
+    }
+    case 'sconce': {
+      // Wall sconce: a small shade throwing light up and down.
+      const glow = color || '#ffe9c0';
+      return (
+        <group>
+          <mesh position={[0, h / 2, -d * 0.3]} castShadow>
+            <boxGeometry args={[w * 0.4, h * 0.5, d * 0.3]} />
+            <meshStandardMaterial color="#4a4a50" roughness={0.5} metalness={0.4} />
+          </mesh>
+          <mesh position={[0, h / 2, 0]}>
+            <cylinderGeometry args={[w * 0.4, w * 0.5, h * 0.7, 16, 1, true]} />
+            <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={1.2} side={2} roughness={0.5} />
+          </mesh>
+          <LampLight position={[0, h * 0.5, d * 0.2]} intensity={4} distance={3.5} color={glow} />
+        </group>
+      );
+    }
+    case 'spotlight': {
+      // Recessed ceiling spot / downlight.
+      const glow = '#fff4e0';
+      return (
+        <group>
+          <mesh position={[0, h * 0.5, 0]}>
+            <cylinderGeometry args={[w * 0.5, w * 0.5, h, 20]} />
+            <meshStandardMaterial color="#d8dade" roughness={0.4} metalness={0.5} />
+          </mesh>
+          <mesh position={[0, h * 0.02, 0]}>
+            <cylinderGeometry args={[w * 0.38, w * 0.38, h * 0.1, 20]} />
+            <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={2.6} />
+          </mesh>
+          <LampLight position={[0, -h * 0.3, 0]} intensity={6} distance={5} color={glow} />
+        </group>
+      );
+    }
     case 'mirror':
       return (
         <group>

@@ -80,6 +80,8 @@ interface DesignState extends DesignSnapshot {
   showDimensions: boolean; // 2D: architectural dimension annotations
   dollhouse: boolean; // 3D: fade walls between camera and interior
   walkMode: boolean; // 3D: first-person walk-through mode
+  sunTime: number; // 3D: time of day 0..24 driving sun angle/colour (renders)
+  lightsOn: boolean; // 3D: artificial (lamp/LED) fixtures emit light
   defaultWallHeight: number;
   defaultWallThickness: number;
   pendingFurnitureType: string | null;
@@ -102,6 +104,8 @@ interface DesignState extends DesignSnapshot {
   setUnits: (u: Units) => void;
   setDollhouse: (b: boolean) => void;
   setWalkMode: (b: boolean) => void;
+  setSunTime: (t: number) => void;
+  setLightsOn: (b: boolean) => void;
   requestFit: () => void;
   select: (sel: Selection) => void;
   clearSelection: () => void;
@@ -158,19 +162,34 @@ interface DesignState extends DesignSnapshot {
 
 const SETTINGS_KEY = 'homedesigner.settings.v1';
 
-/** Load persisted display settings (units) from their own key — kept out of
- *  the undo snapshot so changing units never pollutes history. */
-const loadSettings = (): { units: Units } => {
+/** Load persisted display settings (units, lighting) from their own key — kept
+ *  out of the undo snapshot so changing them never pollutes history. */
+const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean } => {
+  const def = { units: 'metric' as Units, sunTime: 13, lightsOn: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      if (s.units === 'metric' || s.units === 'imperial') return { units: s.units };
+      return {
+        units: s.units === 'imperial' ? 'imperial' : 'metric',
+        sunTime: typeof s.sunTime === 'number' ? Math.min(24, Math.max(0, s.sunTime)) : def.sunTime,
+        lightsOn: typeof s.lightsOn === 'boolean' ? s.lightsOn : def.lightsOn,
+      };
     }
   } catch {
     /* ignore corrupt storage */
   }
-  return { units: 'metric' };
+  return def;
+};
+
+/** Merge-write a settings patch so each setter keeps the others' values. */
+const persistSettings = (patch: Partial<{ units: Units; sunTime: number; lightsOn: boolean }>) => {
+  try {
+    const cur = loadSettings();
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...cur, ...patch }));
+  } catch {
+    /* storage may be full / unavailable */
+  }
 };
 
 const emptySnapshot = (): DesignSnapshot => {
@@ -316,6 +335,8 @@ export const useDesign = create<DesignState>((set, get) => {
     selectedIds: [],
     savedTick: 0,
     units: loadSettings().units,
+    sunTime: loadSettings().sunTime,
+    lightsOn: loadSettings().lightsOn,
     _past: [],
     _future: [],
 
@@ -327,15 +348,20 @@ export const useDesign = create<DesignState>((set, get) => {
     setShowGrid: (b) => set({ showGrid: b }),
     setShowDimensions: (b) => set({ showDimensions: b }),
     setUnits: (u) => {
-      try {
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify({ units: u }));
-      } catch {
-        /* storage may be full / unavailable */
-      }
+      persistSettings({ units: u });
       set({ units: u });
     },
     setDollhouse: (b) => set({ dollhouse: b }),
     setWalkMode: (b) => set({ walkMode: b }),
+    setSunTime: (t) => {
+      const v = Math.min(24, Math.max(0, t));
+      persistSettings({ sunTime: v });
+      set({ sunTime: v });
+    },
+    setLightsOn: (b) => {
+      persistSettings({ lightsOn: b });
+      set({ lightsOn: b });
+    },
     requestFit: () => set((st) => ({ fitRequest: st.fitRequest + 1 })),
     select: (sel) =>
       set({ selection: sel, selectedIds: sel.kind === 'furniture' && sel.id ? [sel.id] : [] }),

@@ -6,6 +6,10 @@ import { requirePro } from '../lib/pro';
 import { FURNITURE_CATALOG } from '../data/furnitureCatalog';
 import SymbolIcon from './SymbolIcon';
 
+// Openings (doors/windows) are placed from the build-mode dock flyout, so they
+// no longer clutter the furniture catalog.
+const CATALOG = FURNITURE_CATALOG.filter((e) => e.category !== 'Openings');
+
 export default function CatalogSidebar({
   open = false,
   docked = false,
@@ -22,13 +26,13 @@ export default function CatalogSidebar({
 
   const categories = useMemo(() => {
     const set = new Set<string>();
-    FURNITURE_CATALOG.forEach((e) => set.add(e.category));
+    CATALOG.forEach((e) => set.add(e.category));
     return ['All', ...set];
   }, []);
 
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const items = FURNITURE_CATALOG.filter(
+    const items = CATALOG.filter(
       (e) =>
         (category === 'All' || e.category === category) &&
         (!q || e.name.toLowerCase().includes(q) || e.category.toLowerCase().includes(q)),

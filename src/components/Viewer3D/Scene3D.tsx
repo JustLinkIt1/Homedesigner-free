@@ -14,6 +14,32 @@ import { applyWatermark } from '../../lib/watermark';
 import { slugify } from '../../lib/appInfo';
 import { FLOOR_MATERIALS } from '../../data/furnitureCatalog';
 
+/**
+ * Sun model: map a 0..24h clock to a light direction, colour and intensities.
+ * The sun rises in the east (−x), peaks south-high at noon, sets west (+x);
+ * colour warms toward sunrise/sunset and the whole rig dims into night so
+ * artificial fixtures take over. Shared by the sky dome and the key light so
+ * daylight through windows always matches the sky the render shows.
+ */
+export function sunModel(t: number) {
+  // Daylight fraction: 0 before 6am / after 8pm, 1 around midday.
+  const day = Math.max(0, Math.sin(((t - 6) / 12) * Math.PI)); // 6->0, 12->1, 18->0
+  const azimuth = ((t - 6) / 12) * Math.PI; // east(0) -> west(PI) across the day
+  const elev = day; // 0 at horizon, 1 at zenith
+  const dir: [number, number, number] = [
+    Math.cos(azimuth) * (1 - elev * 0.6), // + morning east, - evening west
+    0.15 + elev * 1.2, // never fully underground so shadows stay sane
+    0.35 + elev * 0.4,
+  ];
+  // Warmth: amber at low sun, neutral-cool at noon.
+  const warm = 1 - day; // 1 at dawn/dusk
+  const sunColor = `rgb(${Math.round(255)},${Math.round(238 - warm * 60)},${Math.round(210 - warm * 110)})`;
+  const sunIntensity = 0.15 + day * 1.7;
+  const ambient = 0.12 + day * 0.32;
+  const isNight = day < 0.12;
+  return { dir, sunColor, sunIntensity, ambient, day, isNight };
+}
+
 /** Interior paint palette for walls (first entry is the default plaster). */
 const WALL_PAINTS = [
   '#ece6db', '#ffffff', '#f5efe3', '#e9d8c3', '#dfe5dc', '#cfdce2',
@@ -79,14 +105,17 @@ const IS_TOUCH =
   window.matchMedia &&
   window.matchMedia('(pointer: coarse)').matches;
 
-/** Soft, fully-offline image-based lighting (no CDN HDR fetch). */
-function StudioEnvironment() {
+/** Soft, fully-offline image-based lighting (no CDN HDR fetch). `day` (0..1)
+ *  scales the sky-dome contribution so night actually reads dark and interior
+ *  fixtures take over. Re-keyed on the day bucket so the env map rebakes. */
+function StudioEnvironment({ day }: { day: number }) {
+  const k = 0.18 + day * 0.82; // keep a dim floor so nothing goes pure black
   return (
     <Environment resolution={256} frames={1}>
-      <Lightformer intensity={1.1} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
-      <Lightformer intensity={0.8} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
-      <Lightformer intensity={0.6} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
-      <Lightformer intensity={0.3} position={[0, -4, 0]} scale={[12, 12, 1]} rotation={[-Math.PI / 2, 0, 0]} color="#202225" />
+      <Lightformer intensity={1.1 * k} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
+      <Lightformer intensity={0.8 * k} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
+      <Lightformer intensity={0.6 * k} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
+      <Lightformer intensity={0.3 * k} position={[0, -4, 0]} scale={[12, 12, 1]} rotation={[-Math.PI / 2, 0, 0]} color="#202225" />
     </Environment>
   );
 }
@@ -127,6 +156,18 @@ export default function Scene3D() {
   const dollhouse = useDesign((s) => s.dollhouse);
   const walkMode = useDesign((s) => s.walkMode);
   const setWalkMode = useDesign((s) => s.setWalkMode);
+  const sunTime = useDesign((s) => s.sunTime);
+
+  // Time-of-day sun rig (drives sky + key light + fill so window light and
+  // the visible sky always agree).
+  const sun = sunModel(sunTime);
+  const sunPos: [number, number, number] = [
+    center[0] + sun.dir[0] * radius * 1.5,
+    sun.dir[1] * radius * 1.6 + 4,
+    center[2] + sun.dir[2] * radius * 1.5,
+  ];
+  // Sky wants a direction, not a world point.
+  const skySun: [number, number, number] = [sun.dir[0], Math.max(0.02, sun.dir[1]), sun.dir[2]];
 
   // Touch input state shared between the HTML overlay and the in-Canvas controller.
   const moveRef = useRef({ x: 0, y: 0 });
@@ -156,22 +197,23 @@ export default function Scene3D() {
       {/* Dome radius must sit inside the camera far plane (default 1000). */}
       <Sky
         distance={700}
-        sunPosition={[60, 38, 25]}
-        turbidity={5}
-        rayleigh={1.6}
+        sunPosition={skySun}
+        turbidity={sun.isNight ? 12 : 5}
+        rayleigh={sun.isNight ? 0.4 : 1.6 + (1 - sun.day) * 2}
         mieCoefficient={0.004}
-        mieDirectionalG={0.8}
+        mieDirectionalG={0.85}
       />
-      <fog attach="fog" args={['#dfe6ee', radius * 5, radius * 14]} />
+      <fog attach="fog" args={[sun.isNight ? '#0e1420' : '#dfe6ee', radius * 5, radius * 14]} />
       <SoftShadows size={24} samples={12} />
 
-      <ambientLight intensity={0.32} />
-      <hemisphereLight intensity={0.42} groundColor="#2a2c33" />
-      {/* Warm key light (sun) for an inviting, rendered interior look. */}
+      <ambientLight intensity={sun.ambient} />
+      <hemisphereLight intensity={0.18 + sun.day * 0.3} groundColor="#2a2c33" color={sun.isNight ? '#20293a' : '#ffffff'} />
+      {/* Sun key light — position, colour and intensity track time of day, so
+          shadows and the light spilling through windows match the sky. */}
       <directionalLight
-        position={[center[0] + 12, 22, center[2] + 8]}
-        intensity={1.55}
-        color="#fff3e2"
+        position={sunPos}
+        intensity={sun.sunIntensity}
+        color={sun.sunColor}
         castShadow
         shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0004}
@@ -181,9 +223,13 @@ export default function Scene3D() {
         shadow-camera-bottom={-radius * 2}
         shadow-camera-far={80}
       />
-      {/* Cool fill from the opposite side. */}
-      <directionalLight position={[center[0] - 14, 12, center[2] - 10]} intensity={0.32} color="#cdd8ff" />
-      <StudioEnvironment />
+      {/* Cool sky fill from the opposite side (fades at night). */}
+      <directionalLight
+        position={[center[0] - sun.dir[0] * 14, 12, center[2] - sun.dir[2] * 10]}
+        intensity={0.1 + sun.day * 0.24}
+        color="#cdd8ff"
+      />
+      <StudioEnvironment key={Math.round(sun.day * 4)} day={sun.day} />
 
       {/* Soft contact shadows ground the furniture & walls realistically. */}
       <ContactShadows

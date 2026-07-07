@@ -835,6 +835,89 @@ button.brand:hover .brand-name {
   color: var(--text-2);
   transition: background 0.14s, color 0.14s;
 }
+
+/* Doors & windows flyout, anchored to the dock. */
+.openings-flyout {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 268px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 20;
+  animation: ctx-in 0.12s ease;
+}
+.of-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 9px;
+}
+.of-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.of-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 4px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.of-item:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.of-item.active {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+.of-item.locked {
+  opacity: 0.7;
+}
+.of-symbol {
+  width: 30px;
+  height: 30px;
+  color: var(--text);
+}
+.of-lock {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 8px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--brand);
+  border-radius: 4px;
+  padding: 1px 3px;
+  letter-spacing: 0.03em;
+}
+@media (max-width: 880px) {
+  .openings-flyout {
+    left: 50%;
+    top: auto;
+    bottom: calc(100% + 12px);
+    transform: translateX(-50%);
+    width: 280px;
+  }
+}
 .dock-btn:hover {
   background: var(--surface-2);
   color: var(--text);
@@ -895,6 +978,25 @@ button.brand:hover .brand-name {
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+}
+/* Lighting HUD: lights toggle + time-of-day slider. */
+.light-pill .toggle.on {
+  color: var(--brand);
+}
+.sun-slider {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 4px;
+}
+.sun-slider input[type='range'] {
+  width: 92px;
+  accent-color: var(--brand);
+}
+.sun-slider .sun-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  min-width: 34px;
 }
 .pill .toggle {
   white-space: nowrap;

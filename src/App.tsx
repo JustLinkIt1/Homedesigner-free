@@ -11,6 +11,9 @@ import {
   Camera,
   Sofa,
   SlidersHorizontal,
+  Lightbulb,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
 import ToolDock from './components/ToolDock';
@@ -25,6 +28,7 @@ import ProjectsScreen from './components/ProjectsScreen';
 import { useProStore } from './store/proStore';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
+import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
 import { sceneCapture, planCapture } from './lib/renderBridge';
 import { useDraw, drawBridge } from './lib/ui';
 import { initNative } from './lib/native';
@@ -45,6 +49,7 @@ export default function App() {
     showDimensions, setShowDimensions, dollhouse, setDollhouse,
     walkMode, setWalkMode, pendingFurnitureType,
     units, setUnits,
+    sunTime, setSunTime, lightsOn, setLightsOn,
   } = useDesign();
   const [showImport, setShowImport] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -180,7 +185,15 @@ export default function App() {
         onHome={goHome}
       />
       <div className="body">
-        {view === '2d' && <CatalogSidebar open={drawer === 'catalog'} docked={tool === 'furniture'} />}
+        {view === '2d' && (
+          <CatalogSidebar
+            open={drawer === 'catalog'}
+            // Furniture mode docks the catalog in — but not while an opening
+            // (door/window) is the armed type: those place from the build-mode
+            // dock flyout and shouldn't reflow the canvas with the catalog.
+            docked={tool === 'furniture' && !CATALOG_BY_TYPE[pendingFurnitureType ?? '']?.opening}
+          />
+        )}
         <div className="stage-wrap">
           {view === '2d' ? (
             <Canvas2D />
@@ -261,6 +274,32 @@ export default function App() {
                   <button className="toggle" onClick={() => setWalkMode(true)} style={{ fontWeight: 600 }}>
                     <Footprints className="icon" style={{ width: 16, height: 16 }} /> Walk through
                   </button>
+                </div>
+                <div className="pill light-pill">
+                  <button
+                    className={`toggle ${lightsOn ? 'on' : ''}`}
+                    onClick={() => setLightsOn(!lightsOn)}
+                    title="Toggle artificial lights (lamps, LEDs)"
+                  >
+                    <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> Lights
+                  </button>
+                  <label className="sun-slider" title="Time of day — sunlight angle & warmth">
+                    {sunTime < 6 || sunTime >= 20 ? (
+                      <Moon className="icon" style={{ width: 15, height: 15 }} />
+                    ) : (
+                      <Sun className="icon" style={{ width: 15, height: 15 }} />
+                    )}
+                    <input
+                      type="range"
+                      min={0}
+                      max={24}
+                      step={0.5}
+                      value={sunTime}
+                      onChange={(e) => setSunTime(Number(e.target.value))}
+                      aria-label="Time of day"
+                    />
+                    <span className="sun-time">{`${String(Math.floor(sunTime)).padStart(2, '0')}:${sunTime % 1 ? '30' : '00'}`}</span>
+                  </label>
                 </div>
               </div>
               <div className="render-actions">

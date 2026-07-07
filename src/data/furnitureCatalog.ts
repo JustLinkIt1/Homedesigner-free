@@ -8,6 +8,10 @@ export type Shape3D =
   | 'chair'
   | 'table'
   | 'lamp'
+  | 'led_strip'
+  | 'cove_light'
+  | 'sconce'
+  | 'spotlight'
   | 'plant'
   | 'rug'
   | 'tv'
@@ -122,6 +126,10 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'pendant', pro: true, name: 'Pendant Light', category: 'Lighting', width: 30, depth: 30, height: 40, color: '#3a3a40', shape: 'pendant', icon: '💡' },
   { type: 'ceiling_light', name: 'Ceiling Light', category: 'Lighting', width: 50, depth: 50, height: 12, color: '#f4f0e4', shape: 'ceiling_light', icon: '💡' },
   { type: 'table_lamp', name: 'Table Lamp', category: 'Lighting', width: 28, depth: 28, height: 55, color: '#e8d49a', shape: 'desk_lamp', icon: '💡' },
+  { type: 'spotlight', name: 'Recessed Spotlight', category: 'Lighting', width: 12, depth: 12, height: 8, color: '#fff4e0', shape: 'spotlight', icon: '🔆' },
+  { type: 'led_strip', pro: true, name: 'LED Strip', category: 'Lighting', width: 120, depth: 4, height: 3, color: '#ffd9a0', shape: 'led_strip', icon: '➖' },
+  { type: 'cove_light', pro: true, name: 'Cove / Niche Light', category: 'Lighting', width: 90, depth: 14, height: 10, color: '#ffe6c0', shape: 'cove_light', icon: '🔅' },
+  { type: 'wall_sconce', pro: true, name: 'Wall Sconce', category: 'Lighting', width: 18, depth: 14, height: 30, color: '#ffe9c0', shape: 'sconce', icon: '💡' },
 
   // Decor
   { type: 'wall_art', pro: true, name: 'Wall Art', category: 'Decor', width: 80, depth: 4, height: 60, color: '#b0795a', shape: 'wall_art', icon: '🖼️' },

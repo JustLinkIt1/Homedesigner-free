@@ -143,6 +143,10 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: 'M32,70 L68,32', sw: 2.5 },
     { d: circle(70, 30, 12) },
   ],
+  spotlight: [{ d: circle(50, 50, 30), sw: 2 }, { d: circle(50, 50, 12) }],
+  led_strip: [{ d: 'M6,50 H94', sw: 6 }, { d: 'M14,42 V58 M34,42 V58 M54,42 V58 M74,42 V58 M90,42 V58', sw: 1.5 }],
+  cove_light: [{ d: rect(8, 40, 84, 20, 4) }, { d: 'M18,50 H82', sw: 3 }],
+  sconce: [{ d: 'M28,20 H72 L82,80 H18 Z', sw: 2 }, { d: 'M40,20 A10,10 0 0 1 60,20', sw: 2 }],
   mirror: [
     { d: rect(4, 26, 92, 48, 4) },
     { d: 'M30,66 L52,34 M46,66 L68,34', sw: 2 },
