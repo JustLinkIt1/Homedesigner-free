@@ -6,7 +6,15 @@ import { requirePro } from '../lib/pro';
 import { FURNITURE_CATALOG } from '../data/furnitureCatalog';
 import SymbolIcon from './SymbolIcon';
 
-export default function CatalogSidebar({ open = false }: { open?: boolean }) {
+export default function CatalogSidebar({
+  open = false,
+  docked = false,
+}: {
+  /** Mobile drawer visibility (Objects tab). */
+  open?: boolean;
+  /** Desktop visibility: docked in only while the furniture tool is active. */
+  docked?: boolean;
+}) {
   const { pendingFurnitureType, setPendingFurniture } = useDesign();
   const isPro = useProStore((s) => s.isPro);
   const [query, setQuery] = useState('');
@@ -35,7 +43,7 @@ export default function CatalogSidebar({ open = false }: { open?: boolean }) {
   }, [query, category]);
 
   return (
-    <aside className={`sidebar ${open ? 'open' : ''}`}>
+    <aside className={`sidebar ${open ? 'open' : ''} ${docked ? 'docked' : ''}`}>
       <div className="sidebar-head">
         <Sofa className="icon" /> Furniture &amp; objects
       </div>

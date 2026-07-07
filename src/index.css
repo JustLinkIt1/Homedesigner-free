@@ -1989,6 +1989,18 @@ button.brand:hover .brand-name {
 }
 
 /* ---------- Mobile / responsive ---------- */
+/* Desktop: the catalog docks in only during furniture mode, so building
+   gets the full canvas (Planner-style mode separation). */
+@media (min-width: 881px) {
+  .sidebar:not(.right) {
+    margin-left: -281px; /* width + border */
+    transition: margin-left 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .sidebar:not(.right).docked {
+    margin-left: 0;
+  }
+}
+
 .mobile-tabs {
   display: none;
 }
@@ -2070,6 +2082,10 @@ button.brand:hover .brand-name {
     bottom: calc(72px + env(safe-area-inset-bottom));
     transform: translateX(-50%);
     flex-direction: row;
+  }
+  /* Phones enter furniture mode via the Objects tab instead. */
+  .dock-btn.furniture-toggle {
+    display: none;
   }
   .dock-btn[data-tip]:hover::after {
     display: none;

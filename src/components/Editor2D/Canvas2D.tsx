@@ -188,6 +188,11 @@ export default function Canvas2D() {
         setMeasureA(null);
         setMeasureSeg(null);
         s.clearSelection();
+        if (tool === 'furniture') {
+          // Leave furniture mode (tucks the catalog panel away on desktop).
+          s.setPendingFurniture(null);
+          s.setTool('select');
+        }
       } else if (e.key === 'Enter') {
         if (chaining && lengthInput) commitTypedLength();
         else finishDraft();

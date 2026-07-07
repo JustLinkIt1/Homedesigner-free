@@ -180,7 +180,7 @@ export default function App() {
         onHome={goHome}
       />
       <div className="body">
-        {view === '2d' && <CatalogSidebar open={drawer === 'catalog'} />}
+        {view === '2d' && <CatalogSidebar open={drawer === 'catalog'} docked={tool === 'furniture'} />}
         <div className="stage-wrap">
           {view === '2d' ? (
             <Canvas2D />

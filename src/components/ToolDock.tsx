@@ -1,4 +1,4 @@
-import { MousePointer2, PenTool, Square, DoorOpen, Eraser, Hand, Ruler } from 'lucide-react';
+import { MousePointer2, PenTool, Square, DoorOpen, Eraser, Hand, Ruler, Sofa } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import type { ToolMode } from '../types';
 
@@ -34,6 +34,24 @@ export default function ToolDock() {
         );
       })}
       <div className="dock-sep" />
+      {/* Furniture mode: docks the catalog panel in; any build tool tucks it
+          away again. Hidden on phones — the Objects tab plays this role. */}
+      <button
+        className={`dock-btn furniture-toggle ${tool === 'furniture' ? 'active' : ''}`}
+        data-tip="Furnish (open catalog)"
+        aria-label="Furnish — open the furniture catalog"
+        aria-pressed={tool === 'furniture'}
+        onClick={() => {
+          if (tool === 'furniture') {
+            setPendingFurniture(null);
+            setTool('select');
+          } else {
+            setTool('furniture');
+          }
+        }}
+      >
+        <Sofa className="icon" />
+      </button>
       <button
         className={`dock-btn ${pendingFurnitureType === 'door' ? 'active' : ''}`}
         data-tip="Add door"
