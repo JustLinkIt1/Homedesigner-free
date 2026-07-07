@@ -4,7 +4,7 @@ import { useDesign } from '../store/designStore';
 import { renderPlanFile, type RenderedPlan } from '../lib/pdfImport';
 import { importDxf } from '../lib/dxfImport';
 import { autoThreshold, type PixelSegment } from '../lib/autoTrace';
-import { traceWallsV2 } from '../lib/wallTrace';
+import { traceWallsV2, traceWallsAuto } from '../lib/wallTrace';
 import { segmentsToWalls } from '../lib/wallBuilder';
 
 type Stage = 'pick' | 'raster' | 'dxf' | 'busy';
@@ -38,13 +38,16 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
   const effThreshold =
     rendered && autoMode ? autoThreshold(rendered.imageData) : sensitivity;
 
-  // Recompute the live wall preview whenever inputs change.
+  // Recompute the live wall preview whenever inputs change. Auto mode may
+  // retry across a threshold ladder when Otsu's first pick finds nothing.
   useEffect(() => {
     if (stage !== 'raster' || !rendered) return;
-    const segs = traceWallsV2(rendered.imageData, {
-      threshold: effThreshold,
-      minLength: minLenCm / cmPerPx,
-    });
+    const segs = autoMode
+      ? traceWallsAuto(rendered.imageData, { minLength: minLenCm / cmPerPx })
+      : traceWallsV2(rendered.imageData, {
+          threshold: sensitivity,
+          minLength: minLenCm / cmPerPx,
+        });
     setPreviewSegs(segs);
     const walls = segmentsToWalls(segs, cmPerPx, { x: 0, y: 0 }, {
       height: s.defaultWallHeight,
@@ -104,10 +107,12 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
   const runTrace = (replace: boolean) => {
     if (!rendered) return;
     recalibrate();
-    const segs = traceWallsV2(rendered.imageData, {
-      threshold: effThreshold,
-      minLength: minLenCm / cmPerPx,
-    });
+    const segs = autoMode
+      ? traceWallsAuto(rendered.imageData, { minLength: minLenCm / cmPerPx })
+      : traceWallsV2(rendered.imageData, {
+          threshold: sensitivity,
+          minLength: minLenCm / cmPerPx,
+        });
     const walls = segmentsToWalls(segs, cmPerPx, { x: 0, y: 0 }, {
       height: s.defaultWallHeight,
       thickness: s.defaultWallThickness,

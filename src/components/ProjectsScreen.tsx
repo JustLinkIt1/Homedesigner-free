@@ -31,7 +31,12 @@ export default function ProjectsScreen({
   const [list, setList] = useState<projects.ProjectMeta[]>(() => projects.listProjects());
   const [renaming, setRenaming] = useState<string | null>(null);
   const refresh = () => setList(projects.listProjects());
-  useEffect(refresh, []);
+  useEffect(() => {
+    refresh();
+    // Fired when a background write (e.g. the async thumbnail) lands.
+    window.addEventListener('projects-updated', refresh);
+    return () => window.removeEventListener('projects-updated', refresh);
+  }, []);
 
   const openProject = (id: string) => {
     const snap = projects.readProject(id);

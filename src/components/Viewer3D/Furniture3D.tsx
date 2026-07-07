@@ -1,6 +1,9 @@
-import { Suspense, type ReactNode } from 'react';
+import { Suspense, useRef, type ReactNode } from 'react';
+import * as THREE from 'three';
+import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { CATALOG_BY_TYPE, type Shape3D } from '../../data/furnitureCatalog';
 import GltfFurniture, { hasModel } from './GltfFurniture';
+import { useDesign } from '../../store/designStore';
 import type { FurnitureItem } from '../../types';
 
 const M = 0.01; // cm -> m
@@ -21,10 +24,12 @@ export default function Furniture3D({
   item,
   selected,
   onSelect,
+  draggable = false,
 }: {
   item: FurnitureItem;
   selected: boolean;
   onSelect: () => void;
+  draggable?: boolean;
 }) {
   const w = item.width * M;
   const d = item.depth * M;
@@ -33,13 +38,75 @@ export default function Furniture3D({
   const shape: Shape3D = entry?.shape ?? 'box';
   const color = item.color;
 
+  // Drag-to-move on the storey's floor plane. The group's position is moved
+  // live (no store churn); a single updateFurniture commit on release keeps
+  // one undo entry per drag, matching the 2D editor.
+  const groupRef = useRef<THREE.Group>(null);
+  const controls = useThree((st) => st.controls) as { enabled: boolean } | null;
+  const drag = useRef<{ plane: THREE.Plane; grab: THREE.Vector3; moved: boolean } | null>(null);
+
+  const beginDrag = (e: ThreeEvent<PointerEvent>) => {
+    const g = groupRef.current;
+    // Non-interactive storeys keep normal camera behaviour over furniture.
+    if (!draggable || !g || useDesign.getState().walkMode) return;
+    e.stopPropagation();
+    onSelect();
+    const wp = new THREE.Vector3();
+    g.getWorldPosition(wp);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -wp.y);
+    const hit = new THREE.Vector3();
+    if (!e.ray.intersectPlane(plane, hit)) return;
+    (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
+    drag.current = { plane, grab: hit.sub(wp), moved: false };
+    if (controls) controls.enabled = false; // orbit pauses while dragging
+  };
+
+  const moveDrag = (e: ThreeEvent<PointerEvent>) => {
+    const st = drag.current;
+    const g = groupRef.current;
+    if (!st || !g || !g.parent) return;
+    e.stopPropagation();
+    const hit = new THREE.Vector3();
+    if (!e.ray.intersectPlane(st.plane, hit)) return;
+    // World position the group origin should take, then into parent space.
+    const local = g.parent.worldToLocal(hit.sub(st.grab));
+    g.position.set(local.x, 0, local.z);
+    st.moved = true;
+  };
+
+  const endDrag = (e: ThreeEvent<PointerEvent>) => {
+    const st = drag.current;
+    drag.current = null;
+    if (controls) controls.enabled = true;
+    if (st) e.stopPropagation();
+    if (st?.moved && groupRef.current) {
+      const p = groupRef.current.position;
+      useDesign.getState().updateFurniture(item.id, {
+        position: { x: p.x / M, y: p.z / M },
+      });
+    }
+  };
+
   return (
     <group
+      ref={groupRef}
       position={[item.position.x * M, 0, item.position.y * M]}
       rotation={[0, (-item.rotation * Math.PI) / 180, 0]}
       onClick={(e) => {
         e.stopPropagation();
         onSelect();
+      }}
+      onPointerDown={beginDrag}
+      onPointerMove={moveDrag}
+      onPointerUp={endDrag}
+      onPointerOver={(e) => {
+        if (draggable) {
+          e.stopPropagation();
+          document.body.style.cursor = 'grab';
+        }
+      }}
+      onPointerOut={() => {
+        if (draggable && !drag.current) document.body.style.cursor = '';
       }}
     >
       {selected && (

@@ -173,4 +173,10 @@ export function readProject(id: string): unknown | null {
 
 export function setThumbnail(id: string, dataUrl: string): void {
   touchMeta(id, { thumbnail: dataUrl });
+  // Thumbnails finish after navigation — let a mounted projects screen know.
+  try {
+    window.dispatchEvent(new CustomEvent('projects-updated'));
+  } catch {
+    /* non-browser context */
+  }
 }

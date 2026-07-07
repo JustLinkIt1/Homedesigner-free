@@ -61,13 +61,17 @@ export default function App() {
   const stateRef = useRef({ photoMode, showImport, walkMode, screen });
   stateRef.current = { photoMode, showImport, walkMode, screen };
 
-  // Going home: snapshot a small thumbnail of the plan for the project card.
-  // Awaited so the card already has its image when the projects screen mounts.
-  const goHome = async () => {
-    try {
-      const id = projects.getActiveId();
-      const full = planCapture.current?.();
-      if (id && full) {
+  // Going home: capture the plan synchronously (the canvas may unmount right
+  // after), switch screens immediately so the tap feels instant, and finish
+  // the thumbnail downscale in the background — the projects screen refreshes
+  // itself when the write lands.
+  const goHome = () => {
+    const id = projects.getActiveId();
+    const full = planCapture.current?.();
+    setScreen('projects');
+    if (!id || !full) return;
+    (async () => {
+      try {
         const img = new Image();
         img.src = full;
         await img.decode();
@@ -83,11 +87,10 @@ export default function App() {
           ctx.drawImage(img, 0, 0, w, h);
           projects.setThumbnail(id, c.toDataURL('image/jpeg', 0.6));
         }
+      } catch {
+        /* thumbnails are best-effort */
       }
-    } catch {
-      /* thumbnails are best-effort */
-    }
-    setScreen('projects');
+    })();
   };
 
   // Leaving the 3D view always exits walk mode (e.g. switching to 2D).

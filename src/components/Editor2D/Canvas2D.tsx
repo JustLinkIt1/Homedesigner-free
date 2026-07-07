@@ -70,7 +70,14 @@ export default function Canvas2D() {
   const [snapKind, setSnapKind] = useState<SnapKind | 'free'>('free');
   const [snapGuide, setSnapGuide] = useState<GuideLine | null>(null);
   const snapGuideRef = useRef<GuideLine | null>(null);
-  const [isPanning, setIsPanning] = useState(false);
+  // Panning state: the ref is the source of truth for event handlers (mouse
+  // moves arrive faster than React re-renders); the state only drives cursor.
+  const [isPanning, _setIsPanning] = useState(false);
+  const panningRef = useRef(false);
+  const setIsPanning = (v: boolean) => {
+    panningRef.current = v;
+    _setIsPanning(v);
+  };
   const [menu, setMenu] = useState<{ x: number; y: number; kind: string; id: string } | null>(null);
   const openMenu = (x: number, y: number, kind: string, id: string) => setMenu({ x, y, kind, id });
   const closeMenu = () => setMenu(null);
@@ -312,7 +319,16 @@ export default function Canvas2D() {
     if (!stage) return;
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
-    const dir = e.evt.deltaY > 0 ? 0.9 : 1.1;
+    const { deltaX, deltaY, ctrlKey, metaKey, shiftKey } = e.evt;
+    // Trackpads: two-finger sideways scroll (deltaX-dominant) and shift+wheel
+    // pan the plan; pinch arrives as ctrl+wheel and falls through to zoom.
+    if (!ctrlKey && !metaKey && (shiftKey || Math.abs(deltaX) > Math.abs(deltaY))) {
+      const dx = shiftKey && deltaX === 0 ? deltaY : deltaX;
+      const dy = shiftKey && deltaX === 0 ? 0 : deltaY;
+      s.setPan({ x: pan.x - dx, y: pan.y - dy });
+      return;
+    }
+    const dir = deltaY > 0 ? 0.9 : 1.1;
     const newZoom = Math.max(0.05, Math.min(4, zoom * dir));
     // Keep the point under the cursor fixed.
     const wx = (pointer.x - pan.x) / zoom;
@@ -320,6 +336,26 @@ export default function Canvas2D() {
     s.setPan({ x: pointer.x - wx * newZoom, y: pointer.y - wy * newZoom });
     s.setZoom(newZoom);
   };
+
+  // Hold space to pan with any tool (standard canvas-app affordance).
+  const [spacePan, setSpacePan] = useState(false);
+  useEffect(() => {
+    const dn = (e: KeyboardEvent) => {
+      if (e.code !== 'Space' || e.repeat) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      e.preventDefault();
+      setSpacePan(true);
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === 'Space') setSpacePan(false);
+    };
+    window.addEventListener('keydown', dn);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', dn);
+      window.removeEventListener('keyup', up);
+    };
+  }, []);
 
   // Core place/draw/select action at a world point — shared by mouse & touch.
   const actAt = (p: Point) => {
@@ -372,8 +408,10 @@ export default function Canvas2D() {
     const isMiddle = e.evt.button === 1;
     const p = worldPointer();
     if (!p) return;
-    if (tool === 'pan' || isMiddle || e.evt.button === 2) {
+    if (tool === 'pan' || isMiddle || e.evt.button === 2 || spacePan) {
       setIsPanning(true);
+      // Anchor immediately so the very first mousemove already pans.
+      lastPan.current = { x: e.evt.clientX, y: e.evt.clientY };
       return;
     }
     actAt(p);
@@ -400,9 +438,12 @@ export default function Canvas2D() {
     }
   };
 
-  // ---- touch: tap to act, two-finger pinch to zoom & pan ----
+  // ---- touch: tap to act, one-finger drag from empty canvas to pan,
+  // two-finger pinch to zoom & pan ----
   const pinch = useRef<{ dist: number; center: Point } | null>(null);
   const touchMoved = useRef(false);
+  const touchStartPt = useRef<Point | null>(null);
+  const touchPanEligible = useRef(false);
   const longPress = useRef<number | null>(null);
   const longPressFired = useRef(false);
   const cancelLongPress = () => {
@@ -421,6 +462,12 @@ export default function Canvas2D() {
       cancelLongPress();
     } else if (t.length === 1) {
       touchMoved.current = false;
+      touchStartPt.current = { x: t[0].clientX, y: t[0].clientY };
+      // A drag that starts on empty canvas (or the traced background plan)
+      // pans the viewport with ANY tool — taps still act as before.
+      const target = e.target as Konva.Node;
+      touchPanEligible.current =
+        target === (target.getStage() as unknown as Konva.Node) || target.name() === 'bg-plan';
       if (tool === 'pan') {
         setIsPanning(true);
         lastPan.current = { x: t[0].clientX, y: t[0].clientY };
@@ -468,10 +515,20 @@ export default function Canvas2D() {
       s.setZoom(newZoom);
       pinch.current = next;
     } else if (t.length === 1) {
-      touchMoved.current = true;
+      const cur = { x: t[0].clientX, y: t[0].clientY };
+      if (!touchMoved.current) {
+        // Tap slop: fingers jitter a few px — don't turn taps into drags.
+        const st0 = touchStartPt.current;
+        if (st0 && Math.hypot(cur.x - st0.x, cur.y - st0.y) < 7) return;
+        touchMoved.current = true;
+        cancelLongPress();
+        if (touchPanEligible.current && !lastPan.current) {
+          setIsPanning(true);
+          lastPan.current = st0 ?? cur;
+        }
+      }
       cancelLongPress();
-      if (isPanning && lastPan.current) {
-        const cur = { x: t[0].clientX, y: t[0].clientY };
+      if (lastPan.current) {
         const { pan: pn } = useDesign.getState();
         s.setPan({ x: pn.x + (cur.x - lastPan.current.x), y: pn.y + (cur.y - lastPan.current.y) });
         lastPan.current = cur;
@@ -490,6 +547,8 @@ export default function Canvas2D() {
         if (p) actAt(p);
       }
       pinch.current = null;
+      touchStartPt.current = null;
+      touchPanEligible.current = false;
       endPan();
     }
   };
@@ -504,19 +563,38 @@ export default function Canvas2D() {
 
   // Pan by tracking raw pointer deltas.
   const lastPan = useRef<{ x: number; y: number } | null>(null);
-  const onStageMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const onStageMouseMove = () => {
     onMouseMove();
-    if (!isPanning) return;
-    const cur = { x: e.evt.clientX, y: e.evt.clientY };
-    if (lastPan.current) {
-      s.setPan({ x: pan.x + (cur.x - lastPan.current.x), y: pan.y + (cur.y - lastPan.current.y) });
-    }
-    lastPan.current = cur;
   };
   const endPan = () => {
     setIsPanning(false);
     lastPan.current = null;
   };
+
+  // Mouse panning runs on window listeners so the drag keeps working when the
+  // cursor crosses the side panels or leaves the canvas — releasing anywhere
+  // ends it. (Touch panning stays in the stage handlers: fingers can't hover.)
+  useEffect(() => {
+    if (!isPanning) return;
+    const mm = (ev: MouseEvent) => {
+      const cur = { x: ev.clientX, y: ev.clientY };
+      if (lastPan.current) {
+        // Read the live pan: many moves land between React renders, and
+        // accumulating onto the render-time value silently drops deltas.
+        const { pan: pn } = useDesign.getState();
+        s.setPan({ x: pn.x + (cur.x - lastPan.current.x), y: pn.y + (cur.y - lastPan.current.y) });
+      }
+      lastPan.current = cur;
+    };
+    const mu = () => endPan();
+    window.addEventListener('mousemove', mm);
+    window.addEventListener('mouseup', mu);
+    return () => {
+      window.removeEventListener('mousemove', mm);
+      window.removeEventListener('mouseup', mu);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPanning]);
 
   const finishDraft = () => {
     if (tool === 'wall' && draft.length >= 2) {
@@ -674,7 +752,8 @@ export default function Canvas2D() {
   }, [showGrid, pan, zoom, size, gridSize]);
 
   const cursorStyle =
-    tool === 'pan' || isPanning ? 'grabbing' :
+    isPanning ? 'grabbing' :
+    tool === 'pan' || spacePan ? 'grab' :
     tool === 'select' ? 'default' : 'crosshair';
 
   // Calibrate the whole drawing from one measured wall: factor = real / drawn.
@@ -718,8 +797,6 @@ export default function Canvas2D() {
         onWheel={onWheel}
         onMouseDown={onMouseDown}
         onMouseMove={onStageMouseMove}
-        onMouseUp={endPan}
-        onMouseLeave={endPan}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -744,6 +821,7 @@ export default function Canvas2D() {
           {/* Background plan */}
           {background && bgImage && (
             <KImage
+              name="bg-plan"
               image={bgImage}
               x={background.x}
               y={background.y}

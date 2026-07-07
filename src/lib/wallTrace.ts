@@ -121,6 +121,7 @@ function houghSegments(
   h: number,
   scale: number,
   cfg: TraceConfig,
+  baseThickness?: number,
 ): PixelSegment[] {
   const pts: number[] = [];
   for (let y = 0; y < h; y++) {
@@ -218,7 +219,7 @@ function houghSegments(
         y1: first.y * scale,
         x2: last.x * scale,
         y2: last.y * scale,
-        thickness: Math.max(4, cfg.minHalfThickness * 2 * scale),
+        thickness: baseThickness ?? Math.max(4, cfg.minHalfThickness * 2 * scale),
       });
     };
     for (let k = 1; k < onLine.length; k++) {
@@ -331,14 +332,23 @@ function mergeColinear(segs: Seg2[], angleTol: number, perpTol: number, gapTol: 
     let offSum = 0;
     let wSum = 0;
     let thick = 0;
+    let offMin = Infinity;
+    let offMax = -Infinity;
     for (const s of cluster) {
       const w = segLen(s) || 1;
       const o = ((s.x1 * nx + s.y1 * ny) + (s.x2 * nx + s.y2 * ny)) / 2;
       offSum += o * w;
       wSum += w;
       thick = Math.max(thick, s.thickness);
+      offMin = Math.min(offMin, o);
+      offMax = Math.max(offMax, o);
     }
     const off = offSum / wSum;
+    // Perpendicular spread of the cluster measures the real wall thickness:
+    // for a filled wall it's the band width Hough sampled; for a CAD-style
+    // double-line wall it's the gap between the two strokes.
+    const spread = offMax - offMin;
+    if (spread > thick) thick = spread + Math.min(4, thick);
     // A point on the centreline: base point shifted to the averaged offset.
     const cx = base.x1 + nx * (off - baseOff);
     const cy = base.y1 + ny * (off - baseOff);
@@ -352,6 +362,94 @@ function mergeColinear(segs: Seg2[], angleTol: number, perpTol: number, gapTol: 
     });
   }
   return out;
+}
+
+/**
+ * Snap segments to the plan's dominant rotation frame. Scans and photos are
+ * rarely perfectly square; walls that are really parallel/perpendicular come
+ * out of Hough a degree or two apart, which leaves sloppy corners. Fold all
+ * angles mod 90°, take the length-weighted circular mean as the plan's
+ * rotation, and rotate every segment (about its midpoint) whose angle is
+ * within `tolDeg` of one of the frame's two axes onto that axis exactly.
+ */
+function rectifyAngles(segs: Seg2[], tolDeg = 4): { segs: Seg2[]; theta0: number } {
+  if (segs.length === 0) return { segs, theta0: 0 };
+  let sx = 0;
+  let sy = 0;
+  for (const s of segs) {
+    const a4 = segAngle(s) * 4; // fold the π/2 symmetry onto a full circle
+    const w = segLen(s);
+    sx += Math.cos(a4) * w;
+    sy += Math.sin(a4) * w;
+  }
+  if (Math.hypot(sx, sy) < 1e-6) return { segs, theta0: 0 };
+  let theta0 = Math.atan2(sy, sx) / 4;
+  if (theta0 < 0) theta0 += Math.PI / 2;
+  const tol = (tolDeg * Math.PI) / 180;
+  const snapped = segs.map((s) => {
+    const a = segAngle(s);
+    let best = a;
+    let bestD = Infinity;
+    for (let k = 0; k < 2; k++) {
+      const cand = (theta0 + (k * Math.PI) / 2) % Math.PI;
+      const d = angleDiff(a, cand);
+      if (d < bestD) {
+        bestD = d;
+        best = cand;
+      }
+    }
+    if (bestD < 1e-6 || bestD > tol) return s;
+    const mx = (s.x1 + s.x2) / 2;
+    const my = (s.y1 + s.y2) / 2;
+    const half = segLen(s) / 2;
+    let dx = Math.cos(best);
+    let dy = Math.sin(best);
+    // Preserve the segment's original direction sense.
+    if ((s.x2 - s.x1) * dx + (s.y2 - s.y1) * dy < 0) {
+      dx = -dx;
+      dy = -dy;
+    }
+    return { ...s, x1: mx - dx * half, y1: my - dy * half, x2: mx + dx * half, y2: my + dy * half };
+  });
+  return { segs: snapped, theta0 };
+}
+
+/**
+ * Count how many perpendicular offset rows around a segment carry ink.
+ * A single-stroke wall lights 2-3 rows, an outlined (double-line) wall two
+ * small groups, but a row of TEXT smears ink across most of the band — that's
+ * the tell that lets lines-mode drop label rows it can't distinguish by
+ * length or connectivity.
+ */
+function activeProfileRows(bin: Bin, s: Seg2, radius = 10): number {
+  const sc = bin.scale;
+  const x1 = s.x1 / sc;
+  const y1 = s.y1 / sc;
+  const x2 = s.x2 / sc;
+  const y2 = s.y2 / sc;
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  if (len < 4) return 0;
+  const ux = (x2 - x1) / len;
+  const uy = (y2 - y1) / len;
+  const nx = -uy;
+  const ny = ux;
+  const counts = new Array(2 * radius + 1).fill(0);
+  const step = Math.max(1, len / 200);
+  for (let t = 0; t <= len; t += step) {
+    const bx = x1 + ux * t;
+    const by = y1 + uy * t;
+    for (let o = -radius; o <= radius; o++) {
+      const x = Math.round(bx + nx * o);
+      const y = Math.round(by + ny * o);
+      if (x < 0 || y < 0 || x >= bin.w || y >= bin.h) continue;
+      if (bin.data[y * bin.w + x]) counts[o + radius]++;
+    }
+  }
+  const max = Math.max(...counts);
+  if (max === 0) return 0;
+  let active = 0;
+  for (const c of counts) if (c > max * 0.3) active++;
+  return active;
 }
 
 /** Perpendicular distance from a point to a segment (clamped to its extent). */
@@ -422,23 +520,65 @@ export function traceWallsStages(img: ImageData, options: Partial<TraceConfig> =
   // minHalfThickness is specified in source px; convert to the downscaled
   // processed-px units the distance transform works in.
   const mask = thickMask(bin, dist, cfg.minHalfThickness / bin.scale);
-  const raw = houghSegments(mask, bin.w, bin.h, bin.scale, cfg);
+
+  // Mode pick: plans either FILL their walls (thick ink bands — the mask keeps
+  // them and drops thin furniture/text) or OUTLINE them (CAD/PDF exports draw
+  // each wall as two thin parallel strokes; scans often use one thin stroke).
+  // Outlined plans leave the thick mask nearly empty, so fall back to tracing
+  // ALL ink — the colinear merge then fuses stroke pairs into centrelines.
+  let inkCount = 0;
+  for (let i = 0; i < bin.data.length; i++) inkCount += bin.data[i];
+  let thickCount = 0;
+  for (let i = 0; i < mask.length; i++) thickCount += mask[i];
+  const mode: 'solid' | 'lines' =
+    thickCount >= Math.max(60, inkCount * 0.12) ? 'solid' : 'lines';
+
+  const raw =
+    mode === 'solid'
+      ? houghSegments(mask, bin.w, bin.h, bin.scale, cfg)
+      : houghSegments(bin.data, bin.w, bin.h, bin.scale, cfg, 3 * bin.scale);
+
   // Merge fragments/edges into clean centrelines. perpTol must be wide enough to
   // fuse the two faces of a thick wall, but below the spacing of parallel walls;
   // gapTol bridges door/window breaks along a wall — real plans interrupt the
   // wall's ink at every opening, and doors/patio windows commonly span
   // 70-200cm, so this needs to be generous (still far below a room's size).
+  // In lines mode perpTol also has to swallow the stroke-pair gap of an
+  // outlined wall, so it runs slightly wider.
   const angleTol = (10 * Math.PI) / 180;
-  const perpTol = Math.max(14, 13 * bin.scale);
+  const perpTol = mode === 'solid' ? Math.max(14, 13 * bin.scale) : Math.max(18, 14 * bin.scale);
   const gapTol = Math.max(cfg.minLength, 70 * bin.scale);
   const merged1 = mergeColinear(raw, angleTol, perpTol, gapTol);
   const merged2 = mergeColinear(merged1, angleTol, perpTol, gapTol);
-  const lenFiltered = merged2.filter((s) => segLen(s) >= cfg.minLength);
+  // Square up to the plan's dominant rotation before length filtering, so
+  // corner-snapping downstream meets at true right angles.
+  const { segs: rectified, theta0 } = rectifyAngles(merged2);
+  let lenFiltered = rectified.filter((s) => segLen(s) >= cfg.minLength);
+  if (mode === 'lines') {
+    // Tracing ALL ink lets door-swing arcs through as short diagonal chords.
+    // Real walls overwhelmingly sit on the plan's frame axes; drop short
+    // off-frame strokes (a genuinely long diagonal wall still survives).
+    const offTol = (6 * Math.PI) / 180;
+    lenFiltered = lenFiltered.filter((s) => {
+      const a = segAngle(s);
+      const onFrame =
+        angleDiff(a, theta0) <= offTol || angleDiff(a, theta0 + Math.PI / 2) <= offTol;
+      return onFrame || segLen(s) >= cfg.minLength * 2.5;
+    });
+    // Drop text rows: ink across most of the perpendicular band, and short
+    // enough that it can't be a filled wall in an otherwise outlined plan.
+    lenFiltered = lenFiltered.filter(
+      (s) => segLen(s) >= cfg.minLength * 5 || activeProfileRows(bin, s) < 8,
+    );
+  }
   // Remove furniture / label / dimension leftovers: short + isolated strokes.
+  // Solid mode may keep a lone long stroke (an isolated wall drawn thick is
+  // never furniture); in lines mode length proves nothing — dimension lines
+  // and text rows are long too — so membership in the network is required.
   const joinTol = Math.max(cfg.minLength * 0.8, 22 * bin.scale);
-  const keepLong = cfg.minLength * 3;
+  const keepLong = mode === 'solid' ? cfg.minLength * 3 : Infinity;
   const final = networkCleanup(lenFiltered, joinTol, keepLong);
-  return { cfg, bin, raw, merged1, merged2, lenFiltered, final };
+  return { cfg, bin, mode, raw, merged1, merged2, lenFiltered, final };
 }
 
 /** Detect wall segments (any angle) in a raster plan. Coords in source px. */
@@ -446,8 +586,20 @@ export function traceWallsV2(img: ImageData, options: Partial<TraceConfig> = {})
   return traceWallsStages(img, options).final;
 }
 
-/** Auto-pick the threshold then trace. */
+/**
+ * Auto-pick the threshold then trace. Otsu occasionally lands ON the wall
+ * class instead of between ink and paper (e.g. grey walls over a faint grid),
+ * leaving zero ink — when that happens, retry across a small threshold ladder
+ * and keep the first that yields walls.
+ */
 export function traceWallsAuto(img: ImageData, options: Partial<TraceConfig> = {}): PixelSegment[] {
-  const threshold = options.threshold ?? autoThreshold(img);
-  return traceWallsV2(img, { ...options, threshold });
+  const first = options.threshold ?? autoThreshold(img);
+  let best = traceWallsV2(img, { ...options, threshold: first });
+  if (best.length > 0) return best;
+  for (const th of [200, 170, 120]) {
+    if (Math.abs(th - first) < 10) continue;
+    best = traceWallsV2(img, { ...options, threshold: th });
+    if (best.length > 0) return best;
+  }
+  return best;
 }
