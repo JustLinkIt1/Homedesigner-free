@@ -1572,6 +1572,12 @@ button.brand:hover .brand-name {
   border-radius: 8px;
   flex: none;
 }
+.pro-code-error {
+  font-size: 12px;
+  color: var(--danger, #e74c3c);
+  text-align: center;
+  margin-top: -2px;
+}
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-4px); }
