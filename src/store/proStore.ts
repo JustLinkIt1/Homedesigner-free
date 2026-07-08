@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
 import { getProProvider, type ProFeature } from '../lib/pro';
+import { isValidReferralCode, markReferralRedeemed } from '../lib/referral';
 import { toast } from '../lib/ui';
 
 const PRO_CACHE_KEY = 'homedesigner.pro.v1';
@@ -37,6 +38,7 @@ interface ProState {
   refresh: () => Promise<void>;
   purchase: () => Promise<void>;
   restore: () => Promise<void>;
+  redeemCode: (code: string) => boolean;
   openUpsell: (f: ProFeature) => void;
   closeUpsell: () => void;
 }
@@ -114,6 +116,15 @@ export const useProStore = create<ProState>((set, get) => ({
     } finally {
       set({ busy: false });
     }
+  },
+
+  redeemCode: (code: string) => {
+    if (!isValidReferralCode(code)) return false;
+    markReferralRedeemed();
+    set({ isPro: true, upsellFeature: null });
+    writeCache(true);
+    toast.success('Pro unlocked with your referral code!');
+    return true;
   },
 
   openUpsell: (f) => set({ upsellFeature: f }),
