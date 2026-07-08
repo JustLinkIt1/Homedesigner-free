@@ -22,8 +22,9 @@ export interface ProProvider {
   restore(): Promise<boolean>;
 }
 
-/** RevenueCat public SDK key (Android). Set before shipping — see RELEASING.md. */
-const REVENUECAT_ANDROID_KEY = import.meta.env.VITE_REVENUECAT_ANDROID_KEY ?? '';
+/** RevenueCat public SDK key (Android). Safe to embed — this is the client-
+ *  facing key, not the secret API key. */
+const REVENUECAT_ANDROID_KEY = 'test_ObHsYdSPpBeUhrUhcsafhGeuVLd';
 const ENTITLEMENT_ID = 'pro';
 
 class RevenueCatProvider implements ProProvider {
