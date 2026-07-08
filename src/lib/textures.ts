@@ -185,3 +185,96 @@ export const FLOOR_ROUGHNESS: Record<FloorKind, number> = {
   concrete: 0.85,
   marble: 0.25,
 };
+
+// ---------------------------------------------------------------------------
+// Custom user textures
+//
+// Users can upload any image as a wall paint or floor covering. We downscale
+// aggressively before storing (project JSON persists to localStorage, so a
+// raw 4K photo would blow past quota after a couple of walls) and cache the
+// resulting THREE.Texture keyed by data URL.
+// ---------------------------------------------------------------------------
+
+/** Longest side of a resized user texture. Balances legibility vs. storage. */
+const CUSTOM_MAX = 720;
+
+/** Resize a user-supplied image to a storage-friendly JPEG data URL. */
+export async function prepareTextureImage(
+  file: Blob,
+): Promise<{ src: string; naturalWidth: number; naturalHeight: number }> {
+  const bitmap = await blobToImage(file);
+  const scale = Math.min(1, CUSTOM_MAX / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  // JPEG at 0.82 balances filesize against banding on smooth gradients.
+  const src = canvas.toDataURL('image/jpeg', 0.82);
+  return { src, naturalWidth: bitmap.width, naturalHeight: bitmap.height };
+}
+
+function blobToImage(file: Blob): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = (e) => {
+      URL.revokeObjectURL(url);
+      reject(e);
+    };
+    img.src = url;
+  });
+}
+
+// Data-URL -> THREE.Texture cache. Textures live for the app's lifetime; when
+// a wall/floor swaps its image the old dataURL is dropped from the design and
+// its cache entry stays until page reload — that's fine, they're cheap to hold.
+const customCache = new Map<string, THREE.Texture>();
+
+/** Fetch (or build) the THREE.Texture for a user-imported image. */
+export function customTexture(src: string): THREE.Texture {
+  const hit = customCache.get(src);
+  if (hit) return hit;
+  const img = new Image();
+  const tex = new THREE.Texture(img);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  img.onload = () => {
+    tex.needsUpdate = true;
+  };
+  img.src = src;
+  customCache.set(src, tex);
+  return tex;
+}
+
+/**
+ * Rewrite the front/back-face UVs of a BoxGeometry so a repeat-wrapped
+ * texture with `repeat=1/patternMetres` tiles at real scale regardless of
+ * how large or small the wall span is. Only the two large faces (front and
+ * back of the wall) need scaling — the thin side edges look fine at 0..1.
+ */
+export function paintedBoxGeometry(
+  spanWidth: number,
+  spanHeight: number,
+  thickness: number,
+): THREE.BoxGeometry {
+  const geo = new THREE.BoxGeometry(spanWidth, spanHeight, thickness);
+  const uv = geo.attributes.uv as THREE.BufferAttribute;
+  // BoxGeometry vertex order is +x, -x, +y, -y, +z, -z, four verts each.
+  // The wall paint faces are +z (indices 16-19) and -z (indices 20-23).
+  for (let f = 4; f <= 5; f++) {
+    for (let v = 0; v < 4; v++) {
+      const i = f * 4 + v;
+      uv.setXY(i, uv.getX(i) * spanWidth, uv.getY(i) * spanHeight);
+    }
+  }
+  uv.needsUpdate = true;
+  return geo;
+}

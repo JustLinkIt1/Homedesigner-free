@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
-import { getFloorTexture, FLOOR_ROUGHNESS } from '../../lib/textures';
+import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry } from '../../lib/textures';
 import { dist, boundsOf } from '../../lib/geometry';
 import Furniture3D from './Furniture3D';
 import type { FloorGeom, Opening, Room, Wall } from '../../types';
@@ -59,6 +59,32 @@ export interface WallFade {
 /** Screen-space tap on a paintable surface (wall body or room floor). */
 export type SurfaceTap = { kind: 'wall' | 'room'; id: string; x: number; y: number };
 
+/** A single opaque wall body chunk. When the wall carries a custom paint
+ *  image, we bake real-world UVs into the geometry so pattern scale is
+ *  uniform across every span regardless of size. */
+function WallSpan({
+  position,
+  material,
+  spanW,
+  spanH,
+  thickness,
+  textured,
+}: {
+  position: [number, number, number];
+  material: THREE.MeshStandardMaterial;
+  spanW: number;
+  spanH: number;
+  thickness: number;
+  textured: boolean;
+}) {
+  const geometry = useMemo(
+    () => (textured ? paintedBoxGeometry(spanW, spanH, thickness) : new THREE.BoxGeometry(spanW, spanH, thickness)),
+    [textured, spanW, spanH, thickness],
+  );
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return <mesh position={position} geometry={geometry} material={material} castShadow receiveShadow />;
+}
+
 function WallMesh({
   wall,
   openings,
@@ -83,11 +109,21 @@ function WallMesh({
 
   const spans = useMemo(() => wallSpans(wall, openings), [wall, openings]);
 
-  // One material shared by every span of this wall (no per-span clones).
-  const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: wall.color, roughness: 0.92, metalness: 0 }),
-    [wall.color],
-  );
+  // One material shared by every span of this wall (no per-span clones). When
+  // the wall has a custom paint image, the material carries the map + the
+  // per-span geometry has UVs baked in metres so pattern scale is uniform.
+  const mat = useMemo(() => {
+    const m = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.92, metalness: 0 });
+    if (wall.texture) {
+      const tex = customTexture(wall.texture.src);
+      const patternM = Math.max(0.02, wall.texture.scaleCm * M);
+      tex.repeat.set(1 / patternM, 1 / patternM);
+      m.map = tex;
+    } else {
+      m.color = new THREE.Color(wall.color);
+    }
+    return m;
+  }, [wall.color, wall.texture?.src, wall.texture?.scaleCm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Outward-facing horizontal normal (points away from the building centre).
   const normal = useMemo(() => {
@@ -131,15 +167,15 @@ function WallMesh({
     >
       {/* Solid wall body — all spans share one fadeable material */}
       {spans.map((s, i) => (
-        <mesh
+        <WallSpan
           key={i}
           position={[((s.a + s.b) / 2) * M, ((s.y0 + s.y1) / 2) * M, 0]}
           material={mat}
-          castShadow
-          receiveShadow
-        >
-          <boxGeometry args={[(s.b - s.a) * M, (s.y1 - s.y0) * M, t]} />
-        </mesh>
+          spanW={(s.b - s.a) * M}
+          spanH={(s.y1 - s.y0) * M}
+          thickness={t}
+          textured={!!wall.texture}
+        />
       ))}
       {/* Baseboards on floor-level spans (skip headers; breaks at doors). */}
       {spans
@@ -432,7 +468,20 @@ function FloorMesh({ room, onTap }: { room: Room; onTap?: (tap: SurfaceTap) => v
   const mat = FLOOR_BY_ID[room.floorMaterial];
   const kind = mat?.kind ?? 'wood';
   const color = mat?.color ?? room.color;
-  const texture = useMemo(() => getFloorTexture(kind, color), [kind, color]);
+  const proc = useMemo(() => getFloorTexture(kind, color), [kind, color]);
+  // Room ShapeGeometry UVs are already in world metres, so `repeat` maps
+  // directly to "tiles per metre" — 1/patternMetres tiles once per pattern.
+  const custom = useMemo(() => {
+    if (!room.texture) return null;
+    const t = customTexture(room.texture.src);
+    const patternM = Math.max(0.02, room.texture.scaleCm * M);
+    t.repeat.set(1 / patternM, 1 / patternM);
+    return t;
+  }, [room.texture?.src, room.texture?.scaleCm]);
+
+  const useCustom = !!custom;
+  const roughness = useCustom ? 0.6 : FLOOR_ROUGHNESS[kind];
+  const metalness = !useCustom && (kind === 'marble' || kind === 'tile') ? 0.08 : 0;
 
   return (
     <mesh
@@ -451,9 +500,9 @@ function FloorMesh({ room, onTap }: { room: Room; onTap?: (tap: SurfaceTap) => v
       }
     >
       <meshStandardMaterial
-        map={texture}
-        roughness={FLOOR_ROUGHNESS[kind]}
-        metalness={kind === 'marble' || kind === 'tile' ? 0.08 : 0}
+        map={custom ?? proc}
+        roughness={roughness}
+        metalness={metalness}
         side={THREE.DoubleSide}
       />
     </mesh>

@@ -1,10 +1,11 @@
-import { SlidersHorizontal, Sparkles, Trash2, MousePointer2, Copy, Boxes } from 'lucide-react';
+import { SlidersHorizontal, Sparkles, Trash2, MousePointer2, Copy, Boxes, Image as ImageIcon } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
-import { floorThumbnail } from '../lib/textures';
+import { floorThumbnail, prepareTextureImage } from '../lib/textures';
 import { toast } from '../lib/ui';
 import { dist, polygonArea } from '../lib/geometry';
 import { formatLength, formatArea } from '../lib/units';
+import type { CustomTexture } from '../types';
 
 const WALL_PAINTS = [
   '#f5f4f0', '#efe7d6', '#d9d2c5', '#cfd2d4', '#a7b6a0',
@@ -94,21 +95,29 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 {WALL_PAINTS.map((c) => (
                   <button
                     key={c}
-                    className={`paint-dot ${wall.color.toLowerCase() === c.toLowerCase() ? 'active' : ''}`}
+                    className={`paint-dot ${!wall.texture && wall.color.toLowerCase() === c.toLowerCase() ? 'active' : ''}`}
                     style={{ background: c }}
                     title={c}
-                    onClick={() => s.updateWall(wall.id, { color: c })}
+                    onClick={() => s.updateWall(wall.id, { color: c, texture: undefined })}
                   />
                 ))}
                 <label className="paint-dot" style={{ background: wall.color, display: 'grid', placeItems: 'center', cursor: 'pointer' }} title="Custom color">
-                  <input type="color" value={wall.color} onChange={(e) => s.updateWall(wall.id, { color: e.target.value })} style={{ opacity: 0, width: 0, height: 0 }} />
+                  <input type="color" value={wall.color} onChange={(e) => s.updateWall(wall.id, { color: e.target.value, texture: undefined })} style={{ opacity: 0, width: 0, height: 0 }} />
                 </label>
               </div>
               <button className="btn block" style={{ marginTop: 12, height: 36 }}
-                onClick={() => { for (const w of s.walls) s.updateWall(w.id, { color: wall.color }); }}>
+                onClick={() => { for (const w of s.walls) s.updateWall(w.id, { color: wall.color, texture: undefined }); }}>
                 Apply to all walls
               </button>
             </div>
+            <TextureCard
+              label="Custom paint image"
+              texture={wall.texture}
+              defaultScale={100}
+              onChange={(t) => s.updateWall(wall.id, { texture: t })}
+              onApplyAll={(t) => { for (const w of s.walls) s.updateWall(w.id, { texture: t }); }}
+              applyAllLabel="Apply to all walls"
+            />
             <button className="btn-danger" onClick={() => s.deleteById('wall', wall.id)}>
               <Trash2 className="icon" /> Delete wall
             </button>
@@ -133,9 +142,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 {FLOOR_MATERIALS.map((m) => (
                   <button
                     key={m.id}
-                    className={`swatch ${room.floorMaterial === m.id ? 'active' : ''}`}
+                    className={`swatch ${!room.texture && room.floorMaterial === m.id ? 'active' : ''}`}
                     style={{ backgroundImage: `url(${floorThumbnail(m.kind, m.color)})` }}
-                    onClick={() => s.updateRoom(room.id, { floorMaterial: m.id })}
+                    onClick={() => s.updateRoom(room.id, { floorMaterial: m.id, texture: undefined })}
                     title={m.name}
                   >
                     <span className="sw-name">{m.name}</span>
@@ -143,6 +152,14 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 ))}
               </div>
             </div>
+            <TextureCard
+              label="Custom floor image"
+              texture={room.texture}
+              defaultScale={60}
+              onChange={(t) => s.updateRoom(room.id, { texture: t })}
+              onApplyAll={(t) => { for (const r of s.rooms) s.updateRoom(r.id, { texture: t }); }}
+              applyAllLabel="Apply to all rooms"
+            />
             <button className="btn-danger" onClick={() => s.deleteById('room', room.id)}>
               <Trash2 className="icon" /> Delete room
             </button>
@@ -245,6 +262,102 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
         )}
       </div>
     </aside>
+  );
+}
+
+/** Upload / preview / rescale a user-provided image texture. */
+function TextureCard({
+  label,
+  texture,
+  defaultScale,
+  onChange,
+  onApplyAll,
+  applyAllLabel,
+}: {
+  label: string;
+  texture?: CustomTexture;
+  defaultScale: number;
+  onChange: (texture: CustomTexture | undefined) => void;
+  onApplyAll?: (texture: CustomTexture | undefined) => void;
+  applyAllLabel?: string;
+}) {
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const { src } = await prepareTextureImage(file);
+      onChange({ src, scaleCm: texture?.scaleCm ?? defaultScale });
+    } catch {
+      toast.error("Couldn't load that image.");
+    }
+  };
+  return (
+    <div className="prop-card">
+      <div className="prop-label">{label}</div>
+      {texture ? (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 8,
+                border: '1px solid var(--border, #d0d3d8)',
+                backgroundImage: `url(${texture.src})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+              aria-label="Texture preview"
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label className="btn block" style={{ height: 30, fontSize: 12, cursor: 'pointer' }}>
+                <ImageIcon className="icon" /> Replace
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => onFile(e.target.files?.[0])} />
+              </label>
+              <button className="btn block" style={{ height: 30, fontSize: 12 }} onClick={() => onChange(undefined)}>
+                Remove
+              </button>
+            </div>
+          </div>
+          <div className="prop-row" style={{ alignItems: 'center' }}>
+            <label style={{ minWidth: 0 }}>Pattern size (cm)</label>
+            <input
+              type="range"
+              min={5}
+              max={400}
+              step={1}
+              value={Math.round(texture.scaleCm)}
+              onChange={(e) => onChange({ ...texture, scaleCm: Number(e.target.value) })}
+            />
+          </div>
+          <div className="prop-row">
+            <label>Real-world tile size</label>
+            <input
+              type="number"
+              min={5}
+              max={400}
+              step={1}
+              value={Math.round(texture.scaleCm)}
+              onChange={(e) => onChange({ ...texture, scaleCm: Math.max(5, Math.min(400, Number(e.target.value))) })}
+            />
+          </div>
+          {onApplyAll && (
+            <button className="btn block" style={{ marginTop: 8, height: 34 }} onClick={() => onApplyAll(texture)}>
+              {applyAllLabel ?? 'Apply everywhere'}
+            </button>
+          )}
+        </>
+      ) : (
+        <label className="btn primary block" style={{ height: 38, cursor: 'pointer' }}>
+          <ImageIcon className="icon" /> Upload image
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => onFile(e.target.files?.[0])}
+          />
+        </label>
+      )}
+    </div>
   );
 }
 

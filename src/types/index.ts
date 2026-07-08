@@ -7,6 +7,14 @@ export interface Point {
   y: number;
 }
 
+/** A user-uploaded texture image (data URL) applied to a wall or floor.
+ *  `scaleCm` is the real-world size of one tile of the pattern along either
+ *  axis, so a 30x30cm floor tile pattern set to 30 renders at real scale. */
+export interface CustomTexture {
+  src: string;
+  scaleCm: number;
+}
+
 export interface Wall {
   id: string;
   start: Point;
@@ -16,6 +24,8 @@ export interface Wall {
   /** Wall height in cm. */
   height: number;
   color: string;
+  /** Optional custom paint image — overrides `color` in the 3D view. */
+  texture?: CustomTexture;
 }
 
 export interface Room {
@@ -27,6 +37,8 @@ export interface Room {
   color: string;
   /** True when created by automatic room detection (so re-detection can refresh it). */
   auto?: boolean;
+  /** Optional custom floor image — overrides `floorMaterial` in the 3D view. */
+  texture?: CustomTexture;
 }
 
 /** Visual/behavioural variant of an opening.
