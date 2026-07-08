@@ -41,7 +41,7 @@ export default function ProUpsellModal() {
   const { upsellFeature, closeUpsell, purchase, restore, redeemCode, busy, priceLabel, isPro } = useProStore();
   const [showCode, setShowCode] = useState(false);
   const [codeValue, setCodeValue] = useState('');
-  const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
 
   const open = !!upsellFeature && !isPro;
@@ -97,36 +97,31 @@ export default function ProUpsellModal() {
             </button>
           )}
           {showCode ? (
-            <>
-              <form
-                className="pro-code-form"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const err = await redeemCode(codeValue);
-                  if (err) {
-                    setCodeError(err);
-                    codeRef.current?.focus();
-                  }
+            <form
+              className="pro-code-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!redeemCode(codeValue)) {
+                  setCodeError(true);
+                  codeRef.current?.focus();
+                }
+              }}
+            >
+              <input
+                ref={codeRef}
+                className={`pro-code-input${codeError ? ' error' : ''}`}
+                placeholder="Enter referral code"
+                value={codeValue}
+                onChange={(e) => {
+                  setCodeValue(e.target.value);
+                  setCodeError(false);
                 }}
-              >
-                <input
-                  ref={codeRef}
-                  className={`pro-code-input${codeError ? ' error' : ''}`}
-                  placeholder="Enter referral code"
-                  value={codeValue}
-                  onChange={(e) => {
-                    setCodeValue(e.target.value);
-                    setCodeError(null);
-                  }}
-                  disabled={busy}
-                  autoFocus
-                />
-                <button className="btn primary pro-code-go" type="submit" disabled={!codeValue.trim() || busy}>
-                  {busy ? <span className="spin" /> : 'Redeem'}
-                </button>
-              </form>
-              {codeError && <div className="pro-code-error">{codeError}</div>}
-            </>
+                autoFocus
+              />
+              <button className="btn primary pro-code-go" type="submit" disabled={!codeValue.trim()}>
+                Redeem
+              </button>
+            </form>
           ) : (
             <button
               className="pro-restore"
