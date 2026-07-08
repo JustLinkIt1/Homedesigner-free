@@ -139,33 +139,37 @@ export function sampleProject(): GeomSnapshot {
     fur('island', 300, 220),
     fur('pendant', 245, 210),
     fur('pendant', 355, 210),
+    // Bar stools sit at the south face of the island (the entertaining side).
     fur('bar_stool', 225, 285),
     fur('bar_stool', 300, 285),
     fur('bar_stool', 375, 285),
 
     // ---------- Dining (centre of the great room) ----------
+    // Chair rotations use the plan convention encoded in Furniture3D:
+    //   rotation 0 → item faces +Y (south / down on screen)
+    //   rotation 180 → item faces -Y (north / up on screen)
+    // so a chair at the *north* side of the table wants rotation 0.
     fur('dining_table', 550, 430),
-    fur('dining_chair', 500, 370, 180),
-    fur('dining_chair', 550, 370, 180),
-    fur('dining_chair', 600, 370, 180),
-    fur('dining_chair', 500, 490, 0),
-    fur('dining_chair', 550, 490, 0),
-    fur('dining_chair', 600, 490, 0),
+    fur('dining_chair', 500, 370, 0),
+    fur('dining_chair', 550, 370, 0),
+    fur('dining_chair', 600, 370, 0),
+    fur('dining_chair', 500, 490, 180),
+    fur('dining_chair', 550, 490, 180),
+    fur('dining_chair', 600, 490, 180),
     fur('pendant', 550, 430),
     fur('large_plant', 700, 380),
 
     // ---------- Living (south of the great room) ----------
     fur('rug', 340, 700),
-    fur('sofa', 340, 785, 0),
+    fur('sofa', 340, 785, 180),          // faces north, toward the TV
     fur('coffee_table', 340, 685),
-    fur('tv_stand', 340, 560, 180),
-    fur('armchair', 130, 720, 30),
+    fur('tv_stand', 340, 560, 0),        // faces south, toward the sofa
+    fur('armchair', 150, 720, 260),      // faces the coffee table (east-north)
     fur('side_table', 65, 720),
     fur('floor_lamp', 90, 610),
     fur('bookshelf', 25, 500, 90),
-    fur('large_plant', 60, 90),
     fur('large_plant', 690, 780),
-    fur('wall_art', 735, 640, 90),
+    fur('wall_art', 742, 640, 90),       // hung on the partition wall, faces west
     fur('ceiling_light', 340, 700),
 
     // ---------- Master bedroom ----------
@@ -180,10 +184,10 @@ export function sampleProject(): GeomSnapshot {
     fur('large_plant', 795, 450),
 
     // ---------- Bathroom ----------
-    fur('bathtub', 960, 550, 0),
-    fur('vanity', 800, 700, 90),
-    fur('toilet', 800, 800, 0),
-    fur('shower', 1045, 800, 0),
+    fur('bathtub', 960, 550, 0),         // along the north (interior) wall
+    fur('vanity', 800, 535, 0),          // basin faces south into the room
+    fur('toilet', 795, 805, 180),        // cistern to the south wall
+    fur('shower', 1045, 800, 0),         // SE corner
     fur('ceiling_light', 925, 675),
   ];
 

@@ -2059,6 +2059,35 @@ button.brand:hover .brand-name {
   z-index: 2;
   box-shadow: var(--shadow-md);
 }
+.photo-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(12, 14, 19, 0.72);
+  z-index: 3;
+}
+.photo-fallback > * {
+  max-width: 420px;
+  text-align: center;
+  color: #fff;
+}
+.photo-fallback-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.photo-fallback-body {
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.85;
+  margin-bottom: 18px;
+}
+.photo-fallback .btn.primary {
+  padding: 10px 24px;
+  border-radius: 999px;
+}
 
 /* ---------- Walk mode HUD ---------- */
 .walk-hint {

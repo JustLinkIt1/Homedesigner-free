@@ -12,18 +12,30 @@ import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
 
-const MAX_SAMPLES = 400;
+const MAX_SAMPLES = 200;
 
 /** Lives inside <Pathtracer> so it can use its context. */
 function PathtracedContent({
   center,
   onSamples,
+  onUnsupported,
 }: {
   center: [number, number, number];
   onSamples: (n: number) => void;
+  onUnsupported: () => void;
 }) {
   const { pathtracer, reset, update } = usePathtracer();
   const { scene, gl } = useThree();
+
+  // Some mobile GPUs report WebGL2 but lack the float-buffer support the
+  // path tracer needs; in that case pathtracer.samples never advances. Flag
+  // it up-front so the UI shows a helpful message instead of a stalled bar.
+  useEffect(() => {
+    const glCtx = gl.getContext();
+    const ext =
+      'getExtension' in glCtx ? (glCtx as WebGL2RenderingContext).getExtension('EXT_color_buffer_float') : null;
+    if (!ext) onUnsupported();
+  }, [gl, onUnsupported]);
 
   // Offline gradient sky → image-based lighting (no CDN fetch).
   useEffect(() => {
@@ -71,6 +83,17 @@ function PathtracedContent({
 export default function PhotoMode({ onClose }: { onClose: () => void }) {
   const { center, radius } = useDesignBounds();
   const [samples, setSamples] = useState(0);
+  const [unsupported, setUnsupported] = useState(false);
+  // If sample counter hasn't advanced within a few seconds of mounting the
+  // pathtracer, treat the device as unsupported and offer the standard-render
+  // fallback rather than leaving the user staring at "0/200 samples" forever.
+  useEffect(() => {
+    if (samples > 0) return;
+    const t = window.setTimeout(() => {
+      if (samples === 0) setUnsupported(true);
+    }, 6000);
+    return () => window.clearTimeout(t);
+  }, [samples]);
   const done = samples >= MAX_SAMPLES;
   const pct = Math.round((samples / MAX_SAMPLES) * 100);
 
@@ -82,15 +105,35 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
         style={{ position: 'absolute', inset: 0 }}
       >
         <Pathtracer enabled samples={MAX_SAMPLES} bounces={5} tiles={[3, 3]}>
-          <PathtracedContent center={center} onSamples={setSamples} />
+          <PathtracedContent
+            center={center}
+            onSamples={setSamples}
+            onUnsupported={() => setUnsupported(true)}
+          />
         </Pathtracer>
       </Canvas>
+
+      {unsupported && (
+        <div className="photo-fallback">
+          <div className="photo-fallback-title">Photorealistic mode isn't available on this device.</div>
+          <div className="photo-fallback-body">
+            Your GPU doesn't support the float buffers the path tracer needs. Use{' '}
+            <b>Render image</b> from the 3D view instead — it saves a crisp raster snapshot
+            with the current lighting.
+          </div>
+          <button className="btn primary" onClick={onClose}>
+            Back to 3D
+          </button>
+        </div>
+      )}
 
       <div className="photo-bar">
         <div className="photo-status">
           <span className="logo">📷</span>
           <div>
-            <div className="photo-title">{done ? 'Render complete' : 'Rendering photorealistic image…'}</div>
+            <div className="photo-title">
+              {unsupported ? 'Not available on this device' : done ? 'Render complete' : 'Rendering photorealistic image…'}
+            </div>
             <div className="photo-sub">
               {samples} / {MAX_SAMPLES} samples
               <div className="photo-progress">
@@ -103,7 +146,11 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
           <button className="btn" onClick={onClose}>
             Close
           </button>
-          <button className="btn primary" onClick={() => photoCapture.current?.()}>
+          <button
+            className="btn primary"
+            disabled={samples === 0}
+            onClick={() => photoCapture.current?.()}
+          >
             💾 Save PNG
           </button>
         </div>
