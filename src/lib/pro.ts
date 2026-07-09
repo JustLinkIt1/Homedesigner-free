@@ -10,6 +10,13 @@ import { PLAY_STORE_URL } from './appInfo';
 
 export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects';
 
+function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(msg)), ms)),
+  ]);
+}
+
 export interface ProProvider {
   init(): Promise<void>;
   /** Resolve the CURRENT entitlement. Reject (throw) on transport errors —
@@ -66,9 +73,9 @@ class RevenueCatProvider implements ProProvider {
 
   async purchase(): Promise<boolean> {
     const Purchases = await this.sdk();
-    const offerings = await Purchases.getOfferings();
+    const offerings = await withTimeout(Purchases.getOfferings(), 10000, 'Timed out loading store products');
     const pkg = offerings.current?.availablePackages[0];
-    if (!pkg) throw new Error('Pro upgrade is not available right now.');
+    if (!pkg) throw new Error('Pro upgrade is not available right now. Please try again later.');
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
     return customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
   }

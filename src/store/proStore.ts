@@ -92,8 +92,7 @@ export const useProStore = create<ProState>((set, get) => ({
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      // User-cancelled flows shouldn't toast an error.
-      if (!/cancel/i.test(msg)) toast.error('Purchase didn’t complete. You were not charged.');
+      if (!/cancel/i.test(msg)) toast.error(msg || 'Purchase did not complete. You were not charged.');
     } finally {
       set({ busy: false });
     }
