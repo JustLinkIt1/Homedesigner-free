@@ -48,7 +48,11 @@ class RevenueCatProvider implements ProProvider {
     }
     const { Purchases } = await import('@revenuecat/purchases-capacitor');
     if (!this.configured) {
-      await Purchases.configure({ apiKey: REVENUECAT_ANDROID_KEY });
+      await withTimeout(
+        Purchases.configure({ apiKey: REVENUECAT_ANDROID_KEY }),
+        8000,
+        'Could not connect to the store. Check your connection and try again.',
+      );
       this.configured = true;
     }
     return Purchases;
