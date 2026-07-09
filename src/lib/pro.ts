@@ -32,7 +32,33 @@ export interface ProProvider {
 /** RevenueCat public SDK key (Android). Safe to embed — this is the client-
  *  facing key, not the secret API key. */
 const REVENUECAT_ANDROID_KEY = 'goog_JtJREnLfSrMrpUMYtcLYwfNmnPC';
-const ENTITLEMENT_ID = 'pro';
+/** Preferred entitlement identifier. Kept resilient below: any active
+ *  entitlement counts as Pro, so a dashboard rename can't lock buyers out. */
+const ENTITLEMENT_ID = 'Pro';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/** True if the customer holds Pro. Checks the named entitlement first, then
+ *  falls back to "any active entitlement" — this app only sells one thing, so
+ *  a case/name mismatch in the RevenueCat dashboard must never deny access. */
+function hasProEntitlement(customerInfo: any): boolean {
+  const active = customerInfo?.entitlements?.active ?? {};
+  return active[ENTITLEMENT_ID] !== undefined || Object.keys(active).length > 0;
+}
+
+/** First purchasable package across ALL offerings, preferring the current one.
+ *  Guards against the wrong offering being marked "current" in the dashboard:
+ *  if current has no store-valid packages, we scan the rest. */
+function firstAvailablePackage(offerings: any): any | null {
+  const pools: any[] = [];
+  if (offerings?.current) pools.push(offerings.current);
+  for (const off of Object.values(offerings?.all ?? {})) pools.push(off);
+  for (const off of pools) {
+    const pkg = (off as any)?.availablePackages?.[0];
+    if (pkg) return pkg;
+  }
+  return null;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 class RevenueCatProvider implements ProProvider {
   private configured = false;
@@ -65,29 +91,29 @@ class RevenueCatProvider implements ProProvider {
   async isEntitled(): Promise<boolean> {
     const Purchases = await this.sdk();
     const { customerInfo } = await Purchases.getCustomerInfo();
-    return customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    return hasProEntitlement(customerInfo);
   }
 
   async getPrice(): Promise<string | null> {
     const Purchases = await this.sdk();
     const offerings = await Purchases.getOfferings();
-    const pkg = offerings.current?.availablePackages[0];
+    const pkg = firstAvailablePackage(offerings);
     return pkg?.product.priceString ?? null;
   }
 
   async purchase(): Promise<boolean> {
     const Purchases = await this.sdk();
     const offerings = await withTimeout(Purchases.getOfferings(), 10000, 'Timed out loading store products');
-    const pkg = offerings.current?.availablePackages[0];
+    const pkg = firstAvailablePackage(offerings);
     if (!pkg) throw new Error('Pro upgrade is not available right now. Please try again later.');
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
-    return customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    return hasProEntitlement(customerInfo);
   }
 
   async restore(): Promise<boolean> {
     const Purchases = await this.sdk();
     const { customerInfo } = await Purchases.restorePurchases();
-    return customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    return hasProEntitlement(customerInfo);
   }
 }
 
