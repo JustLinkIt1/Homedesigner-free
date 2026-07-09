@@ -4,6 +4,7 @@ import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
 import { FURNITURE_CATALOG } from '../data/furnitureCatalog';
+import { tapLight } from '../lib/haptics';
 import SymbolIcon from './SymbolIcon';
 import type { ToolMode } from '../types';
 
@@ -54,9 +55,13 @@ export default function ToolDock() {
               data-tip={t.label}
               aria-label={t.label}
               aria-pressed={tool === t.id}
-              onClick={() => setTool(t.id)}
+              onClick={() => {
+                tapLight();
+                setTool(t.id);
+              }}
             >
               <Icon className="icon" />
+              <span className="dock-label">{t.label}</span>
             </button>
             {i === 2 && <div className="dock-sep" />}
           </div>

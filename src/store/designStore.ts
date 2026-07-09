@@ -17,6 +17,7 @@ import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { sampleProject } from '../data/sampleProject';
 import { toast } from '../lib/ui';
+import * as haptics from '../lib/haptics';
 import * as projects from '../lib/projects';
 import type { Units } from '../lib/units';
 
@@ -430,6 +431,7 @@ export const useDesign = create<DesignState>((set, get) => {
           color: entry.color,
         });
       });
+      haptics.tapLight();
       return id;
     },
 
@@ -490,15 +492,25 @@ export const useDesign = create<DesignState>((set, get) => {
 
     deleteSelected: () => {
       const { selection, selectedIds, deleteById } = get();
+      // Offer a one-tap Undo on every delete — the commit-based history means
+      // undo() reverts exactly this deletion.
+      const undoable = (label: string) => {
+        haptics.notify('warning');
+        toast.action(label, { label: 'Undo', onClick: () => get().undo() });
+      };
       if (selectedIds.length > 1) {
         const ids = new Set(selectedIds);
+        const count = ids.size;
         commit((d) => {
           d.furniture = d.furniture.filter((f) => !ids.has(f.id));
         });
         set({ selection: { kind: null, id: null }, selectedIds: [] });
+        undoable(`Deleted ${count} items`);
         return;
       }
+      if (!selection.kind || !selection.id) return;
       deleteById(selection.kind, selection.id);
+      undoable('Deleted');
     },
 
     setSelectedIds: (ids) =>

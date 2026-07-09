@@ -2,32 +2,72 @@ import { create } from 'zustand';
 
 // ---------- Toasts ----------
 export type ToastKind = 'info' | 'success' | 'error';
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
 export interface Toast {
   id: string;
   message: string;
   kind: ToastKind;
+  action?: ToastAction;
 }
 
 interface ToastState {
   toasts: Toast[];
-  push: (message: string, kind?: ToastKind) => void;
+  push: (message: string, kind?: ToastKind, action?: ToastAction) => void;
   dismiss: (id: string) => void;
+  /** Freeze/restart a toast's auto-dismiss (e.g. while a finger rests on it). */
+  pause: (id: string) => void;
+  resume: (id: string) => void;
 }
 
-export const useToasts = create<ToastState>((set) => ({
-  toasts: [],
-  push: (message, kind = 'info') => {
-    const id = Math.random().toString(36).slice(2);
-    set((s) => ({ toasts: [...s.toasts, { id, message, kind }] }));
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3400);
-  },
-  dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-}));
+// Toasts with an action (Undo) get a longer window so it's reachable.
+const TTL = 3400;
+const ACTION_TTL = 6000;
+const timers = new Map<string, ReturnType<typeof setTimeout>>();
+
+export const useToasts = create<ToastState>((set) => {
+  const arm = (id: string, ms: number) => {
+    const t = timers.get(id);
+    if (t) clearTimeout(t);
+    timers.set(
+      id,
+      setTimeout(() => {
+        timers.delete(id);
+        set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) }));
+      }, ms),
+    );
+  };
+  return {
+    toasts: [],
+    push: (message, kind = 'info', action) => {
+      const id = Math.random().toString(36).slice(2);
+      set((s) => ({ toasts: [...s.toasts, { id, message, kind, action }] }));
+      arm(id, action ? ACTION_TTL : TTL);
+    },
+    dismiss: (id) => {
+      const t = timers.get(id);
+      if (t) clearTimeout(t);
+      timers.delete(id);
+      set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) }));
+    },
+    pause: (id) => {
+      const t = timers.get(id);
+      if (t) clearTimeout(t);
+      timers.delete(id);
+    },
+    resume: (id) => arm(id, 2000),
+  };
+});
 
 export const toast = {
   info: (m: string) => useToasts.getState().push(m, 'info'),
   success: (m: string) => useToasts.getState().push(m, 'success'),
   error: (m: string) => useToasts.getState().push(m, 'error'),
+  /** Info toast with an inline action button (e.g. "Undo"). */
+  action: (m: string, action: ToastAction, kind: ToastKind = 'info') =>
+    useToasts.getState().push(m, kind, action),
 };
 
 // ---------- Confirm dialog ----------

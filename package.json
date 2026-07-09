@@ -1,7 +1,7 @@
 {
   "name": "homedesigner-free",
   "private": true,
-  "version": "1.0.8",
+  "version": "1.0.9",
   "license": "UNLICENSED",
   "type": "module",
   "description": "HomeDesigner: draw floor plans in 2D, furnish every room, and walk through your home in 3D. Import PDF/DXF/image plans with automatic wall tracing.",
@@ -18,6 +18,7 @@
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.4.1",
     "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/haptics": "^8.0.2",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",

@@ -8,15 +8,34 @@ const ICON: Record<ToastKind, typeof Info> = {
 };
 
 export function Toaster() {
-  const { toasts, dismiss } = useToasts();
+  const { toasts, dismiss, pause, resume } = useToasts();
   return (
     <div className="toaster" aria-live="polite">
       {toasts.map((t) => {
         const Icon = ICON[t.kind];
         return (
-          <div key={t.id} className={`toast ${t.kind}`} role="status">
+          <div
+            key={t.id}
+            className={`toast ${t.kind}`}
+            role="status"
+            onMouseEnter={() => pause(t.id)}
+            onMouseLeave={() => resume(t.id)}
+            onTouchStart={() => pause(t.id)}
+            onTouchEnd={() => resume(t.id)}
+          >
             <Icon className="icon" />
             <span>{t.message}</span>
+            {t.action && (
+              <button
+                className="toast-action"
+                onClick={() => {
+                  t.action?.onClick();
+                  dismiss(t.id);
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
             <button aria-label="Dismiss" onClick={() => dismiss(t.id)}>
               <X className="icon" style={{ width: 15, height: 15 }} />
             </button>

@@ -30,7 +30,7 @@ import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
 import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
 import { sceneCapture, planCapture } from './lib/renderBridge';
-import { useDraw, drawBridge } from './lib/ui';
+import { useDraw, drawBridge, useConfirm } from './lib/ui';
 import { initNative } from './lib/native';
 import { isWebGLAvailable } from './lib/webgl';
 import * as projects from './lib/projects';
@@ -45,7 +45,7 @@ const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
 
 export default function App() {
   const {
-    view, tool, zoom, showGrid, setZoom, setShowGrid,
+    view, setView, walls, tool, zoom, showGrid, setZoom, setShowGrid,
     showDimensions, setShowDimensions, dollhouse, setDollhouse,
     walkMode, setWalkMode, pendingFurnitureType,
     units, setUnits,
@@ -63,8 +63,8 @@ export default function App() {
   const drawing = useDraw((s) => s.active);
 
   // Keep latest UI state for the hardware back-button handler.
-  const stateRef = useRef({ photoMode, showImport, walkMode, screen });
-  stateRef.current = { photoMode, showImport, walkMode, screen };
+  const stateRef = useRef({ photoMode, showImport, walkMode, screen, showHelp, showAbout });
+  stateRef.current = { photoMode, showImport, walkMode, screen, showHelp, showAbout };
 
   // Going home: capture the plan synchronously (the canvas may unmount right
   // after), switch screens immediately so the tap feels instant, and finish
@@ -106,6 +106,25 @@ export default function App() {
   useEffect(() => {
     initNative(() => {
       const st = stateRef.current;
+      // Close any open modal/overlay FIRST so hardware-back dismisses it
+      // instead of falling through and exiting the app. (Reported: pressing
+      // back on the Pro unlock sheet closed the whole app.)
+      if (useConfirm.getState().req) {
+        useConfirm.getState().answer(false);
+        return true;
+      }
+      if (useProStore.getState().upsellFeature) {
+        useProStore.getState().closeUpsell();
+        return true;
+      }
+      if (st.showHelp) {
+        setShowHelp(false);
+        return true;
+      }
+      if (st.showAbout) {
+        setShowAbout(false);
+        return true;
+      }
       if (st.walkMode) {
         setWalkMode(false);
         return true;
@@ -203,6 +222,14 @@ export default function App() {
                 3D view isn't available on this device — it needs WebGL, which your
                 browser/graphics driver doesn't provide. The 2D editor still works fully.
               </p>
+            </div>
+          ) : walls.length === 0 ? (
+            <div className="stage-loading stage-empty">
+              <h3>Nothing to show in 3D yet</h3>
+              <p>Draw some walls in the 2D plan, then switch back here to walk through your home.</p>
+              <button className="btn primary" onClick={() => setView('2d')}>
+                Go to 2D plan
+              </button>
             </div>
           ) : (
             <Suspense fallback={<div className="stage-loading"><span className="spin" /> Loading 3D…</div>}>

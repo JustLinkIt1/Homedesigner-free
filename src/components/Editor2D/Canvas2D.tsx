@@ -23,6 +23,7 @@ import FurnitureSymbol from './FurnitureSymbol';
 import { buildSnapElements, nearestSnap, type SnapKind, type GuideLine } from '../../lib/snapping';
 import { computeWallPolygons } from '../../lib/wallGeometry';
 import { formatLength, type Units } from '../../lib/units';
+import { selectionTick, tapMedium } from '../../lib/haptics';
 import type { Point } from '../../types';
 import {
   resizeBox,
@@ -278,6 +279,7 @@ export default function Canvas2D() {
   // Records what kind of inference the last applySnaps() landed on, for the
   // on-canvas snap indicator.
   const snapKindRef = useRef<SnapKind | 'free'>('free');
+  const lastHardSnapRef = useRef<SnapKind | null>(null);
 
   /**
    * CAD-style snapping while drawing walls/rooms, via the prioritized snap
@@ -293,11 +295,17 @@ export default function Canvas2D() {
       const els = buildSnapElements({ walls, draft, prev, radius, guides: true });
       const snap = nearestSnap(els, p);
       if (snap) {
+        // Buzz once each time a hard snap (endpoint/midpoint) is freshly
+        // acquired — de-duped via the transition check so drags don't rattle.
+        const hard = snap.kind === 'point' || snap.kind === 'midpoint';
+        if (hard && lastHardSnapRef.current !== snap.kind) selectionTick();
+        lastHardSnapRef.current = hard ? snap.kind : null;
         snapKindRef.current = snap.kind;
         snapGuideRef.current = snap.guide ?? null;
         return snap.point;
       }
     }
+    lastHardSnapRef.current = null;
     snapGuideRef.current = null;
     // Grid — skipped while tracing over a background so free angles aren't fought.
     if (showGrid && !background) {
@@ -486,6 +494,7 @@ export default function Canvas2D() {
           longPress.current = null;
           if (touchMoved.current || !wp) return;
           longPressFired.current = true;
+          tapMedium();
           const hit = pickAt(wp);
           if (hit) {
             if (!(hit.kind === 'furniture' && selectedIds.includes(hit.id))) {
