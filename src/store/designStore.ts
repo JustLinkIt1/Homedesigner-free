@@ -128,6 +128,8 @@ interface DesignState extends DesignSnapshot {
   setSelectedIds: (ids: string[]) => void;
   toggleSelected: (id: string) => void;
   moveFurnitureGroup: (ids: string[], dx: number, dy: number) => void;
+  alignSelected: (edge: 'left' | 'hcenter' | 'right' | 'top' | 'vmiddle' | 'bottom') => void;
+  distributeSelected: (axis: 'h' | 'v') => void;
   duplicateSelection: () => void;
   copySelection: () => void;
   paste: () => void;
@@ -534,6 +536,60 @@ export const useDesign = create<DesignState>((set, get) => {
         d.furniture = d.furniture.map((f) =>
           set2.has(f.id) ? { ...f, position: { x: f.position.x + dx, y: f.position.y + dy } } : f,
         );
+      });
+    },
+
+    // Align the selected furniture to a shared edge/centre of their combined
+    // bounding box. Positions are centres; width/depth are footprints.
+    alignSelected: (edge) => {
+      const { selectedIds, furniture } = get();
+      const sel = furniture.filter((f) => selectedIds.includes(f.id));
+      if (sel.length < 2) return;
+      const left = Math.min(...sel.map((f) => f.position.x - f.width / 2));
+      const right = Math.max(...sel.map((f) => f.position.x + f.width / 2));
+      const top = Math.min(...sel.map((f) => f.position.y - f.depth / 2));
+      const bottom = Math.max(...sel.map((f) => f.position.y + f.depth / 2));
+      const cx = (left + right) / 2;
+      const cy = (top + bottom) / 2;
+      const nx = (f: FurnitureItem): number => {
+        if (edge === 'left') return left + f.width / 2;
+        if (edge === 'right') return right - f.width / 2;
+        if (edge === 'hcenter') return cx;
+        return f.position.x;
+      };
+      const ny = (f: FurnitureItem): number => {
+        if (edge === 'top') return top + f.depth / 2;
+        if (edge === 'bottom') return bottom - f.depth / 2;
+        if (edge === 'vmiddle') return cy;
+        return f.position.y;
+      };
+      const ids = new Set(selectedIds);
+      commit((d) => {
+        d.furniture = d.furniture.map((f) =>
+          ids.has(f.id) ? { ...f, position: { x: nx(f), y: ny(f) } } : f,
+        );
+      });
+    },
+
+    // Even out spacing between the selected items along one axis, keeping the
+    // two extreme items fixed and distributing centres evenly between them.
+    distributeSelected: (axis) => {
+      const { selectedIds, furniture } = get();
+      const sel = furniture.filter((f) => selectedIds.includes(f.id));
+      if (sel.length < 3) return;
+      const key = axis === 'h' ? 'x' : 'y';
+      const sorted = [...sel].sort((a, b) => a.position[key] - b.position[key]);
+      const first = sorted[0].position[key];
+      const last = sorted[sorted.length - 1].position[key];
+      const step = (last - first) / (sorted.length - 1);
+      const target = new Map<string, number>();
+      sorted.forEach((f, i) => target.set(f.id, first + step * i));
+      commit((d) => {
+        d.furniture = d.furniture.map((f) => {
+          if (!target.has(f.id)) return f;
+          const v = target.get(f.id)!;
+          return { ...f, position: axis === 'h' ? { ...f.position, x: v } : { ...f.position, y: v } };
+        });
       });
     },
 

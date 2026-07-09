@@ -1,4 +1,9 @@
-import { SlidersHorizontal, Sparkles, Trash2, MousePointer2, Copy, Boxes, Image as ImageIcon } from 'lucide-react';
+import {
+  SlidersHorizontal, Sparkles, Trash2, MousePointer2, Copy, Boxes, Image as ImageIcon,
+  AlignStartVertical, AlignCenterVertical, AlignEndVertical,
+  AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
+  AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter,
+} from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
 import { floorThumbnail, prepareTextureImage } from '../lib/textures';
@@ -36,6 +41,34 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
             <div className="prop-card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Boxes className="icon" style={{ color: 'var(--brand)' }} />
               <strong>{s.selectedIds.length} objects selected</strong>
+            </div>
+            <div className="prop-card">
+              <div className="prop-label">Align</div>
+              <div className="align-grid">
+                <button title="Align left" onClick={() => s.alignSelected('left')}><AlignStartVertical className="icon" /></button>
+                <button title="Align horizontal centres" onClick={() => s.alignSelected('hcenter')}><AlignCenterVertical className="icon" /></button>
+                <button title="Align right" onClick={() => s.alignSelected('right')}><AlignEndVertical className="icon" /></button>
+                <button title="Align top" onClick={() => s.alignSelected('top')}><AlignStartHorizontal className="icon" /></button>
+                <button title="Align vertical centres" onClick={() => s.alignSelected('vmiddle')}><AlignCenterHorizontal className="icon" /></button>
+                <button title="Align bottom" onClick={() => s.alignSelected('bottom')}><AlignEndHorizontal className="icon" /></button>
+              </div>
+              <div className="prop-label" style={{ marginTop: 10 }}>Distribute (3+)</div>
+              <div className="align-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <button
+                  title="Distribute horizontally"
+                  disabled={s.selectedIds.length < 3}
+                  onClick={() => s.distributeSelected('h')}
+                >
+                  <AlignHorizontalDistributeCenter className="icon" />
+                </button>
+                <button
+                  title="Distribute vertically"
+                  disabled={s.selectedIds.length < 3}
+                  onClick={() => s.distributeSelected('v')}
+                >
+                  <AlignVerticalDistributeCenter className="icon" />
+                </button>
+              </div>
             </div>
             <button className="btn block" style={{ marginBottom: 8 }} onClick={() => s.duplicateSelection()}>
               <Copy className="icon" /> Duplicate
@@ -225,12 +258,16 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     <option value="single">Single</option>
                     <option value="double">Double</option>
                     <option value="sliding">Sliding</option>
+                    <option value="pocket">Pocket</option>
+                    <option value="bifold">Bi-fold</option>
+                    <option value="passage">Passage (no leaf)</option>
+                    <option value="arch">Arch (no leaf)</option>
                   </select>
                 ) : (
                   <select
                     value={opening.style ?? 'standard'}
                     onChange={(e) => {
-                      const style = e.target.value as 'standard' | 'french';
+                      const style = e.target.value as never;
                       s.updateOpening(opening.id, {
                         style,
                         ...(style === 'french' ? { sill: 0, height: 220 } : {}),
@@ -239,6 +276,8 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                   >
                     <option value="standard">Standard</option>
                     <option value="french">French (full height)</option>
+                    <option value="casement">Casement</option>
+                    <option value="sliding">Sliding</option>
                   </select>
                 )}
               </div>

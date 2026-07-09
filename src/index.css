@@ -731,6 +731,34 @@ button.brand:hover .brand-name {
   flex-wrap: wrap;
   gap: 7px;
 }
+.align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.align-grid button {
+  display: grid;
+  place-items: center;
+  height: 38px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  transition: background 0.12s, border-color 0.12s;
+}
+.align-grid button:hover:not(:disabled) {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.align-grid button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.align-grid .icon {
+  width: 18px;
+  height: 18px;
+}
 .paint-dot {
   width: 28px;
   height: 28px;
