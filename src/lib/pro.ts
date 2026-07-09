@@ -24,7 +24,7 @@ export interface ProProvider {
 
 /** RevenueCat public SDK key (Android). Safe to embed — this is the client-
  *  facing key, not the secret API key. */
-const REVENUECAT_ANDROID_KEY = 'test_ObHsYdSPpBeUhrUhcsafhGeuVLd';
+const REVENUECAT_ANDROID_KEY = 'goog_JtJREnLfSrMrpUMYtcLYwfNmnPC';
 const ENTITLEMENT_ID = 'pro';
 
 class RevenueCatProvider implements ProProvider {
