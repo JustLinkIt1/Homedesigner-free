@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Layers, X, Crown } from 'lucide-react';
+import { Plus, Layers, X, Crown, Copy, ChevronUp, ChevronDown } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
@@ -15,10 +15,13 @@ export default function FloorSwitcher() {
   const activeFloorId = useDesign((s) => s.activeFloorId);
   const setActiveFloor = useDesign((s) => s.setActiveFloor);
   const addFloor = useDesign((s) => s.addFloor);
+  const cloneFloor = useDesign((s) => s.cloneFloor);
   const removeFloor = useDesign((s) => s.removeFloor);
   const renameFloor = useDesign((s) => s.renameFloor);
+  const activeFloor = useDesign((s) => s.floors.find((f) => f.id === s.activeFloorId));
   const isPro = useProStore((s) => s.isPro);
   const [editing, setEditing] = useState<string | null>(null);
+  const [cloneOpen, setCloneOpen] = useState(false);
 
   if (floors.length === 0) return null;
   // Highest storey at the top of the list.
@@ -31,12 +34,39 @@ export default function FloorSwitcher() {
     addFloor();
   };
 
+  const handleClone = (direction: 'above' | 'below') => {
+    setCloneOpen(false);
+    if (!requirePro('multiFloor')) return;
+    cloneFloor(direction);
+    toast.success(`Copied ${activeFloor?.name ?? 'floor'} ${direction}`);
+  };
+
   return (
     <div className="floor-switcher" aria-label="Storeys">
-      <button className="floor-add" onClick={handleAdd} title="Add a floor above">
+      <button className="floor-add" onClick={handleAdd} title="Add an empty floor above">
         <Plus className="icon" style={{ width: 14, height: 14 }} /> Floor
         {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
       </button>
+      <div className="floor-clone-wrap">
+        <button
+          className="floor-add floor-clone"
+          onClick={() => setCloneOpen((v) => !v)}
+          title="Copy this floor's walls onto a new storey"
+        >
+          <Copy className="icon" style={{ width: 13, height: 13 }} /> Copy floor
+          {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
+        </button>
+        {cloneOpen && (
+          <div className="floor-clone-menu" role="menu">
+            <button role="menuitem" onClick={() => handleClone('above')}>
+              <ChevronUp className="icon" style={{ width: 14, height: 14 }} /> Copy above
+            </button>
+            <button role="menuitem" onClick={() => handleClone('below')}>
+              <ChevronDown className="icon" style={{ width: 14, height: 14 }} /> Copy below
+            </button>
+          </div>
+        )}
+      </div>
       <div className="floor-list">
         {ordered.map((f) => {
           const active = f.id === activeFloorId;

@@ -142,6 +142,7 @@ interface DesignState extends DesignSnapshot {
   // multi-floor (storeys)
   setActiveFloor: (id: string) => void;
   addFloor: () => void;
+  cloneFloor: (direction: 'above' | 'below') => void;
   removeFloor: (id: string) => void;
   renameFloor: (id: string, name: string) => void;
 
@@ -668,6 +669,54 @@ export const useDesign = create<DesignState>((set, get) => {
         d.background = null;
       });
       set({ selection: { kind: null, id: null }, selectedIds: [] });
+    },
+
+    // Copy the active storey's shell (walls, their openings and rooms) onto a
+    // new storey stacked directly above or below, so levels line up into a real
+    // multi-storey house. Furniture is left off — the copy is a blank canvas to
+    // furnish. Every id is regenerated and opening.wallId is remapped so the
+    // clone is fully independent of the source floor.
+    cloneFloor: (direction) => {
+      const st = get();
+      const src = st.floorGeom[st.activeFloorId] ?? geomOf(st);
+      const wallIdMap = new Map<string, string>();
+      const walls = src.walls.map((w) => {
+        const nid = uid();
+        wallIdMap.set(w.id, nid);
+        return { ...w, id: nid };
+      });
+      const openings = src.openings.map((o) => ({
+        ...o,
+        id: uid(),
+        wallId: wallIdMap.get(o.wallId) ?? o.wallId,
+      }));
+      const rooms = src.rooms.map((r) => ({
+        ...r,
+        id: uid(),
+        points: r.points.map((p) => ({ ...p })),
+      }));
+      const clone: FloorGeom = { walls, rooms, furniture: [], openings, background: null };
+
+      const id = uid();
+      const elevations = st.floors.map((f) => f.elevation);
+      const elevation =
+        direction === 'above'
+          ? Math.max(...elevations, 0) + STOREY_HEIGHT
+          : Math.min(...elevations, 0) - STOREY_HEIGHT;
+      const srcName = st.floors.find((f) => f.id === st.activeFloorId)?.name ?? 'Floor';
+      const name = `${srcName} copy`;
+
+      commit((d) => {
+        d.floors = [...d.floors, { id, name, elevation }];
+        d.floorGeom = { ...d.floorGeom, [id]: clone };
+        d.activeFloorId = id;
+        d.walls = clone.walls;
+        d.rooms = clone.rooms;
+        d.furniture = clone.furniture;
+        d.openings = clone.openings;
+        d.background = clone.background;
+      });
+      set((s) => ({ selection: { kind: null, id: null }, selectedIds: [], fitRequest: s.fitRequest + 1 }));
     },
 
     removeFloor: (id) => {

@@ -1160,6 +1160,46 @@ button.brand:hover .brand-name {
 .floor-add:hover {
   background: var(--brand-600);
 }
+.floor-clone-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.floor-clone {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.floor-clone:hover {
+  background: var(--surface-2, var(--surface));
+  border-color: var(--brand);
+}
+.floor-clone-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 5px;
+  box-shadow: var(--shadow-sm);
+}
+.floor-clone-menu button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+.floor-clone-menu button:hover {
+  background: var(--brand);
+  color: #fff;
+}
 .floor-list {
   display: flex;
   flex-direction: column;
