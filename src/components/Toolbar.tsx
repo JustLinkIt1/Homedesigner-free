@@ -12,6 +12,7 @@ import {
   Download,
   FileImage,
   FileText,
+  ClipboardList,
   Info,
   CircleHelp,
 } from 'lucide-react';
@@ -47,11 +48,13 @@ export default function Toolbar({
   onImport,
   onAbout,
   onHelp,
+  onShoppingList,
   onHome,
 }: {
   onImport: () => void;
   onAbout: () => void;
   onHelp: () => void;
+  onShoppingList: () => void;
   onHome: () => void;
 }) {
   const s = useDesign();
@@ -185,6 +188,15 @@ export default function Toolbar({
                 <button role="menuitem" onClick={() => runExport('pdf')}>
                   <FileText className="icon" /> PDF document
                   {!isPro && <span className="pro-tag">PRO</span>}
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setExportOpen(false);
+                    onShoppingList();
+                  }}
+                >
+                  <ClipboardList className="icon" /> Shopping list
                 </button>
               </div>
             )}
