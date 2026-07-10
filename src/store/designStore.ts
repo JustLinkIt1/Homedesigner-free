@@ -18,6 +18,7 @@ import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { sampleProject } from '../data/sampleProject';
 import { toast } from '../lib/ui';
 import * as haptics from '../lib/haptics';
+import { recordRecent } from '../lib/recent';
 import * as projects from '../lib/projects';
 import type { Units } from '../lib/units';
 
@@ -132,7 +133,7 @@ interface DesignState extends DesignSnapshot {
   distributeSelected: (axis: 'h' | 'v') => void;
   duplicateSelection: () => void;
   copySelection: () => void;
-  paste: () => void;
+  paste: (at?: Point) => void;
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
   setProjectName: (name: string) => void;
@@ -370,8 +371,12 @@ export const useDesign = create<DesignState>((set, get) => {
     select: (sel) =>
       set({ selection: sel, selectedIds: sel.kind === 'furniture' && sel.id ? [sel.id] : [] }),
     clearSelection: () => set({ selection: { kind: null, id: null }, selectedIds: [] }),
-    setPendingFurniture: (type) =>
-      set({ pendingFurnitureType: type, tool: type ? 'furniture' : get().tool }),
+    setPendingFurniture: (type) => {
+      // Feed the catalog's "Recent" row — furniture only, never openings
+      // (doors/windows arm from the dock flyout and would pollute the row).
+      if (type && CATALOG_BY_TYPE[type] && !CATALOG_BY_TYPE[type].opening) recordRecent(type);
+      set({ pendingFurnitureType: type, tool: type ? 'furniture' : get().tool });
+    },
 
     addWall: (start, end) => {
       const id = uid();
@@ -633,14 +638,20 @@ export const useDesign = create<DesignState>((set, get) => {
       clipboard = furniture.filter((f) => ids.includes(f.id)).map((f) => ({ ...f }));
     },
 
-    paste: () => {
+    paste: (at) => {
       if (clipboard.length === 0) return;
+      // Paste at the cursor when a target is given (group centre lands there,
+      // preserving relative layout); otherwise nudge by the classic +40 offset.
+      const cx = clipboard.reduce((a, f) => a + f.position.x, 0) / clipboard.length;
+      const cy = clipboard.reduce((a, f) => a + f.position.y, 0) / clipboard.length;
+      const dx = at ? at.x - cx : 40;
+      const dy = at ? at.y - cy : 40;
       const newIds: string[] = [];
       commit((d) => {
         for (const f of clipboard) {
           const nid = uid();
           newIds.push(nid);
-          d.furniture.push({ ...f, id: nid, position: { x: f.position.x + 40, y: f.position.y + 40 } });
+          d.furniture.push({ ...f, id: nid, position: { x: f.position.x + dx, y: f.position.y + dy } });
         }
       });
       set({ selectedIds: newIds, selection: { kind: 'furniture', id: newIds[newIds.length - 1] } });

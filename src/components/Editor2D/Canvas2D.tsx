@@ -79,9 +79,13 @@ export default function Canvas2D() {
     panningRef.current = v;
     _setIsPanning(v);
   };
-  const [menu, setMenu] = useState<{ x: number; y: number; kind: string; id: string } | null>(null);
-  const openMenu = (x: number, y: number, kind: string, id: string) => setMenu({ x, y, kind, id });
+  const [menu, setMenu] = useState<{ x: number; y: number; kind: string; id: string; wp: Point | null } | null>(null);
+  // Menu also captures the tap's WORLD point so Paste can land right there.
+  const openMenu = (x: number, y: number, kind: string, id: string) =>
+    setMenu({ x, y, kind, id, wp: worldPointer() });
   const closeMenu = () => setMenu(null);
+  // Last known cursor position in world coords (for paste-at-cursor).
+  const lastCursorRef = useRef<Point | null>(null);
 
   // Live drag-edit state for selection handles. While a handle is being
   // dragged we render from these locals and commit to the store exactly once
@@ -204,6 +208,20 @@ export default function Canvas2D() {
         } else if (selection.id || s.selectedIds.length) {
           s.deleteSelected();
         }
+      } else if (e.key.startsWith('Arrow') && !chaining) {
+        // Nudge selected furniture: 1cm, or 10cm with Shift.
+        const ids = s.selectedIds.length
+          ? s.selectedIds
+          : selection.kind === 'furniture' && selection.id
+            ? [selection.id]
+            : [];
+        if (ids.length) {
+          e.preventDefault();
+          const step = e.shiftKey ? 10 : 1;
+          const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+          const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+          if (dx || dy) s.moveFurnitureGroup(ids, dx, dy);
+        }
       } else if (chaining && /^[0-9.]$/.test(e.key)) {
         setLengthInput((v) => (v.length < 8 ? v + e.key : v));
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
@@ -217,7 +235,7 @@ export default function Canvas2D() {
         s.copySelection();
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v') {
         e.preventDefault();
-        s.paste();
+        s.paste(lastCursorRef.current ?? undefined);
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault();
         s.setSelectedIds(s.furniture.map((f) => f.id));
@@ -552,6 +570,11 @@ export default function Canvas2D() {
 
   const onTouchEnd = (e: Konva.KonvaEventObject<TouchEvent>) => {
     if (e.evt.touches.length === 0) {
+      // Cancel the touchend so the browser never fires the compatibility
+      // mouse events (mousedown/click) for this tap. Without this, a single
+      // tap ran BOTH the touch handler and the ghost mousedown — placing
+      // furniture twice and instantly closing freshly-opened drawers.
+      if (e.evt.cancelable) e.evt.preventDefault();
       cancelLongPress();
       if (longPressFired.current) {
         // The long-press already opened the context menu — swallow the tap.
@@ -570,6 +593,7 @@ export default function Canvas2D() {
   const onMouseMove = () => {
     const p = worldPointer();
     if (!p) return;
+    lastCursorRef.current = p;
     setCursor(applySnaps(p));
     setSnapKind(snapKindRef.current);
     setSnapGuide(snapGuideRef.current);
@@ -1410,7 +1434,7 @@ function ContextMenu({
   count,
   onClose,
 }: {
-  menu: { x: number; y: number; kind: string; id: string };
+  menu: { x: number; y: number; kind: string; id: string; wp: Point | null };
   multi: boolean;
   count: number;
   onClose: () => void;
@@ -1450,7 +1474,7 @@ function ContextMenu({
     <div className="ctx-menu" style={{ left: menu.x, top: menu.y }} onPointerDown={(e) => e.stopPropagation()}>
       {menu.kind === 'empty' ? (
         <>
-          {item('Paste', () => s.paste(), { sub: '⌘V' })}
+          {item('Paste', () => s.paste(menu.wp ?? undefined), { sub: '⌘V' })}
           {item('Select all', () => s.setSelectedIds(s.furniture.map((f) => f.id)), { sub: '⌘A' })}
         </>
       ) : (

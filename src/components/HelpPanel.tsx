@@ -17,8 +17,9 @@ const SECTIONS: { title: string; rows: { keys?: string[]; text: string }[] }[] =
       { text: 'Drag a wall to move it; drag an endpoint to move the whole corner' },
       { keys: ['Del'], text: 'Delete selection' },
       { keys: ['Ctrl', 'Z'], text: 'Undo (add Shift to redo)' },
-      { keys: ['Ctrl', 'C'], text: 'Copy furniture (V pastes, D duplicates)' },
+      { keys: ['Ctrl', 'C'], text: 'Copy furniture (V pastes at the cursor, D duplicates)' },
       { keys: ['Ctrl', 'A'], text: 'Select all furniture' },
+      { keys: ['←', '↑', '↓', '→'], text: 'Nudge selected furniture 1 cm (hold Shift for 10 cm)' },
       { text: 'Right-click (or long-press on touch) for copy / duplicate / arrange' },
     ],
   },
@@ -40,7 +41,13 @@ const SECTIONS: { title: string; rows: { keys?: string[]; text: string }[] }[] =
 ];
 
 /** Keyboard-shortcut & feature reference ("?" in the toolbar). */
-export default function HelpPanel({ onClose }: { onClose: () => void }) {
+export default function HelpPanel({
+  onClose,
+  onReplayTour,
+}: {
+  onClose: () => void;
+  onReplayTour?: () => void;
+}) {
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal help-panel" onMouseDown={(e) => e.stopPropagation()}>
@@ -69,6 +76,11 @@ export default function HelpPanel({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <div className="modal-foot">
+          {onReplayTour && (
+            <button className="btn" onClick={onReplayTour}>
+              Show intro again
+            </button>
+          )}
           <button className="btn primary" onClick={onClose}>
             Got it
           </button>

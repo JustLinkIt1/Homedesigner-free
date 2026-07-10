@@ -23,6 +23,8 @@ import Canvas2D from './components/Editor2D/Canvas2D';
 import FloorSwitcher from './components/FloorSwitcher';
 import AboutDialog from './components/AboutDialog';
 import HelpPanel from './components/HelpPanel';
+import CoachMarks from './components/CoachMarks';
+import RotateControls from './components/Viewer3D/RotateControls';
 import ProUpsellModal from './components/ProUpsellModal';
 import ProjectsScreen from './components/ProjectsScreen';
 import { useProStore } from './store/proStore';
@@ -47,7 +49,7 @@ export default function App() {
   const {
     view, setView, walls, tool, zoom, showGrid, setZoom, setShowGrid,
     showDimensions, setShowDimensions, dollhouse, setDollhouse,
-    walkMode, setWalkMode, pendingFurnitureType,
+    walkMode, setWalkMode, pendingFurnitureType, selection,
     units, setUnits,
     sunTime, setSunTime, lightsOn, setLightsOn,
   } = useDesign();
@@ -61,6 +63,93 @@ export default function App() {
   // Projects home first — the editor opens a specific project.
   const [screen, setScreen] = useState<'projects' | 'editor'>('projects');
   const drawing = useDraw((s) => s.active);
+  // One-time first-run tour + dismissible tip bar.
+  const [showTour, setShowTour] = useState(false);
+  const [tipsDismissed, setTipsDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('homedesigner.tips.v1') === 'dismissed';
+    } catch {
+      return false;
+    }
+  });
+
+  // --- Auto-open the Edit drawer when an object is selected on touch. ---
+  // Tapping furniture on a phone otherwise "does nothing" visible: the props
+  // panel lives behind the Edit tab. Auto-open it, but never fight the user:
+  //  - autoOpenedRef: only auto-close what we auto-opened
+  //  - suppressedIdRef: user closed while this id was selected → don't reopen
+  //  - pointerDownRef: drags select on pointerdown; defer opening to pointerup
+  const coarsePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+  const autoOpenedRef = useRef(false);
+  const suppressedIdRef = useRef<string | null>(null);
+  const pointerDownRef = useRef(false);
+  const drawerRef = useRef(drawer);
+  drawerRef.current = drawer;
+  useEffect(() => {
+    const down = () => { pointerDownRef.current = true; };
+    const up = () => { pointerDownRef.current = false; };
+    window.addEventListener('pointerdown', down, true);
+    window.addEventListener('pointerup', up, true);
+    window.addEventListener('pointercancel', up, true);
+    return () => {
+      window.removeEventListener('pointerdown', down, true);
+      window.removeEventListener('pointerup', up, true);
+      window.removeEventListener('pointercancel', up, true);
+    };
+  }, []);
+  useEffect(() => {
+    if (!coarsePointer || screen !== 'editor') return;
+    if (!selection.id) {
+      if (autoOpenedRef.current && drawerRef.current === 'props') setDrawer(null);
+      autoOpenedRef.current = false;
+      suppressedIdRef.current = null;
+      return;
+    }
+    const ok =
+      tool === 'select' && !drawing && drawerRef.current === null && suppressedIdRef.current !== selection.id;
+    if (!ok) return;
+    const open = () => {
+      autoOpenedRef.current = true;
+      setDrawer('props');
+    };
+    if (!pointerDownRef.current) {
+      open();
+      return;
+    }
+    const once = () => {
+      if (useDesign.getState().selection.id === selection.id) open();
+    };
+    window.addEventListener('pointerup', once, { once: true });
+    return () => window.removeEventListener('pointerup', once);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection.id, tool, drawing, screen]);
+
+  // First-run tour: only on entering the editor with a truly blank project
+  // (the sample home loads walls before onOpenEditor, so it never shows).
+  useEffect(() => {
+    if (screen !== 'editor') return;
+    try {
+      if (localStorage.getItem('homedesigner.tour.v1')) return;
+      if (useDesign.getState().walls.length === 0) {
+        localStorage.setItem('homedesigner.tour.v1', 'shown'); // never re-nag
+        setShowTour(true);
+      }
+    } catch {
+      /* storage unavailable — skip the tour */
+    }
+  }, [screen]);
+
+  const replayTour = () => {
+    try {
+      localStorage.removeItem('homedesigner.tour.v1');
+      localStorage.removeItem('homedesigner.tips.v1');
+    } catch {
+      /* best-effort */
+    }
+    setTipsDismissed(false);
+    setShowHelp(false);
+    setShowTour(true);
+  };
 
   // Keep latest UI state for the hardware back-button handler.
   const stateRef = useRef({ photoMode, showImport, walkMode, screen, showHelp, showAbout });
@@ -177,6 +266,8 @@ export default function App() {
     ? 'Click any wall, room or object to delete it'
     : tool === 'measure'
     ? 'Measure a wall, then enter its real length to scale the whole drawing · Esc to clear'
+    : tool === 'select' && walls.length === 0
+    ? 'Pick a tool on the left to start — try ✏️ Draw walls'
     : null;
 
   if (screen === 'projects') {
@@ -238,7 +329,25 @@ export default function App() {
           )}
 
           {view === '2d' && <ToolDock />}
-          {view === '2d' && tip && <div className="tip">{tip}</div>}
+          {view === '2d' && tip && !tipsDismissed && (
+            <div className="tip">
+              <span>{tip}</span>
+              <button
+                className="tip-x"
+                aria-label="Hide tips"
+                onClick={() => {
+                  setTipsDismissed(true);
+                  try {
+                    localStorage.setItem('homedesigner.tips.v1', 'dismissed');
+                  } catch {
+                    /* best-effort */
+                  }
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
           {view === '2d' && drawing && (
             <div className="draw-affordance">
               <span>{tool === 'room' ? 'Click the first point or' : 'Double-click or'} press Enter to finish</span>
@@ -350,6 +459,7 @@ export default function App() {
                   <span>Photo mode</span>
                 </button>
               </div>
+              <RotateControls />
             </>
           )}
 
@@ -357,7 +467,18 @@ export default function App() {
         </div>
         <PropertiesPanel open={drawer === 'props'} />
 
-        {drawer && <div className="drawer-backdrop" onClick={() => setDrawer(null)} />}
+        {drawer && (
+          <div
+            className="drawer-backdrop"
+            onClick={() => {
+              // A manual close while something is selected means "leave me
+              // alone about this object" — suppress re-auto-opening it.
+              if (drawer === 'props' && selection.id) suppressedIdRef.current = selection.id;
+              autoOpenedRef.current = false;
+              setDrawer(null);
+            }}
+          />
+        )}
         <div className="mobile-tabs">
           {view === '2d' && (
             <button
@@ -369,7 +490,16 @@ export default function App() {
           )}
           <button
             className={drawer === 'props' ? 'active' : ''}
-            onClick={() => setDrawer(drawer === 'props' ? null : 'props')}
+            onClick={() => {
+              if (drawer === 'props') {
+                if (selection.id) suppressedIdRef.current = selection.id;
+                autoOpenedRef.current = false;
+                setDrawer(null);
+              } else {
+                autoOpenedRef.current = false; // user-opened: never auto-close
+                setDrawer('props');
+              }
+            }}
           >
             <SlidersHorizontal className="icon" /> Edit
           </button>
@@ -383,7 +513,20 @@ export default function App() {
       )}
 
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
-      {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
+      {showHelp && <HelpPanel onClose={() => setShowHelp(false)} onReplayTour={replayTour} />}
+
+      {showTour && view === '2d' && !showImport && !photoMode && (
+        <CoachMarks
+          onDone={() => {
+            try {
+              localStorage.setItem('homedesigner.tour.v1', 'done');
+            } catch {
+              /* best-effort */
+            }
+            setShowTour(false);
+          }}
+        />
+      )}
 
       {photoMode && isWebGLAvailable() && (
         <Suspense

@@ -307,6 +307,13 @@ button.brand:hover .brand-name {
   width: 38px;
   justify-content: center;
 }
+/* Android's 48dp-ish guideline: enlarge icon buttons on touch devices only. */
+@media (hover: none) and (pointer: coarse) {
+  .tbtn.icon-only {
+    width: 44px;
+    height: 44px;
+  }
+}
 .tbtn.cta {
   background: var(--brand);
   color: #fff;
@@ -1341,13 +1348,30 @@ button.brand:hover .brand-name {
   transform: translateX(-50%);
   background: var(--text);
   color: #fff;
-  padding: 9px 16px;
+  padding: 9px 8px 9px 16px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
   z-index: 6;
   box-shadow: var(--shadow-md);
   max-width: 80vw;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tip-x {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+}
+.tip-x:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 
 /* ---------- Active-drawing affordance ---------- */
@@ -2139,7 +2163,7 @@ button.brand:hover .brand-name {
 .photo-bar {
   position: absolute;
   left: 50%;
-  bottom: 22px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -2308,6 +2332,114 @@ button.brand:hover .brand-name {
   pointer-events: none;
 }
 
+/* ---------- First-run coach marks ---------- */
+.coach-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 24, 33, 0.45);
+  z-index: 80;
+}
+.coach-bubble {
+  position: fixed;
+  z-index: 81;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  padding: 14px 16px;
+}
+.coach-arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+.coach-arrow.left { transform: rotate(-45deg); }
+.coach-arrow.right { transform: rotate(135deg); }
+.coach-arrow.up { transform: rotate(45deg); }
+.coach-arrow.down { transform: rotate(225deg); }
+.coach-step {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--brand);
+  margin-bottom: 4px;
+}
+.coach-bubble h4 {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.coach-bubble p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.coach-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+.coach-skip {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 6px 8px;
+}
+.coach-skip:hover {
+  color: var(--text);
+}
+.coach-next {
+  height: 34px;
+  padding: 0 18px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+/* ---------- 3D rotate pill ---------- */
+.rotate3d-pill {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-md);
+  padding: 3px;
+  z-index: 8;
+}
+.rotate3d-pill button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--text);
+}
+.rotate3d-pill button:hover {
+  background: var(--brand);
+  color: #fff;
+}
+.rotate3d-pill .icon {
+  width: 19px;
+  height: 19px;
+}
+.rotate3d-pill .val {
+  min-width: 42px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
 /* ---------- Mobile / responsive ---------- */
 /* Desktop: the catalog docks in only during furniture mode, so building
    gets the full canvas (Planner-style mode separation). */
@@ -2390,6 +2522,10 @@ button.brand:hover .brand-name {
   }
   .render-actions::-webkit-scrollbar {
     display: none;
+  }
+  /* Sit the rotate pill above the render-actions strip. */
+  .rotate3d-pill {
+    bottom: calc(120px + env(safe-area-inset-bottom));
   }
   /* In 3D only the Edit tab shows bottom-right, so the HUD strip can run
      wider before it has to stop. */
