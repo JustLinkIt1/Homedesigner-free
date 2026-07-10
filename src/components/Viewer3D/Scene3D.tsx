@@ -86,12 +86,12 @@ const IS_TOUCH =
  *  scales the sky-dome contribution so night actually reads dark and interior
  *  fixtures take over. Re-keyed on the day bucket so the env map rebakes. */
 function StudioEnvironment({ day }: { day: number }) {
-  const k = 0.18 + day * 0.82; // keep a dim floor so nothing goes pure black
+  const k = 0.24 + day * 0.96; // keep a dim floor so nothing goes pure black
   return (
     <Environment resolution={256} frames={1}>
-      <Lightformer intensity={1.1 * k} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
-      <Lightformer intensity={0.8 * k} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
-      <Lightformer intensity={0.6 * k} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
+      <Lightformer intensity={1.35 * k} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
+      <Lightformer intensity={0.95 * k} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
+      <Lightformer intensity={0.7 * k} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
       <Lightformer intensity={0.3 * k} position={[0, -4, 0]} scale={[12, 12, 1]} rotation={[-Math.PI / 2, 0, 0]} color="#202225" />
     </Environment>
   );
@@ -183,8 +183,10 @@ export default function Scene3D() {
       <fog attach="fog" args={[sun.isNight ? '#0e1420' : '#dfe6ee', radius * 5, radius * 14]} />
       <SoftShadows size={24} samples={12} />
 
-      <ambientLight intensity={sun.ambient} />
-      <hemisphereLight intensity={0.18 + sun.day * 0.3} groundColor="#2a2c33" color={sun.isNight ? '#20293a' : '#ffffff'} />
+      {/* Airier interiors: lifted ambient/hemisphere + softened shadows so
+          rooms behind walls read bright and clean instead of murky. */}
+      <ambientLight intensity={sun.ambient * 1.4 + 0.06} />
+      <hemisphereLight intensity={0.26 + sun.day * 0.42} groundColor="#3a3d45" color={sun.isNight ? '#20293a' : '#ffffff'} />
       {/* Sun key light — position, colour and intensity track time of day, so
           shadows and the light spilling through windows match the sky. */}
       <directionalLight
@@ -192,6 +194,7 @@ export default function Scene3D() {
         intensity={sun.sunIntensity}
         color={sun.sunColor}
         castShadow
+        shadow-intensity={0.8}
         shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0004}
         shadow-camera-left={-radius * 2}

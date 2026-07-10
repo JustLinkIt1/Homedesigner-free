@@ -139,14 +139,25 @@ function WallMesh({
     return { nx, nz };
   }, [dxCm, dzCm, mx, mz, center]);
 
+  // Planner-style dark cap on the cut top of the wall — reads as a floor
+  // plan edge from above and makes the dollhouse view look "rendered".
+  // Registered with the fade loop so it disappears with its wall.
+  const capMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: '#3d434c', roughness: 0.65, metalness: 0.05 }),
+    [],
+  );
+
   // Register fade data with the parent's single loop; dispose material on unmount.
   useEffect(() => {
     register(wall.id, { mat, nx: normal.nx, nz: normal.nz, mx, mz });
+    register(`${wall.id}:cap`, { mat: capMat, nx: normal.nx, nz: normal.nz, mx, mz });
     return () => {
       unregister(wall.id);
+      unregister(`${wall.id}:cap`);
       mat.dispose();
+      capMat.dispose();
     };
-  }, [wall.id, mat, normal, mx, mz, register, unregister]);
+  }, [wall.id, mat, capMat, normal, mx, mz, register, unregister]);
 
   return (
     <group
@@ -177,6 +188,14 @@ function WallMesh({
           textured={!!wall.texture}
         />
       ))}
+      {/* Dark top cap along the full wall (fades with the wall body). */}
+      <mesh
+        position={[(dist(wall.start, wall.end) / 2) * M, wall.height * M + 0.015, 0]}
+        material={capMat}
+        castShadow
+      >
+        <boxGeometry args={[dist(wall.start, wall.end) * M, 0.03, t + 0.016]} />
+      </mesh>
       {/* Baseboards on floor-level spans (skip headers; breaks at doors). */}
       {spans
         .filter((s) => s.y0 <= 0.01 && s.b - s.a > 1)
