@@ -2266,6 +2266,48 @@ button.brand:hover .brand-name {
   box-shadow: var(--shadow-md);
 }
 
+/* On-screen walk controls (touch): a move joystick (bottom-left) and a
+   look pad covering the rest of the screen. The joystick sits above the look
+   pad so a thumb on the stick never gets read as a look-drag. */
+.walk-touch {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  touch-action: none;
+  pointer-events: none;
+}
+.walk-look {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+.walk-joystick {
+  position: absolute;
+  left: calc(24px + env(safe-area-inset-left));
+  bottom: calc(30px + env(safe-area-inset-bottom));
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: rgba(20, 24, 33, 0.28);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 9;
+}
+.walk-joystick-knob {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  will-change: transform;
+  pointer-events: none;
+}
+
 /* ---------- Mobile / responsive ---------- */
 /* Desktop: the catalog docks in only during furniture mode, so building
    gets the full canvas (Planner-style mode separation). */
