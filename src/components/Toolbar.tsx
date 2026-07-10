@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Info,
   CircleHelp,
+  Settings,
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
@@ -49,12 +50,14 @@ export default function Toolbar({
   onAbout,
   onHelp,
   onShoppingList,
+  onSettings,
   onHome,
 }: {
   onImport: () => void;
   onAbout: () => void;
   onHelp: () => void;
   onShoppingList: () => void;
+  onSettings: () => void;
   onHome: () => void;
 }) {
   const s = useDesign();
@@ -168,6 +171,9 @@ export default function Toolbar({
           }}
         >
           <Save className="icon" />
+        </button>
+        <button className="tbtn icon-only" title="Settings" aria-label="Settings" onClick={onSettings}>
+          <Settings className="icon" />
         </button>
         <button className="tbtn icon-only" title="Tips & shortcuts" aria-label="Tips and shortcuts" onClick={onHelp}>
           <CircleHelp className="icon" />

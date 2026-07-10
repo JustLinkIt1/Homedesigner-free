@@ -70,6 +70,50 @@
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   color-scheme: light;
+
+  /* Motion */
+  --dur-fast: 0.12s;
+  --dur: 0.18s;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Dark theme: same token contract, night values. Applied via data-theme on
+   <html> by src/lib/theme.ts (System pref tracks prefers-color-scheme). */
+:root[data-theme='dark'] {
+  --bg: #121419;
+  --surface: #1c1f26;
+  --surface-2: #23262e;
+  --surface-3: #2a2e37;
+  --border: #2e323c;
+  --border-strong: #3c414d;
+
+  --text: #e8eaef;
+  --text-2: #a6adba;
+  --text-3: #6f7683;
+
+  --brand: #5b7cff;
+  --brand-600: #7189ff;
+  --brand-soft: rgba(91, 124, 255, 0.16);
+  --brand-soft-2: rgba(91, 124, 255, 0.24);
+
+  --canvas-bg: #16181d;
+  --grid: #22252c;
+  --grid-major: #2c303a;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
+}
+
+/* Floating overlay chrome that hardcodes white in the light theme. */
+:root[data-theme='dark'] .photo-dollhouse,
+:root[data-theme='dark'] .photo-hint,
+:root[data-theme='dark'] .walk-hint {
+  background: rgba(30, 33, 40, 0.94);
+  color: var(--text);
 }
 
 * {
@@ -1763,6 +1807,79 @@ button.brand:hover .brand-name {
 /* Help panel */
 .modal.help-panel {
   max-width: 520px;
+}
+
+/* Settings */
+.modal.settings {
+  max-width: 440px;
+}
+.settings-body section + section {
+  margin-top: 18px;
+}
+.settings-body h3 {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+.seg {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 4px;
+}
+.seg button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.seg button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-xs);
+}
+.seg button .icon {
+  width: 15px;
+  height: 15px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+.settings-row + .settings-row {
+  border-top: 1px solid var(--border);
+}
+.settings-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+}
+.settings-meta {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: center;
+}
+.settings-meta a {
+  color: var(--text-2);
 }
 
 /* Shopping list */

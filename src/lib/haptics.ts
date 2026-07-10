@@ -5,8 +5,27 @@ import { Capacitor } from '@capacitor/core';
 
 type HModule = typeof import('@capacitor/haptics');
 let mod: Promise<HModule> | null = null;
+
+const PREF_KEY = 'homedesigner.haptics.v1';
+
+export function hapticsEnabled(): boolean {
+  try {
+    return localStorage.getItem(PREF_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+export function setHapticsEnabled(on: boolean): void {
+  try {
+    localStorage.setItem(PREF_KEY, on ? 'on' : 'off');
+  } catch {
+    /* best-effort */
+  }
+}
+
 const load = (): Promise<HModule> | null => {
-  if (!Capacitor.isNativePlatform()) return null;
+  if (!Capacitor.isNativePlatform() || !hapticsEnabled()) return null;
   if (!mod) mod = import('@capacitor/haptics');
   return mod;
 };

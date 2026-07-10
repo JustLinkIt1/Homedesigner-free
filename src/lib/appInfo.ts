@@ -14,6 +14,8 @@ export const PLAY_STORE_URL =
 
 export const PRIVACY_URL = 'https://justlinkit1.github.io/Homedesigner-free/privacy.html';
 
+export const SUPPORT_EMAIL = 'nathanjoppich@gmail.com';
+
 /** Filesystem-safe slug used for export/download filenames. */
 export function slugify(name: string): string {
   const s = (name || 'home')

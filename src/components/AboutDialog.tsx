@@ -1,5 +1,10 @@
-import { Info, ExternalLink } from 'lucide-react';
-import { APP_NAME, APP_TAGLINE, APP_VERSION, PRIVACY_URL, CREDITS } from '../lib/appInfo';
+import { Info, ExternalLink, Mail } from 'lucide-react';
+import { APP_NAME, APP_TAGLINE, APP_VERSION, PRIVACY_URL, SUPPORT_EMAIL, CREDITS } from '../lib/appInfo';
+
+const supportHref = () =>
+  `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} ${APP_VERSION} feedback`)}&body=${encodeURIComponent(
+    `\n\n—\nApp ${APP_VERSION} · ${navigator.userAgent}`,
+  )}`;
 
 /** App info, privacy link and third-party attributions (required for CC-BY assets). */
 export default function AboutDialog({ onClose }: { onClose: () => void }) {
@@ -34,6 +39,9 @@ export default function AboutDialog({ onClose }: { onClose: () => void }) {
           </ul>
         </div>
         <div className="modal-foot">
+          <a className="btn" href={supportHref()}>
+            <Mail className="icon" /> Contact support
+          </a>
           <button className="btn primary" onClick={onClose}>
             Close
           </button>

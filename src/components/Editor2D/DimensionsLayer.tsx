@@ -3,6 +3,7 @@ import { Group, Line, Text } from 'react-konva';
 import { useDesign } from '../../store/designStore';
 import { dist, midpoint, boundsOf, polygonArea, polygonCentroid } from '../../lib/geometry';
 import { formatLength, formatArea, type Units } from '../../lib/units';
+import { useTheme, canvasColors } from '../../lib/theme';
 import type { Point, Wall, Room } from '../../types';
 
 /**
@@ -14,10 +15,6 @@ import type { Point, Wall, Room } from '../../types';
  * value maps to the right number of cm at the current scale.
  */
 
-// Legible on the light canvas (#f1f1ec).
-const COLOR = '#7c8493';
-const TEXT_COLOR = '#3f4753';
-const OVERALL_COLOR = '#2b3340';
 
 interface Props {
   zoom: number;
@@ -102,6 +99,11 @@ function WallDimension({
   px: (n: number) => number;
   units: Units;
 }) {
+  // Themed inks (legible on the light or dark canvas).
+  const C = canvasColors(useTheme((t) => t.theme));
+  const COLOR = C.dimensionInk;
+  const TEXT_COLOR = C.dimensionText;
+  const OVERALL_COLOR = C.dimensionOverall;
   const a = wall.start;
   const b = wall.end;
   const len = dist(a, b);
@@ -188,6 +190,11 @@ function WallDimension({
 
 /** A single, legible area label placed just below the room name. */
 function RoomDimension({ room, px, units }: { room: Room; px: (n: number) => number; units: Units }) {
+  // Themed inks (legible on the light or dark canvas).
+  const C = canvasColors(useTheme((t) => t.theme));
+  const COLOR = C.dimensionInk;
+  const TEXT_COLOR = C.dimensionText;
+  const OVERALL_COLOR = C.dimensionOverall;
   if (room.points.length < 3) return null;
   const c = polygonCentroid(room.points);
   const fs = px(12.5);
@@ -208,6 +215,11 @@ function RoomDimension({ room, px, units }: { room: Room; px: (n: number) => num
 
 /** Exterior overall width (top) and height (left) for the whole building. */
 function OverallDimension({ walls, px, units }: { walls: Wall[]; px: (n: number) => number; units: Units }) {
+  // Themed inks (legible on the light or dark canvas).
+  const C = canvasColors(useTheme((t) => t.theme));
+  const COLOR = C.dimensionInk;
+  const TEXT_COLOR = C.dimensionText;
+  const OVERALL_COLOR = C.dimensionOverall;
   if (walls.length === 0) return null;
   const pts = walls.flatMap((w) => [w.start, w.end]);
   const { min, max } = boundsOf(pts);

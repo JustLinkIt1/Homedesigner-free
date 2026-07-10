@@ -24,6 +24,7 @@ import { buildSnapElements, nearestSnap, type SnapKind, type GuideLine } from '.
 import { computeWallPolygons } from '../../lib/wallGeometry';
 import { formatLength, type Units } from '../../lib/units';
 import { selectionTick, tapMedium } from '../../lib/haptics';
+import { useTheme, canvasColors } from '../../lib/theme';
 import type { Point } from '../../types';
 import {
   resizeBox,
@@ -38,10 +39,9 @@ const IS_COARSE =
 const HANDLE_R = IS_COARSE ? 14 : 8; // radius in screen px (÷ zoom at render)
 
 // Handle visuals (screen-space px; divided by zoom at render to stay constant).
-const HANDLE_FILL = '#ffffff';
-const HANDLE_STROKE = '#3b63f6';
 
 export default function Canvas2D() {
+  const C = canvasColors(useTheme((t) => t.theme));
   const wrapRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const gridRef = useRef<Konva.Group>(null);
@@ -877,7 +877,7 @@ export default function Canvas2D() {
               <Line
                 key={i}
                 points={l.pts}
-                stroke={l.major ? '#d2d2c9' : '#e4e4dd'}
+                stroke={l.major ? C.gridMajor : C.gridMinor}
                 strokeWidth={(l.major ? 1.4 : 0.8) / zoom}
                 listening={false}
               />
@@ -896,9 +896,9 @@ export default function Canvas2D() {
                   closed
                   fill={fill}
                   opacity={sel ? 0.7 : 0.55}
-                  stroke={sel ? '#3b63f6' : 'transparent'}
+                  stroke={sel ? C.selection : 'transparent'}
                   strokeWidth={(sel ? 4 : 3) / zoom}
-                  shadowColor={sel ? '#3b63f6' : undefined}
+                  shadowColor={sel ? C.selection : undefined}
                   shadowBlur={sel ? 14 / zoom : 0}
                   shadowOpacity={sel ? 0.5 : 0}
                   onMouseDown={() => tool === 'select' && s.select({ kind: 'room', id: r.id })}
@@ -910,7 +910,7 @@ export default function Canvas2D() {
                   align="center"
                   text={r.name}
                   fontSize={14 / zoom}
-                  fill="#0e1014"
+                  fill={C.labelInk}
                   fontStyle="bold"
                   listening={false}
                 />
@@ -944,7 +944,7 @@ export default function Canvas2D() {
                 <Line
                   points={(wallPolys.get(w.id) ?? [start, end, end, start]).flatMap((p) => [p.x, p.y])}
                   closed
-                  fill={sel ? '#3b63f6' : '#39414e'}
+                  fill={sel ? C.selection : C.wallBody}
                   listening={false}
                 />
                 {/* Invisible hit/drag target — unchanged interaction, just no
@@ -1079,48 +1079,48 @@ export default function Canvas2D() {
                         archways add a second dashed line for the header */}
                     <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
                     <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
-                    <Line points={[-wd / 2, 0, wd / 2, 0]} stroke={sel ? '#3b63f6' : '#aeb6c2'} strokeWidth={1.4 / zoom} dash={[6 / zoom, 5 / zoom]} />
+                    <Line points={[-wd / 2, 0, wd / 2, 0]} stroke={sel ? C.selection : '#aeb6c2'} strokeWidth={1.4 / zoom} dash={[6 / zoom, 5 / zoom]} />
                     {o.style === 'arch' && (
-                      <Line points={[-wd / 2, -t / 4, wd / 2, -t / 4]} stroke={sel ? '#3b63f6' : '#aeb6c2'} strokeWidth={1.2 / zoom} dash={[3 / zoom, 4 / zoom]} />
+                      <Line points={[-wd / 2, -t / 4, wd / 2, -t / 4]} stroke={sel ? C.selection : '#aeb6c2'} strokeWidth={1.2 / zoom} dash={[3 / zoom, 4 / zoom]} />
                     )}
                   </>
                 ) : o.type === 'door' && o.style === 'pocket' ? (
                   <>
                     {/* leaf parked in the wall cavity + dashed track across */}
-                    <Rect x={-wd / 2 - wd * 0.55} y={-t * 0.28} width={wd * 0.55} height={t * 0.56} fill={sel ? '#3b63f6' : '#b9a58c'} />
-                    <Line points={[-wd / 2, 0, wd / 2, 0]} stroke={sel ? '#3b63f6' : '#aeb6c2'} strokeWidth={1.4 / zoom} dash={[6 / zoom, 5 / zoom]} />
+                    <Rect x={-wd / 2 - wd * 0.55} y={-t * 0.28} width={wd * 0.55} height={t * 0.56} fill={sel ? C.selection : '#b9a58c'} />
+                    <Line points={[-wd / 2, 0, wd / 2, 0]} stroke={sel ? C.selection : '#aeb6c2'} strokeWidth={1.4 / zoom} dash={[6 / zoom, 5 / zoom]} />
                     <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
                     <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
                   </>
                 ) : o.type === 'door' && o.style === 'bifold' ? (
                   <>
                     {/* folded leaves: the classic W chevron */}
-                    <Line points={[-wd / 2, 0, -wd / 4, -wd * 0.3, 0, 0]} stroke={sel ? '#3b63f6' : '#8a94a2'} strokeWidth={2 / zoom} />
-                    <Line points={[0, 0, wd / 4, -wd * 0.3, wd / 2, 0]} stroke={sel ? '#3b63f6' : '#8a94a2'} strokeWidth={2 / zoom} />
+                    <Line points={[-wd / 2, 0, -wd / 4, -wd * 0.3, 0, 0]} stroke={sel ? C.selection : '#8a94a2'} strokeWidth={2 / zoom} />
+                    <Line points={[0, 0, wd / 4, -wd * 0.3, wd / 2, 0]} stroke={sel ? C.selection : '#8a94a2'} strokeWidth={2 / zoom} />
                     <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
                     <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
                   </>
                 ) : o.type === 'door' && o.style === 'double' ? (
                   <>
                     {/* two leaves hinged at each jamb, swinging to the centre */}
-                    <Line points={[-wd / 2, 0, -wd / 2, -wd / 2]} stroke={sel ? '#3b63f6' : '#cfd6e0'} strokeWidth={3 / zoom} />
-                    <Arc x={-wd / 2} y={0} innerRadius={wd / 2} outerRadius={wd / 2} angle={90} rotation={270} stroke={sel ? '#3b63f6' : '#6b7480'} strokeWidth={1.5 / zoom} />
-                    <Line points={[wd / 2, 0, wd / 2, -wd / 2]} stroke={sel ? '#3b63f6' : '#cfd6e0'} strokeWidth={3 / zoom} />
-                    <Arc x={wd / 2} y={0} innerRadius={wd / 2} outerRadius={wd / 2} angle={90} rotation={180} stroke={sel ? '#3b63f6' : '#6b7480'} strokeWidth={1.5 / zoom} />
+                    <Line points={[-wd / 2, 0, -wd / 2, -wd / 2]} stroke={sel ? C.selection : '#cfd6e0'} strokeWidth={3 / zoom} />
+                    <Arc x={-wd / 2} y={0} innerRadius={wd / 2} outerRadius={wd / 2} angle={90} rotation={270} stroke={sel ? C.selection : '#6b7480'} strokeWidth={1.5 / zoom} />
+                    <Line points={[wd / 2, 0, wd / 2, -wd / 2]} stroke={sel ? C.selection : '#cfd6e0'} strokeWidth={3 / zoom} />
+                    <Arc x={wd / 2} y={0} innerRadius={wd / 2} outerRadius={wd / 2} angle={90} rotation={180} stroke={sel ? C.selection : '#6b7480'} strokeWidth={1.5 / zoom} />
                     <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
                     <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
                   </>
                 ) : o.type === 'door' && o.style === 'sliding' ? (
                   <>
                     {/* two offset panels, no swing */}
-                    <Rect x={-wd / 2} y={-t * 0.45} width={wd * 0.55} height={t * 0.35} fill={sel ? '#3b63f6' : '#9db4c4'} />
-                    <Rect x={-wd * 0.05} y={t * 0.1} width={wd * 0.55} height={t * 0.35} fill={sel ? '#3b63f6' : '#c3d2dc'} />
+                    <Rect x={-wd / 2} y={-t * 0.45} width={wd * 0.55} height={t * 0.35} fill={sel ? C.selection : '#9db4c4'} />
+                    <Rect x={-wd * 0.05} y={t * 0.1} width={wd * 0.55} height={t * 0.35} fill={sel ? C.selection : '#c3d2dc'} />
                     <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
                     <Line points={[wd / 2, -t / 2, wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
                   </>
                 ) : o.type === 'door' ? (
                   <>
-                    <Line points={[-wd / 2, 0, -wd / 2, -wd]} stroke={sel ? '#3b63f6' : '#cfd6e0'} strokeWidth={3 / zoom} />
+                    <Line points={[-wd / 2, 0, -wd / 2, -wd]} stroke={sel ? C.selection : '#cfd6e0'} strokeWidth={3 / zoom} />
                     <Arc
                       x={-wd / 2}
                       y={0}
@@ -1128,7 +1128,7 @@ export default function Canvas2D() {
                       outerRadius={wd}
                       angle={90}
                       rotation={270}
-                      stroke={sel ? '#3b63f6' : '#6b7480'}
+                      stroke={sel ? C.selection : '#6b7480'}
                       strokeWidth={1.5 / zoom}
                     />
                     <Line points={[-wd / 2, -t / 2, -wd / 2, t / 2]} stroke="#cfd6e0" strokeWidth={2 / zoom} />
@@ -1142,7 +1142,7 @@ export default function Canvas2D() {
                       width={wd}
                       height={t}
                       fill="#dcebf5"
-                      stroke={sel ? '#3b63f6' : '#6aa6cc'}
+                      stroke={sel ? C.selection : '#6aa6cc'}
                       strokeWidth={2 / zoom}
                     />
                     <Line points={[-wd / 2, 0, wd / 2, 0]} stroke="#7fb8d8" strokeWidth={1.5 / zoom} />
@@ -1156,14 +1156,14 @@ export default function Canvas2D() {
                     {o.style === 'sliding' && (
                       <>
                         {/* two offset sashes */}
-                        <Rect x={-wd / 2} y={-t * 0.38} width={wd * 0.55} height={t * 0.28} fill={sel ? '#3b63f6' : '#8fc3e0'} />
-                        <Rect x={-wd * 0.05} y={t * 0.1} width={wd * 0.55} height={t * 0.28} fill={sel ? '#3b63f6' : '#b7d9ec'} />
+                        <Rect x={-wd / 2} y={-t * 0.38} width={wd * 0.55} height={t * 0.28} fill={sel ? C.selection : '#8fc3e0'} />
+                        <Rect x={-wd * 0.05} y={t * 0.1} width={wd * 0.55} height={t * 0.28} fill={sel ? C.selection : '#b7d9ec'} />
                       </>
                     )}
                     {o.style === 'casement' && (
                       <>
                         {/* hinged sash swing, like a door but glazed */}
-                        <Line points={[-wd / 2, 0, -wd / 2, -wd * 0.7]} stroke={sel ? '#3b63f6' : '#7fb8d8'} strokeWidth={2 / zoom} />
+                        <Line points={[-wd / 2, 0, -wd / 2, -wd * 0.7]} stroke={sel ? C.selection : '#7fb8d8'} strokeWidth={2 / zoom} />
                         <Arc x={-wd / 2} y={0} innerRadius={wd * 0.7} outerRadius={wd * 0.7} angle={55} rotation={270} stroke="#7fb8d8" strokeWidth={1.2 / zoom} />
                       </>
                     )}
@@ -1175,8 +1175,8 @@ export default function Canvas2D() {
                     x={0}
                     y={0}
                     radius={HANDLE_R / zoom}
-                    fill={HANDLE_FILL}
-                    stroke={HANDLE_STROKE}
+                    fill={C.handleFill}
+                    stroke={C.handleStroke}
                     strokeWidth={2 / zoom}
                     draggable
                     onMouseEnter={(e) => {
@@ -1281,14 +1281,14 @@ export default function Canvas2D() {
                     fill={f.color}
                     opacity={0.55}
                     cornerRadius={Math.min(width, depth) * 0.08}
-                    stroke={sel || selectedIds.includes(f.id) ? '#3b63f6' : '#00000033'}
+                    stroke={sel || selectedIds.includes(f.id) ? C.selection : C.furnitureOutline}
                     strokeWidth={(sel || selectedIds.includes(f.id) ? 3 : 1) / zoom}
                   />
                   <FurnitureSymbol
                     shape={entry?.shape ?? 'box'}
                     width={width}
                     depth={depth}
-                    color={sel ? '#3b63f6' : '#242a33'}
+                    color={sel ? C.selection : C.symbolInk}
                   />
                 </Group>
                 {editing && (
@@ -1506,6 +1506,7 @@ function FurnitureGhost({
   at: Point;
   zoom: number;
 }) {
+  const C = canvasColors(useTheme((t) => t.theme));
   return (
     <Group x={at.x} y={at.y} listening={false} opacity={0.75}>
       <Rect
@@ -1514,12 +1515,12 @@ function FurnitureGhost({
         width={entry.width}
         height={entry.depth}
         fill="rgba(59,99,246,0.14)"
-        stroke="#3b63f6"
+        stroke={C.selection}
         strokeWidth={1.5 / zoom}
         dash={[8 / zoom, 5 / zoom]}
         cornerRadius={Math.min(entry.width, entry.depth) * 0.08}
       />
-      <FurnitureSymbol shape={entry.shape} width={entry.width} depth={entry.depth} color="#3b63f6" />
+      <FurnitureSymbol shape={entry.shape} width={entry.width} depth={entry.depth} color={C.selection} />
     </Group>
   );
 }
@@ -1527,6 +1528,7 @@ function FurnitureGhost({
 // Tape-measure overlay: a dashed line between two points with end ticks and a
 // pill-backed distance label at the midpoint (respects the units toggle).
 function MeasureView({ a, b, zoom, units }: { a: Point; b: Point; zoom: number; units: Units }) {
+  const C = canvasColors(useTheme((t) => t.theme));
   const len = dist(a, b);
   const mid = midpoint(a, b);
   const dx = (b.x - a.x) / (len || 1);
@@ -1539,7 +1541,7 @@ function MeasureView({ a, b, zoom, units }: { a: Point; b: Point; zoom: number; 
   const padX = 7 / zoom;
   const boxW = label.length * fs * 0.62 + padX * 2;
   const boxH = fs + 9 / zoom;
-  const ACCENT = '#e0533d'; // warm, distinct from the blue draw colour
+  const ACCENT = C.accent; // warm, distinct from the blue draw colour
   return (
     <Group listening={false}>
       <Line points={[a.x, a.y, b.x, b.y]} stroke={ACCENT} strokeWidth={1.6 / zoom} dash={[9 / zoom, 6 / zoom]} />
@@ -1598,6 +1600,7 @@ function SnapIndicator({ at, kind, zoom }: { at: Point; kind: SnapKind; zoom: nu
 function DraftView({
   draft, cursor, tool, zoom, units, lengthInput,
 }: { draft: Point[]; cursor: Point | null; tool: string; zoom: number; units: Units; lengthInput: string }) {
+  const C = canvasColors(useTheme((t) => t.theme));
   const last = draft[draft.length - 1];
   // While typing a length, lock the ghost segment's endpoint to that distance
   // (direction still follows the mouse — angle/guide snapping still applies).
@@ -1618,7 +1621,7 @@ function DraftView({
       <Line
         points={flat}
         closed={tool === 'room'}
-        stroke="#3b63f6"
+        stroke={C.selection}
         strokeWidth={(tool === 'wall' ? 8 : 2) / zoom}
         lineCap="round"
         opacity={0.7}
@@ -1626,7 +1629,7 @@ function DraftView({
         fill={tool === 'room' ? 'rgba(76,141,255,0.12)' : undefined}
       />
       {draft.map((p, i) => (
-        <Circle key={i} x={p.x} y={p.y} radius={5 / zoom} fill="#fff" stroke="#3b63f6" strokeWidth={2 / zoom} />
+        <Circle key={i} x={p.x} y={p.y} radius={5 / zoom} fill="#fff" stroke={C.selection} strokeWidth={2 / zoom} />
       ))}
       {cursor && last && (
         <Text
@@ -1659,13 +1662,14 @@ function WallEndpointHandle({
   onMove: (p: Point) => Point;
   onEnd: () => void;
 }) {
+  const C = canvasColors(useTheme((t) => t.theme));
   return (
     <Circle
       x={x}
       y={y}
       radius={r}
-      fill={HANDLE_FILL}
-      stroke={HANDLE_STROKE}
+      fill={C.handleFill}
+      stroke={C.handleStroke}
       strokeWidth={2 / zoom}
       draggable
       onMouseEnter={(e) => {
@@ -1711,6 +1715,7 @@ function FurnitureHandles({
   onRotate: (deg: number) => void;
   onCommit: () => void;
 }) {
+  const C = canvasColors(useTheme((t) => t.theme));
   const hr = 7 / zoom; // corner handle radius (cm)
   const { width, depth, position } = box;
   const corners: Point[] = [
@@ -1736,7 +1741,7 @@ function FurnitureHandles({
         y={-depth / 2}
         width={width}
         height={depth}
-        stroke="#3b63f6"
+        stroke={C.selection}
         strokeWidth={1.5 / zoom}
         dash={[6 / zoom, 4 / zoom]}
         listening={false}
@@ -1744,7 +1749,7 @@ function FurnitureHandles({
       {/* rotation stalk + handle */}
       <Line
         points={[0, -depth / 2, rotPos.x, rotPos.y]}
-        stroke="#3b63f6"
+        stroke={C.selection}
         strokeWidth={1.5 / zoom}
         listening={false}
       />
@@ -1752,8 +1757,8 @@ function FurnitureHandles({
         x={rotPos.x}
         y={rotPos.y}
         radius={hr}
-        fill={HANDLE_FILL}
-        stroke={HANDLE_STROKE}
+        fill={C.handleFill}
+        stroke={C.handleStroke}
         strokeWidth={2 / zoom}
         draggable
         onMouseEnter={(e) => {
@@ -1790,8 +1795,8 @@ function FurnitureHandles({
           x={c.x}
           y={c.y}
           radius={hr}
-          fill={HANDLE_FILL}
-          stroke={HANDLE_STROKE}
+          fill={C.handleFill}
+          stroke={C.handleStroke}
           strokeWidth={2 / zoom}
           draggable
           onMouseEnter={(e) => {

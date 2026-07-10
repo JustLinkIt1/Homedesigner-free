@@ -1,8 +1,39 @@
 import { Component, type ReactNode } from 'react';
-import { APP_NAME } from '../lib/appInfo';
+import { APP_NAME, APP_VERSION, SUPPORT_EMAIL } from '../lib/appInfo';
 
 interface State {
   error: Error | null;
+}
+
+const CRASH_KEY = 'homedesigner.crashlog.v1';
+
+/** Ring buffer of the last few crashes — local only, never sent anywhere. */
+function recordCrash(error: Error): void {
+  try {
+    const log = JSON.parse(localStorage.getItem(CRASH_KEY) ?? '[]');
+    log.unshift({
+      message: String(error.message).slice(0, 500),
+      stack: String(error.stack ?? '').slice(0, 2000),
+      version: APP_VERSION,
+      ts: new Date().toISOString(),
+    });
+    localStorage.setItem(CRASH_KEY, JSON.stringify(log.slice(0, 5)));
+  } catch {
+    /* best-effort */
+  }
+}
+
+function crashMailHref(error: Error): string {
+  const body = [
+    'What were you doing when it crashed?',
+    '',
+    '—',
+    `App ${APP_VERSION} · ${navigator.userAgent}`,
+    '',
+    error.message,
+    (error.stack ?? '').slice(0, 1200),
+  ].join('\n');
+  return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} crash report`)}&body=${encodeURIComponent(body)}`;
 }
 
 /**
@@ -15,6 +46,7 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
+    recordCrash(error);
     return { error };
   }
 
@@ -57,6 +89,9 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
             <button className="btn" onClick={this.downloadBackup}>
               Download project backup
             </button>
+            <a className="btn" href={crashMailHref(this.state.error)}>
+              Email crash details
+            </a>
           </div>
         </div>
       </div>

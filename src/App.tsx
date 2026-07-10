@@ -23,6 +23,7 @@ import Canvas2D from './components/Editor2D/Canvas2D';
 import FloorSwitcher from './components/FloorSwitcher';
 import AboutDialog from './components/AboutDialog';
 import HelpPanel from './components/HelpPanel';
+import SettingsDialog from './components/SettingsDialog';
 import CoachMarks from './components/CoachMarks';
 import RotateControls from './components/Viewer3D/RotateControls';
 import ShoppingList from './components/ShoppingList';
@@ -57,6 +58,7 @@ export default function App() {
   const [showImport, setShowImport] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showList, setShowList] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
   const [rendering, setRendering] = useState(false);
@@ -154,8 +156,8 @@ export default function App() {
   };
 
   // Keep latest UI state for the hardware back-button handler.
-  const stateRef = useRef({ photoMode, showImport, walkMode, screen, showHelp, showAbout, showList });
-  stateRef.current = { photoMode, showImport, walkMode, screen, showHelp, showAbout, showList };
+  const stateRef = useRef({ photoMode, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings });
+  stateRef.current = { photoMode, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings };
 
   // Going home: capture the plan synchronously (the canvas may unmount right
   // after), switch screens immediately so the tap feels instant, and finish
@@ -218,6 +220,10 @@ export default function App() {
       }
       if (st.showList) {
         setShowList(false);
+        return true;
+      }
+      if (st.showSettings) {
+        setShowSettings(false);
         return true;
       }
       if (st.walkMode) {
@@ -299,6 +305,7 @@ export default function App() {
         onAbout={() => setShowAbout(true)}
         onHelp={() => setShowHelp(true)}
         onShoppingList={() => setShowList(true)}
+        onSettings={() => setShowSettings(true)}
         onHome={goHome}
       />
       <div className="body">
@@ -522,6 +529,15 @@ export default function App() {
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
       {showHelp && <HelpPanel onClose={() => setShowHelp(false)} onReplayTour={replayTour} />}
       {showList && <ShoppingList onClose={() => setShowList(false)} />}
+      {showSettings && (
+        <SettingsDialog
+          onClose={() => setShowSettings(false)}
+          onReplayTour={() => {
+            setShowSettings(false);
+            replayTour();
+          }}
+        />
+      )}
 
       {showTour && view === '2d' && !showImport && !photoMode && (
         <CoachMarks
