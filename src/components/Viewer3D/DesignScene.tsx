@@ -638,10 +638,14 @@ function FloorContent({
 export default function DesignScene({
   interactive = true,
   dollhouse = false,
+  dollhouseInstant = false,
   onSurfaceTap,
 }: {
   interactive?: boolean;
   dollhouse?: boolean;
+  /** Snap wall fades instead of lerping — for progressive renders (photo
+   *  mode) where the fade must be settled the moment the camera stops. */
+  dollhouseInstant?: boolean;
   onSurfaceTap?: (tap: SurfaceTap) => void;
 }) {
   const floors = useDesign((s) => s.floors);
@@ -667,7 +671,7 @@ export default function DesignScene({
       const camDot = w.nx * (camera.position.x - w.mx) + w.nz * (camera.position.z - w.mz);
       const target = camDot > 0.25 ? 0.1 : 1;
       m.transparent = true;
-      m.opacity += (target - m.opacity) * 0.2;
+      m.opacity = dollhouseInstant ? target : m.opacity + (target - m.opacity) * 0.2;
       m.depthWrite = m.opacity > 0.85;
     });
   });

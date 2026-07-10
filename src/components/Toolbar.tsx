@@ -81,9 +81,16 @@ export default function Toolbar({
     s.clearSelection();
     await new Promise((r) => requestAnimationFrame(() => r(null)));
     try {
-      const ok = kind === 'png' ? await exportPlanPNG(s.projectName) : await exportPlanPDF(s.projectName);
-      if (ok) toast.success(kind === 'png' ? 'Plan exported as PNG' : 'Plan exported as PDF');
-      else toast.info('Nothing to export yet — add walls or rooms first');
+      if (kind === 'png') {
+        const ok = await exportPlanPNG(s.projectName);
+        if (ok) toast.success('Plan exported as PNG');
+        else toast.info('Nothing to export yet — add walls or rooms first');
+      } else {
+        const pages = await exportPlanPDF(s.projectName);
+        if (pages > 1) toast.success(`PDF exported — one page per floor (${pages})`);
+        else if (pages === 1) toast.success('Plan exported as PDF');
+        else toast.info('Nothing to export yet — add walls or rooms first');
+      }
     } catch {
       toast.error('Export failed');
     }

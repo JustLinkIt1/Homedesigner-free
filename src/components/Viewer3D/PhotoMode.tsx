@@ -39,15 +39,33 @@ function pathtracerSupported(): boolean {
 /** Lives inside <Pathtracer> so it can use its context. */
 function PathtracedContent({
   center,
+  dollhouse,
   onSamples,
   onUnsupported,
 }: {
   center: [number, number, number];
+  dollhouse: boolean;
   onSamples: (n: number) => void;
   onUnsupported: () => void;
 }) {
   const { pathtracer, reset, update } = usePathtracer();
   const { scene, gl } = useThree();
+
+  // The dollhouse fade edits material opacities the tracer has already baked;
+  // re-sync them whenever the camera settles or the toggle flips. (The fade is
+  // instant in photo mode, so two frames after a change it is final.)
+  const syncMaterials = () => {
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        (pathtracer as unknown as { updateMaterials?: () => void })?.updateMaterials?.();
+        reset();
+      }),
+    );
+  };
+  useEffect(() => {
+    syncMaterials();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dollhouse]);
 
   useEffect(() => {
     const glCtx = gl.getContext();
@@ -90,8 +108,13 @@ function PathtracedContent({
 
   return (
     <>
-      <DesignScene interactive={false} />
-      <OrbitControls makeDefault target={center} onChange={() => reset()} />
+      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant />
+      <OrbitControls
+        makeDefault
+        target={center}
+        onChange={() => reset()}
+        onEnd={dollhouse ? syncMaterials : undefined}
+      />
     </>
   );
 }
@@ -127,7 +150,15 @@ function RasterCapture({ composerRef }: { composerRef: React.MutableRefObject<an
 
 /** A real-time "beauty" view: the same time-of-day sun rig and film look as the
  *  3D scene, but rendered with the standard rasteriser so it runs anywhere. */
-function RasterContent({ center, radius }: { center: [number, number, number]; radius: number }) {
+function RasterContent({
+  center,
+  radius,
+  dollhouse,
+}: {
+  center: [number, number, number];
+  radius: number;
+  dollhouse: boolean;
+}) {
   const composerRef = useRef<any>(null);
   const sunTime = useDesign((s) => s.sunTime);
   const sun = sunModel(sunTime);
@@ -168,7 +199,7 @@ function RasterContent({ center, radius }: { center: [number, number, number]; r
         <meshStandardMaterial color="#e6e8eb" roughness={1} />
       </mesh>
 
-      <DesignScene interactive={false} />
+      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant />
 
       <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
         <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />
@@ -189,6 +220,9 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
     pathtracerSupported() ? 'trace' : 'raster',
   );
   const [samples, setSamples] = useState(0);
+  // Same dollhouse flag as the 3D view, so framing carries over naturally.
+  const dollhouse = useDesign((s) => s.dollhouse);
+  const setDollhouse = useDesign((s) => s.setDollhouse);
 
   // Safety net: if the tracer probe passed but samples never advance, fall
   // back to the raster beauty view instead of a stalled bar.
@@ -213,7 +247,12 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
           style={{ position: 'absolute', inset: 0 }}
         >
           <Pathtracer enabled samples={MAX_SAMPLES} bounces={5} tiles={[3, 3]}>
-            <PathtracedContent center={center} onSamples={setSamples} onUnsupported={() => setMode('raster')} />
+            <PathtracedContent
+              center={center}
+              dollhouse={dollhouse}
+              onSamples={setSamples}
+              onUnsupported={() => setMode('raster')}
+            />
           </Pathtracer>
         </Canvas>
       ) : (
@@ -224,9 +263,14 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
           camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
           style={{ position: 'absolute', inset: 0 }}
         >
-          <RasterContent center={center} radius={radius} />
+          <RasterContent center={center} radius={radius} dollhouse={dollhouse} />
         </Canvas>
       )}
+
+      <label className="photo-dollhouse" title="Fade the walls facing the camera">
+        <input type="checkbox" checked={dollhouse} onChange={(e) => setDollhouse(e.target.checked)} />
+        🏠 Dollhouse
+      </label>
 
       <div className="photo-bar">
         <div className="photo-status">
