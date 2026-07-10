@@ -14,23 +14,49 @@ export function isValidReferralCode(raw: string): boolean {
   return !!VALID_CODES[normalize(raw)];
 }
 
-export function isReferralRedeemed(): boolean {
+/** The redeemed code, or null. Legacy installs stored '1' before we kept the
+ *  code itself — those can only have been HOMEDESIGN50. */
+export function redeemedReferralCode(): string | null {
   try {
-    return localStorage.getItem(REFERRAL_KEY) === '1';
+    const v = localStorage.getItem(REFERRAL_KEY);
+    if (!v) return null;
+    return v === '1' ? 'HOMEDESIGN50' : v;
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function markReferralRedeemed(): void {
+export function isReferralRedeemed(): boolean {
+  return redeemedReferralCode() !== null;
+}
+
+export function markReferralRedeemed(raw: string): void {
+  const code = normalize(raw);
   try {
-    localStorage.setItem(REFERRAL_KEY, '1');
+    localStorage.setItem(REFERRAL_KEY, code);
   } catch {
     /* best-effort */
   }
   if (Capacitor.isNativePlatform()) {
     import('@capacitor/preferences')
-      .then(({ Preferences }) => Preferences.set({ key: REFERRAL_KEY, value: '1' }))
+      .then(({ Preferences }) => Preferences.set({ key: REFERRAL_KEY, value: code }))
       .catch(() => {});
   }
+  syncReferralAttribute();
+}
+
+/**
+ * Tag this RevenueCat customer with the redeemed code so redemptions are
+ * countable from the dashboard/API (the app has no backend of its own).
+ * Fire-and-forget; requires Purchases.configure to have run (proStore.refresh
+ * does that on launch, and calls this afterwards to backfill devices that
+ * redeemed before this attribute existed).
+ */
+export function syncReferralAttribute(): void {
+  if (!Capacitor.isNativePlatform()) return;
+  const code = redeemedReferralCode();
+  if (!code) return;
+  import('@revenuecat/purchases-capacitor')
+    .then(({ Purchases }) => Purchases.setAttributes({ referral_code: code }))
+    .catch(() => {});
 }

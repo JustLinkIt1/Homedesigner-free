@@ -3,7 +3,12 @@
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
 import { getProProvider, type ProFeature } from '../lib/pro';
-import { isValidReferralCode, markReferralRedeemed } from '../lib/referral';
+import {
+  isValidReferralCode,
+  markReferralRedeemed,
+  isReferralRedeemed,
+  syncReferralAttribute,
+} from '../lib/referral';
 import { toast } from '../lib/ui';
 
 const PRO_CACHE_KEY = 'homedesigner.pro.v1';
@@ -44,8 +49,9 @@ interface ProState {
 }
 
 export const useProStore = create<ProState>((set, get) => ({
-  // Seeded synchronously so gates work instantly and offline.
-  isPro: readCache(),
+  // Seeded synchronously so gates work instantly and offline. A redeemed
+  // referral code counts even if the entitlement cache was clobbered.
+  isPro: readCache() || isReferralRedeemed(),
   priceLabel: null,
   busy: false,
   upsellFeature: null,
@@ -64,7 +70,12 @@ export const useProStore = create<ProState>((set, get) => ({
     }
     try {
       await provider.init();
-      const entitled = await provider.isEntitled();
+      // Backfill the referral attribute for devices that redeemed before we
+      // started reporting redemptions to RevenueCat (needs configure() first).
+      syncReferralAttribute();
+      // A redeemed referral code is a grant in its own right: RevenueCat
+      // knows nothing about it, so it must never be able to revoke it.
+      const entitled = (await provider.isEntitled()) || isReferralRedeemed();
       // Only a SUCCESSFUL response may change the flag — a network error must
       // never lock a paying user out of what they bought.
       set({ isPro: entitled });
@@ -119,7 +130,7 @@ export const useProStore = create<ProState>((set, get) => ({
 
   redeemCode: (code: string) => {
     if (!isValidReferralCode(code)) return false;
-    markReferralRedeemed();
+    markReferralRedeemed(code);
     set({ isPro: true, upsellFeature: null });
     writeCache(true);
     toast.success('Pro unlocked with your referral code!');
