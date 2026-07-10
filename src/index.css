@@ -738,6 +738,55 @@ button.brand:hover .brand-name {
   flex-wrap: wrap;
   gap: 7px;
 }
+/* Room style presets */
+.style-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.style-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.style-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.style-chip:hover .style-thumb {
+  transform: scale(1.06);
+  border-color: var(--brand);
+}
+.style-wall {
+  position: absolute;
+  inset: 0 0 55% 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+.style-name {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
 .align-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -4,8 +4,10 @@ import {
   AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
   AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useDesign } from '../store/designStore';
 import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
+import { ROOM_STYLES } from '../data/roomStyles';
 import { floorThumbnail, prepareTextureImage } from '../lib/textures';
 import { toast } from '../lib/ui';
 import { dist, polygonArea } from '../lib/geometry';
@@ -169,6 +171,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <span className="field-val">{formatArea(polygonArea(room.points), s.units)}</span>
               </div>
             </div>
+            <StyleCard roomId={room.id} />
             <div className="prop-card">
               <div className="prop-label">Flooring</div>
               <div className="swatches">
@@ -301,6 +304,44 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
         )}
       </div>
     </aside>
+  );
+}
+
+/** One-tap coordinated looks: wall paint + flooring, per room or whole home. */
+function StyleCard({ roomId }: { roomId: string }) {
+  const s = useDesign();
+  const [wholeHome, setWholeHome] = useState(false);
+  return (
+    <div className="prop-card">
+      <div className="prop-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        Room styles
+        <label className="style-scope">
+          <input type="checkbox" checked={wholeHome} onChange={(e) => setWholeHome(e.target.checked)} />
+          Whole home
+        </label>
+      </div>
+      <div className="style-grid">
+        {ROOM_STYLES.map((st) => {
+          const mat = FLOOR_MATERIALS.find((m) => m.id === st.floorMaterial);
+          return (
+            <button
+              key={st.id}
+              className="style-chip"
+              title={`${st.name} — ${mat?.name ?? ''} floor`}
+              onClick={() => s.applyRoomStyle(wholeHome ? 'all' : roomId, st.id)}
+            >
+              <span
+                className="style-thumb"
+                style={{ backgroundImage: mat ? `url(${floorThumbnail(mat.kind, mat.color)})` : undefined }}
+              >
+                <span className="style-wall" style={{ background: st.wallColor }} />
+              </span>
+              <span className="style-name">{st.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

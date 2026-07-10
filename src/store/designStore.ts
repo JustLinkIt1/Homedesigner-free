@@ -12,8 +12,9 @@ import type {
   ViewMode,
   Wall,
 } from '../types';
-import { uid, dist } from '../lib/geometry';
+import { uid, dist, pointToSegment } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
+import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { sampleProject } from '../data/sampleProject';
 import { toast } from '../lib/ui';
@@ -131,6 +132,8 @@ interface DesignState extends DesignSnapshot {
   moveFurnitureGroup: (ids: string[], dx: number, dy: number) => void;
   alignSelected: (edge: 'left' | 'hcenter' | 'right' | 'top' | 'vmiddle' | 'bottom') => void;
   distributeSelected: (axis: 'h' | 'v') => void;
+  /** Apply a coordinated style (wall paint + flooring) to one room or 'all'. */
+  applyRoomStyle: (roomId: string | 'all', styleId: string) => void;
   duplicateSelection: () => void;
   copySelection: () => void;
   paste: (at?: Point) => void;
@@ -748,6 +751,61 @@ export const useDesign = create<DesignState>((set, get) => {
         d.background = null;
       });
       set({ selection: { kind: null, id: null }, selectedIds: [] });
+    },
+
+    applyRoomStyle: (roomId, styleId) => {
+      const style = ROOM_STYLE_BY_ID[styleId];
+      if (!style) return;
+      const { rooms, walls } = get();
+      // A wall borders a room when a meaningful stretch of it runs along the
+      // room polygon's boundary. Endpoint tests fail for shared perimeter
+      // walls that extend past the room, so measure the colinear OVERLAP
+      // between the wall and each polygon edge instead.
+      const boundaryOverlap = (w: Wall, pts: Point[], tol: number): number => {
+        let total = 0;
+        for (let i = 0; i < pts.length; i++) {
+          const a = pts[i];
+          const b = pts[(i + 1) % pts.length];
+          const ex = b.x - a.x;
+          const ey = b.y - a.y;
+          const len = Math.hypot(ex, ey);
+          if (len < 1e-6) continue;
+          // Perpendicular distance of both wall endpoints from the edge LINE.
+          const dLine = (p: Point) => Math.abs(ex * (p.y - a.y) - ey * (p.x - a.x)) / len;
+          if (dLine(w.start) > tol || dLine(w.end) > tol) continue;
+          // Colinear: measure 1D overlap of the wall span with the edge span.
+          const t = (p: Point) => (ex * (p.x - a.x) + ey * (p.y - a.y)) / len;
+          const lo = Math.min(t(w.start), t(w.end));
+          const hi = Math.max(t(w.start), t(w.end));
+          total += Math.max(0, Math.min(hi, len) - Math.max(lo, 0));
+        }
+        return total;
+      };
+      const targets = roomId === 'all' ? rooms : rooms.filter((r) => r.id === roomId);
+      if (targets.length === 0) return;
+      const wallIds = new Set<string>();
+      if (roomId === 'all') {
+        for (const w of walls) wallIds.add(w.id);
+      } else {
+        for (const r of targets) {
+          for (const w of walls) {
+            const tol = w.thickness / 2 + 8;
+            if (boundaryOverlap(w, r.points, tol) >= 40) wallIds.add(w.id);
+          }
+        }
+      }
+      const roomIds = new Set(targets.map((r) => r.id));
+      commit((d) => {
+        d.rooms = d.rooms.map((r) =>
+          roomIds.has(r.id)
+            ? { ...r, floorMaterial: style.floorMaterial, color: style.roomFill, texture: undefined }
+            : r,
+        );
+        d.walls = d.walls.map((w) =>
+          wallIds.has(w.id) ? { ...w, color: style.wallColor, texture: undefined } : w,
+        );
+      });
+      haptics.tapLight();
     },
 
     // Copy the active storey's shell (walls, their openings and rooms) onto a
