@@ -12,9 +12,31 @@ const M = 0.01; // cm -> m
  * so they never weigh down the initial bundle. `yaw` corrects a model whose
  * "front" doesn't face +Z. Drop in a new pack by adding entries here.
  */
+const U = (f: string) => `${import.meta.env.BASE_URL}models/${f}.glb`;
+
 export const FURNITURE_MODELS: Record<string, { url: string; yaw?: number }> = {
-  sofa: { url: `${import.meta.env.BASE_URL}models/sofa.glb` },
-  armchair: { url: `${import.meta.env.BASE_URL}models/armchair.glb` },
+  sofa: { url: U('sofa') },
+  armchair: { url: U('armchair') },
+  // Poly Haven CC0 pack (1k, quantized + webp-compressed at build time).
+  dining_table: { url: U('dining_table') },
+  dining_chair: { url: U('dining_chair') },
+  coffee_table: { url: U('coffee_table') },
+  nightstand: { url: U('nightstand') },
+  plant: { url: U('plant') },
+  large_plant: { url: U('large_plant') },
+  stove: { url: U('stove') },
+  desk: { url: U('desk') },
+  bed_double: { url: U('bed_double') },
+  bookshelf: { url: U('bookshelf') },
+  side_table: { url: U('side_table') },
+  bar_stool: { url: U('bar_stool') },
+  bench: { url: U('bench') },
+  wardrobe: { url: U('wardrobe') },
+  dresser: { url: U('dresser') },
+  ottoman: { url: U('ottoman') },
+  // NB: no pendant/tv model — the fitter rests bases on the floor, which is
+  // wrong for hanging lights, and the procedural TV (emissive screen at stand
+  // height) reads better than a flat panel lying on the ground.
 };
 
 export function hasModel(type: string): boolean {
@@ -63,5 +85,8 @@ export default function GltfFurniture({ item }: { item: FurnitureItem }) {
   );
 }
 
-// Warm the cache for the bundled models when this module loads in the 3D view.
-Object.values(FURNITURE_MODELS).forEach((m) => useGLTF.preload(m.url));
+// Warm only the most common models; the rest stream in on first use so a
+// 20-model library doesn't front-load the 3D view.
+for (const t of ['sofa', 'armchair', 'dining_table', 'dining_chair'] as const) {
+  useGLTF.preload(FURNITURE_MODELS[t].url);
+}

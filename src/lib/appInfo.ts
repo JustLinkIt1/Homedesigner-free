@@ -41,4 +41,9 @@ export const CREDITS: { name: string; license: string; url: string }[] = [
     license: 'SIL OFL 1.1',
     url: 'https://github.com/tokotype/PlusJakartaSans',
   },
+  {
+    name: 'Furniture 3D model pack — Poly Haven contributors',
+    license: 'CC0 1.0',
+    url: 'https://polyhaven.com/models',
+  },
 ];
