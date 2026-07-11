@@ -2194,11 +2194,60 @@ button.brand:hover .brand-name {
 .ps-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   height: 58px;
   padding: 0 18px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex: none;
+}
+
+/* ---------- Language picker (projects header + Settings) ---------- */
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  transition: background var(--dur, 0.16s), border-color var(--dur, 0.16s);
+}
+.lang-btn:hover {
+  background: var(--surface-2);
+}
+.lang-btn .icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-2);
+}
+.lang-btn .caret {
+  width: 14px;
+  height: 14px;
+  margin-left: -1px;
+  opacity: 0.7;
+}
+.lang-menu {
+  min-width: 170px;
+}
+.lang-menu-right {
+  left: auto;
+  right: 0;
+}
+.lang-menu button {
+  justify-content: space-between;
+}
+.lang-menu button.active {
+  color: var(--brand-600);
+}
+.lang-check {
+  width: 16px;
+  height: 16px;
+  color: var(--brand-600);
 }
 .ps-main {
   flex: 1;

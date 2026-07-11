@@ -3,19 +3,14 @@ import { Settings, Monitor, Sun, Moon, ExternalLink } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { hapticsEnabled, setHapticsEnabled, tapLight } from '../lib/haptics';
-import { useLang, useI18n, type LangPref } from '../lib/i18n';
+import { useI18n } from '../lib/i18n';
+import LanguagePicker from './LanguagePicker';
 import { APP_NAME, APP_VERSION, PRIVACY_URL } from '../lib/appInfo';
 
 const THEME_OPTIONS: { id: ThemePref; label: string; icon: typeof Sun }[] = [
   { id: 'system', label: 'System', icon: Monitor },
   { id: 'light', label: 'Light', icon: Sun },
   { id: 'dark', label: 'Dark', icon: Moon },
-];
-
-const LANG_OPTIONS: { id: LangPref; label: string }[] = [
-  { id: 'system', label: 'System' },
-  { id: 'en', label: 'English' },
-  { id: 'fr', label: 'Français' },
 ];
 
 /** Central app preferences (theme, units, haptics, editor defaults, tour). */
@@ -34,8 +29,6 @@ export default function SettingsDialog({
   const setShowGrid = useDesign((s) => s.setShowGrid);
   const showDimensions = useDesign((s) => s.showDimensions);
   const setShowDimensions = useDesign((s) => s.setShowDimensions);
-  const langPref = useLang((s) => s.pref);
-  const setLangPref = useLang((s) => s.setPref);
   const [haptics, setHaptics] = useState(hapticsEnabled);
   const t = useI18n();
 
@@ -90,18 +83,9 @@ export default function SettingsDialog({
 
           <section>
             <h3>{t('Language')}</h3>
-            <div className="seg" role="radiogroup" aria-label={t('Language')}>
-              {LANG_OPTIONS.map((o) => (
-                <button
-                  key={o.id}
-                  className={langPref === o.id ? 'active' : ''}
-                  role="radio"
-                  aria-checked={langPref === o.id}
-                  onClick={() => setLangPref(o.id)}
-                >
-                  {o.id === 'system' ? t('System') : o.label}
-                </button>
-              ))}
+            <div className="settings-row">
+              <span>{t('Language')}</span>
+              <LanguagePicker align="right" />
             </div>
           </section>
 

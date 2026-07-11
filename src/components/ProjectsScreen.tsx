@@ -7,6 +7,7 @@ import { requirePro } from '../lib/pro';
 import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { SAMPLES } from '../data/samples';
 import { useI18n } from '../lib/i18n';
+import LanguagePicker from './LanguagePicker';
 import * as projects from '../lib/projects';
 
 function timeAgo(ts: number): string {
@@ -80,6 +81,7 @@ export default function ProjectsScreen({
             <span className="sub">{APP_TAGLINE}</span>
           </div>
         </div>
+        <LanguagePicker align="right" />
       </header>
 
       <main className="ps-main">
