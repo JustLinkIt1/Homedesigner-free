@@ -100,7 +100,8 @@ check('shopping list rows', (await page.locator('.bom-table tbody tr').count()) 
 await page.click('.modal-foot .btn.primary');
 
 // ---- 4. Settings round-trip -------------------------------------------------
-await page.click('[aria-label="Settings"]');
+await page.click('[aria-label="More"]');
+await page.click('.more-menu [role="menuitem"]:has-text("Settings")');
 await page.click('.seg button:has-text("Dark")');
 const dark = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
 check('dark theme applies', dark === 'dark');

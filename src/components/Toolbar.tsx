@@ -16,6 +16,7 @@ import {
   Info,
   CircleHelp,
   Settings,
+  MoreVertical,
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
@@ -67,6 +68,8 @@ export default function Toolbar({
   const t = useI18n();
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   // Close the export menu on any outside click.
   useEffect(() => {
@@ -77,6 +80,39 @@ export default function Toolbar({
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [exportOpen]);
+
+  // Close the "More" overflow menu on any outside click.
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [moreOpen]);
+
+  const saveToFile = async () => {
+    await exportProject({
+      walls: s.walls,
+      rooms: s.rooms,
+      furniture: s.furniture,
+      openings: s.openings,
+      background: s.background,
+      projectName: s.projectName,
+      floors: s.floors,
+      floorGeom: s.floorGeom,
+      activeFloorId: s.activeFloorId,
+    });
+    toast.success('Project file downloaded');
+  };
+
+  const openFromFile = async () => {
+    const snap = await openProjectFile();
+    if (snap) {
+      s.loadSnapshot(snap);
+      toast.success('Project opened');
+    }
+  };
 
   const runExport = async (kind: 'png' | 'pdf') => {
     setExportOpen(false);
@@ -140,50 +176,6 @@ export default function Toolbar({
           <Import className="icon" />
           <span>{t('Import plan')}</span>
         </button>
-        <button
-          className="tbtn icon-only"
-          title="Open a saved project"
-          aria-label="Open a saved project"
-          onClick={async () => {
-            const snap = await openProjectFile();
-            if (snap) {
-              s.loadSnapshot(snap);
-              toast.success('Project opened');
-            }
-          }}
-        >
-          <FolderOpen className="icon" />
-        </button>
-        <button
-          className="tbtn icon-only"
-          title="Save project to a file"
-          aria-label="Save project to a file"
-          onClick={async () => {
-            await exportProject({
-              walls: s.walls,
-              rooms: s.rooms,
-              furniture: s.furniture,
-              openings: s.openings,
-              background: s.background,
-              projectName: s.projectName,
-              floors: s.floors,
-              floorGeom: s.floorGeom,
-              activeFloorId: s.activeFloorId,
-            });
-            toast.success('Project file downloaded');
-          }}
-        >
-          <Save className="icon" />
-        </button>
-        <button className="tbtn icon-only" title={t('Settings')} aria-label={t('Settings')} onClick={onSettings}>
-          <Settings className="icon" />
-        </button>
-        <button className="tbtn icon-only" title={t('Tips & shortcuts')} aria-label="Tips and shortcuts" onClick={onHelp}>
-          <CircleHelp className="icon" />
-        </button>
-        <button className="tbtn icon-only" title={t('About')} aria-label={t('About')} onClick={onAbout}>
-          <Info className="icon" />
-        </button>
         {s.view === '2d' && (
           <div className="export-wrap" ref={exportRef}>
             <button
@@ -218,6 +210,38 @@ export default function Toolbar({
             )}
           </div>
         )}
+        <div className="export-wrap" ref={moreRef}>
+          <button
+            className="tbtn icon-only"
+            title={t('More')}
+            aria-label={t('More')}
+            aria-haspopup="menu"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((o) => !o)}
+          >
+            <MoreVertical className="icon" />
+          </button>
+          {moreOpen && (
+            <div className="export-menu more-menu" role="menu">
+              <button role="menuitem" onClick={() => { setMoreOpen(false); onSettings(); }}>
+                <Settings className="icon" /> {t('Settings')}
+              </button>
+              <button role="menuitem" onClick={() => { setMoreOpen(false); onHelp(); }}>
+                <CircleHelp className="icon" /> {t('Tips & shortcuts')}
+              </button>
+              <button role="menuitem" onClick={() => { setMoreOpen(false); onAbout(); }}>
+                <Info className="icon" /> {t('About')}
+              </button>
+              <div className="menu-divider" role="separator" />
+              <button role="menuitem" onClick={() => { setMoreOpen(false); openFromFile(); }}>
+                <FolderOpen className="icon" /> {t('Open project file')}
+              </button>
+              <button role="menuitem" onClick={() => { setMoreOpen(false); saveToFile(); }}>
+                <Save className="icon" /> {t('Save a copy')}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="spacer" />

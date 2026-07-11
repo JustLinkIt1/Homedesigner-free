@@ -9,6 +9,7 @@ import {
   Footprints,
   Image as ImageIcon,
   Camera,
+  ChevronDown,
   Sofa,
   SlidersHorizontal,
   Lightbulb,
@@ -65,6 +66,8 @@ export default function App() {
   const [photoMode, setPhotoMode] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderScale, setRenderScale] = useState(3); // supersample factor for captures
+  const [renderMenuOpen, setRenderMenuOpen] = useState(false);
+  const renderMenuRef = useRef<HTMLDivElement>(null);
   const [drawer, setDrawer] = useState<null | 'catalog' | 'props'>(null);
   // Projects home first — the editor opens a specific project.
   const [screen, setScreen] = useState<'projects' | 'editor'>('projects');
@@ -258,13 +261,26 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleRender = async () => {
+  // Close the render-quality menu on any outside click.
+  useEffect(() => {
+    if (!renderMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (renderMenuRef.current && !renderMenuRef.current.contains(e.target as Node)) {
+        setRenderMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [renderMenuOpen]);
+
+  const handleRender = async (scale = renderScale) => {
     if (!sceneCapture.current) return;
+    setRenderScale(scale); // remember the last-used quality
     setRendering(true);
     // Let the spinner paint before the synchronous high-res render blocks.
     await new Promise((r) => setTimeout(r, 30));
     try {
-      await sceneCapture.current(renderScale);
+      await sceneCapture.current(scale);
     } finally {
       setRendering(false);
     }
@@ -458,21 +474,37 @@ export default function App() {
                 </div>
               </div>
               <div className="render-actions">
-                <select
-                  className="render-scale"
-                  value={renderScale}
-                  onChange={(e) => setRenderScale(Number(e.target.value))}
-                  aria-label="Render quality"
-                  title="Render quality"
-                >
-                  <option value={2}>{t('Standard')}</option>
-                  <option value={3}>{t('High')}</option>
-                  <option value={4}>{t('Ultra')}</option>
-                </select>
-                <button className="render-btn" onClick={handleRender} disabled={rendering}>
-                  {rendering ? <span className="spin" /> : <ImageIcon className="icon" />}
-                  <span>{rendering ? t('Rendering…') : t('Render image')}</span>
-                </button>
+                <div className="export-wrap" ref={renderMenuRef}>
+                  <button
+                    className="render-btn"
+                    onClick={() => setRenderMenuOpen((o) => !o)}
+                    disabled={rendering}
+                    aria-haspopup="menu"
+                    aria-expanded={renderMenuOpen}
+                    title={t('Render image')}
+                  >
+                    {rendering ? <span className="spin" /> : <ImageIcon className="icon" />}
+                    <span>{rendering ? t('Rendering…') : t('Render image')}</span>
+                    {!rendering && <ChevronDown className="icon caret" />}
+                  </button>
+                  {renderMenuOpen && (
+                    <div className="export-menu render-menu" role="menu">
+                      {([[2, 'Standard'], [3, 'High'], [4, 'Ultra']] as const).map(([scale, label]) => (
+                        <button
+                          key={scale}
+                          role="menuitem"
+                          className={renderScale === scale ? 'active' : ''}
+                          onClick={() => {
+                            setRenderMenuOpen(false);
+                            handleRender(scale);
+                          }}
+                        >
+                          <ImageIcon className="icon" /> {t(label)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button className="render-btn photo" onClick={() => setPhotoMode(true)}>
                   <Camera className="icon" />
                   <span>{t('Photo mode')}</span>

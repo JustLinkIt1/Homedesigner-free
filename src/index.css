@@ -407,6 +407,17 @@ button.brand:hover .brand-name {
   height: 16px;
   color: var(--text-2);
 }
+.export-menu .menu-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+/* The "More" overflow sits toward the right of its group; anchor its menu to
+   the button's right edge so it never spills off-screen. */
+.more-menu {
+  left: auto;
+  right: 0;
+}
 
 /* Segmented view switch */
 .view-toggle {
@@ -1552,6 +1563,18 @@ button.brand:hover .brand-name {
 }
 .render-btn.photo {
   background: linear-gradient(135deg, var(--violet), #6366f1);
+}
+.render-btn .caret {
+  width: 14px;
+  height: 14px;
+  margin-left: -2px;
+  opacity: 0.8;
+}
+.render-menu button.active {
+  color: var(--brand-600);
+}
+.render-menu button.active .icon {
+  color: var(--brand-600);
 }
 
 /* ---------- Modal ---------- */
@@ -2740,6 +2763,17 @@ button.brand:hover .brand-name {
   .toolbar::-webkit-scrollbar {
     display: none;
   }
+  /* The toolbar scrolls horizontally, which also clips vertically — so its
+     dropdowns (Export, More) must break out as a fixed panel just beneath it
+     instead of being cut off. Scoped to toolbar menus; the 3D render menu
+     (a bottom strip) keeps its own upward-opening rule. */
+  .toolbar .export-menu {
+    position: fixed;
+    top: calc(58px + env(safe-area-inset-top));
+    right: 8px;
+    left: auto;
+    z-index: 60;
+  }
   .brand {
     padding-right: 8px;
   }
@@ -2791,6 +2825,17 @@ button.brand:hover .brand-name {
   }
   .render-actions::-webkit-scrollbar {
     display: none;
+  }
+  /* The render-actions strip lives at the bottom on phones and scrolls
+     horizontally (clipping its children), so its quality menu breaks out as a
+     fixed panel just above the strip instead of being cut off. */
+  .render-menu {
+    position: fixed;
+    top: auto;
+    bottom: calc(112px + env(safe-area-inset-bottom));
+    left: 12px;
+    right: auto;
+    z-index: 60;
   }
   /* Sit the rotate pill above the render-actions strip. */
   .rotate3d-pill {

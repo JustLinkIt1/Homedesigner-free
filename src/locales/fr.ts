@@ -107,6 +107,9 @@ export const FR: Record<string, string> = {
 
   /* ---------- Toolbar ---------- */
   'Import plan': 'Importer un plan',
+  More: 'Plus',
+  'Open project file': 'Ouvrir un fichier projet',
+  'Save a copy': 'Enregistrer une copie',
   Export: 'Exporter',
   'PNG image': 'Image PNG',
   'PDF document': 'Document PDF',
