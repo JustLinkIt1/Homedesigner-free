@@ -20,16 +20,24 @@ function shade(hex: string, amt: number): string {
 }
 
 /** Build a recognizable 3D representation per furniture shape. */
+// Shapes that belong on the ceiling rather than the floor. Their procedural
+// geometry is modelled pointing up toward the ceiling, so the whole group is
+// raised to the storey's ceiling height (see mountY below).
+const CEILING_SHAPES = new Set<Shape3D>(['pendant', 'ceiling_light', 'spotlight']);
+
 export default function Furniture3D({
   item,
   selected,
   onSelect,
   draggable = false,
+  ceilingHeight = 2.7,
 }: {
   item: FurnitureItem;
   selected: boolean;
   onSelect: () => void;
   draggable?: boolean;
+  /** Storey ceiling height in metres — ceiling fixtures mount against it. */
+  ceilingHeight?: number;
 }) {
   const w = item.width * M;
   const d = item.depth * M;
@@ -37,6 +45,15 @@ export default function Furniture3D({
   const entry = CATALOG_BY_TYPE[item.type];
   const shape: Shape3D = entry?.shape ?? 'box';
   const color = item.color;
+
+  // Ceiling fixtures hang/mount from the top of the storey. A pendant reaches
+  // up ~1.9× its height (shade + cord), so its origin drops that far below the
+  // ceiling; flush/recessed fixtures (ceiling light, downlight) sit right under.
+  const mountY = CEILING_SHAPES.has(shape)
+    ? shape === 'pendant'
+      ? ceilingHeight - h * 1.9
+      : ceilingHeight - h
+    : 0;
 
   // Drag-to-move on the storey's floor plane. The group's position is moved
   // live (no store churn); a single updateFurniture commit on release keeps
@@ -70,7 +87,7 @@ export default function Furniture3D({
     if (!e.ray.intersectPlane(st.plane, hit)) return;
     // World position the group origin should take, then into parent space.
     const local = g.parent.worldToLocal(hit.sub(st.grab));
-    g.position.set(local.x, 0, local.z);
+    g.position.set(local.x, mountY, local.z);
     st.moved = true;
   };
 
@@ -90,7 +107,7 @@ export default function Furniture3D({
   return (
     <group
       ref={groupRef}
-      position={[item.position.x * M, 0, item.position.y * M]}
+      position={[item.position.x * M, mountY, item.position.y * M]}
       rotation={[0, (-item.rotation * Math.PI) / 180, 0]}
       onClick={(e) => {
         e.stopPropagation();

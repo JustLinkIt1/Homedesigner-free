@@ -626,6 +626,7 @@ function FloorContent({
           selected={interactive && selection.kind === 'furniture' && selection.id === f.id}
           onSelect={() => interactive && select({ kind: 'furniture', id: f.id })}
           draggable={interactive}
+          ceilingHeight={ceilingHeight}
         />
       ))}
     </group>
