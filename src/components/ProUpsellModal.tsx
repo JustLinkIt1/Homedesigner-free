@@ -4,6 +4,7 @@ import { Crown, Layers, FileText, Sofa, FolderOpen, Sparkles, Check, Ticket } fr
 import { useProStore } from '../store/proStore';
 import type { ProFeature } from '../lib/pro';
 import { APP_NAME } from '../lib/appInfo';
+import { useI18n } from '../lib/i18n';
 
 const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blurb: string }> = {
   multiFloor: {
@@ -39,6 +40,7 @@ const BENEFITS = [
 /** Feature-triggered Pro purchase sheet (Play billing on Android, Play link on web). */
 export default function ProUpsellModal() {
   const { upsellFeature, closeUpsell, purchase, restore, redeemCode, busy, priceLabel, isPro } = useProStore();
+  const t = useI18n();
   const [showCode, setShowCode] = useState(false);
   const [codeValue, setCodeValue] = useState('');
   const [codeError, setCodeError] = useState(false);
@@ -70,13 +72,13 @@ export default function ProUpsellModal() {
           <span className="pro-hero-icon">
             <Icon className="icon" />
           </span>
-          <h2>{copy.title}</h2>
-          <p>{copy.blurb}</p>
+          <h2>{t(copy.title)}</h2>
+          <p>{t(copy.blurb)}</p>
         </div>
         <ul className="pro-benefits">
           {BENEFITS.map((b) => (
             <li key={b}>
-              <Check className="icon" /> {b}
+              <Check className="icon" /> {t(b)}
             </li>
           ))}
         </ul>
@@ -87,13 +89,13 @@ export default function ProUpsellModal() {
             ) : (
               <>
                 <Sparkles className="icon" />
-                {native ? `Unlock Pro${priceLabel ? ` — ${priceLabel}` : ''}` : 'Get the Android app'}
+                {native ? `${t('Unlock Pro')}${priceLabel ? ` — ${priceLabel}` : ''}` : t('Get the Android app')}
               </>
             )}
           </button>
           {native && (
             <button className="pro-restore" onClick={restore} disabled={busy}>
-              Restore purchase
+              {t('Restore purchase')}
             </button>
           )}
           {showCode ? (
@@ -110,7 +112,7 @@ export default function ProUpsellModal() {
               <input
                 ref={codeRef}
                 className={`pro-code-input${codeError ? ' error' : ''}`}
-                placeholder="Enter referral code"
+                placeholder={t('Enter referral code')}
                 value={codeValue}
                 onChange={(e) => {
                   setCodeValue(e.target.value);
@@ -119,7 +121,7 @@ export default function ProUpsellModal() {
                 autoFocus
               />
               <button className="btn primary pro-code-go" type="submit" disabled={!codeValue.trim()}>
-                Redeem
+                {t('Redeem')}
               </button>
             </form>
           ) : (
@@ -130,11 +132,11 @@ export default function ProUpsellModal() {
                 setTimeout(() => codeRef.current?.focus(), 50);
               }}
             >
-              <Ticket className="icon" /> Have a referral code?
+              <Ticket className="icon" /> {t('Have a referral code?')}
             </button>
           )}
           <button className="pro-later" onClick={closeUpsell}>
-            Maybe later
+            {t('Maybe later')}
           </button>
         </div>
       </div>

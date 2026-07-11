@@ -24,10 +24,12 @@ import { toast } from '../lib/ui';
 import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { requirePro } from '../lib/pro';
 import { useProStore } from '../store/proStore';
+import { useI18n } from '../lib/i18n';
 
 function SavedBadge({ tick }: { tick: number }) {
   const [saving, setSaving] = useState(false);
   const first = useRef(true);
+  const tr = useI18n();
   useEffect(() => {
     if (first.current) {
       first.current = false;
@@ -40,7 +42,7 @@ function SavedBadge({ tick }: { tick: number }) {
   return (
     <span className={`saved-badge ${saving ? 'saving' : ''}`}>
       {saving ? <span className="spin" style={{ width: 12, height: 12 }} /> : <Check className="icon" style={{ width: 13, height: 13 }} />}
-      {saving ? 'Saving…' : 'Saved'}
+      {saving ? tr('Saving…') : tr('Saved')}
     </span>
   );
 }
@@ -62,6 +64,7 @@ export default function Toolbar({
 }) {
   const s = useDesign();
   const isPro = useProStore((st) => st.isPro);
+  const t = useI18n();
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -135,7 +138,7 @@ export default function Toolbar({
       <div className="tool-group">
         <button className="tbtn ghost" onClick={onImport} title="Import a 2D plan (PDF / DXF / image)">
           <Import className="icon" />
-          <span>Import plan</span>
+          <span>{t('Import plan')}</span>
         </button>
         <button
           className="tbtn icon-only"
@@ -172,13 +175,13 @@ export default function Toolbar({
         >
           <Save className="icon" />
         </button>
-        <button className="tbtn icon-only" title="Settings" aria-label="Settings" onClick={onSettings}>
+        <button className="tbtn icon-only" title={t('Settings')} aria-label={t('Settings')} onClick={onSettings}>
           <Settings className="icon" />
         </button>
-        <button className="tbtn icon-only" title="Tips & shortcuts" aria-label="Tips and shortcuts" onClick={onHelp}>
+        <button className="tbtn icon-only" title={t('Tips & shortcuts')} aria-label="Tips and shortcuts" onClick={onHelp}>
           <CircleHelp className="icon" />
         </button>
-        <button className="tbtn icon-only" title="About" aria-label="About" onClick={onAbout}>
+        <button className="tbtn icon-only" title={t('About')} aria-label={t('About')} onClick={onAbout}>
           <Info className="icon" />
         </button>
         {s.view === '2d' && (
@@ -191,15 +194,15 @@ export default function Toolbar({
               onClick={() => setExportOpen((o) => !o)}
             >
               <Download className="icon" />
-              <span>Export</span>
+              <span>{t('Export')}</span>
             </button>
             {exportOpen && (
               <div className="export-menu" role="menu">
                 <button role="menuitem" onClick={() => runExport('png')}>
-                  <FileImage className="icon" /> PNG image
+                  <FileImage className="icon" /> {t('PNG image')}
                 </button>
                 <button role="menuitem" onClick={() => runExport('pdf')}>
-                  <FileText className="icon" /> PDF document
+                  <FileText className="icon" /> {t('PDF document')}
                   {!isPro && <span className="pro-tag">PRO</span>}
                 </button>
                 <button
@@ -209,7 +212,7 @@ export default function Toolbar({
                     onShoppingList();
                   }}
                 >
-                  <ClipboardList className="icon" /> Shopping list
+                  <ClipboardList className="icon" /> {t('Shopping list')}
                 </button>
               </div>
             )}
@@ -222,11 +225,11 @@ export default function Toolbar({
       <div className="view-toggle">
         <button className={s.view === '2d' ? 'active' : ''} onClick={() => s.setView('2d')}>
           <Grid3x3 className="icon" />
-          <span>2D Plan</span>
+          <span>{t('2D Plan')}</span>
         </button>
         <button className={s.view === '3d' ? 'active' : ''} onClick={() => s.setView('3d')}>
           <Box className="icon" />
-          <span>3D View</span>
+          <span>{t('3D View')}</span>
         </button>
       </div>
     </div>

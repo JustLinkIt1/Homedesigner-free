@@ -3,12 +3,19 @@ import { Settings, Monitor, Sun, Moon, ExternalLink } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { hapticsEnabled, setHapticsEnabled, tapLight } from '../lib/haptics';
+import { useLang, useI18n, type LangPref } from '../lib/i18n';
 import { APP_NAME, APP_VERSION, PRIVACY_URL } from '../lib/appInfo';
 
 const THEME_OPTIONS: { id: ThemePref; label: string; icon: typeof Sun }[] = [
   { id: 'system', label: 'System', icon: Monitor },
   { id: 'light', label: 'Light', icon: Sun },
   { id: 'dark', label: 'Dark', icon: Moon },
+];
+
+const LANG_OPTIONS: { id: LangPref; label: string }[] = [
+  { id: 'system', label: 'System' },
+  { id: 'en', label: 'English' },
+  { id: 'fr', label: 'Français' },
 ];
 
 /** Central app preferences (theme, units, haptics, editor defaults, tour). */
@@ -27,18 +34,21 @@ export default function SettingsDialog({
   const setShowGrid = useDesign((s) => s.setShowGrid);
   const showDimensions = useDesign((s) => s.showDimensions);
   const setShowDimensions = useDesign((s) => s.setShowDimensions);
+  const langPref = useLang((s) => s.pref);
+  const setLangPref = useLang((s) => s.setPref);
   const [haptics, setHaptics] = useState(hapticsEnabled);
+  const t = useI18n();
 
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal settings" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <Settings className="icon" /> Settings
+          <Settings className="icon" /> {t('Settings')}
         </div>
         <div className="modal-body settings-body">
           <section>
-            <h3>Appearance</h3>
-            <div className="seg" role="radiogroup" aria-label="Theme">
+            <h3>{t('Appearance')}</h3>
+            <div className="seg" role="radiogroup" aria-label={t('Appearance')}>
               {THEME_OPTIONS.map((o) => {
                 const Icon = o.icon;
                 return (
@@ -49,7 +59,7 @@ export default function SettingsDialog({
                     aria-checked={pref === o.id}
                     onClick={() => setPref(o.id)}
                   >
-                    <Icon className="icon" /> {o.label}
+                    <Icon className="icon" /> {t(o.label)}
                   </button>
                 );
               })}
@@ -57,15 +67,15 @@ export default function SettingsDialog({
           </section>
 
           <section>
-            <h3>Units</h3>
-            <div className="seg" role="radiogroup" aria-label="Measurement units">
+            <h3>{t('Units')}</h3>
+            <div className="seg" role="radiogroup" aria-label={t('Units')}>
               <button
                 className={units === 'metric' ? 'active' : ''}
                 role="radio"
                 aria-checked={units === 'metric'}
                 onClick={() => setUnits('metric')}
               >
-                Metric (m)
+                {t('Metric (m)')}
               </button>
               <button
                 className={units === 'imperial' ? 'active' : ''}
@@ -73,19 +83,36 @@ export default function SettingsDialog({
                 aria-checked={units === 'imperial'}
                 onClick={() => setUnits('imperial')}
               >
-                Imperial (ft)
+                {t('Imperial (ft)')}
               </button>
             </div>
           </section>
 
           <section>
-            <h3>Editor</h3>
+            <h3>{t('Language')}</h3>
+            <div className="seg" role="radiogroup" aria-label={t('Language')}>
+              {LANG_OPTIONS.map((o) => (
+                <button
+                  key={o.id}
+                  className={langPref === o.id ? 'active' : ''}
+                  role="radio"
+                  aria-checked={langPref === o.id}
+                  onClick={() => setLangPref(o.id)}
+                >
+                  {o.id === 'system' ? t('System') : o.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3>{t('Editor')}</h3>
             <label className="settings-row">
-              <span>Show grid</span>
+              <span>{t('Show grid')}</span>
               <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
             </label>
             <label className="settings-row">
-              <span>Show dimensions</span>
+              <span>{t('Show dimensions')}</span>
               <input
                 type="checkbox"
                 checked={showDimensions}
@@ -93,7 +120,7 @@ export default function SettingsDialog({
               />
             </label>
             <label className="settings-row">
-              <span>Vibration feedback</span>
+              <span>{t('Vibration feedback')}</span>
               <input
                 type="checkbox"
                 checked={haptics}
@@ -107,22 +134,22 @@ export default function SettingsDialog({
           </section>
 
           <section>
-            <h3>Help</h3>
+            <h3>{t('Help')}</h3>
             <button className="btn block" onClick={onReplayTour}>
-              Replay the intro tour
+              {t('Replay the intro tour')}
             </button>
           </section>
 
           <p className="settings-meta">
             {APP_NAME} v{APP_VERSION} ·{' '}
             <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
-              Privacy policy <ExternalLink className="icon" style={{ width: 11, height: 11 }} />
+              {t('Privacy policy')} <ExternalLink className="icon" style={{ width: 11, height: 11 }} />
             </a>
           </p>
         </div>
         <div className="modal-foot">
           <button className="btn primary" onClick={onClose}>
-            Done
+            {t('Done')}
           </button>
         </div>
       </div>

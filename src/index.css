@@ -1809,6 +1809,34 @@ button.brand:hover .brand-name {
   max-width: 520px;
 }
 
+/* Templates row on the projects home */
+.ps-templates {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -6px 0 16px;
+}
+.ps-templates-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+.ps-templates .chip {
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  transition: border-color var(--dur-fast), color var(--dur-fast);
+}
+.ps-templates .chip:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
 /* Settings */
 .modal.settings {
   max-width: 440px;

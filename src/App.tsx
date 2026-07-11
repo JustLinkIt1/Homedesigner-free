@@ -37,6 +37,7 @@ import { sceneCapture, planCapture } from './lib/renderBridge';
 import { useDraw, drawBridge, useConfirm } from './lib/ui';
 import { initNative } from './lib/native';
 import { isWebGLAvailable } from './lib/webgl';
+import { useI18n } from './lib/i18n';
 import * as projects from './lib/projects';
 
 // Heavy modules loaded on demand to keep the 2D-first experience light:
@@ -55,6 +56,7 @@ export default function App() {
     units, setUnits,
     sunTime, setSunTime, lightsOn, setLightsOn,
   } = useDesign();
+  const t = useI18n();
   const [showImport, setShowImport] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -271,17 +273,17 @@ export default function App() {
   const tip = drawing
     ? null // the Finish affordance takes over while actively drawing
     : tool === 'wall'
-    ? 'Click to add wall points — or type a length (e.g. 4.5) and press Enter for exact walls'
+    ? t('Click to add wall points — or type a length (e.g. 4.5) and press Enter for exact walls')
     : tool === 'room'
-    ? 'Click corners to outline a room · click the first point to close it'
+    ? t('Click corners to outline a room · click the first point to close it')
     : tool === 'furniture' && pendingFurnitureType
-    ? 'Click in the plan to place it · switch to Select to move & rotate'
+    ? t('Click in the plan to place it · switch to Select to move & rotate')
     : tool === 'erase'
-    ? 'Click any wall, room or object to delete it'
+    ? t('Click any wall, room or object to delete it')
     : tool === 'measure'
-    ? 'Measure a wall, then enter its real length to scale the whole drawing · Esc to clear'
+    ? t('Measure a wall, then enter its real length to scale the whole drawing · Esc to clear')
     : tool === 'select' && walls.length === 0
-    ? 'Pick a tool on the left to start — try ✏️ Draw walls'
+    ? t('Pick a tool on the left to start — try ✏️ Draw walls')
     : null;
 
   if (screen === 'projects') {
@@ -326,20 +328,21 @@ export default function App() {
           ) : !isWebGLAvailable() ? (
             <div className="stage-loading webgl-missing">
               <p>
-                3D view isn't available on this device — it needs WebGL, which your
-                browser/graphics driver doesn't provide. The 2D editor still works fully.
+                {t(
+                  "3D view isn't available on this device — it needs WebGL, which your browser/graphics driver doesn't provide. The 2D editor still works fully.",
+                )}
               </p>
             </div>
           ) : walls.length === 0 ? (
             <div className="stage-loading stage-empty">
-              <h3>Nothing to show in 3D yet</h3>
-              <p>Draw some walls in the 2D plan, then switch back here to walk through your home.</p>
+              <h3>{t('Nothing to show in 3D yet')}</h3>
+              <p>{t('Draw some walls in the 2D plan, then switch back here to walk through your home.')}</p>
               <button className="btn primary" onClick={() => setView('2d')}>
-                Go to 2D plan
+                {t('Go to 2D plan')}
               </button>
             </div>
           ) : (
-            <Suspense fallback={<div className="stage-loading"><span className="spin" /> Loading 3D…</div>}>
+            <Suspense fallback={<div className="stage-loading"><span className="spin" /> {t('Loading 3D…')}</div>}>
               <Scene3D />
             </Suspense>
           )}
@@ -366,9 +369,9 @@ export default function App() {
           )}
           {view === '2d' && drawing && (
             <div className="draw-affordance">
-              <span>{tool === 'room' ? 'Click the first point or' : 'Double-click or'} press Enter to finish</span>
+              <span>{tool === 'room' ? t('Click the first point or') : t('Double-click or')} {t('press Enter to finish')}</span>
               <button className="finish-btn" onClick={() => drawBridge.finish?.()}>
-                ✓ Finish
+                ✓ {t('Finish')}
               </button>
               <button className="cancel-btn" onClick={() => drawBridge.cancel?.()} aria-label="Cancel drawing">
                 Esc
@@ -387,11 +390,11 @@ export default function App() {
               <div className="pill">
                 <label className="toggle">
                   <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
-                  <Grid3x3 className="icon" style={{ width: 15, height: 15 }} /> Grid
+                  <Grid3x3 className="icon" style={{ width: 15, height: 15 }} /> {t('Grid')}
                 </label>
                 <label className="toggle">
                   <input type="checkbox" checked={showDimensions} onChange={(e) => setShowDimensions(e.target.checked)} />
-                  <Ruler className="icon" style={{ width: 15, height: 15 }} /> Dimensions
+                  <Ruler className="icon" style={{ width: 15, height: 15 }} /> {t('Dimensions')}
                 </label>
               </div>
               <div className="pill units-pill" role="group" aria-label="Display units">
@@ -421,10 +424,10 @@ export default function App() {
                 <div className="pill">
                   <label className="toggle">
                     <input type="checkbox" checked={dollhouse} onChange={(e) => setDollhouse(e.target.checked)} />
-                    <House className="icon" style={{ width: 15, height: 15 }} /> Dollhouse
+                    <House className="icon" style={{ width: 15, height: 15 }} /> {t('Dollhouse')}
                   </label>
                   <button className="toggle" onClick={() => setWalkMode(true)} style={{ fontWeight: 600 }}>
-                    <Footprints className="icon" style={{ width: 16, height: 16 }} /> Walk through
+                    <Footprints className="icon" style={{ width: 16, height: 16 }} /> {t('Walk through')}
                   </button>
                 </div>
                 <div className="pill light-pill">
@@ -433,7 +436,7 @@ export default function App() {
                     onClick={() => setLightsOn(!lightsOn)}
                     title="Toggle artificial lights (lamps, LEDs)"
                   >
-                    <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> Lights
+                    <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> {t('Lights')}
                   </button>
                   <label className="sun-slider" title="Time of day — sunlight angle & warmth">
                     {sunTime < 6 || sunTime >= 20 ? (
@@ -462,17 +465,17 @@ export default function App() {
                   aria-label="Render quality"
                   title="Render quality"
                 >
-                  <option value={2}>Standard</option>
-                  <option value={3}>High</option>
-                  <option value={4}>Ultra</option>
+                  <option value={2}>{t('Standard')}</option>
+                  <option value={3}>{t('High')}</option>
+                  <option value={4}>{t('Ultra')}</option>
                 </select>
                 <button className="render-btn" onClick={handleRender} disabled={rendering}>
                   {rendering ? <span className="spin" /> : <ImageIcon className="icon" />}
-                  <span>{rendering ? 'Rendering…' : 'Render image'}</span>
+                  <span>{rendering ? t('Rendering…') : t('Render image')}</span>
                 </button>
                 <button className="render-btn photo" onClick={() => setPhotoMode(true)}>
                   <Camera className="icon" />
-                  <span>Photo mode</span>
+                  <span>{t('Photo mode')}</span>
                 </button>
               </div>
               <RotateControls />
@@ -501,7 +504,7 @@ export default function App() {
               className={drawer === 'catalog' ? 'active' : ''}
               onClick={() => setDrawer(drawer === 'catalog' ? null : 'catalog')}
             >
-              <Sofa className="icon" /> Objects
+              <Sofa className="icon" /> {t('Objects')}
             </button>
           )}
           <button
@@ -517,7 +520,7 @@ export default function App() {
               }
             }}
           >
-            <SlidersHorizontal className="icon" /> Edit
+            <SlidersHorizontal className="icon" /> {t('Edit')}
           </button>
         </div>
       </div>

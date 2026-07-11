@@ -5,6 +5,7 @@ import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
 import { FURNITURE_CATALOG } from '../data/furnitureCatalog';
 import { tapLight } from '../lib/haptics';
+import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
 import type { ToolMode } from '../types';
 
@@ -24,6 +25,7 @@ const OPENINGS = FURNITURE_CATALOG.filter((e) => e.category === 'Openings');
 export default function ToolDock() {
   const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign();
   const isPro = useProStore((s) => s.isPro);
+  const tr = useI18n();
   const [openingsOpen, setOpeningsOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -52,8 +54,8 @@ export default function ToolDock() {
           <div key={t.id} style={{ display: 'contents' }}>
             <button
               className={`dock-btn ${tool === t.id ? 'active' : ''}`}
-              data-tip={t.label}
-              aria-label={t.label}
+              data-tip={tr(t.label)}
+              aria-label={tr(t.label)}
               aria-pressed={tool === t.id}
               onClick={() => {
                 tapLight();
@@ -61,7 +63,7 @@ export default function ToolDock() {
               }}
             >
               <Icon className="icon" />
-              <span className="dock-label">{t.label}</span>
+              <span className="dock-label">{tr(t.label)}</span>
             </button>
             {i === 2 && <div className="dock-sep" />}
           </div>
@@ -73,7 +75,7 @@ export default function ToolDock() {
       <div className="dock-openings" ref={wrapRef} style={{ display: 'contents' }}>
         <button
           className={`dock-btn ${openingActive ? 'active' : ''}`}
-          data-tip="Doors & windows"
+          data-tip={tr('Doors & windows')}
           aria-label="Doors and windows"
           aria-haspopup="menu"
           aria-expanded={openingsOpen}
@@ -83,7 +85,7 @@ export default function ToolDock() {
         </button>
         {openingsOpen && (
           <div className="openings-flyout" role="menu">
-            <div className="of-title">Doors &amp; windows</div>
+            <div className="of-title">{tr('Doors & windows')}</div>
             <div className="of-grid">
               {OPENINGS.map((e) => {
                 const locked = !!e.pro && !isPro;
@@ -92,11 +94,11 @@ export default function ToolDock() {
                     key={e.type}
                     className={`of-item ${pendingFurnitureType === e.type ? 'active' : ''} ${locked ? 'locked' : ''}`}
                     role="menuitem"
-                    title={e.name}
+                    title={tr(e.name)}
                     onClick={() => pickOpening(e.type, locked)}
                   >
                     <SymbolIcon shape={e.shape} className="of-symbol" />
-                    <span>{e.name}</span>
+                    <span>{tr(e.name)}</span>
                     {locked && <span className="of-lock">PRO</span>}
                   </button>
                 );
@@ -110,7 +112,7 @@ export default function ToolDock() {
           away again. Hidden on phones — the Objects tab plays this role. */}
       <button
         className={`dock-btn furniture-toggle ${tool === 'furniture' && !openingActive ? 'active' : ''}`}
-        data-tip="Furnish (open catalog)"
+        data-tip={tr('Furnish (open catalog)')}
         aria-label="Furnish — open the furniture catalog"
         aria-pressed={tool === 'furniture' && !openingActive}
         onClick={() => {

@@ -59,7 +59,7 @@ const store = (fn) => page.evaluate(fn);
 // ---- 1. Projects screen renders, sample home opens -------------------------
 await page.goto(BASE);
 check('projects screen renders', await page.waitForSelector('.projects-screen', { timeout: 20000 }).then(() => true).catch(() => false));
-await page.click('text=sample home');
+await page.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
 check('editor opens', await page.waitForSelector('.toolbar', { timeout: 15000 }).then(() => true).catch(() => false));
 await page.locator('.coach-skip').click().catch(() => {});
 check('2D canvas mounts', (await page.locator('.konvajs-content canvas').count()) > 0);

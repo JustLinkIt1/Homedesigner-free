@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { tapLight } from '../lib/haptics';
+import { useI18n } from '../lib/i18n';
 
 /**
  * Tiny self-contained first-run tour: three fixed-position bubbles anchored to
@@ -76,6 +77,7 @@ export default function CoachMarks({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [pos, setPos] = useState<Pos | null>(null);
   const doneRef = useRef(false);
+  const t = useI18n();
 
   const finish = () => {
     if (doneRef.current) return;
@@ -131,14 +133,14 @@ export default function CoachMarks({ onDone }: { onDone: () => void }) {
   return (
     <>
       <div className="coach-scrim" onClick={finish} />
-      <div className="coach-bubble" style={{ left: pos.left, top: pos.top, width: BUBBLE_W }} role="dialog" aria-label={s.title}>
+      <div className="coach-bubble" style={{ left: pos.left, top: pos.top, width: BUBBLE_W }} role="dialog" aria-label={t(s.title)}>
         <div className={`coach-arrow ${pos.arrow}`} style={{ left: pos.arrowLeft, top: pos.arrowTop }} />
         <div className="coach-step">{step + 1} / {STEPS.length}</div>
-        <h4>{s.title}</h4>
-        <p>{s.text}</p>
+        <h4>{t(s.title)}</h4>
+        <p>{t(s.text)}</p>
         <div className="coach-actions">
           <button className="coach-skip" onClick={finish}>
-            Skip
+            {t('Skip')}
           </button>
           <button
             className="btn primary coach-next"
@@ -148,7 +150,7 @@ export default function CoachMarks({ onDone }: { onDone: () => void }) {
               else setStep(step + 1);
             }}
           >
-            {last ? 'Done' : 'Next'}
+            {last ? t('Done') : t('Next')}
           </button>
         </div>
       </div>

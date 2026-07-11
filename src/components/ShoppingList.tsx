@@ -7,10 +7,12 @@ import { slugify } from '../lib/appInfo';
 import { formatLength } from '../lib/units';
 import { toast } from '../lib/ui';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
+import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
 
 /** Aggregated furniture list across all storeys — a shareable shopping list. */
 export default function ShoppingList({ onClose }: { onClose: () => void }) {
+  const t = useI18n();
   const floors = useDesign((s) => s.floors);
   const floorGeom = useDesign((s) => s.floorGeom);
   const units = useDesign((s) => s.units);
@@ -42,21 +44,21 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal shopping-list" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <ClipboardList className="icon" /> Shopping list
+          <ClipboardList className="icon" /> {t('Shopping list')}
         </div>
         <div className="modal-body bom-body">
           {rows.length === 0 ? (
             <div className="empty-state" style={{ padding: '28px 20px' }}>
-              <p>No furniture placed yet — furnish your home, then come back for the list.</p>
+              <p>{t('No furniture placed yet — furnish your home, then come back for the list.')}</p>
             </div>
           ) : (
             <table className="bom-table">
               <thead>
                 <tr>
-                  <th>Item</th>
-                  <th className="num">Qty</th>
-                  <th>Size (W×D)</th>
-                  {multiFloor && <th>Floor</th>}
+                  <th>{t('Item')}</th>
+                  <th className="num">{t('Qty')}</th>
+                  <th>{t('Size (W×D)')}</th>
+                  {multiFloor && <th>{t('Floor')}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -67,20 +69,20 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
                         {CATALOG_BY_TYPE[r.type] && (
                           <SymbolIcon shape={CATALOG_BY_TYPE[r.type].shape} className="bom-symbol" />
                         )}
-                        {r.name}
+                        {t(r.name)}
                       </span>
                     </td>
                     <td className="num">{r.count}</td>
                     <td>
                       {formatLength(r.width, units)} × {formatLength(r.depth, units)}
                     </td>
-                    {multiFloor && <td className="bom-floors">{r.floors.join(', ')}</td>}
+                    {multiFloor && <td className="bom-floors">{r.floors.map((f) => t(f)).join(', ')}</td>}
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td>Total</td>
+                  <td>{t('Total')}</td>
                   <td className="num">{total}</td>
                   <td colSpan={multiFloor ? 2 : 1} />
                 </tr>
@@ -92,15 +94,15 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
           {rows.length > 0 && (
             <>
               <button className="btn" onClick={copyText}>
-                <Copy className="icon" /> Copy as text
+                <Copy className="icon" /> {t('Copy as text')}
               </button>
               <button className="btn" onClick={saveCsv}>
-                <Download className="icon" /> Save CSV
+                <Download className="icon" /> {t('Save CSV')}
               </button>
             </>
           )}
           <button className="btn primary" onClick={onClose}>
-            Done
+            {t('Done')}
           </button>
         </div>
       </div>

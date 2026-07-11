@@ -16,8 +16,9 @@ import { uid, dist } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
-import { sampleProject } from '../data/sampleProject';
+import { SAMPLE_BY_ID, SAMPLES } from '../data/samples';
 import { toast } from '../lib/ui';
+import { t } from '../lib/i18n';
 import * as haptics from '../lib/haptics';
 import { recordRecent } from '../lib/recent';
 import * as projects from '../lib/projects';
@@ -159,7 +160,7 @@ interface DesignState extends DesignSnapshot {
   updateBackground: (patch: Partial<BackgroundPlan>) => void;
 
   newProject: () => void;
-  loadSample: () => void;
+  loadSample: (sampleId?: string) => void;
   loadSnapshot: (s: MaybeFloored) => void;
 
   undo: () => void;
@@ -506,7 +507,7 @@ export const useDesign = create<DesignState>((set, get) => {
       // undo() reverts exactly this deletion.
       const undoable = (label: string) => {
         haptics.notify('warning');
-        toast.action(label, { label: 'Undo', onClick: () => get().undo() });
+        toast.action(label, { label: t('Undo'), onClick: () => get().undo() });
       };
       if (selectedIds.length > 1) {
         const ids = new Set(selectedIds);
@@ -515,12 +516,12 @@ export const useDesign = create<DesignState>((set, get) => {
           d.furniture = d.furniture.filter((f) => !ids.has(f.id));
         });
         set({ selection: { kind: null, id: null }, selectedIds: [] });
-        undoable(`Deleted ${count} items`);
+        undoable(`${t('Deleted')} ${count}`);
         return;
       }
       if (!selection.kind || !selection.id) return;
       deleteById(selection.kind, selection.id);
-      undoable('Deleted');
+      undoable(t('Deleted'));
     },
 
     setSelectedIds: (ids) =>
@@ -942,8 +943,9 @@ export const useDesign = create<DesignState>((set, get) => {
       });
     },
 
-    loadSample: () => {
-      const snap = withFloors(sampleProject());
+    loadSample: (sampleId) => {
+      const def = (sampleId && SAMPLE_BY_ID[sampleId]) || SAMPLES[0];
+      const snap = withFloors(def.build());
       persist(snap);
       set((st) => ({
         ...snap,

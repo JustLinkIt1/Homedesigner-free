@@ -5,6 +5,7 @@ import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
 import { FURNITURE_CATALOG, CATALOG_BY_TYPE, type CatalogEntry } from '../data/furnitureCatalog';
 import { getRecent } from '../lib/recent';
+import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
 
 // Openings (doors/windows) are placed from the build-mode dock flyout, so they
@@ -14,7 +15,9 @@ const CATALOG = FURNITURE_CATALOG.filter((e) => e.category !== 'Openings');
 function CatalogItem({ entry }: { entry: CatalogEntry }) {
   const { pendingFurnitureType, setPendingFurniture } = useDesign();
   const isPro = useProStore((s) => s.isPro);
+  const t = useI18n();
   const locked = !!entry.pro && !isPro;
+  const name = t(entry.name);
   return (
     <button
       className={`cat-item ${pendingFurnitureType === entry.type ? 'active' : ''} ${locked ? 'locked' : ''}`}
@@ -24,7 +27,7 @@ function CatalogItem({ entry }: { entry: CatalogEntry }) {
         if (locked && !requirePro('catalog')) return;
         setPendingFurniture(pendingFurnitureType === entry.type ? null : entry.type);
       }}
-      title={locked ? `${entry.name} — Pro item` : `Place ${entry.name}`}
+      title={locked ? `${name} — Pro` : `${name}`}
     >
       {locked && (
         <span className="ci-lock" aria-label="Pro item">
@@ -32,7 +35,7 @@ function CatalogItem({ entry }: { entry: CatalogEntry }) {
         </span>
       )}
       <SymbolIcon shape={entry.shape} className="ci-symbol" />
-      <span className="label">{entry.name}</span>
+      <span className="label">{name}</span>
     </button>
   );
 }
@@ -47,6 +50,7 @@ export default function CatalogSidebar({
   docked?: boolean;
 }) {
   const pendingFurnitureType = useDesign((s) => s.pendingFurnitureType);
+  const t = useI18n();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>('All');
 
@@ -69,7 +73,11 @@ export default function CatalogSidebar({
     const items = CATALOG.filter(
       (e) =>
         (category === 'All' || e.category === category) &&
-        (!q || e.name.toLowerCase().includes(q) || e.category.toLowerCase().includes(q)),
+        (!q ||
+          e.name.toLowerCase().includes(q) ||
+          t(e.name).toLowerCase().includes(q) ||
+          e.category.toLowerCase().includes(q) ||
+          t(e.category).toLowerCase().includes(q)),
     );
     const map = new Map<string, typeof FURNITURE_CATALOG>();
     for (const e of items) {
@@ -78,17 +86,19 @@ export default function CatalogSidebar({
       map.set(e.category, arr);
     }
     return [...map.entries()];
+    // t is stable per language; re-grouping on every render would be wasteful.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, category]);
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''} ${docked ? 'docked' : ''}`}>
       <div className="sidebar-head">
-        <Sofa className="icon" /> Furniture &amp; objects
+        <Sofa className="icon" /> {t('Objects')}
       </div>
       <div className="cat-search">
         <Search className="icon" />
         <input
-          placeholder="Search objects…"
+          placeholder={t('Search objects…')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -100,7 +110,7 @@ export default function CatalogSidebar({
             className={`chip ${category === c ? 'active' : ''}`}
             onClick={() => setCategory(c)}
           >
-            {c}
+            {t(c)}
           </button>
         ))}
       </div>
@@ -108,7 +118,7 @@ export default function CatalogSidebar({
         {!query.trim() && category === 'All' && recent.length > 0 && (
           <div className="cat-section" key="__recent">
             <div className="cat-title">
-              <History className="icon" style={{ width: 13, height: 13, verticalAlign: -2 }} /> Recent
+              <History className="icon" style={{ width: 13, height: 13, verticalAlign: -2 }} /> {t('Recent')}
             </div>
             <div className="cat-grid">
               {recent.map((e) => (
@@ -119,12 +129,12 @@ export default function CatalogSidebar({
         )}
         {grouped.length === 0 && (
           <div className="empty-state" style={{ padding: '28px 20px' }}>
-            <p>No objects match “{query}”.</p>
+            <p>{t('No objects match')} “{query}”.</p>
           </div>
         )}
         {grouped.map(([cat, items]) => (
           <div className="cat-section" key={cat}>
-            {category === 'All' && <div className="cat-title">{cat}</div>}
+            {category === 'All' && <div className="cat-title">{t(cat)}</div>}
             <div className="cat-grid">
               {items.map((e) => (
                 <CatalogItem key={e.type} entry={e} />

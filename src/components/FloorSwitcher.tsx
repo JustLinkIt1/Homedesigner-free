@@ -4,6 +4,7 @@ import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
 import { confirmDialog, toast } from '../lib/ui';
+import { useI18n } from '../lib/i18n';
 
 /**
  * Storey switcher: stacked top→bottom like a building. Click a floor to edit
@@ -20,6 +21,7 @@ export default function FloorSwitcher() {
   const renameFloor = useDesign((s) => s.renameFloor);
   const activeFloor = useDesign((s) => s.floors.find((f) => f.id === s.activeFloorId));
   const isPro = useProStore((s) => s.isPro);
+  const t = useI18n();
   const [editing, setEditing] = useState<string | null>(null);
   const [cloneOpen, setCloneOpen] = useState(false);
 
@@ -44,7 +46,7 @@ export default function FloorSwitcher() {
   return (
     <div className="floor-switcher" aria-label="Storeys">
       <button className="floor-add" onClick={handleAdd} title="Add an empty floor above">
-        <Plus className="icon" style={{ width: 14, height: 14 }} /> Floor
+        <Plus className="icon" style={{ width: 14, height: 14 }} /> {t('Floor')}
         {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
       </button>
       <div className="floor-clone-wrap">
@@ -53,16 +55,16 @@ export default function FloorSwitcher() {
           onClick={() => setCloneOpen((v) => !v)}
           title="Copy this floor's walls onto a new storey"
         >
-          <Copy className="icon" style={{ width: 13, height: 13 }} /> Copy floor
+          <Copy className="icon" style={{ width: 13, height: 13 }} /> {t('Copy floor')}
           {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
         </button>
         {cloneOpen && (
           <div className="floor-clone-menu" role="menu">
             <button role="menuitem" onClick={() => handleClone('above')}>
-              <ChevronUp className="icon" style={{ width: 14, height: 14 }} /> Copy above
+              <ChevronUp className="icon" style={{ width: 14, height: 14 }} /> {t('Copy above')}
             </button>
             <button role="menuitem" onClick={() => handleClone('below')}>
-              <ChevronDown className="icon" style={{ width: 14, height: 14 }} /> Copy below
+              <ChevronDown className="icon" style={{ width: 14, height: 14 }} /> {t('Copy below')}
             </button>
           </div>
         )}
@@ -94,7 +96,7 @@ export default function FloorSwitcher() {
                   title={`${f.name} — double-click to rename`}
                 >
                   <Layers className="icon" style={{ width: 14, height: 14 }} />
-                  <span>{f.name}</span>
+                  <span>{t(f.name)}</span>
                 </button>
               )}
               {active && floors.length > 1 && (
