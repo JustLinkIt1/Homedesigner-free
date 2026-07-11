@@ -1313,6 +1313,42 @@ button.brand:hover .brand-name {
   background: var(--surface-2);
 }
 
+/* Inline dimension-length editor — sits over a tapped wall length label */
+.dim-edit {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  background: var(--surface);
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+}
+.dim-edit input {
+  width: 68px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  text-align: right;
+}
+.dim-edit input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+.dim-edit-unit {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-2);
+  padding-right: 2px;
+}
+
 /* Storey switcher — floats bottom-left over the stage */
 .floor-switcher {
   position: absolute;
@@ -2679,6 +2715,63 @@ button.brand:hover .brand-name {
   inset: 0;
   background: rgba(20, 24, 33, 0.45);
   z-index: 80;
+}
+
+/* First-run opt-in tour prompt */
+.welcome-tour-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(20, 24, 33, 0.42);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.welcome-tour {
+  width: min(92vw, 340px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg, 18px);
+  box-shadow: var(--shadow-lg, 0 24px 60px rgba(0, 0, 0, 0.28));
+  padding: 24px 22px 18px;
+  text-align: center;
+}
+.welcome-tour .wt-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--brand);
+  color: #fff;
+  margin-bottom: 12px;
+}
+.welcome-tour .wt-icon .icon {
+  width: 24px;
+  height: 24px;
+}
+.welcome-tour h2 {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+.welcome-tour p {
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0 0 18px;
+}
+.welcome-tour .wt-actions {
+  display: flex;
+  gap: 8px;
+}
+.welcome-tour .wt-actions .btn {
+  flex: 1;
+  justify-content: center;
 }
 .coach-bubble {
   position: fixed;

@@ -199,6 +199,11 @@ export const JA: Record<string, string> = {
   Next: '次へ',
   Done: '完了',
 
+  /* ---------- Welcome tour ---------- */
+  Welcome: 'ようこそ',
+  'Take a quick tour to learn the basics.': '基本を学ぶために簡単なツアーをどうぞ。',
+  'Start tour': 'ツアーを開始',
+
   /* ---------- Settings ---------- */
   Settings: '設定',
   Appearance: '外観',

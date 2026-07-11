@@ -199,6 +199,11 @@ export const ZH: Record<string, string> = {
   Next: '下一步',
   Done: '完成',
 
+  /* ---------- Welcome tour ---------- */
+  Welcome: '欢迎',
+  'Take a quick tour to learn the basics.': '快速浏览一下，了解基础操作。',
+  'Start tour': '开始浏览',
+
   /* ---------- Settings ---------- */
   Settings: '设置',
   Appearance: '外观',

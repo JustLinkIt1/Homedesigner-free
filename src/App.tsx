@@ -26,6 +26,7 @@ import AboutDialog from './components/AboutDialog';
 import HelpPanel from './components/HelpPanel';
 import SettingsDialog from './components/SettingsDialog';
 import CoachMarks from './components/CoachMarks';
+import WelcomeTour from './components/WelcomeTour';
 import RotateControls from './components/Viewer3D/RotateControls';
 import ShoppingList from './components/ShoppingList';
 import ProUpsellModal from './components/ProUpsellModal';
@@ -74,6 +75,7 @@ export default function App() {
   const drawing = useDraw((s) => s.active);
   // One-time first-run tour + dismissible tip bar.
   const [showTour, setShowTour] = useState(false);
+  const [offerTour, setOfferTour] = useState(false);
   const [tipsDismissed, setTipsDismissed] = useState(() => {
     try {
       return localStorage.getItem('homedesigner.tips.v1') === 'dismissed';
@@ -141,7 +143,7 @@ export default function App() {
       if (localStorage.getItem('homedesigner.tour.v1')) return;
       if (useDesign.getState().walls.length === 0) {
         localStorage.setItem('homedesigner.tour.v1', 'shown'); // never re-nag
-        setShowTour(true);
+        setOfferTour(true); // opt-in: offer the tour rather than forcing it
       }
     } catch {
       /* storage unavailable — skip the tour */
@@ -157,6 +159,7 @@ export default function App() {
     }
     setTipsDismissed(false);
     setShowHelp(false);
+    setOfferTour(false);
     setShowTour(true);
   };
 
@@ -573,6 +576,16 @@ export default function App() {
             setShowSettings(false);
             replayTour();
           }}
+        />
+      )}
+
+      {offerTour && view === '2d' && !showImport && !photoMode && (
+        <WelcomeTour
+          onStart={() => {
+            setOfferTour(false);
+            setShowTour(true);
+          }}
+          onSkip={() => setOfferTour(false)}
         />
       )}
 

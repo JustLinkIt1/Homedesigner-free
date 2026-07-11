@@ -18,9 +18,11 @@ import type { Point, Wall, Room } from '../../types';
 
 interface Props {
   zoom: number;
+  /** When set, per-wall length labels become clickable to type an exact length. */
+  onEditWall?: (wallId: string) => void;
 }
 
-export default function DimensionsLayer({ zoom }: Props) {
+export default function DimensionsLayer({ zoom, onEditWall }: Props) {
   const walls = useDesign((s) => s.walls);
   const rooms = useDesign((s) => s.rooms);
   const units = useDesign((s) => s.units);
@@ -41,8 +43,10 @@ export default function DimensionsLayer({ zoom }: Props) {
     ? { x: (bounds.min.x + bounds.max.x) / 2, y: (bounds.min.y + bounds.max.y) / 2 }
     : null;
 
+  // Interactive only enables the small clickable wall labels; every decorative
+  // shape stays listening={false} so clicks still fall through to the walls.
   return (
-    <Group listening={false}>
+    <Group listening={!!onEditWall}>
       {/* Per-wall dimensions (skips perimeter walls that duplicate the overall,
           and walls too short to label legibly at the current zoom). */}
       {center &&
@@ -50,7 +54,9 @@ export default function DimensionsLayer({ zoom }: Props) {
         walls.map((w) => {
           if (dist(w.start, w.end) * zoom < 30) return null;
           if (isPerimeterDuplicate(w, bounds)) return null;
-          return <WallDimension key={w.id} wall={w} center={center} px={px} units={units} />;
+          return (
+            <WallDimension key={w.id} wall={w} center={center} px={px} units={units} onEdit={onEditWall} />
+          );
         })}
 
       {/* Per-room area label (sizes come from wall/overall dims) */}
@@ -93,11 +99,13 @@ function WallDimension({
   center,
   px,
   units,
+  onEdit,
 }: {
   wall: Wall;
   center: Point;
   px: (n: number) => number;
   units: Units;
+  onEdit?: (wallId: string) => void;
 }) {
   // Themed inks (legible on the light or dark canvas).
   const C = canvasColors(useTheme((t) => t.theme));
@@ -155,22 +163,24 @@ function WallDimension({
   return (
     <Group>
       {/* witness lines */}
-      <Line points={[aw0.x, aw0.y, aw1.x, aw1.y]} stroke={COLOR} strokeWidth={px(0.8)} />
-      <Line points={[bw0.x, bw0.y, bw1.x, bw1.y]} stroke={COLOR} strokeWidth={px(0.8)} />
+      <Line points={[aw0.x, aw0.y, aw1.x, aw1.y]} stroke={COLOR} strokeWidth={px(0.8)} listening={false} />
+      <Line points={[bw0.x, bw0.y, bw1.x, bw1.y]} stroke={COLOR} strokeWidth={px(0.8)} listening={false} />
       {/* dimension line */}
-      <Line points={[a1.x, a1.y, b1.x, b1.y]} stroke={COLOR} strokeWidth={px(0.9)} />
+      <Line points={[a1.x, a1.y, b1.x, b1.y]} stroke={COLOR} strokeWidth={px(0.9)} listening={false} />
       {/* end ticks (45°) */}
       <Line
         points={[a1.x - tickVec.x, a1.y - tickVec.y, a1.x + tickVec.x, a1.y + tickVec.y]}
         stroke={COLOR}
         strokeWidth={px(1)}
+        listening={false}
       />
       <Line
         points={[b1.x - tickVec.x, b1.y - tickVec.y, b1.x + tickVec.x, b1.y + tickVec.y]}
         stroke={COLOR}
         strokeWidth={px(1)}
+        listening={false}
       />
-      {/* length label, centred and upright */}
+      {/* length label — click to type an exact length (rescales the wall). */}
       <Text
         x={lp.x}
         y={lp.y}
@@ -182,6 +192,26 @@ function WallDimension({
         offsetY={fs}
         width={px(56)}
         align="center"
+        listening={!!onEdit}
+        hitStrokeWidth={px(20)}
+        onMouseEnter={(e) => {
+          const st = e.target.getStage();
+          if (st) st.container().style.cursor = 'text';
+        }}
+        onMouseLeave={(e) => {
+          const st = e.target.getStage();
+          if (st) st.container().style.cursor = 'default';
+        }}
+        onClick={(e) => {
+          if (!onEdit) return;
+          e.cancelBubble = true;
+          onEdit(wall.id);
+        }}
+        onTap={(e) => {
+          if (!onEdit) return;
+          e.cancelBubble = true;
+          onEdit(wall.id);
+        }}
       />
     </Group>
   );
@@ -204,6 +234,7 @@ function RoomDimension({ room, px, units }: { room: Room; px: (n: number) => num
       offsetX={px(40)}
       width={px(80)}
       align="center"
+      listening={false}
     />
   );
 }
@@ -234,7 +265,7 @@ function OverallDimension({ walls, px, units }: { walls: Wall[]; px: (n: number)
   );
 
   return (
-    <Group>
+    <Group listening={false}>
       {/* top: overall width */}
       {witness(min.x, min.y, min.x, topY - tick)}
       {witness(max.x, min.y, max.x, topY - tick)}

@@ -199,6 +199,11 @@ export const DE: Record<string, string> = {
   Next: 'Weiter',
   Done: 'Fertig',
 
+  /* ---------- Welcome tour ---------- */
+  Welcome: 'Willkommen',
+  'Take a quick tour to learn the basics.': 'Mach eine kurze Tour, um die Grundlagen zu lernen.',
+  'Start tour': 'Tour starten',
+
   /* ---------- Settings ---------- */
   Settings: 'Einstellungen',
   Appearance: 'Darstellung',

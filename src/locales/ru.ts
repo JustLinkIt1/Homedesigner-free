@@ -199,6 +199,11 @@ export const RU: Record<string, string> = {
   Next: 'Далее',
   Done: 'Готово',
 
+  /* ---------- Welcome tour ---------- */
+  Welcome: 'Добро пожаловать',
+  'Take a quick tour to learn the basics.': 'Пройдите быстрый тур, чтобы освоить основы.',
+  'Start tour': 'Начать тур',
+
   /* ---------- Settings ---------- */
   Settings: 'Настройки',
   Appearance: 'Внешний вид',

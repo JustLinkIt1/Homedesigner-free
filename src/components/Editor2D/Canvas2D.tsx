@@ -77,6 +77,9 @@ export default function Canvas2D() {
     panningRef.current = v;
     _setIsPanning(v);
   };
+  // Click-a-dimension-to-resize: an HTML input overlaid on the tapped wall
+  // length label; committing moves that wall's end to the typed length.
+  const [dimEdit, setDimEdit] = useState<{ wallId: string; x: number; y: number; value: string } | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; kind: string; id: string; wp: Point | null } | null>(null);
   // Menu also captures the tap's WORLD point so Paste can land right there.
   const openMenu = (x: number, y: number, kind: string, id: string) =>
@@ -463,6 +466,39 @@ export default function Canvas2D() {
     } else {
       setDraft((d2) => [...d2, next]);
     }
+  };
+
+  // Open the length editor over a wall's dimension label.
+  const openDimEdit = (wallId: string) => {
+    const w = s.walls.find((x) => x.id === wallId);
+    if (!w) return;
+    const lenCm = dist(w.start, w.end);
+    const mid = midpoint(w.start, w.end);
+    // World → screen so the input sits on top of the label.
+    const sx = mid.x * zoom + pan.x;
+    const sy = mid.y * zoom + pan.y;
+    const val = units === 'imperial' ? (lenCm / 30.48).toFixed(2) : (lenCm / 100).toFixed(2);
+    s.select({ kind: 'wall', id: wallId });
+    setDimEdit({ wallId, x: sx, y: sy, value: val });
+  };
+
+  // Commit the typed length: keep `start` fixed and move the wall's end (and any
+  // walls sharing that corner) so the wall becomes exactly that long.
+  const applyDimEdit = () => {
+    setDimEdit((cur) => {
+      if (!cur) return null;
+      const val = parseFloat(cur.value);
+      const w = s.walls.find((x) => x.id === cur.wallId);
+      if (w && val > 0) {
+        const lenCm = units === 'imperial' ? val * 30.48 : val * 100;
+        const dx = w.end.x - w.start.x;
+        const dy = w.end.y - w.start.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const newEnd = { x: w.start.x + (dx / d) * lenCm, y: w.start.y + (dy / d) * lenCm };
+        s.moveCorner(w.end, newEnd);
+      }
+      return null;
+    });
   };
 
   // ---- touch: tap to act, one-finger drag from empty canvas to pan,
@@ -1037,9 +1073,6 @@ export default function Canvas2D() {
             );
           })}
 
-          {/* Dimension annotations */}
-          {showDimensions && <DimensionsLayer zoom={zoom} />}
-
           {/* Openings (doors & windows) */}
           {openings.map((o) => {
             const wall = walls.find((w) => w.id === o.wallId);
@@ -1330,6 +1363,12 @@ export default function Canvas2D() {
             );
           })}
 
+          {/* Dimension annotations — drawn above furniture so labels stay
+              visible and tappable (in Select mode) even over objects. */}
+          {showDimensions && (
+            <DimensionsLayer zoom={zoom} onEditWall={tool === 'select' ? openDimEdit : undefined} />
+          )}
+
           {/* Ghost preview of the object about to be placed */}
           {tool === 'furniture' &&
             s.pendingFurnitureType &&
@@ -1384,6 +1423,30 @@ export default function Canvas2D() {
         </Layer>
       </Stage>
       {menu && <ContextMenu menu={menu} multi={multi} count={selectedIds.length} onClose={closeMenu} />}
+
+      {/* Inline length editor over a tapped dimension label. */}
+      {dimEdit && (
+        <div
+          className="dim-edit"
+          style={{ left: dimEdit.x, top: dimEdit.y }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            autoFocus
+            value={dimEdit.value}
+            onChange={(e) => setDimEdit((cur) => (cur ? { ...cur, value: e.target.value } : cur))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') applyDimEdit();
+              if (e.key === 'Escape') setDimEdit(null);
+            }}
+            onBlur={applyDimEdit}
+          />
+          <span className="dim-edit-unit">{units === 'imperial' ? 'ft' : 'm'}</span>
+        </div>
+      )}
 
       {/* Scale-from-wall calibration card (after a measurement is frozen). */}
       {tool === 'measure' && measureSeg && (
@@ -1667,6 +1730,9 @@ function WallEndpointHandle({
       fill={C.handleFill}
       stroke={C.handleStroke}
       strokeWidth={2 / zoom}
+      // Grab area is much larger than the dot so corners are easy to catch
+      // (especially on touch); the visible handle stays small.
+      hitStrokeWidth={(IS_COARSE ? 34 : 26) / zoom}
       draggable
       onMouseEnter={(e) => {
         const st = e.target.getStage();

@@ -199,6 +199,11 @@ export const TR: Record<string, string> = {
   Next: 'İleri',
   Done: 'Bitti',
 
+  /* ---------- Welcome tour ---------- */
+  Welcome: 'Hoş geldiniz',
+  'Take a quick tour to learn the basics.': 'Temelleri öğrenmek için hızlı bir tur yapın.',
+  'Start tour': 'Turu başlat',
+
   /* ---------- Settings ---------- */
   Settings: 'Ayarlar',
   Appearance: 'Görünüm',

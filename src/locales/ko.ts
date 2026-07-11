@@ -199,6 +199,11 @@ export const KO: Record<string, string> = {
   Next: '다음',
   Done: '완료',
 
+  /* ---------- Welcome tour ---------- */
+  Welcome: '환영합니다',
+  'Take a quick tour to learn the basics.': '기본기를 익히려면 간단한 둘러보기를 해보세요.',
+  'Start tour': '둘러보기 시작',
+
   /* ---------- Settings ---------- */
   Settings: '설정',
   Appearance: '모양',

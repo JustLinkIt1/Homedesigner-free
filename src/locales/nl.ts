@@ -199,6 +199,11 @@ export const NL: Record<string, string> = {
   Next: 'Volgende',
   Done: 'Klaar',
 
+  /* ---------- Welcome tour ---------- */
+  Welcome: 'Welkom',
+  'Take a quick tour to learn the basics.': 'Doe een korte rondleiding om de basis te leren.',
+  'Start tour': 'Rondleiding starten',
+
   /* ---------- Settings ---------- */
   Settings: 'Instellingen',
   Appearance: 'Weergave',
