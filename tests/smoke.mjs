@@ -120,7 +120,9 @@ if (process.env.SMOKE_SKIP_3D) {
     const s = window.useDesign.getState();
     s.select({ kind: 'furniture', id: s.furniture[0].id });
   });
-  const pill = await page.waitForSelector('.rotate3d-pill', { timeout: 10000 }).then(() => true).catch(() => false);
+  // Generous: under software GL the model-heavy scene can stall the main
+  // thread for tens of seconds while shaders/BVH compile.
+  const pill = await page.waitForSelector('.rotate3d-pill', { timeout: 45000 }).then(() => true).catch(() => false);
   check('3D rotate pill appears', pill);
   if (pill) {
     const r0 = await store(() => window.useDesign.getState().furniture[0].rotation);

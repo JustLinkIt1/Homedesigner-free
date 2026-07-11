@@ -36,7 +36,6 @@ const REVENUECAT_ANDROID_KEY = 'goog_JtJREnLfSrMrpUMYtcLYwfNmnPC';
  *  entitlement counts as Pro, so a dashboard rename can't lock buyers out. */
 const ENTITLEMENT_ID = 'Pro';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /** True if the customer holds Pro. Checks the named entitlement first, then
  *  falls back to "any active entitlement" — this app only sells one thing, so
  *  a case/name mismatch in the RevenueCat dashboard must never deny access. */
@@ -58,7 +57,6 @@ function firstAvailablePackage(offerings: any): any | null {
   }
   return null;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 class RevenueCatProvider implements ProProvider {
   private configured = false;

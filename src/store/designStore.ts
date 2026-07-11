@@ -12,7 +12,7 @@ import type {
   ViewMode,
   Wall,
 } from '../types';
-import { uid, dist, pointToSegment } from '../lib/geometry';
+import { uid, dist } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';

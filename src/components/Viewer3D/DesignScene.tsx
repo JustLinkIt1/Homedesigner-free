@@ -496,6 +496,8 @@ function FloorMesh({ room, onTap }: { room: Room; onTap?: (tap: SurfaceTap) => v
     const patternM = Math.max(0.02, room.texture.scaleCm * M);
     t.repeat.set(1 / patternM, 1 / patternM);
     return t;
+    // Fine-grained on purpose: rebuild only when the image or scale changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.texture?.src, room.texture?.scaleCm]);
 
   const useCustom = !!custom;

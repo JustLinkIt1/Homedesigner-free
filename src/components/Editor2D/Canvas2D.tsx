@@ -9,8 +9,6 @@ import {
   angleDeg,
   lerp,
   snapToGrid,
-  snapAngle,
-  snapToEndpoints,
   pointToSegment,
   polygonCentroid,
   boundsOf,
@@ -165,14 +163,12 @@ export default function Canvas2D() {
       const gridWasVisible = grid?.visible() ?? false;
       if (grid) grid.visible(false);
       stage.draw();
-      let url: string | null = null;
       try {
-        url = stage.toDataURL({ x: rx, y: ry, width: rw, height: rh, pixelRatio, mimeType: 'image/png' });
+        return stage.toDataURL({ x: rx, y: ry, width: rw, height: rh, pixelRatio, mimeType: 'image/png' });
       } finally {
         if (grid && gridWasVisible) grid.visible(true);
         stage.draw();
       }
-      return url;
     };
     return () => {
       planCapture.current = null;

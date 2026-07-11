@@ -15,6 +15,14 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // React-Compiler-era strictness disabled: react-three-fiber's core idiom
+      // is mutating three.js objects (camera/materials) inside useFrame, and
+      // this codebase intentionally seeds state from effects in a few places.
+      // The classic rules-of-hooks + exhaustive-deps stay on.
+      'react-hooks/immutability': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/purity': 'off',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       eqeqeq: ['error', 'smart'],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],

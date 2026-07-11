@@ -103,7 +103,6 @@ function WallDimension({
   const C = canvasColors(useTheme((t) => t.theme));
   const COLOR = C.dimensionInk;
   const TEXT_COLOR = C.dimensionText;
-  const OVERALL_COLOR = C.dimensionOverall;
   const a = wall.start;
   const b = wall.end;
   const len = dist(a, b);
@@ -190,11 +189,7 @@ function WallDimension({
 
 /** A single, legible area label placed just below the room name. */
 function RoomDimension({ room, px, units }: { room: Room; px: (n: number) => number; units: Units }) {
-  // Themed inks (legible on the light or dark canvas).
-  const C = canvasColors(useTheme((t) => t.theme));
-  const COLOR = C.dimensionInk;
-  const TEXT_COLOR = C.dimensionText;
-  const OVERALL_COLOR = C.dimensionOverall;
+  const TEXT_COLOR = canvasColors(useTheme((t) => t.theme)).dimensionText;
   if (room.points.length < 3) return null;
   const c = polygonCentroid(room.points);
   const fs = px(12.5);
@@ -215,11 +210,7 @@ function RoomDimension({ room, px, units }: { room: Room; px: (n: number) => num
 
 /** Exterior overall width (top) and height (left) for the whole building. */
 function OverallDimension({ walls, px, units }: { walls: Wall[]; px: (n: number) => number; units: Units }) {
-  // Themed inks (legible on the light or dark canvas).
-  const C = canvasColors(useTheme((t) => t.theme));
-  const COLOR = C.dimensionInk;
-  const TEXT_COLOR = C.dimensionText;
-  const OVERALL_COLOR = C.dimensionOverall;
+  const OVERALL_COLOR = canvasColors(useTheme((t) => t.theme)).dimensionOverall;
   if (walls.length === 0) return null;
   const pts = walls.flatMap((w) => [w.start, w.end]);
   const { min, max } = boundsOf(pts);

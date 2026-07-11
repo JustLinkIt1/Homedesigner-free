@@ -252,6 +252,8 @@ export default function App() {
     });
     // Resolve the Pro entitlement (billing on Android, mock on web).
     useProStore.getState().refresh();
+    // Mount-once by design: the handler reads live state via refs/getState.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRender = async () => {
