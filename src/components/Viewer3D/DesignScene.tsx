@@ -139,11 +139,12 @@ function WallMesh({
     return { nx, nz };
   }, [dxCm, dzCm, mx, mz, center]);
 
-  // Planner-style dark cap on the cut top of the wall — reads as a floor
-  // plan edge from above and makes the dollhouse view look "rendered".
+  // Planner-style cap on the cut top of the wall — reads as a floor-plan edge
+  // from above and makes the dollhouse view look "rendered". A warm charcoal
+  // (rather than a cold blue-grey) keeps the whole scene feeling inviting.
   // Registered with the fade loop so it disappears with its wall.
   const capMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#3d434c', roughness: 0.65, metalness: 0.05 }),
+    () => new THREE.MeshStandardMaterial({ color: '#4a453e', roughness: 0.6, metalness: 0.04 }),
     [],
   );
 
@@ -599,6 +600,15 @@ function FloorContent({
   const ceilingHeight =
     (geom.walls.reduce((m, w) => Math.max(m, w.height), 0) || 270) * M;
 
+  // Tapping a wall or floor selects it (so the Properties/Edit panel can edit
+  // its height, thickness, paint or delete it — wall editing right in 3D) AND
+  // opens the quick paint popover at the tap point.
+  const tapSurface = (tap: SurfaceTap) => {
+    select({ kind: tap.kind, id: tap.id });
+    onSurfaceTap?.(tap);
+  };
+  const onTap = interactive ? tapSurface : undefined;
+
   return (
     <group position={[0, elevation * M, 0]}>
       {elevation > 0 && geom.rooms.map((r) => <SlabMesh key={`slab-${r.id}`} room={r} />)}
@@ -606,7 +616,7 @@ function FloorContent({
         <CeilingMesh key={`ceil-${r.id}`} room={r} height={ceilingHeight} />
       ))}
       {geom.rooms.map((r) => (
-        <FloorMesh key={r.id} room={r} onTap={interactive ? onSurfaceTap : undefined} />
+        <FloorMesh key={r.id} room={r} onTap={onTap} />
       ))}
       {geom.walls.map((w) => (
         <WallMesh
@@ -616,7 +626,7 @@ function FloorContent({
           center={center}
           register={register}
           unregister={unregister}
-          onTap={interactive ? onSurfaceTap : undefined}
+          onTap={onTap}
         />
       ))}
       {geom.furniture.map((f) => (

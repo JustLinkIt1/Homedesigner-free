@@ -243,13 +243,13 @@ export default function Scene3D() {
         blur={2.4}
         far={2.2}
         opacity={0.42}
-        color="#0a0c10"
+        color="#100d0a"
       />
 
       {/* Ground + grid */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center[0], -0.01, center[2]]} receiveShadow>
         <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#e6e8eb" roughness={1} />
+        <meshStandardMaterial color="#eceae4" roughness={1} />
       </mesh>
       <Grid
         position={[center[0], 0, center[2]]}

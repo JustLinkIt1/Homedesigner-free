@@ -119,8 +119,16 @@ export default function App() {
       suppressedIdRef.current = null;
       return;
     }
+    // In 3D, tapping a wall or floor is a "decorate" gesture handled by the
+    // in-place paint popover (the surface recolours live with the scene still
+    // visible) — don't also slide the full Edit drawer over the view. The wall
+    // stays selected, so the Edit tab still opens its height/thickness/delete
+    // controls on demand. Furniture (no popover) and every 2D selection keep
+    // auto-opening the drawer as before.
+    const surfaceIn3D = view === '3d' && (selection.kind === 'wall' || selection.kind === 'room');
     const ok =
-      tool === 'select' && !drawing && drawerRef.current === null && suppressedIdRef.current !== selection.id;
+      tool === 'select' && !drawing && !surfaceIn3D &&
+      drawerRef.current === null && suppressedIdRef.current !== selection.id;
     if (!ok) return;
     const open = () => {
       autoOpenedRef.current = true;
@@ -136,7 +144,7 @@ export default function App() {
     window.addEventListener('pointerup', once, { once: true });
     return () => window.removeEventListener('pointerup', once);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection.id, tool, drawing, screen]);
+  }, [selection.id, selection.kind, tool, drawing, screen, view]);
 
   // First-run tour: only on entering the editor with a truly blank project
   // (the sample home loads walls before onOpenEditor, so it never shows).
