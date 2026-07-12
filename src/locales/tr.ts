@@ -227,6 +227,7 @@ export const TR: Record<string, string> = {
   'No objects match': 'Şununla eşleşen nesne yok:',
 
   /* ---------- 3D view HUD ---------- */
+  'Time of day': 'Günün saati',
   'Loading 3D…': '3B yükleniyor…',
   Standard: 'Standart',
   High: 'Yüksek',

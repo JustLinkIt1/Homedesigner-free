@@ -227,6 +227,7 @@ export const ZH: Record<string, string> = {
   'No objects match': '没有匹配的物体：',
 
   /* ---------- 3D view HUD ---------- */
+  'Time of day': '时段',
   'Loading 3D…': '正在加载 3D…',
   Standard: '标准',
   High: '高',

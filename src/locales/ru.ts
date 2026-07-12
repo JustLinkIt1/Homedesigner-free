@@ -227,6 +227,7 @@ export const RU: Record<string, string> = {
   'No objects match': 'Нет объектов по запросу',
 
   /* ---------- 3D view HUD ---------- */
+  'Time of day': 'Время суток',
   'Loading 3D…': 'Загрузка 3D…',
   Standard: 'Стандарт',
   High: 'Высокое',

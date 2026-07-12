@@ -227,6 +227,7 @@ export const JA: Record<string, string> = {
   'No objects match': '一致するオブジェクトがありません:',
 
   /* ---------- 3D view HUD ---------- */
+  'Time of day': '時刻',
   'Loading 3D…': '3Dを読み込み中…',
   Standard: '標準',
   High: '高',

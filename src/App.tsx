@@ -69,6 +69,8 @@ export default function App() {
   const [renderScale, setRenderScale] = useState(3); // supersample factor for captures
   const [renderMenuOpen, setRenderMenuOpen] = useState(false);
   const renderMenuRef = useRef<HTMLDivElement>(null);
+  const [lightingOpen, setLightingOpen] = useState(false);
+  const lightingRef = useRef<HTMLDivElement>(null);
   const [drawer, setDrawer] = useState<null | 'catalog' | 'props'>(null);
   // Projects home first — the editor opens a specific project.
   const [screen, setScreen] = useState<'projects' | 'editor'>('projects');
@@ -276,6 +278,18 @@ export default function App() {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [renderMenuOpen]);
 
+  // Close the lighting popover on any outside click.
+  useEffect(() => {
+    if (!lightingOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (lightingRef.current && !lightingRef.current.contains(e.target as Node)) {
+        setLightingOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [lightingOpen]);
+
   const handleRender = async (scale = renderScale) => {
     if (!sceneCapture.current) return;
     setRenderScale(scale); // remember the last-used quality
@@ -449,31 +463,51 @@ export default function App() {
                     <Footprints className="icon" style={{ width: 16, height: 16 }} /> {t('Walk through')}
                   </button>
                 </div>
-                <div className="pill light-pill">
+                {/* Lighting folds the lamps toggle + time-of-day slider into a
+                    popover so the HUD stays compact on phones (it used to run
+                    off the right edge). */}
+                <div className="pill light-pill export-wrap" ref={lightingRef}>
                   <button
-                    className={`toggle ${lightsOn ? 'on' : ''}`}
-                    onClick={() => setLightsOn(!lightsOn)}
-                    title="Toggle artificial lights (lamps, LEDs)"
+                    className="toggle"
+                    aria-haspopup="menu"
+                    aria-expanded={lightingOpen}
+                    onClick={() => setLightingOpen((o) => !o)}
+                    title={t('Lighting')}
                   >
-                    <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> {t('Lights')}
-                  </button>
-                  <label className="sun-slider" title="Time of day — sunlight angle & warmth">
                     {sunTime < 6 || sunTime >= 20 ? (
                       <Moon className="icon" style={{ width: 15, height: 15 }} />
                     ) : (
                       <Sun className="icon" style={{ width: 15, height: 15 }} />
                     )}
-                    <input
-                      type="range"
-                      min={0}
-                      max={24}
-                      step={0.5}
-                      value={sunTime}
-                      onChange={(e) => setSunTime(Number(e.target.value))}
-                      aria-label="Time of day"
-                    />
-                    <span className="sun-time">{`${String(Math.floor(sunTime)).padStart(2, '0')}:${sunTime % 1 ? '30' : '00'}`}</span>
-                  </label>
+                    {t('Lighting')}
+                  </button>
+                  {lightingOpen && (
+                    <div className="export-menu lighting-menu" role="menu">
+                      <button
+                        className={`toggle ${lightsOn ? 'on' : ''}`}
+                        onClick={() => setLightsOn(!lightsOn)}
+                      >
+                        <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> {t('Lights')}
+                      </button>
+                      <label className="sun-slider" title={t('Time of day')}>
+                        {sunTime < 6 || sunTime >= 20 ? (
+                          <Moon className="icon" style={{ width: 15, height: 15 }} />
+                        ) : (
+                          <Sun className="icon" style={{ width: 15, height: 15 }} />
+                        )}
+                        <input
+                          type="range"
+                          min={0}
+                          max={24}
+                          step={0.5}
+                          value={sunTime}
+                          onChange={(e) => setSunTime(Number(e.target.value))}
+                          aria-label={t('Time of day')}
+                        />
+                        <span className="sun-time">{`${String(Math.floor(sunTime)).padStart(2, '0')}:${sunTime % 1 ? '30' : '00'}`}</span>
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="render-actions">

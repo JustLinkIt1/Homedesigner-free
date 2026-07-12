@@ -227,6 +227,7 @@ export const KO: Record<string, string> = {
   'No objects match': '일치하는 오브젝트 없음:',
 
   /* ---------- 3D view HUD ---------- */
+  'Time of day': '시간대',
   'Loading 3D…': '3D 로딩 중…',
   Standard: '표준',
   High: '높음',

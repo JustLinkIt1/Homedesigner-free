@@ -227,6 +227,7 @@ export const PT: Record<string, string> = {
   'No objects match': 'Nenhum objeto corresponde a',
 
   /* ---------- 3D view HUD ---------- */
+  'Time of day': 'Hora do dia',
   'Loading 3D…': 'Carregando 3D…',
   Standard: 'Padrão',
   High: 'Alta',

@@ -227,6 +227,7 @@ export const DE: Record<string, string> = {
   'No objects match': 'Keine Objekte passen zu',
 
   /* ---------- 3D view HUD ---------- */
+  'Time of day': 'Tageszeit',
   'Loading 3D…': '3D wird geladen…',
   Standard: 'Standard',
   High: 'Hoch',

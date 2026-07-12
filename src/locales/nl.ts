@@ -227,6 +227,7 @@ export const NL: Record<string, string> = {
   'No objects match': 'Geen objecten komen overeen met',
 
   /* ---------- 3D view HUD ---------- */
+  'Time of day': 'Tijd van de dag',
   'Loading 3D…': '3D laden…',
   Standard: 'Standaard',
   High: 'Hoog',

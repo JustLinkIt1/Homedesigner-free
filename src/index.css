@@ -1181,6 +1181,40 @@ button.brand:hover .brand-name {
 .pill .toggle {
   white-space: nowrap;
 }
+/* Lighting popover — opens upward from the HUD (which sits at the screen
+   bottom) and holds the lamps toggle + time-of-day slider. */
+.lighting-menu {
+  top: auto;
+  bottom: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  min-width: 214px;
+}
+.lighting-menu .toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.lighting-menu .toggle:hover {
+  background: var(--surface-2);
+}
+.lighting-menu .toggle.on {
+  color: var(--brand);
+}
+.lighting-menu .sun-slider {
+  padding: 8px 10px;
+  gap: 9px;
+}
+.lighting-menu .sun-slider input[type='range'] {
+  flex: 1;
+  width: auto;
+}
 .pill.text {
   padding: 8px 14px;
 }
@@ -2975,6 +3009,16 @@ button.brand:hover .brand-name {
     position: fixed;
     top: auto;
     bottom: calc(112px + env(safe-area-inset-bottom));
+    left: 12px;
+    right: auto;
+    z-index: 60;
+  }
+  /* The HUD strip also scrolls horizontally, so the Lighting popover breaks
+     out as a fixed panel above it rather than being clipped. */
+  .lighting-menu {
+    position: fixed;
+    top: auto;
+    bottom: calc(72px + env(safe-area-inset-bottom));
     left: 12px;
     right: auto;
     z-index: 60;
