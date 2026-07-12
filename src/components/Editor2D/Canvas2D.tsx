@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Stage, Layer, Line, Rect, Group, Text, Circle, Arc, Image as KImage } from 'react-konva';
-import type Konva from 'konva';
+import Konva from 'konva';
 import { useDesign } from '../../store/designStore';
 import { useHtmlImage } from '../../lib/useHtmlImage';
 import {
@@ -30,6 +30,16 @@ import {
   snapAngleTo,
   type Box,
 } from './editHandles';
+
+// Cap the Konva canvas pixel ratio. Ultra-high-DPI phones (e.g. Galaxy S25 at
+// ~1440p report devicePixelRatio ~3.5) otherwise render the full-screen 2D
+// Stage at 3-4x — millions of extra pixels every redraw, so panning/dragging
+// crawls while a lower-DPI phone (S24) stays smooth. 2x is already retina-crisp
+// for line art + text; this is the single biggest 2D perf win. Photo/plan
+// exports pass their own explicit pixelRatio, so they're unaffected.
+if (typeof window !== 'undefined') {
+  Konva.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+}
 
 // Touch devices need ~44px targets; mouse pointers stay precise at 16px.
 const IS_COARSE =
