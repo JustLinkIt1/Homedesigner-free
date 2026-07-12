@@ -83,6 +83,7 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'ottoman', name: 'Ottoman', category: 'Living', width: 70, depth: 70, height: 42, color: '#7d8aa0', shape: 'ottoman', icon: '🟦' },
   { type: 'side_table', name: 'Side Table', category: 'Living', width: 45, depth: 45, height: 55, color: '#9c6b3f', shape: 'side_table', icon: '🛋️' },
   { type: 'console', pro: true, name: 'Console Table', category: 'Living', width: 120, depth: 35, height: 80, color: '#7a5a3a', shape: 'table', icon: '🪵' },
+  { type: 'lounge_chair', pro: true, name: 'Lounge Chair', category: 'Living', width: 75, depth: 80, height: 75, color: '#7f8a72', shape: 'chair', icon: '🪑' },
 
   // Bedroom
   { type: 'bed_double', name: 'Double Bed', category: 'Bedroom', width: 160, depth: 210, height: 50, color: '#b6a98f', shape: 'bed', icon: '🛏️' },
@@ -96,6 +97,7 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
 
   // Dining / Kitchen
   { type: 'dining_table', name: 'Dining Table', category: 'Dining', width: 160, depth: 90, height: 75, color: '#8a5a30', shape: 'table', icon: '🍽️' },
+  { type: 'round_dining_table', pro: true, name: 'Round Table', category: 'Dining', width: 120, depth: 120, height: 75, color: '#9c6b3f', shape: 'table', icon: '🍽️' },
   { type: 'dining_chair', name: 'Dining Chair', category: 'Dining', width: 45, depth: 50, height: 90, color: '#6e5236', shape: 'chair', icon: '🪑' },
   { type: 'fridge', name: 'Refrigerator', category: 'Kitchen', width: 70, depth: 70, height: 180, color: '#d6d9dd', shape: 'fridge', icon: '🧊' },
   { type: 'counter', name: 'Counter', category: 'Kitchen', width: 200, depth: 60, height: 90, color: '#cfd2d6', shape: 'box', icon: '🍳' },

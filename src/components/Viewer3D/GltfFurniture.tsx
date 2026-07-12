@@ -34,6 +34,16 @@ export const FURNITURE_MODELS: Record<string, { url: string; yaw?: number }> = {
   wardrobe: { url: U('wardrobe') },
   dresser: { url: U('dresser') },
   ottoman: { url: U('ottoman') },
+  // Second Poly Haven CC0 batch (v1.0.35).
+  office_chair: { url: U('office_chair') },
+  console: { url: U('console') },
+  mirror: { url: U('mirror') },
+  cabinets: { url: U('cabinets') },
+  filing_cabinet: { url: U('filing_cabinet') },
+  desk_lamp: { url: U('desk_lamp') },
+  office_bookshelf: { url: U('office_bookshelf') },
+  lounge_chair: { url: U('lounge_chair') },
+  round_dining_table: { url: U('round_dining_table') },
   // NB: no pendant/tv model — the fitter rests bases on the floor, which is
   // wrong for hanging lights, and the procedural TV (emissive screen at stand
   // height) reads better than a flat panel lying on the ground.
