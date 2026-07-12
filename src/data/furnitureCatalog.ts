@@ -145,6 +145,28 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'bench', name: 'Garden Bench', category: 'Outdoor', width: 150, depth: 50, height: 80, color: '#6e5236', shape: 'sofa', icon: '🪑' },
   { type: 'stairs', name: 'Stairs', category: 'Outdoor', width: 100, depth: 250, height: 280, color: '#9aa0a6', shape: 'stairs', icon: '🪜' },
 
+  // Realistic CC0 model pack (Poly Haven) — extra furnishings across rooms.
+  { type: 'accent_chair', pro: true, name: 'Accent Chair', category: 'Living', width: 70, depth: 72, height: 80, color: '#7f8a72', shape: 'chair', icon: '🪑' },
+  { type: 'rocking_chair', pro: true, name: 'Rocking Chair', category: 'Living', width: 62, depth: 95, height: 105, color: '#7a5a3a', shape: 'chair', icon: '🪑' },
+  { type: 'round_coffee_table', pro: true, name: 'Round Coffee Table', category: 'Living', width: 90, depth: 90, height: 42, color: '#9c6b3f', shape: 'table', icon: '🪵' },
+  { type: 'tall_side_table', pro: true, name: 'Tall Side Table', category: 'Living', width: 42, depth: 42, height: 62, color: '#8a5a30', shape: 'side_table', icon: '🪵' },
+  { type: 'accent_table', pro: true, name: 'Accent Table', category: 'Living', width: 60, depth: 60, height: 52, color: '#9c6b3f', shape: 'table', icon: '🪵' },
+  { type: 'modern_sofa', pro: true, name: 'Modern Sofa', category: 'Living', width: 200, depth: 92, height: 80, color: '#8a8f96', shape: 'sofa', icon: '🛋️' },
+  { type: 'display_cabinet', pro: true, name: 'Display Cabinet', category: 'Living', width: 100, depth: 45, height: 120, color: '#7a5a3a', shape: 'box', icon: '🗄️' },
+  { type: 'sideboard', pro: true, name: 'Sideboard', category: 'Living', width: 120, depth: 45, height: 88, color: '#b7b0a0', shape: 'box', icon: '🗄️' },
+  { type: 'worn_bookshelf', pro: true, name: 'Rustic Bookshelf', category: 'Living', width: 90, depth: 30, height: 180, color: '#8a5a30', shape: 'bookshelf', icon: '📚' },
+  { type: 'tea_table', pro: true, name: 'Tea Table', category: 'Living', width: 100, depth: 60, height: 38, color: '#6f4b2e', shape: 'table', icon: '🪵' },
+  { type: 'wooden_dining_chair', pro: true, name: 'Wooden Chair', category: 'Dining', width: 45, depth: 50, height: 95, color: '#8a5a30', shape: 'chair', icon: '🪑' },
+  { type: 'bar_chair', pro: true, name: 'Bar Chair', category: 'Kitchen', width: 40, depth: 40, height: 98, color: '#6e6e72', shape: 'stool', icon: '🪑' },
+  { type: 'wooden_stool', pro: true, name: 'Wooden Stool', category: 'Kitchen', width: 35, depth: 35, height: 46, color: '#9c6b3f', shape: 'stool', icon: '🪑' },
+  { type: 'metal_stool', pro: true, name: 'Metal Stool', category: 'Kitchen', width: 36, depth: 36, height: 66, color: '#6e6e72', shape: 'stool', icon: '🪑' },
+  { type: 'chest_of_drawers', pro: true, name: 'Chest of Drawers', category: 'Bedroom', width: 90, depth: 45, height: 95, color: '#7a5a3a', shape: 'box', icon: '🗄️' },
+  { type: 'day_bed', pro: true, name: 'Day Bed', category: 'Bedroom', width: 100, depth: 200, height: 60, color: '#b6a98f', shape: 'bed', icon: '🛏️' },
+  { type: 'metal_desk', pro: true, name: 'Metal Desk', category: 'Office', width: 140, depth: 70, height: 75, color: '#6e6e72', shape: 'table', icon: '🪵' },
+  { type: 'throw_pillows', pro: true, name: 'Throw Pillows', category: 'Decor', width: 55, depth: 45, height: 22, color: '#cbb89a', shape: 'box', icon: '🛋️' },
+  { type: 'clay_planter', pro: true, name: 'Clay Planter', category: 'Decor', width: 40, depth: 40, height: 45, color: '#a5673f', shape: 'plant', icon: '🪴' },
+  { type: 'picnic_table', pro: true, name: 'Picnic Table', category: 'Outdoor', width: 150, depth: 140, height: 75, color: '#9c7a4f', shape: 'table', icon: '🪑' },
+
   // Openings (placed on walls)
   { type: 'door', name: 'Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#a9744f', shape: 'door', icon: '🚪', opening: { kind: 'door', style: 'single', sill: 0 } },
   { type: 'double_door', pro: true, name: 'Double Door', category: 'Openings', width: 160, depth: 12, height: 205, color: '#a9744f', shape: 'door_double', icon: '🚪', opening: { kind: 'door', style: 'double', sill: 0 } },

@@ -44,6 +44,27 @@ export const FURNITURE_MODELS: Record<string, { url: string; yaw?: number }> = {
   office_bookshelf: { url: U('office_bookshelf') },
   lounge_chair: { url: U('lounge_chair') },
   round_dining_table: { url: U('round_dining_table') },
+  // Third Poly Haven CC0 batch (v1.0.36).
+  accent_chair: { url: U('accent_chair') },
+  rocking_chair: { url: U('rocking_chair') },
+  round_coffee_table: { url: U('round_coffee_table') },
+  tall_side_table: { url: U('tall_side_table') },
+  accent_table: { url: U('accent_table') },
+  modern_sofa: { url: U('modern_sofa') },
+  display_cabinet: { url: U('display_cabinet') },
+  sideboard: { url: U('sideboard') },
+  worn_bookshelf: { url: U('worn_bookshelf') },
+  tea_table: { url: U('tea_table') },
+  wooden_dining_chair: { url: U('wooden_dining_chair') },
+  bar_chair: { url: U('bar_chair') },
+  wooden_stool: { url: U('wooden_stool') },
+  metal_stool: { url: U('metal_stool') },
+  chest_of_drawers: { url: U('chest_of_drawers') },
+  day_bed: { url: U('day_bed') },
+  metal_desk: { url: U('metal_desk') },
+  throw_pillows: { url: U('throw_pillows') },
+  clay_planter: { url: U('clay_planter') },
+  picnic_table: { url: U('picnic_table') },
   // NB: no pendant/tv model — the fitter rests bases on the floor, which is
   // wrong for hanging lights, and the procedural TV (emissive screen at stand
   // height) reads better than a flat panel lying on the ground.

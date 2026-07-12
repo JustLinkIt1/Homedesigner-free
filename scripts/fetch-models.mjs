@@ -5,8 +5,9 @@
 //   node scripts/fetch-models.mjs
 //
 // Missing/failed assets are skipped (that catalog type keeps its procedural
-// mesh). Assets are CC0 (Poly Haven).
-import { writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
+// mesh). Oversized results (>1.3MB) are dropped. Prints ready-to-paste catalog
+// + manifest snippets for the models that succeeded. Assets are CC0 (Poly Haven).
+import { writeFileSync, mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -17,18 +18,28 @@ const TMP = join(ROOT, '.model-tmp');
 const BIN = join(ROOT, 'node_modules', '.bin', 'gltf-transform');
 mkdirSync(OUT, { recursive: true });
 
-// type (our catalog id)  ->  Poly Haven asset id
+// [type, polyhavenId, name, category, w, d, h, shape, color]
 const LIST = [
-  ['office_chair', 'modern_arm_chair_01'],
-  ['console', 'ClassicConsole_01'],
-  ['mirror', 'ornate_mirror_01'],
-  ['cabinets', 'modern_wooden_cabinet'],
-  ['filing_cabinet', 'drawer_cabinet'],
-  ['desk_lamp', 'desk_lamp_arm_01'],
-  ['office_bookshelf', 'Shelf_01'],
-  // New catalog items (added in furnitureCatalog.ts):
-  ['lounge_chair', 'mid_century_lounge_chair'],
-  ['round_dining_table', 'round_wooden_table_01'],
+  ['accent_chair', 'GreenChair_01', 'Accent Chair', 'Living', 70, 72, 80, 'chair', '#7f8a72'],
+  ['rocking_chair', 'Rockingchair_01', 'Rocking Chair', 'Living', 62, 95, 105, 'chair', '#7a5a3a'],
+  ['round_coffee_table', 'coffee_table_round_01', 'Round Coffee Table', 'Living', 90, 90, 42, 'table', '#9c6b3f'],
+  ['tall_side_table', 'side_table_tall_01', 'Tall Side Table', 'Living', 42, 42, 62, 'side_table', '#8a5a30'],
+  ['accent_table', 'small_wooden_table_01', 'Accent Table', 'Living', 60, 60, 52, 'table', '#9c6b3f'],
+  ['modern_sofa', 'sofa_02', 'Modern Sofa', 'Living', 200, 92, 80, 'sofa', '#8a8f96'],
+  ['display_cabinet', 'vintage_cabinet_01', 'Display Cabinet', 'Living', 100, 45, 120, 'box', '#7a5a3a'],
+  ['sideboard', 'painted_wooden_cabinet', 'Sideboard', 'Living', 120, 45, 88, 'box', '#b7b0a0'],
+  ['worn_bookshelf', 'wooden_bookshelf_worn', 'Rustic Bookshelf', 'Living', 90, 30, 180, 'bookshelf', '#8a5a30'],
+  ['tea_table', 'chinese_tea_table', 'Tea Table', 'Living', 100, 60, 38, 'table', '#6f4b2e'],
+  ['wooden_dining_chair', 'WoodenChair_01', 'Wooden Chair', 'Dining', 45, 50, 95, 'chair', '#8a5a30'],
+  ['bar_chair', 'bar_chair_round_01', 'Bar Chair', 'Kitchen', 40, 40, 98, 'stool', '#6e6e72'],
+  ['wooden_stool', 'wooden_stool_01', 'Wooden Stool', 'Kitchen', 35, 35, 46, 'stool', '#9c6b3f'],
+  ['metal_stool', 'metal_stool_01', 'Metal Stool', 'Kitchen', 36, 36, 66, 'stool', '#6e6e72'],
+  ['chest_of_drawers', 'vintage_wooden_drawer_01', 'Chest of Drawers', 'Bedroom', 90, 45, 95, 'box', '#7a5a3a'],
+  ['day_bed', 'vintage_day_bed', 'Day Bed', 'Bedroom', 100, 200, 60, 'bed', '#b6a98f'],
+  ['metal_desk', 'metal_office_desk', 'Metal Desk', 'Office', 140, 70, 75, 'table', '#6e6e72'],
+  ['throw_pillows', 'throw_pillows_01', 'Throw Pillows', 'Decor', 55, 45, 22, 'box', '#cbb89a'],
+  ['clay_planter', 'planter_pot_clay', 'Clay Planter', 'Decor', 40, 40, 45, 'plant', '#a5673f'],
+  ['picnic_table', 'wooden_picnic_table', 'Picnic Table', 'Outdoor', 150, 140, 75, 'table', '#9c7a4f'],
 ];
 
 const download = async (url, dest) => {
@@ -36,32 +47,38 @@ const download = async (url, dest) => {
   mkdirSync(dirname(dest), { recursive: true });
   writeFileSync(dest, buf);
 };
-
-const done = [];
-for (const [type, id] of LIST) {
+const MAX = 1.3 * 1024 * 1024;
+const ok = [];
+for (const row of LIST) {
+  const [type, id] = row;
   const outFile = join(OUT, `${type}.glb`);
-  if (existsSync(outFile)) { done.push(type); continue; }
   const dir = join(TMP, type);
   try {
-    rmSync(dir, { recursive: true, force: true });
-    mkdirSync(dir, { recursive: true });
-    const meta = await fetch(`https://api.polyhaven.com/files/${id}`).then((r) => r.json());
-    const node = meta.gltf?.['1k']?.gltf ?? meta.gltf?.['2k']?.gltf;
-    if (!node?.url) { console.log(`skip ${type}: no gltf`); continue; }
-    await download(node.url, join(dir, 'model.gltf'));
-    for (const [rel, info] of Object.entries(node.include ?? {})) {
-      await download(info.url, join(dir, rel));
+    if (!existsSync(outFile)) {
+      rmSync(dir, { recursive: true, force: true });
+      mkdirSync(dir, { recursive: true });
+      const meta = await fetch(`https://api.polyhaven.com/files/${id}`).then((r) => r.json());
+      const node = meta.gltf?.['1k']?.gltf ?? meta.gltf?.['2k']?.gltf;
+      if (!node?.url) { console.log(`skip ${type}: no gltf`); continue; }
+      await download(node.url, join(dir, 'model.gltf'));
+      for (const [rel, info] of Object.entries(node.include ?? {})) await download(info.url, join(dir, rel));
+      const size = (tex) => execFileSync(BIN, ['optimize', join(dir, 'model.gltf'), outFile,
+        '--compress', 'quantize', '--texture-compress', 'webp', '--texture-size', String(tex)], { stdio: 'pipe' });
+      size(512);
+      if (statSync(outFile).size > MAX) size(256); // second, tighter pass if heavy
     }
-    execFileSync(BIN, [
-      'optimize', join(dir, 'model.gltf'), outFile,
-      '--compress', 'quantize', '--texture-compress', 'webp', '--texture-size', '512',
-    ], { stdio: 'pipe' });
-    const kb = Math.round((await import('node:fs')).statSync(outFile).size / 1024);
-    console.log(`ok   ${type}  <- ${id}  (${kb} KB)`);
-    done.push(type);
+    if (statSync(outFile).size > MAX) { console.log(`drop ${type}: ${Math.round(statSync(outFile).size/1024)}KB too big`); rmSync(outFile, { force: true }); continue; }
+    console.log(`ok   ${type}  <- ${id}  (${Math.round(statSync(outFile).size/1024)} KB)`);
+    ok.push(row);
   } catch (e) {
-    console.log(`skip ${type}: ${String(e.message).slice(0, 120)}`);
+    console.log(`skip ${type}: ${String(e.message).slice(0, 100)}`);
   }
 }
 rmSync(TMP, { recursive: true, force: true });
-console.log(`\n${done.length}/${LIST.length} models -> public/models/  [${done.join(', ')}]`);
+
+// Emit paste-ready snippets.
+const manifest = ok.map(([t]) => `  ${t}: { url: U('${t}') },`).join('\n');
+const catalog = ok.map(([t, , name, cat, w, d, h, shape, color]) =>
+  `  { type: '${t}', pro: true, name: '${name}', category: '${cat}', width: ${w}, depth: ${d}, height: ${h}, color: '${color}', shape: '${shape}', icon: '🪑' },`).join('\n');
+writeFileSync(join(ROOT, 'scripts', 'models-snippets.txt'), `MANIFEST:\n${manifest}\n\nCATALOG:\n${catalog}\n`);
+console.log(`\n${ok.length}/${LIST.length} models ok. Snippets -> scripts/models-snippets.txt`);
