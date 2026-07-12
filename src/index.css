@@ -2994,6 +2994,21 @@ button.brand:hover .brand-name {
     bottom: calc(72px + env(safe-area-inset-bottom));
     transform: translateX(-50%);
     flex-direction: row;
+    /* Never let the dock run past the screen edges. */
+    max-width: calc(100vw - 16px);
+  }
+  /* Icon-only on phones: labels under 7 tools make the row overflow and clip
+     at the edges. Compact square buttons keep it centred and fully on-screen
+     (the tour + standard icons cover discoverability). */
+  .tool-dock .dock-label {
+    display: none;
+  }
+  .tool-dock .dock-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    grid-auto-flow: initial;
+    flex: none;
   }
   /* Phones enter furniture mode via the Objects tab instead. */
   .dock-btn.furniture-toggle {
