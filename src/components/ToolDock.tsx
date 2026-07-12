@@ -1,26 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { MousePointer2, PenTool, Square, DoorOpen, Eraser, Hand, Ruler, Sofa } from 'lucide-react';
+import { DoorOpen, Sofa } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
-import { FURNITURE_CATALOG } from '../data/furnitureCatalog';
+import { TOOLS, OPENINGS } from '../data/tools';
 import { tapLight } from '../lib/haptics';
 import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
-import type { ToolMode } from '../types';
-
-const TOOLS: { id: ToolMode; icon: typeof MousePointer2; label: string }[] = [
-  { id: 'select', icon: MousePointer2, label: 'Select & move' },
-  { id: 'wall', icon: PenTool, label: 'Draw walls' },
-  { id: 'room', icon: Square, label: 'Draw room' },
-  { id: 'measure', icon: Ruler, label: 'Measure distance' },
-  { id: 'erase', icon: Eraser, label: 'Erase' },
-  { id: 'pan', icon: Hand, label: 'Pan' },
-];
-
-// Doors, windows and openings are placed like furniture but belong to the
-// build flow — so they live in a dedicated dock flyout, not the catalog panel.
-const OPENINGS = FURNITURE_CATALOG.filter((e) => e.category === 'Openings');
 
 export default function ToolDock() {
   const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign();

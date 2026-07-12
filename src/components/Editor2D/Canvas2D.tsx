@@ -311,7 +311,8 @@ export default function Canvas2D() {
    * and there's no plan to trace over.
    */
   const applySnaps = (p: Point): Point => {
-    const radius = 14 / zoom;
+    // Wider catch radius on touch so a fingertip reliably grabs endpoints/guides.
+    const radius = (IS_COARSE ? 22 : 14) / zoom;
     if (tool === 'wall' || tool === 'room') {
       const prev = draft.length > 0 ? draft[draft.length - 1] : null;
       const els = buildSnapElements({ walls, draft, prev, radius, guides: true });
@@ -398,7 +399,7 @@ export default function Canvas2D() {
     if (tool === 'wall') {
       setDraft((d) => [...d, snapped]);
     } else if (tool === 'room') {
-      if (draft.length >= 3 && dist(snapped, draft[0]) < 25 / zoom) {
+      if (draft.length >= 3 && dist(snapped, draft[0]) < (IS_COARSE ? 38 : 25) / zoom) {
         s.addRoom(draft);
         setDraft([]);
       } else {
@@ -879,6 +880,9 @@ export default function Canvas2D() {
         ref={stageRef}
         width={size.w}
         height={size.h}
+        // Require deliberate movement before any node drag starts, so a tap or
+        // small finger jitter selects without nudging furniture/walls/corners.
+        dragDistance={IS_COARSE ? 8 : 3}
         onWheel={onWheel}
         onMouseDown={onMouseDown}
         onMouseMove={onStageMouseMove}
@@ -1292,7 +1296,10 @@ export default function Canvas2D() {
                   x={position.x}
                   y={position.y}
                   rotation={rotation}
-                  draggable={tool === 'select'}
+                  // On touch an item must be selected before it can be dragged —
+                  // the first tap only selects (brushing a stray item can't move
+                  // it), a second drag moves it. Mouse keeps one-gesture drag.
+                  draggable={tool === 'select' && (!IS_COARSE || sel || selectedIds.includes(f.id))}
                   onMouseDown={(e) => {
                     if (tool !== 'select') return;
                     e.cancelBubble = true; // don't let the stage re-select
@@ -1802,7 +1809,8 @@ function FurnitureHandles({
   onCommit: () => void;
 }) {
   const C = canvasColors(useTheme((t) => t.theme));
-  const hr = 7 / zoom; // corner handle radius (cm)
+  const hr = (IS_COARSE ? 11 : 7) / zoom; // corner handle radius (cm) — bigger on touch
+  const grab = (IS_COARSE ? 22 : 0) / zoom; // extra invisible hit area for fingertips
   const { width, depth, position } = box;
   const corners: Point[] = [
     { x: -width / 2, y: -depth / 2 },
@@ -1843,6 +1851,7 @@ function FurnitureHandles({
         x={rotPos.x}
         y={rotPos.y}
         radius={hr}
+        hitStrokeWidth={grab}
         fill={C.handleFill}
         stroke={C.handleStroke}
         strokeWidth={2 / zoom}
@@ -1881,6 +1890,7 @@ function FurnitureHandles({
           x={c.x}
           y={c.y}
           radius={hr}
+          hitStrokeWidth={grab}
           fill={C.handleFill}
           stroke={C.handleStroke}
           strokeWidth={2 / zoom}

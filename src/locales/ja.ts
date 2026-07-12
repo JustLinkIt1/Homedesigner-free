@@ -295,4 +295,10 @@ export const JA: Record<string, string> = {
   'Plan exported as PDF': 'プランをPDFで書き出しました',
   'Project duplicated': 'プロジェクトを複製しました',
   'Project deleted': 'プロジェクトを削除しました',
+
+  /* ---------- Mobile build/view (v1.0.32) ---------- */
+  Build: '作成',
+  View: '表示',
+  'Tap points, then finish': '点をタップして完了',
+  'Tap the first point to close, or finish': '最初の点をタップして閉じる、または完了',
 };

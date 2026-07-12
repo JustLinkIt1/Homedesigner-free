@@ -15,9 +15,11 @@ import {
   Lightbulb,
   Sun,
   Moon,
+  PenTool,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
 import ToolDock from './components/ToolDock';
+import BuildSheet from './components/BuildSheet';
 import CatalogSidebar from './components/CatalogSidebar';
 import PropertiesPanel from './components/PropertiesPanel';
 import Canvas2D from './components/Editor2D/Canvas2D';
@@ -72,7 +74,9 @@ export default function App() {
   const renderMenuRef = useRef<HTMLDivElement>(null);
   const [lightingOpen, setLightingOpen] = useState(false);
   const lightingRef = useRef<HTMLDivElement>(null);
-  const [drawer, setDrawer] = useState<null | 'catalog' | 'props'>(null);
+  const [viewOpen, setViewOpen] = useState(false); // phone "View" popover (dollhouse/walk/lighting)
+  const viewRef = useRef<HTMLDivElement>(null);
+  const [drawer, setDrawer] = useState<null | 'catalog' | 'props' | 'build'>(null);
   // Projects home first — the editor opens a specific project.
   const [screen, setScreen] = useState<'projects' | 'editor'>('projects');
   const drawing = useDraw((s) => s.active);
@@ -299,6 +303,16 @@ export default function App() {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [lightingOpen]);
 
+  // Close the phone "View" popover on any outside click.
+  useEffect(() => {
+    if (!viewOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (viewRef.current && !viewRef.current.contains(e.target as Node)) setViewOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [viewOpen]);
+
   const handleRender = async (scale = renderScale) => {
     if (!sceneCapture.current) return;
     setRenderScale(scale); // remember the last-used quality
@@ -411,18 +425,24 @@ export default function App() {
           )}
           {view === '2d' && drawing && (
             <div className="draw-affordance">
-              <span>{tool === 'room' ? t('Click the first point or') : t('Double-click or')} {t('press Enter to finish')}</span>
+              <span>
+                {coarsePointer
+                  ? tool === 'room'
+                    ? t('Tap the first point to close, or finish')
+                    : t('Tap points, then finish')
+                  : `${tool === 'room' ? t('Click the first point or') : t('Double-click or')} ${t('press Enter to finish')}`}
+              </span>
               <button className="finish-btn" onClick={() => drawBridge.finish?.()}>
                 ✓ {t('Finish')}
               </button>
-              <button className="cancel-btn" onClick={() => drawBridge.cancel?.()} aria-label="Cancel drawing">
-                Esc
+              <button className="cancel-btn" onClick={() => drawBridge.cancel?.()} aria-label={coarsePointer ? t('Cancel') : 'Cancel drawing'}>
+                {coarsePointer ? '✕' : 'Esc'}
               </button>
             </div>
           )}
 
           {view === '2d' && (
-            <div className="hud">
+            <div className="hud hud-2d">
               <div className="pill">
                 <button onClick={() => setZoom(zoom / 1.2)} title="Zoom out"><Minus className="icon" style={{ width: 16, height: 16 }} /></button>
                 <span className="val">{Math.round(zoom * 100)}%</span>
@@ -430,13 +450,13 @@ export default function App() {
                 <button onClick={() => useDesign.getState().requestFit()} title="Fit to view"><Maximize2 className="icon" style={{ width: 15, height: 15 }} /></button>
               </div>
               <div className="pill">
-                <label className="toggle">
+                <label className="toggle" title={t('Grid')}>
                   <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
-                  <Grid3x3 className="icon" style={{ width: 15, height: 15 }} /> {t('Grid')}
+                  <Grid3x3 className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Grid')}</span>
                 </label>
-                <label className="toggle">
+                <label className="toggle" title={t('Dimensions')}>
                   <input type="checkbox" checked={showDimensions} onChange={(e) => setShowDimensions(e.target.checked)} />
-                  <Ruler className="icon" style={{ width: 15, height: 15 }} /> {t('Dimensions')}
+                  <Ruler className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Dimensions')}</span>
                 </label>
               </div>
               <div className="pill units-pill" role="group" aria-label="Display units">
@@ -462,7 +482,11 @@ export default function App() {
 
           {view === '3d' && !walkMode && isWebGLAvailable() && (
             <>
-              <div className="hud">
+              <div className="hud hud-3d">
+                {/* Desktop: Dollhouse/Walk + Lighting shown inline. On phones
+                    these fold into the single "View" popover below so the HUD
+                    is one compact pill that can't run off the screen edge. */}
+                <div className="hud-inline">
                 <div className="pill">
                   <label className="toggle">
                     <input type="checkbox" checked={dollhouse} onChange={(e) => setDollhouse(e.target.checked)} />
@@ -492,6 +516,61 @@ export default function App() {
                   </button>
                   {lightingOpen && (
                     <div className="export-menu lighting-menu" role="menu">
+                      <button
+                        className={`toggle ${lightsOn ? 'on' : ''}`}
+                        onClick={() => setLightsOn(!lightsOn)}
+                      >
+                        <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> {t('Lights')}
+                      </button>
+                      <label className="sun-slider" title={t('Time of day')}>
+                        {sunTime < 6 || sunTime >= 20 ? (
+                          <Moon className="icon" style={{ width: 15, height: 15 }} />
+                        ) : (
+                          <Sun className="icon" style={{ width: 15, height: 15 }} />
+                        )}
+                        <input
+                          type="range"
+                          min={0}
+                          max={24}
+                          step={0.5}
+                          value={sunTime}
+                          onChange={(e) => setSunTime(Number(e.target.value))}
+                          aria-label={t('Time of day')}
+                        />
+                        <span className="sun-time">{`${String(Math.floor(sunTime)).padStart(2, '0')}:${sunTime % 1 ? '30' : '00'}`}</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+                </div>
+
+                {/* Phones: one grouped "View" pill folds Dollhouse + Walk +
+                    Lighting into a single popover so the 3D HUD is one compact
+                    control that fits beside the Edit tab (was clipping before). */}
+                <div className="pill view-pill export-wrap" ref={viewRef}>
+                  <button
+                    className="toggle"
+                    aria-haspopup="menu"
+                    aria-expanded={viewOpen}
+                    onClick={() => setViewOpen((o) => !o)}
+                    title={t('View')}
+                  >
+                    <House className="icon" style={{ width: 15, height: 15 }} /> {t('View')}
+                    <ChevronDown className="icon caret" style={{ width: 14, height: 14 }} />
+                  </button>
+                  {viewOpen && (
+                    <div className="export-menu view-menu" role="menu">
+                      <label className="toggle">
+                        <input type="checkbox" checked={dollhouse} onChange={(e) => setDollhouse(e.target.checked)} />
+                        <House className="icon" style={{ width: 15, height: 15 }} /> {t('Dollhouse')}
+                      </label>
+                      <button
+                        className="toggle"
+                        onClick={() => { setViewOpen(false); setWalkMode(true); }}
+                      >
+                        <Footprints className="icon" style={{ width: 16, height: 16 }} /> {t('Walk through')}
+                      </button>
+                      <div className="view-menu-sep" />
                       <button
                         className={`toggle ${lightsOn ? 'on' : ''}`}
                         onClick={() => setLightsOn(!lightsOn)}
@@ -572,6 +651,7 @@ export default function App() {
           {!walkMode && <FloorSwitcher />}
         </div>
         <PropertiesPanel open={drawer === 'props'} />
+        {view === '2d' && <BuildSheet open={drawer === 'build'} onClose={() => setDrawer(null)} />}
 
         {drawer && (
           <div
@@ -586,6 +666,14 @@ export default function App() {
           />
         )}
         <div className="mobile-tabs">
+          {view === '2d' && (
+            <button
+              className={drawer === 'build' ? 'active' : ''}
+              onClick={() => setDrawer(drawer === 'build' ? null : 'build')}
+            >
+              <PenTool className="icon" /> {t('Build')}
+            </button>
+          )}
           {view === '2d' && (
             <button
               className={drawer === 'catalog' ? 'active' : ''}

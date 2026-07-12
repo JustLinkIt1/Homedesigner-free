@@ -295,4 +295,10 @@ export const TR: Record<string, string> = {
   'Plan exported as PDF': 'Plan PDF olarak dışa aktarıldı',
   'Project duplicated': 'Proje çoğaltıldı',
   'Project deleted': 'Proje silindi',
+
+  /* ---------- Mobile build/view (v1.0.32) ---------- */
+  Build: 'İnşa',
+  View: 'Görünüm',
+  'Tap points, then finish': 'Noktalara dokunun, sonra bitirin',
+  'Tap the first point to close, or finish': 'Kapatmak için ilk noktaya dokunun veya bitirin',
 };

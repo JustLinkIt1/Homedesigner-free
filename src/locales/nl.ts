@@ -295,4 +295,10 @@ export const NL: Record<string, string> = {
   'Plan exported as PDF': 'Plan geëxporteerd als PDF',
   'Project duplicated': 'Project gedupliceerd',
   'Project deleted': 'Project verwijderd',
+
+  /* ---------- Mobile build/view (v1.0.32) ---------- */
+  Build: 'Bouwen',
+  View: 'Weergave',
+  'Tap points, then finish': 'Tik punten aan en voltooi',
+  'Tap the first point to close, or finish': 'Tik het eerste punt aan om te sluiten, of voltooi',
 };

@@ -295,4 +295,10 @@ export const ZH: Record<string, string> = {
   'Plan exported as PDF': '图纸已导出为 PDF',
   'Project duplicated': '项目已复制',
   'Project deleted': '项目已删除',
+
+  /* ---------- Mobile build/view (v1.0.32) ---------- */
+  Build: '建造',
+  View: '视图',
+  'Tap points, then finish': '点按各点，然后完成',
+  'Tap the first point to close, or finish': '点按第一个点闭合，或完成',
 };

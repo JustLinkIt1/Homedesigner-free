@@ -1593,6 +1593,19 @@ button.brand:hover .brand-name {
 .cancel-btn:hover {
   background: var(--surface-3);
 }
+@media (max-width: 880px) {
+  /* Clear the fixed toolbar and give the finish/cancel comfortable tap targets. */
+  .draw-affordance {
+    top: calc(60px + env(safe-area-inset-top));
+    max-width: calc(100vw - 24px);
+    white-space: normal;
+  }
+  .finish-btn,
+  .cancel-btn {
+    height: 44px;
+    min-width: 44px;
+  }
+}
 
 /* ---------- Render actions (3D) ---------- */
 .render-actions {
@@ -2968,6 +2981,126 @@ button.brand:hover .brand-name {
   display: none;
 }
 
+/* ---------- Build sheet (phone grouped drawing tools) ---------- */
+/* A bottom sheet that holds every build tool, opened from the Build tab —
+   Planner-style grouping so the canvas isn't cluttered by a floating dock. */
+.build-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 65;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  box-shadow: var(--shadow-lg);
+  padding: 8px 14px calc(16px + env(safe-area-inset-bottom));
+  transform: translateY(110%);
+  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.build-sheet.open {
+  transform: translateY(0);
+}
+.bs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px 8px;
+}
+.bs-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+.bs-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: var(--text-2);
+}
+.bs-close:hover {
+  background: var(--surface-2);
+}
+.bs-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  margin: 12px 2px 6px;
+}
+.bs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.bs-tool {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 66px;
+  padding: 10px 4px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.15;
+}
+.bs-tool .icon {
+  width: 22px;
+  height: 22px;
+  color: var(--text-2);
+}
+.bs-tool.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.bs-tool.active .icon {
+  color: #fff;
+}
+.bs-tool.locked {
+  opacity: 0.85;
+}
+.bs-lock {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--brand);
+  background: var(--surface);
+  border-radius: 4px;
+  padding: 1px 3px;
+}
+/* 3D "View" grouped popover — phones only. Desktop keeps the inline pills. */
+.hud-inline {
+  display: contents;
+}
+.view-pill {
+  display: none;
+}
+.view-menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 5px 2px;
+}
+
+@media (min-width: 881px) {
+  /* No Build tab on desktop — the left tool dock plays this role. */
+  .build-sheet {
+    display: none;
+  }
+}
+
 @media (max-width: 880px) {
   .toolbar {
     gap: 2px;
@@ -3067,59 +3200,63 @@ button.brand:hover .brand-name {
   .rotate3d-pill {
     bottom: calc(120px + env(safe-area-inset-bottom));
   }
-  /* In 3D only the Edit tab shows bottom-right, so the HUD strip can run
-     wider before it has to stop. */
-  .body:has(.mobile-tabs button:only-child) .hud {
-    right: 116px;
-  }
+  /* Phones use the grouped Build sheet (opened from the Build tab) instead of a
+     floating dock — a flat 7-icon row overflowed the screen edge. */
   .tool-dock {
-    left: 50%;
-    top: auto;
-    bottom: calc(72px + env(safe-area-inset-bottom));
-    transform: translateX(-50%);
-    flex-direction: row;
-    /* Never let the dock run past the screen edges. */
-    max-width: calc(100vw - 16px);
-  }
-  /* Icon-only on phones: labels under 7 tools make the row overflow and clip
-     at the edges. Compact square buttons keep it centred and fully on-screen
-     (the tour + standard icons cover discoverability). */
-  .tool-dock .dock-label {
     display: none;
   }
-  .tool-dock .dock-btn {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    grid-auto-flow: initial;
-    flex: none;
-  }
-  /* Phones enter furniture mode via the Objects tab instead. */
-  .dock-btn.furniture-toggle {
-    display: none;
-  }
-  .dock-btn[data-tip]:hover::after {
-    display: none;
-  }
-  /* Phone chrome layout — one control per screen corner, nothing stacked:
-       top-left    floor switcher      top-right    render actions (3D)
-       bottom-mid  tool dock           bottom-right Objects/Edit tabs
-       bottom-left HUD pills as a horizontal scroll strip ending at the tabs */
-  .hud {
+  /* Phone chrome layout — nothing crammed into one row:
+       top-left    floor switcher        top-right   render actions (3D)
+       bottom      Build/Objects/Edit tab cluster (right)
+       above it    the 2D HUD chips as a full-width scroll row (freed dock row) */
+  /* 2D HUD (zoom / grid / dimensions / units) sits on its own full-width row
+     just above the tab bar, so it never collides with the tabs. */
+  .hud-2d {
     left: 12px;
-    right: 216px; /* keep clear of the Objects/Edit tabs */
+    right: 12px;
     transform: none;
-    bottom: calc(16px + env(safe-area-inset-bottom));
+    bottom: calc(72px + env(safe-area-inset-bottom));
     justify-content: flex-start;
     overflow-x: auto;
     scrollbar-width: none;
     padding: 2px; /* room for pill shadows inside the scroll clip */
   }
-  .hud::-webkit-scrollbar {
+  .hud-2d::-webkit-scrollbar {
     display: none;
+  }
+  /* Icon-only Grid/Dimensions toggles on phones so the HUD row fits without
+     scrolling (labels are covered by the tour + the checkbox state). */
+  .hud-2d .hud-txt {
+    display: none;
+  }
+  /* 3D HUD is a single compact "View" pill bottom-left, clearing the Edit tab. */
+  .hud-3d {
+    left: 12px;
+    right: 116px;
+    transform: none;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    justify-content: flex-start;
+    padding: 2px;
   }
   .hud .pill {
     flex: none;
+  }
+  /* Phones: hide the inline 3D pills, show the grouped View pill instead. */
+  .hud-inline {
+    display: none;
+  }
+  .view-pill {
+    display: flex;
+  }
+  /* The View popover breaks out as a fixed panel above the HUD row rather than
+     being clipped by the (overflow) HUD strip. */
+  .view-menu {
+    position: fixed;
+    top: auto;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    left: 12px;
+    right: auto;
+    z-index: 65;
   }
   .floor-switcher {
     top: 12px;
@@ -3166,22 +3303,26 @@ button.brand:hover .brand-name {
     display: flex;
     position: fixed;
     bottom: calc(16px + env(safe-area-inset-bottom));
-    right: 16px;
+    right: 12px;
+    left: 12px;
+    justify-content: flex-end;
     gap: 8px;
     z-index: 70;
   }
   .mobile-tabs button {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    justify-content: center;
+    gap: 6px;
     height: 44px;
-    padding: 0 18px;
+    padding: 0 14px;
     border-radius: 999px;
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text);
     font-weight: 700;
-    font-size: 13px;
+    font-size: 12.5px;
+    white-space: nowrap;
     box-shadow: var(--shadow-md);
   }
   .mobile-tabs button.active {

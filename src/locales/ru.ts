@@ -295,4 +295,10 @@ export const RU: Record<string, string> = {
   'Plan exported as PDF': 'План экспортирован в PDF',
   'Project duplicated': 'Проект дублирован',
   'Project deleted': 'Проект удалён',
+
+  /* ---------- Mobile build/view (v1.0.32) ---------- */
+  Build: 'Строить',
+  View: 'Вид',
+  'Tap points, then finish': 'Ставьте точки, затем завершите',
+  'Tap the first point to close, or finish': 'Коснитесь первой точки, чтобы замкнуть, или завершите',
 };

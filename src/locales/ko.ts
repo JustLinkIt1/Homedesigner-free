@@ -295,4 +295,10 @@ export const KO: Record<string, string> = {
   'Plan exported as PDF': '도면을 PDF로 내보냈습니다',
   'Project duplicated': '프로젝트가 복제되었습니다',
   'Project deleted': '프로젝트가 삭제되었습니다',
+
+  /* ---------- Mobile build/view (v1.0.32) ---------- */
+  Build: '만들기',
+  View: '보기',
+  'Tap points, then finish': '점을 탭한 후 완료',
+  'Tap the first point to close, or finish': '첫 점을 탭하여 닫거나 완료',
 };

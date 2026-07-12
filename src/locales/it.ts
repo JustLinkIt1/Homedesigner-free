@@ -295,4 +295,10 @@ export const IT: Record<string, string> = {
   'Plan exported as PDF': 'Pianta esportata come PDF',
   'Project duplicated': 'Progetto duplicato',
   'Project deleted': 'Progetto eliminato',
+
+  /* ---------- Mobile build/view (v1.0.32) ---------- */
+  Build: 'Costruisci',
+  View: 'Vista',
+  'Tap points, then finish': 'Tocca i punti, poi termina',
+  'Tap the first point to close, or finish': 'Tocca il primo punto per chiudere, o termina',
 };
