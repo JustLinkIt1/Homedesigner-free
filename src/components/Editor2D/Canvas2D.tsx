@@ -97,6 +97,11 @@ export default function Canvas2D() {
   const [furnEdit, setFurnEdit] = useState<
     { id: string; position: Point; rotation: number; width: number; depth: number } | null
   >(null);
+  // Body-dragging a piece of furniture: the id is set once (to hide its handles)
+  // and the node is moved by Konva alone, WITHOUT per-frame React re-renders —
+  // re-rendering the whole scene every drag frame made moving objects choppy on
+  // mid-range phones. The final position is committed on drag end.
+  const [draggingFurnId, setDraggingFurnId] = useState<string | null>(null);
   const [openEdit, setOpenEdit] = useState<{ id: string; offset: number } | null>(null);
 
   // Measure container.
@@ -531,7 +536,7 @@ export default function Canvas2D() {
       if (draggingFurn.current) {
         draggingFurn.current.stopDrag();
         draggingFurn.current = null;
-        setFurnEdit(null);
+        setDraggingFurnId(null);
       }
     } else if (t.length === 1) {
       touchMoved.current = false;
@@ -1296,19 +1301,21 @@ export default function Canvas2D() {
                   }}
                   onDragStart={(e) => {
                     draggingFurn.current = e.target;
-                    setFurnEdit({ id: f.id, position: f.position, rotation: f.rotation, width: f.width, depth: f.depth });
+                    // One render to hide this item's handles; after that the drag
+                    // is pure Konva (no React) until release — this is the fix
+                    // for choppy object-moving on slower phones.
+                    setDraggingFurnId(f.id);
                   }}
                   onDragMove={(e) => {
-                    const np = snapToGrid({ x: e.target.x(), y: e.target.y() }, showGrid ? gridSize / 2 : 1);
-                    e.target.position(np);
-                    setFurnEdit({ id: f.id, position: np, rotation: f.rotation, width: f.width, depth: f.depth });
+                    // Snap the node in place; deliberately no setState here.
+                    e.target.position(snapToGrid({ x: e.target.x(), y: e.target.y() }, showGrid ? gridSize / 2 : 1));
                   }}
                   onDragEnd={(e) => {
                     draggingFurn.current = null;
-                    // A pinch cancelled this drag — discard it (furnEdit already
-                    // cleared) so the object stays put.
+                    setDraggingFurnId(null);
+                    // A pinch cancelled this drag — discard it so the object stays put.
                     if (pinch.current) {
-                      setFurnEdit(null);
+                      e.target.position({ x: f.position.x, y: f.position.y });
                       return;
                     }
                     const np = { x: e.target.x(), y: e.target.y() };
@@ -1317,7 +1324,6 @@ export default function Canvas2D() {
                     } else {
                       s.updateFurniture(f.id, { position: np });
                     }
-                    setFurnEdit(null);
                   }}
                 >
                   <Rect
@@ -1338,7 +1344,7 @@ export default function Canvas2D() {
                     color={sel ? C.selection : C.symbolInk}
                   />
                 </Group>
-                {editing && (
+                {editing && draggingFurnId !== f.id && (
                   <FurnitureHandles
                     box={{ position, width, depth }}
                     rotation={rotation}

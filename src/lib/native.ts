@@ -68,17 +68,11 @@ export async function saveText(text: string, filename: string, mime = 'applicati
  */
 export async function initNative(onBack: () => boolean): Promise<void> {
   if (!isNative()) return;
-  try {
-    const { StatusBar, Style } = await import('@capacitor/status-bar');
-    // Style.Light = dark icons for our light UI (Style.Dark would render
-    // white icons on the near-white toolbar — invisible).
-    await StatusBar.setStyle({ style: Style.Light });
-    // Pre-Android-15 devices honour these; on 15+ they're no-ops and the
-    // edge-to-edge safe-area CSS takes over instead.
-    await StatusBar.setBackgroundColor({ color: '#f6f5f2' });
-  } catch {
-    /* status bar unavailable on some devices */
-  }
+  // Status-bar style/background are owned entirely by src/lib/theme.ts, which
+  // sets them from the RESOLVED theme (dark icons on light chrome, light icons
+  // on dark) at startup and on every theme change. Setting Style.Light here
+  // unconditionally previously overrode that and left the icons invisible on
+  // the dark background in dark mode — so we intentionally don't touch it.
   try {
     const { SplashScreen } = await import('@capacitor/splash-screen');
     await SplashScreen.hide();
