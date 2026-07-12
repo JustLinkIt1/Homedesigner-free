@@ -15,34 +15,38 @@ import { applyWatermark } from '../../lib/watermark';
 import { slugify } from '../../lib/appInfo';
 import { sunModel } from '../../lib/sun';
 import { FLOOR_MATERIALS } from '../../data/furnitureCatalog';
+import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl } from '../../data/materials';
 
 export { sunModel };
 
-/** Interior paint palette for walls (first entry is the default plaster). */
-const WALL_PAINTS = [
-  '#ece6db', '#ffffff', '#f5efe3', '#e9d8c3', '#dfe5dc', '#cfdce2',
-  '#d7c4b7', '#c9cdd4', '#b9c7b3', '#e6c9c9', '#f0d9a8', '#4a5568',
-];
-
 /**
- * Planner-style decorate popover: tapping a wall or floor in 3D opens a tiny
- * palette right at the tap point; picking a swatch repaints via the normal
- * store commits (so paint jobs are undoable from the 2D editor).
+ * Planner-style decorate popover: tapping a wall or floor in 3D opens a palette
+ * right at the tap point, grouped into material families (Paint/Basic + Wood,
+ * Tile, Marble, …). Picking a swatch repaints via the normal store commits (so
+ * paint jobs are undoable from the 2D editor).
  */
 function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }) {
-  const current = useDesign((st) =>
-    tap.kind === 'wall'
-      ? st.walls.find((w) => w.id === tap.id)?.color
-      : st.rooms.find((r) => r.id === tap.id)?.floorMaterial,
-  );
+  const wall = useDesign((st) => (tap.kind === 'wall' ? st.walls.find((w) => w.id === tap.id) : undefined));
+  const room = useDesign((st) => (tap.kind === 'room' ? st.rooms.find((r) => r.id === tap.id) : undefined));
+  const exists = tap.kind === 'wall' ? !!wall : !!room;
   // The tapped element may not exist anymore (undo, floor switch).
   useEffect(() => {
-    if (current === undefined) onClose();
-  }, [current, onClose]);
-  if (current === undefined) return null;
+    if (!exists) onClose();
+  }, [exists, onClose]);
+  if (!exists) return null;
 
-  const left = Math.min(Math.max(tap.x, 120), window.innerWidth - 120);
+  const left = Math.min(Math.max(tap.x, 130), window.innerWidth - 130);
   const top = Math.max(86, tap.y - 14);
+  const st = useDesign.getState();
+  const items = tap.kind === 'wall' ? wallMaterials() : floorMaterials();
+  const activeSrc = tap.kind === 'wall' ? wall?.texture?.src : room?.texture?.src;
+  const pickMaterial = (m: (typeof items)[number]) => {
+    const src = materialUrl(m.id);
+    const texture = { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness };
+    if (tap.kind === 'wall') st.updateWall(tap.id, { texture });
+    else st.updateRoom(tap.id, { floorMaterial: '', color: m.color, texture });
+  };
+
   return (
     <div className="paint-pop" style={{ left, top }}>
       <div className="pp-head">
@@ -52,26 +56,52 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
           <X className="icon" />
         </button>
       </div>
-      <div className="pp-swatches">
-        {tap.kind === 'wall'
-          ? WALL_PAINTS.map((c) => (
-              <button
-                key={c}
-                className={`pp-swatch ${current === c ? 'on' : ''}`}
-                style={{ background: c }}
-                title={c}
-                onClick={() => useDesign.getState().updateWall(tap.id, { color: c })}
-              />
-            ))
-          : FLOOR_MATERIALS.map((m) => (
-              <button
-                key={m.id}
-                className={`pp-swatch ${current === m.id ? 'on' : ''}`}
-                style={{ background: m.color }}
-                title={m.name}
-                onClick={() => useDesign.getState().updateRoom(tap.id, { floorMaterial: m.id })}
-              />
-            ))}
+      <div className="pp-scroll">
+        <div className="mat-group-title">{tap.kind === 'wall' ? 'Paint' : 'Basic'}</div>
+        <div className="pp-swatches">
+          {tap.kind === 'wall'
+            ? WALL_PAINTS.map((c) => (
+                <button
+                  key={c}
+                  className={`pp-swatch ${!wall?.texture && wall?.color === c ? 'on' : ''}`}
+                  style={{ background: c }}
+                  title={c}
+                  onClick={() => st.updateWall(tap.id, { color: c, texture: undefined })}
+                />
+              ))
+            : FLOOR_MATERIALS.map((m) => (
+                <button
+                  key={m.id}
+                  className={`pp-swatch ${!room?.texture && room?.floorMaterial === m.id ? 'on' : ''}`}
+                  style={{ background: m.color }}
+                  title={m.name}
+                  onClick={() => st.updateRoom(tap.id, { floorMaterial: m.id, texture: undefined })}
+                />
+              ))}
+        </div>
+        {MATERIAL_GROUPS.map((g) => {
+          const group = items.filter((m) => m.group === g);
+          if (!group.length) return null;
+          return (
+            <div key={g}>
+              <div className="mat-group-title">{g}</div>
+              <div className="pp-swatches">
+                {group.map((m) => {
+                  const src = materialUrl(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      className={`pp-swatch ${activeSrc === src ? 'on' : ''}`}
+                      style={{ backgroundImage: `url(${src})`, backgroundSize: 'cover' }}
+                      title={m.name}
+                      onClick={() => pickMaterial(m)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

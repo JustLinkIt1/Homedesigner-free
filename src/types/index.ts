@@ -13,6 +13,10 @@ export interface Point {
 export interface CustomTexture {
   src: string;
   scaleCm: number;
+  /** PBR overrides for built-in material-library textures (user uploads leave
+   *  these undefined and fall back to sensible per-surface defaults). */
+  roughness?: number;
+  metalness?: number;
 }
 
 export interface Wall {

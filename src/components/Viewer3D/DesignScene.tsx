@@ -119,11 +119,13 @@ function WallMesh({
       const patternM = Math.max(0.02, wall.texture.scaleCm * M);
       tex.repeat.set(1 / patternM, 1 / patternM);
       m.map = tex;
+      m.roughness = wall.texture.roughness ?? 0.92;
+      m.metalness = wall.texture.metalness ?? 0;
     } else {
       m.color = new THREE.Color(wall.color);
     }
     return m;
-  }, [wall.color, wall.texture?.src, wall.texture?.scaleCm]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wall.color, wall.texture?.src, wall.texture?.scaleCm, wall.texture?.roughness, wall.texture?.metalness]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Outward-facing horizontal normal (points away from the building centre).
   const normal = useMemo(() => {
@@ -502,8 +504,10 @@ function FloorMesh({ room, onTap }: { room: Room; onTap?: (tap: SurfaceTap) => v
   }, [room.texture?.src, room.texture?.scaleCm]);
 
   const useCustom = !!custom;
-  const roughness = useCustom ? 0.6 : FLOOR_ROUGHNESS[kind];
-  const metalness = !useCustom && (kind === 'marble' || kind === 'tile') ? 0.08 : 0;
+  const roughness = useCustom ? room.texture?.roughness ?? 0.6 : FLOOR_ROUGHNESS[kind];
+  const metalness = useCustom
+    ? room.texture?.metalness ?? 0
+    : (kind === 'marble' || kind === 'tile' ? 0.08 : 0);
 
   return (
     <mesh

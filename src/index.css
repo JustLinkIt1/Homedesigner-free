@@ -753,6 +753,18 @@ button.brand:hover .brand-name {
   margin-bottom: 8px;
 }
 
+/* Material family sub-header (Planner-5D-style grouping in the pickers). */
+.mat-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+  margin: 14px 0 7px;
+}
+.mat-group-title:first-of-type {
+  margin-top: 4px;
+}
+
 /* Material / color swatches */
 .swatches {
   display: grid;
@@ -3398,6 +3410,24 @@ button.brand:hover .brand-name {
 .pp-swatch.on {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
+}
+/* Grouped material families scroll inside the popover. */
+.pp-scroll {
+  max-height: min(46vh, 320px);
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+.pp-scroll .mat-group-title {
+  margin: 10px 0 6px;
+}
+.pp-scroll .mat-group-title:first-child {
+  margin-top: 0;
+}
+.pp-swatch[style*='url'] {
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
 }
 
 /* ---------- Context menu ---------- */

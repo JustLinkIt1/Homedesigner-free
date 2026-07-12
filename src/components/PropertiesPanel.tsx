@@ -14,10 +14,7 @@ import { dist, polygonArea } from '../lib/geometry';
 import { formatLength, formatArea } from '../lib/units';
 import type { CustomTexture } from '../types';
 
-const WALL_PAINTS = [
-  '#f5f4f0', '#efe7d6', '#d9d2c5', '#cfd2d4', '#a7b6a0',
-  '#8fb0c2', '#384a63', '#c08461', '#cda9a3', '#41454b',
-];
+import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 
 export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   const s = useDesign();
@@ -144,6 +141,31 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 onClick={() => { for (const w of s.walls) s.updateWall(w.id, { color: wall.color, texture: undefined }); }}>
                 Apply to all walls
               </button>
+              {MATERIAL_GROUPS.map((g) => {
+                const items = wallMaterials().filter((m) => m.group === g);
+                if (!items.length) return null;
+                return (
+                  <div key={g}>
+                    <div className="mat-group-title">{g}</div>
+                    <div className="swatches">
+                      {items.map((m) => {
+                        const src = materialUrl(m.id);
+                        return (
+                          <button
+                            key={m.id}
+                            className={`swatch ${wall.texture?.src === src ? 'active' : ''}`}
+                            style={{ backgroundImage: `url(${src})` }}
+                            onClick={() => s.updateWall(wall.id, { texture: { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness } })}
+                            title={m.name}
+                          >
+                            <span className="sw-name">{m.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <TextureCard
               label="Custom paint image"
@@ -174,6 +196,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
             <StyleCard roomId={room.id} />
             <div className="prop-card">
               <div className="prop-label">Flooring</div>
+              <div className="mat-group-title">Basic</div>
               <div className="swatches">
                 {FLOOR_MATERIALS.map((m) => (
                   <button
@@ -187,6 +210,31 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                   </button>
                 ))}
               </div>
+              {MATERIAL_GROUPS.map((g) => {
+                const items = floorMaterials().filter((m) => m.group === g);
+                if (!items.length) return null;
+                return (
+                  <div key={g}>
+                    <div className="mat-group-title">{g}</div>
+                    <div className="swatches">
+                      {items.map((m) => {
+                        const src = materialUrl(m.id);
+                        return (
+                          <button
+                            key={m.id}
+                            className={`swatch ${room.texture?.src === src ? 'active' : ''}`}
+                            style={{ backgroundImage: `url(${src})` }}
+                            onClick={() => s.updateRoom(room.id, { floorMaterial: '', color: m.color, texture: { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness } })}
+                            title={m.name}
+                          >
+                            <span className="sw-name">{m.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <TextureCard
               label="Custom floor image"

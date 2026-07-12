@@ -48,4 +48,9 @@ export const CREDITS: { name: string; license: string; url: string }[] = [
     license: 'CC0 1.0',
     url: 'https://polyhaven.com/models',
   },
+  {
+    name: 'Wall & floor material textures — Poly Haven contributors',
+    license: 'CC0 1.0',
+    url: 'https://polyhaven.com/textures',
+  },
 ];
