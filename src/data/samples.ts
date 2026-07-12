@@ -386,6 +386,106 @@ function cityStudio(): MaybeFloored {
   return { walls, rooms, furniture, openings, background: null, projectName: 'City studio' };
 }
 
+/* ------------------------------------------------------------------ 4. Terraced townhouse
+   A recreation of a real narrow, slightly-tapered terraced-house ground floor:
+   front living room, a WC + staircase in the middle, a dining room, a rear
+   bedroom and a tapered tiled terrace at the back. Front (living) is at the
+   bottom (large Y); the left wall angles in so the plan narrows toward the
+   front, matching the reference drawing. */
+
+function terraceHouse(): MaybeFloored {
+  n = 0;
+  const RX = 470; // straight right wall
+  const BOT = 1560; // front (living) edge
+  const lx = (y: number) => Math.round((55 * y) / BOT); // angled left wall x at height y
+
+  const grey = '#d7d2c6';
+  // Exterior shell (thicker, grey).
+  const wLeft = wall([0, 0], [55, BOT], grey);
+  const wBottom = wall([55, BOT], [RX, BOT], grey);
+  const wRight = wall([RX, BOT], [RX, 0], grey);
+  const wTop = wall([RX, 0], [0, 0], grey);
+  wLeft.thickness = wBottom.thickness = wRight.thickness = wTop.thickness = 18;
+
+  // Interior partitions.
+  const pRear = wall([lx(440), 440], [RX, 440]); // rear rooms | dining
+  const pDine = wall([lx(820), 820], [RX, 820]); // dining | hall
+  const pLiving = wall([lx(1130), 1130], [RX, 1130]); // hall | living
+  const rearDiv = wall([240, 0], [240, 440]); // terrace | rear bedroom
+  const wcRight = wall([185, 820], [185, 1080]); // WC | hall
+  const wcBottom = wall([lx(1080), 1080], [185, 1080]);
+
+  const walls = [wLeft, wBottom, wRight, wTop, pRear, pDine, pLiving, rearDiv, wcRight, wcBottom];
+
+  const openings: Opening[] = [
+    // Front door + window on the street elevation (bottom).
+    opening(wBottom.id, 'door', at([55, BOT], [RX, BOT], 340), 95, 210, 0),
+    opening(wBottom.id, 'window', at([55, BOT], [RX, BOT], 140), 170, 140, 30),
+    // Dining window on the (angled) left wall.
+    opening(wLeft.id, 'window', at([0, 0], [55, BOT], 620), 170, 140, 90),
+    // Rear bedroom window on the back wall.
+    opening(wTop.id, 'window', at([RX, 0], [0, 0], 120), 160, 140, 90),
+    // Terrace doors from the rear bedroom (french) + open flow through the plan.
+    opening(rearDiv.id, 'door', at([240, 0], [240, 440], 230), 180, 210, 0, 'french'),
+    opening(pRear.id, 'door', at([lx(440), 440], [RX, 440], 360), 100, 210, 0, 'passage'),
+    opening(pDine.id, 'door', at([lx(820), 820], [RX, 820], 370), 110, 210, 0, 'passage'),
+    opening(pLiving.id, 'door', at([lx(1130), 1130], [RX, 1130], 360), 120, 210, 0, 'passage'),
+    // WC door off the hall.
+    opening(wcRight.id, 'door', at([185, 820], [185, 1080], 180), 75, 210, 0),
+  ];
+
+  const rooms = [
+    room('Terrace', [[0, 0], [240, 0], [240, 440], [lx(440), 440]], 'tile_grey', '#e7e9ea'),
+    room('Bedroom', rect(240, 0, RX, 440), 'carpet_beige', '#efe6d7'),
+    room('Dining Room', [[lx(440), 440], [RX, 440], [RX, 820], [lx(820), 820]], 'oak', '#f3ecdf'),
+    room('WC', [[lx(820), 820], [185, 820], [185, 1080], [lx(1080), 1080]], 'tile_white', '#eef0ea'),
+    room('Hall', [[185, 820], [RX, 820], [RX, 1130], [lx(1130), 1130], [lx(1080), 1080], [185, 1080]], 'oak', '#f0eadc'),
+    room('Living Room', [[lx(1130), 1130], [RX, 1130], [RX, BOT], [55, BOT]], 'oak', '#f6f1e5'),
+  ];
+
+  const furniture: FurnitureItem[] = [
+    // Living room (front): sofa on the right wall facing the room, two armchairs,
+    // coffee table, plant and a TV on the left wall.
+    fur('rug', 300, 1400),
+    fur('sofa', 415, 1400, 90),
+    fur('coffee_table', 300, 1400),
+    fur('tv_stand', 65, 1400, 270),
+    fur('armchair', 250, 1250, 150),
+    fur('armchair', 250, 1540, 30),
+    fur('large_plant', 95, 1200),
+    fur('ceiling_light', 290, 1360),
+    // Hall + stairs.
+    fur('stairs', 330, 980, 0),
+    fur('console', 430, 870, 0),
+    fur('ceiling_light', 330, 990),
+    // WC.
+    fur('toilet', 150, 1030, 180),
+    fur('sink', 60, 860, 0),
+    // Dining room: 6-seat table with a plant in the corner.
+    fur('dining_table', 250, 630),
+    fur('dining_chair', 175, 540, 270),
+    fur('dining_chair', 175, 630, 270),
+    fur('dining_chair', 175, 720, 270),
+    fur('dining_chair', 325, 540, 90),
+    fur('dining_chair', 325, 630, 90),
+    fur('dining_chair', 325, 720, 90),
+    fur('pendant', 250, 630),
+    fur('large_plant', 95, 500),
+    // Rear bedroom.
+    fur('bed_double', 370, 175),
+    fur('nightstand', 275, 60),
+    fur('wardrobe', 455, 340, 90),
+    fur('ceiling_light', 360, 200),
+    // Terrace (tiled, out back).
+    fur('patio_table', 120, 250),
+    fur('patio_chair', 55, 250, 270),
+    fur('patio_chair', 185, 250, 90),
+    fur('large_plant', 60, 60),
+  ];
+
+  return { walls, rooms, furniture, openings, background: null, projectName: 'Terraced townhouse' };
+}
+
 /* ------------------------------------------------------------------ registry */
 
 export interface SampleDef {
@@ -413,6 +513,12 @@ export const SAMPLES: SampleDef[] = [
     name: 'City studio',
     blurb: 'A clever compact studio with every zone in place',
     build: cityStudio,
+  },
+  {
+    id: 'terrace-house',
+    name: 'Terraced townhouse',
+    blurb: 'Narrow terrace — living, WC & stairs, dining, rear bedroom',
+    build: terraceHouse,
   },
 ];
 
