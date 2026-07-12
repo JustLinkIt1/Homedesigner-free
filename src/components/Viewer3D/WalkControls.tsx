@@ -261,7 +261,9 @@ export default function WalkControls({
       camera.getWorldDirection(forward.current);
       forward.current.y = 0;
       forward.current.normalize();
-      right.current.set(forward.current.z, 0, -forward.current.x); // right = forward × up
+      // right = forward × up  (up = +Y). The previous sign was flipped, which
+      // strafed/steered left–right the wrong way.
+      right.current.set(-forward.current.z, 0, forward.current.x);
 
       let vx = forward.current.x * mf + right.current.x * ms;
       let vz = forward.current.z * mf + right.current.z * ms;

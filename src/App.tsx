@@ -39,6 +39,7 @@ import { sceneCapture, planCapture } from './lib/renderBridge';
 import { useDraw, drawBridge, useConfirm } from './lib/ui';
 import { initNative } from './lib/native';
 import { isWebGLAvailable } from './lib/webgl';
+import { orbitZoom } from './lib/renderBridge';
 import { useI18n } from './lib/i18n';
 import * as projects from './lib/projects';
 
@@ -545,6 +546,15 @@ export default function App() {
                 <button className="render-btn photo" onClick={() => setPhotoMode(true)}>
                   <Camera className="icon" />
                   <span>{t('Photo mode')}</span>
+                </button>
+              </div>
+              {/* Zoom the orbit camera (matches the 2D plan's zoom buttons). */}
+              <div className="zoom-buttons" role="group" aria-label="Zoom">
+                <button onClick={() => orbitZoom.current?.(0.8)} aria-label="Zoom in" title="Zoom in">
+                  <Plus className="icon" />
+                </button>
+                <button onClick={() => orbitZoom.current?.(1.25)} aria-label="Zoom out" title="Zoom out">
+                  <Minus className="icon" />
                 </button>
               </div>
               <RotateControls />

@@ -1634,6 +1634,46 @@ button.brand:hover .brand-name {
 .render-btn.photo {
   background: linear-gradient(135deg, var(--violet), #6366f1);
 }
+
+/* ---------- 3D zoom buttons (right edge) ---------- */
+.zoom-buttons {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-md);
+  z-index: 8;
+}
+.zoom-buttons button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--text);
+}
+.zoom-buttons button:hover {
+  background: var(--surface-2);
+}
+.zoom-buttons .icon {
+  width: 20px;
+  height: 20px;
+}
+@media (max-width: 880px) {
+  /* Sit above the bottom control strips, clear of the render row. */
+  .zoom-buttons {
+    top: auto;
+    bottom: calc(120px + env(safe-area-inset-bottom));
+    transform: none;
+  }
+}
 .render-btn .caret {
   width: 14px;
   height: 14px;

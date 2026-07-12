@@ -504,6 +504,9 @@ export default function Canvas2D() {
   // ---- touch: tap to act, one-finger drag from empty canvas to pan,
   // two-finger pinch to zoom & pan ----
   const pinch = useRef<{ dist: number; center: Point } | null>(null);
+  // The furniture node currently being dragged (if any), so a second finger
+  // starting a pinch can cancel the drag instead of flinging the object.
+  const draggingFurn = useRef<Konva.Node | null>(null);
   const touchMoved = useRef(false);
   const touchStartPt = useRef<Point | null>(null);
   const touchPanEligible = useRef(false);
@@ -523,6 +526,13 @@ export default function Canvas2D() {
       pinch.current = twoFinger(t);
       touchMoved.current = true; // suppress tap
       cancelLongPress();
+      // If a finger had already grabbed a furniture item, a second finger means
+      // the user is pinch-zooming — cancel the drag so the object isn't moved.
+      if (draggingFurn.current) {
+        draggingFurn.current.stopDrag();
+        draggingFurn.current = null;
+        setFurnEdit(null);
+      }
     } else if (t.length === 1) {
       touchMoved.current = false;
       touchStartPt.current = { x: t[0].clientX, y: t[0].clientY };
@@ -1284,15 +1294,23 @@ export default function Canvas2D() {
                     if (e.evt.shiftKey) s.toggleSelected(f.id);
                     else if (!selectedIds.includes(f.id)) s.select({ kind: 'furniture', id: f.id });
                   }}
-                  onDragStart={() =>
-                    setFurnEdit({ id: f.id, position: f.position, rotation: f.rotation, width: f.width, depth: f.depth })
-                  }
+                  onDragStart={(e) => {
+                    draggingFurn.current = e.target;
+                    setFurnEdit({ id: f.id, position: f.position, rotation: f.rotation, width: f.width, depth: f.depth });
+                  }}
                   onDragMove={(e) => {
                     const np = snapToGrid({ x: e.target.x(), y: e.target.y() }, showGrid ? gridSize / 2 : 1);
                     e.target.position(np);
                     setFurnEdit({ id: f.id, position: np, rotation: f.rotation, width: f.width, depth: f.depth });
                   }}
                   onDragEnd={(e) => {
+                    draggingFurn.current = null;
+                    // A pinch cancelled this drag — discard it (furnEdit already
+                    // cleared) so the object stays put.
+                    if (pinch.current) {
+                      setFurnEdit(null);
+                      return;
+                    }
                     const np = { x: e.target.x(), y: e.target.y() };
                     if (multi && selectedIds.includes(f.id)) {
                       s.moveFurnitureGroup(selectedIds, np.x - f.position.x, np.y - f.position.y);

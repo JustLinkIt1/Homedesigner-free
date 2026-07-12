@@ -6,7 +6,8 @@ import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
 import WalkControls, { WalkTouchControls } from './WalkControls';
-import { sceneCapture } from '../../lib/renderBridge';
+import * as THREE from 'three';
+import { sceneCapture, orbitZoom } from '../../lib/renderBridge';
 import { saveImage } from '../../lib/native';
 import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
@@ -95,6 +96,29 @@ function StudioEnvironment({ day }: { day: number }) {
       <Lightformer intensity={0.3 * k} position={[0, -4, 0]} scale={[12, 12, 1]} rotation={[-Math.PI / 2, 0, 0]} color="#202225" />
     </Environment>
   );
+}
+
+/** Registers a dolly function so the on-screen +/- buttons can zoom the orbit
+ *  camera (moving it toward/away from the controls' target). */
+function ZoomBridge() {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as
+    | (THREE.EventDispatcher & { target: THREE.Vector3; minDistance: number; maxDistance: number; update: () => void })
+    | null;
+  useEffect(() => {
+    if (!controls) return;
+    orbitZoom.current = (factor: number) => {
+      const offset = camera.position.clone().sub(controls.target);
+      const dist = Math.max(controls.minDistance, Math.min(controls.maxDistance, offset.length() * factor));
+      offset.setLength(dist);
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    };
+    return () => {
+      orbitZoom.current = null;
+    };
+  }, [camera, controls]);
+  return null;
 }
 
 /** Registers a high-resolution PNG capture function for the toolbar button. */
@@ -252,6 +276,7 @@ export default function Scene3D() {
       </EffectComposer>
 
       <CaptureBridge composerRef={composerRef} />
+      {!walkMode && <ZoomBridge />}
 
       {walkMode ? (
         <WalkControls isTouch={IS_TOUCH} moveRef={moveRef} lookRef={lookRef} />

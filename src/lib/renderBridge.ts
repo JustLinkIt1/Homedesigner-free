@@ -11,3 +11,9 @@ export const photoCapture: { current: CaptureFn | null } = { current: null };
 // of the whole design (grid hidden), or null if there's nothing to export.
 type PlanCaptureFn = () => string | null;
 export const planCapture: { current: PlanCaptureFn | null } = { current: null };
+
+// 3D zoom: a component inside the Canvas registers a dolly function so the
+// on-screen +/- buttons can zoom the OrbitControls camera. `factor` < 1 zooms
+// in (closer to target), > 1 zooms out.
+type ZoomFn = (factor: number) => void;
+export const orbitZoom: { current: ZoomFn | null } = { current: null };
