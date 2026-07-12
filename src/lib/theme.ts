@@ -36,6 +36,13 @@ function applyChrome(theme: ResolvedTheme) {
     import('@capacitor/status-bar')
       .then(({ StatusBar, Style }) =>
         Promise.all([
+          // Keep the status bar as a solid, OS-reserved bar (NOT overlaying the
+          // web content). Without this, some devices (e.g. Samsung on Android 9)
+          // draw the WebView edge-to-edge under a translucent status bar, and
+          // since Android doesn't populate env(safe-area-inset-top) the app's
+          // top row ends up beneath the clock/battery. Reserving the bar means
+          // content always sits below it and the colour below actually shows.
+          StatusBar.setOverlaysWebView({ overlay: false }),
           // Style.Light = dark icons (for our light chrome) and vice versa.
           StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light }),
           StatusBar.setBackgroundColor({ color: CHROME[theme] }),
