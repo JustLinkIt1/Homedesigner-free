@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Component, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Sky } from '@react-three/drei';
 import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
@@ -151,9 +151,28 @@ function ZoomBridge() {
   return null;
 }
 
+/**
+ * Isolates the post-processing composer so a driver/context failure in it
+ * (seen as "Cannot read properties of null (reading 'alpha')" from
+ * EffectComposer.addPass on some GPUs, e.g. Pixel 10 Pro) degrades to the plain
+ * 3D scene instead of taking down the whole view via the app error boundary.
+ */
+class PostFXBoundary extends Component<{ onFail: () => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    this.props.onFail();
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 /** Registers a high-resolution PNG capture function for the toolbar button. */
 function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<any> }) {
-  const { gl, size } = useThree();
+  const { gl, size, scene, camera } = useThree();
   useEffect(() => {
     sceneCapture.current = async (scale = 3) => {
       const { width, height } = size;
@@ -162,14 +181,17 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
       gl.setPixelRatio(1);
       gl.setSize(width * scale, height * scale, false);
       const composer = composerRef.current;
+      // Post-processing degraded (e.g. context-loss on some GPUs) → render the
+      // scene straight to the buffer so Render still works without effects.
+      const draw = () => (composer ? composer.render() : gl.render(scene, camera));
       composer?.setSize(width * scale, height * scale);
-      composer?.render();
+      draw();
       let dataUrl = gl.domElement.toDataURL('image/png');
       // Restore the live view exactly.
       gl.setPixelRatio(dpr);
       gl.setSize(width, height, false);
       composer?.setSize(width, height);
-      composer?.render();
+      draw();
       // Free tier ships a small corner ribbon; Pro exports clean.
       if (!useProStore.getState().isPro) dataUrl = await applyWatermark(dataUrl);
       await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-render.png`);
@@ -177,7 +199,7 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
     return () => {
       sceneCapture.current = null;
     };
-  }, [gl, size, composerRef]);
+  }, [gl, size, scene, camera, composerRef]);
   return null;
 }
 
@@ -206,6 +228,8 @@ export default function Scene3D() {
 
   // Decorate popover state (tap a wall/floor to repaint it in place).
   const [paintTap, setPaintTap] = useState<SurfaceTap | null>(null);
+  // If post-processing fails on this GPU, drop it and render the plain scene.
+  const [postFailed, setPostFailed] = useState(false);
   useEffect(() => {
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
@@ -213,7 +237,8 @@ export default function Scene3D() {
   return (
     <>
     <Canvas
-      flat // composer's ToneMapping owns tone mapping; avoid double-applying
+      flat={!postFailed} // composer's ToneMapping owns tone mapping; when post is
+      // dropped, let three apply its own so the degraded scene isn't washed out
       shadows
       gl={{ antialias: true, preserveDrawingBuffer: false }}
       camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
@@ -299,11 +324,15 @@ export default function Scene3D() {
         onSurfaceTap={walkMode ? undefined : setPaintTap}
       />
 
-      <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
-        <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />
-        <Bloom mipmapBlur intensity={0.18} luminanceThreshold={1.0} />
-        <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      </EffectComposer>
+      {!postFailed && (
+        <PostFXBoundary onFail={() => setPostFailed(true)}>
+          <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
+            <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />
+            <Bloom mipmapBlur intensity={0.18} luminanceThreshold={1.0} />
+            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+          </EffectComposer>
+        </PostFXBoundary>
+      )}
 
       <CaptureBridge composerRef={composerRef} />
       {!walkMode && <ZoomBridge />}
