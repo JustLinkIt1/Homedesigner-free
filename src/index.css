@@ -456,6 +456,11 @@ button.brand:hover .brand-name {
   min-height: 0;
   position: relative;
 }
+/* Bottom-sheet affordances — mobile only (shown in the max-width media query). */
+.sheet-grab,
+.sheet-close {
+  display: none;
+}
 .sidebar {
   width: 280px;
   flex: none;
@@ -3307,6 +3312,47 @@ button.brand:hover .brand-name {
   }
   .sidebar.open {
     transform: translateX(0);
+  }
+  /* Objects catalog: a partial-height bottom sheet so the plan stays visible
+     (and tappable) above it while placing furniture — Planner-5D style. */
+  .sidebar.catalog {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    height: 58vh;
+    z-index: 75; /* above the Build/Objects/Edit tabs — reads as one sheet */
+    transform: translateY(101%);
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: 18px 18px 0 0;
+    padding-top: 0;
+  }
+  .sidebar.catalog.open {
+    transform: translateY(0);
+  }
+  .sheet-grab {
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border);
+    margin: 8px auto 2px;
+    flex: none;
+  }
+  .sheet-close {
+    margin-left: auto;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    color: var(--text-2);
+  }
+  .sheet-close:hover {
+    background: var(--surface-2);
   }
   .drawer-backdrop {
     display: block;

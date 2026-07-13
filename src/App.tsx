@@ -376,6 +376,7 @@ export default function App() {
             // (door/window) is the armed type: those place from the build-mode
             // dock flyout and shouldn't reflow the canvas with the catalog.
             docked={tool === 'furniture' && !CATALOG_BY_TYPE[pendingFurnitureType ?? '']?.opening}
+            onClose={() => setDrawer(null)}
           />
         )}
         <div className="stage-wrap">
@@ -663,7 +664,10 @@ export default function App() {
         <PropertiesPanel open={drawer === 'props'} />
         {view === '2d' && <BuildSheet open={drawer === 'build'} onClose={() => setDrawer(null)} />}
 
-        {drawer && (
+        {/* The Objects catalog opens as a partial-height bottom sheet, so no
+            backdrop — the plan stays visible above it and tappable for placing
+            furniture (Planner-5D style). Props/Build keep their modal backdrop. */}
+        {drawer && drawer !== 'catalog' && (
           <div
             className="drawer-backdrop"
             onClick={() => {

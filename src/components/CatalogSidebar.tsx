@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, Sofa, Lock, History } from 'lucide-react';
+import { Search, Sofa, Lock, History, X } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
@@ -43,11 +43,14 @@ function CatalogItem({ entry }: { entry: CatalogEntry }) {
 export default function CatalogSidebar({
   open = false,
   docked = false,
+  onClose,
 }: {
   /** Mobile drawer visibility (Objects tab). */
   open?: boolean;
   /** Desktop visibility: docked in only while the furniture tool is active. */
   docked?: boolean;
+  /** Close the mobile bottom sheet. */
+  onClose?: () => void;
 }) {
   const pendingFurnitureType = useDesign((s) => s.pendingFurnitureType);
   const t = useI18n();
@@ -91,9 +94,13 @@ export default function CatalogSidebar({
   }, [query, category]);
 
   return (
-    <aside className={`sidebar ${open ? 'open' : ''} ${docked ? 'docked' : ''}`}>
+    <aside className={`sidebar catalog ${open ? 'open' : ''} ${docked ? 'docked' : ''}`}>
+      <div className="sheet-grab" onClick={onClose} />
       <div className="sidebar-head">
         <Sofa className="icon" /> {t('Objects')}
+        <button className="sheet-close" onClick={onClose} aria-label={t('Close')}>
+          <X className="icon" />
+        </button>
       </div>
       <div className="cat-search">
         <Search className="icon" />
