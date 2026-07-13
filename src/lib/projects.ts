@@ -93,9 +93,12 @@ export function loadActive(): unknown | null {
 // (thumbnail-carrying) index each keystroke would be wasteful.
 let lastIndexWrite = 0;
 
-/** Persist the active project's snapshot. Returns false on quota failure. */
-export function saveActive(snap: { projectName: string }): boolean {
-  let id = getActiveId();
+/** Persist the active project's snapshot. Returns false on quota failure.
+ *  `forceId` writes to a specific project (used by the store's coalesced
+ *  autosave so a queued write always lands on the project it was captured for,
+ *  even if the active project changed while it was pending). */
+export function saveActive(snap: { projectName: string }, forceId?: string): boolean {
+  let id = forceId ?? getActiveId();
   if (!id) {
     // First save ever: mint the project on the fly.
     id = uid();

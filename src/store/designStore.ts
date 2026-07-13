@@ -286,8 +286,8 @@ const loadInitial = (): DesignSnapshot => {
 // meant quietly losing work. Warn the user (throttled: persist runs on every
 // edit, one toast per minute is plenty).
 let lastPersistWarning = 0;
-const persist = (snap: DesignSnapshot) => {
-  const ok = projects.saveActive(snap);
+const writeSnap = (snap: DesignSnapshot, id?: string) => {
+  const ok = projects.saveActive(snap, id);
   if (!ok) {
     const now = Date.now();
     if (now - lastPersistWarning > 60_000) {
@@ -296,6 +296,44 @@ const persist = (snap: DesignSnapshot) => {
     }
   }
 };
+
+// Coalesce autosaves. Writing the whole project JSON to localStorage
+// synchronously on every edit commit stalled the Android WebView main thread
+// during furniture drags / rapid edits. Debounce to the trailing edge, bind each
+// queued write to the project it was captured for, and flush on background/close
+// so nothing is ever lost.
+let pendingPersist: { snap: DesignSnapshot; id: string } | null = null;
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+const flushPersist = () => {
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  if (!pendingPersist) return;
+  const { snap, id } = pendingPersist;
+  pendingPersist = null;
+  writeSnap(snap, id);
+};
+const persist = (snap: DesignSnapshot) => {
+  const id = projects.getActiveId();
+  if (!id) {
+    // First save ever mints the project — do it now so it exists immediately.
+    writeSnap(snap);
+    return;
+  }
+  // Queuing a different project than the one already pending? Write that one out
+  // first so its edits can't be lost or land under the new id.
+  if (pendingPersist && pendingPersist.id !== id) flushPersist();
+  pendingPersist = { snap, id };
+  if (!persistTimer) persistTimer = setTimeout(flushPersist, 600);
+};
+if (typeof window !== 'undefined') {
+  const flush = () => flushPersist();
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+}
 
 export const useDesign = create<DesignState>((set, get) => {
   /** Wrap a mutation so it pushes onto the undo stack and persists. */

@@ -230,6 +230,9 @@ export default function Scene3D() {
   const [paintTap, setPaintTap] = useState<SurfaceTap | null>(null);
   // If post-processing fails on this GPU, drop it and render the plain scene.
   const [postFailed, setPostFailed] = useState(false);
+  // Touch devices get the light render tier (no post/shadows, lower DPR).
+  const lowPower = IS_TOUCH;
+  const noPost = postFailed || lowPower;
   useEffect(() => {
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
@@ -237,10 +240,13 @@ export default function Scene3D() {
   return (
     <>
     <Canvas
-      flat={!postFailed} // composer's ToneMapping owns tone mapping; when post is
-      // dropped, let three apply its own so the degraded scene isn't washed out
-      shadows
-      gl={{ antialias: true, preserveDrawingBuffer: false }}
+      // Mobile perf tier: touch devices drop post-processing + shadows and cap
+      // DPR — the biggest GPU costs — to keep 3D navigation smooth on Android.
+      // (High-res photo/plan exports are separate and stay full quality.)
+      flat={!noPost} // when post is dropped, let three apply its own tone mapping
+      shadows={!lowPower}
+      dpr={lowPower ? [1, 1.5] : [1, 2]}
+      gl={{ antialias: !lowPower, preserveDrawingBuffer: false, powerPreference: 'high-performance' }}
       camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => {
@@ -260,7 +266,7 @@ export default function Scene3D() {
         mieDirectionalG={0.85}
       />
       <fog attach="fog" args={[sun.isNight ? '#0e1420' : '#dfe6ee', radius * 5, radius * 14]} />
-      <SoftShadows size={24} samples={12} />
+      {!lowPower && <SoftShadows size={24} samples={12} />}
 
       {/* Airier interiors: lifted ambient/hemisphere + softened shadows so
           rooms behind walls read bright and clean instead of murky. */}
@@ -272,7 +278,7 @@ export default function Scene3D() {
         position={sunPos}
         intensity={sun.sunIntensity}
         color={sun.sunColor}
-        castShadow
+        castShadow={!lowPower}
         shadow-intensity={0.8}
         shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0004}
@@ -290,16 +296,19 @@ export default function Scene3D() {
       />
       <StudioEnvironment key={Math.round(sun.day * 4)} day={sun.day} />
 
-      {/* Soft contact shadows ground the furniture & walls realistically. */}
-      <ContactShadows
-        position={[center[0], 0.015, center[2]]}
-        scale={Math.max(20, radius * 4)}
-        resolution={1024}
-        blur={2.4}
-        far={2.2}
-        opacity={0.42}
-        color="#100d0a"
-      />
+      {/* Soft contact shadows ground the furniture & walls realistically
+          (desktop only — they re-render the scene each frame). */}
+      {!lowPower && (
+        <ContactShadows
+          position={[center[0], 0.015, center[2]]}
+          scale={Math.max(20, radius * 4)}
+          resolution={1024}
+          blur={2.4}
+          far={2.2}
+          opacity={0.42}
+          color="#100d0a"
+        />
+      )}
 
       {/* Ground + grid */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center[0], -0.01, center[2]]} receiveShadow>
@@ -324,9 +333,9 @@ export default function Scene3D() {
         onSurfaceTap={walkMode ? undefined : setPaintTap}
       />
 
-      {!postFailed && (
+      {!noPost && (
         <PostFXBoundary onFail={() => setPostFailed(true)}>
-          <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
+          <EffectComposer ref={composerRef} multisampling={4} enableNormalPass>
             <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />
             <Bloom mipmapBlur intensity={0.18} luminanceThreshold={1.0} />
             <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
