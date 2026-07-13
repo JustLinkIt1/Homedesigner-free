@@ -1251,6 +1251,10 @@ button.brand:hover .brand-name {
   display: flex;
   align-items: center;
   gap: 7px;
+  /* Override the fixed 26x26 of `.pill button` (meant for the +/- icon buttons)
+     so labelled toggles like "Walk through" / "View ▾" size to their text. */
+  width: auto;
+  height: auto;
   padding: 2px 8px;
   cursor: pointer;
   user-select: none;

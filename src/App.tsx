@@ -444,12 +444,6 @@ export default function App() {
           {view === '2d' && (
             <div className="hud hud-2d">
               <div className="pill">
-                <button onClick={() => setZoom(zoom / 1.2)} title="Zoom out"><Minus className="icon" style={{ width: 16, height: 16 }} /></button>
-                <span className="val">{Math.round(zoom * 100)}%</span>
-                <button onClick={() => setZoom(zoom * 1.2)} title="Zoom in"><Plus className="icon" style={{ width: 16, height: 16 }} /></button>
-                <button onClick={() => useDesign.getState().requestFit()} title="Fit to view"><Maximize2 className="icon" style={{ width: 15, height: 15 }} /></button>
-              </div>
-              <div className="pill">
                 <label className="toggle" title={t('Grid')}>
                   <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
                   <Grid3x3 className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Grid')}</span>
@@ -477,6 +471,22 @@ export default function App() {
                   ft
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* 2D zoom on the right edge (mirrors 3D) so the bottom HUD row isn't
+              crowded and the units pill no longer clips off-screen. */}
+          {view === '2d' && (
+            <div className="zoom-buttons" role="group" aria-label="Zoom">
+              <button onClick={() => setZoom(zoom * 1.2)} aria-label="Zoom in" title="Zoom in">
+                <Plus className="icon" />
+              </button>
+              <button onClick={() => setZoom(zoom / 1.2)} aria-label="Zoom out" title="Zoom out">
+                <Minus className="icon" />
+              </button>
+              <button onClick={() => useDesign.getState().requestFit()} aria-label="Fit to view" title="Fit to view">
+                <Maximize2 className="icon" />
+              </button>
             </div>
           )}
 
