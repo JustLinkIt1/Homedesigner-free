@@ -52,7 +52,15 @@ export default function Canvas2D() {
   const C = canvasColors(useTheme((t) => t.theme));
   const wrapRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
+  const layerRef = useRef<Konva.Layer>(null);
   const gridRef = useRef<Konva.Group>(null);
+  // Live pan, kept in sync with committed state. During a pan gesture we move
+  // the Konva layer imperatively (see applyPan) and only commit to React state
+  // on release — otherwise every pointermove (up to 120/s on high-refresh
+  // phones) re-rendered the whole scene, dragging the plan to ~10fps.
+  const panRef = useRef({ x: 0, y: 0 });
+  // Non-null while a pan gesture is in progress (tracks raw pointer deltas).
+  const lastPan = useRef<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
 
   const s = useDesign();
@@ -358,6 +366,18 @@ export default function Canvas2D() {
     };
   };
 
+  // Move the plan imperatively during a pan gesture: nudge the Konva layer
+  // directly (scene redraw only — hit graph off, no React reconcile) and record
+  // the live pan. endPan() commits it to state once on release.
+  const applyPan = (x: number, y: number) => {
+    panRef.current = { x, y };
+    const layer = layerRef.current;
+    if (!layer) return;
+    layer.listening(false); // skip the (expensive) hit-canvas redraw while panning
+    layer.position({ x, y });
+    layer.batchDraw();
+  };
+
   // ---- interaction handlers ----
   const onWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
@@ -619,8 +639,7 @@ export default function Canvas2D() {
       }
       cancelLongPress();
       if (lastPan.current) {
-        const { pan: pn } = useDesign.getState();
-        s.setPan({ x: pn.x + (cur.x - lastPan.current.x), y: pn.y + (cur.y - lastPan.current.y) });
+        applyPan(panRef.current.x + (cur.x - lastPan.current.x), panRef.current.y + (cur.y - lastPan.current.y));
         lastPan.current = cur;
       }
     }
@@ -649,6 +668,9 @@ export default function Canvas2D() {
   };
 
   const onMouseMove = () => {
+    // While panning, the layer is moving imperatively — a cursor-snap setState
+    // here would re-render and fight (reset) that live position. Skip it.
+    if (lastPan.current) return;
     const p = worldPointer();
     if (!p) return;
     lastCursorRef.current = p;
@@ -657,14 +679,21 @@ export default function Canvas2D() {
     setSnapGuide(snapGuideRef.current);
   };
 
-  // Pan by tracking raw pointer deltas.
-  const lastPan = useRef<{ x: number; y: number } | null>(null);
   const onStageMouseMove = () => {
     onMouseMove();
   };
   const endPan = () => {
     setIsPanning(false);
     lastPan.current = null;
+    const layer = layerRef.current;
+    if (!layer) return;
+    layer.listening(true); // restore hit detection now the gesture is over
+    const committed = useDesign.getState().pan;
+    if (committed.x !== panRef.current.x || committed.y !== panRef.current.y) {
+      s.setPan({ ...panRef.current }); // one commit → one re-render, at the end
+    } else {
+      layer.batchDraw(); // rebuild the hit graph if we toggled listening
+    }
   };
 
   // Mouse panning runs on window listeners so the drag keeps working when the
@@ -675,10 +704,8 @@ export default function Canvas2D() {
     const mm = (ev: MouseEvent) => {
       const cur = { x: ev.clientX, y: ev.clientY };
       if (lastPan.current) {
-        // Read the live pan: many moves land between React renders, and
-        // accumulating onto the render-time value silently drops deltas.
-        const { pan: pn } = useDesign.getState();
-        s.setPan({ x: pn.x + (cur.x - lastPan.current.x), y: pn.y + (cur.y - lastPan.current.y) });
+        // Imperative pan against the live ref — no React re-render per move.
+        applyPan(panRef.current.x + (cur.x - lastPan.current.x), panRef.current.y + (cur.y - lastPan.current.y));
       }
       lastPan.current = cur;
     };
@@ -884,6 +911,10 @@ export default function Canvas2D() {
   }, [walls, wallEdit, cornerDrag]);
   const wallPolys = useMemo(() => computeWallPolygons(liveWalls), [liveWalls]);
 
+  // Keep the live pan ref in sync with committed state whenever we're not
+  // mid-gesture (during a pan, applyPan owns panRef and we skip this).
+  if (!lastPan.current) panRef.current = { x: pan.x, y: pan.y };
+
   return (
     <div ref={wrapRef} style={{ position: 'absolute', inset: 0 }}>
       <Stage
@@ -916,7 +947,7 @@ export default function Canvas2D() {
         }}
         style={{ cursor: cursorStyle, background: 'var(--canvas-bg)' }}
       >
-        <Layer x={pan.x} y={pan.y} scaleX={zoom} scaleY={zoom}>
+        <Layer ref={layerRef} x={pan.x} y={pan.y} scaleX={zoom} scaleY={zoom}>
           {/* Background plan */}
           {background && bgImage && (
             <KImage
@@ -962,6 +993,8 @@ export default function Canvas2D() {
                   shadowColor={sel ? C.selection : undefined}
                   shadowBlur={sel ? 14 / zoom : 0}
                   shadowOpacity={sel ? 0.5 : 0}
+                  perfectDrawEnabled={false}
+                  shadowForStrokeEnabled={false}
                   onMouseDown={() => tool === 'select' && s.select({ kind: 'room', id: r.id })}
                 />
                 <Text
@@ -1006,6 +1039,7 @@ export default function Canvas2D() {
                   points={(wallPolys.get(w.id) ?? [start, end, end, start]).flatMap((p) => [p.x, p.y])}
                   closed
                   fill={sel ? C.selection : C.wallBody}
+                  perfectDrawEnabled={false}
                   listening={false}
                 />
                 {/* Invisible hit/drag target — unchanged interaction, just no
