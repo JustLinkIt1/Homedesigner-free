@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
@@ -15,7 +16,12 @@ import type { ToolMode } from '../types';
 const SHEET_TOOLS = TOOLS.filter((t) => t.id !== 'pan'); // two-finger drag pans on touch
 
 export default function BuildSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign();
+  const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign(useShallow((s) => ({
+    tool: s.tool,
+    setTool: s.setTool,
+    setPendingFurniture: s.setPendingFurniture,
+    pendingFurnitureType: s.pendingFurnitureType,
+  })));
   const isPro = useProStore((s) => s.isPro);
   const tr = useI18n();
 
@@ -36,7 +42,12 @@ export default function BuildSheet({ open, onClose }: { open: boolean; onClose: 
   const openingActive = OPENINGS.some((e) => e.type === pendingFurnitureType);
 
   return (
-    <div className={`build-sheet ${open ? 'open' : ''}`} role="dialog" aria-label={tr('Build')}>
+    <div
+      className={`build-sheet ${open ? 'open' : ''}`}
+      role="dialog"
+      aria-label={tr('Build')}
+      aria-hidden={!open}
+    >
       <div className="bs-head">
         <span className="bs-title">{tr('Build')}</span>
         <button className="bs-close" onClick={onClose} aria-label={tr('Close')}>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { DoorOpen, Sofa } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
@@ -9,7 +10,12 @@ import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
 
 export default function ToolDock() {
-  const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign();
+  const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign(useShallow((s) => ({
+    tool: s.tool,
+    setTool: s.setTool,
+    setPendingFurniture: s.setPendingFurniture,
+    pendingFurnitureType: s.pendingFurnitureType,
+  })));
   const isPro = useProStore((s) => s.isPro);
   const tr = useI18n();
   const [openingsOpen, setOpeningsOpen] = useState(false);

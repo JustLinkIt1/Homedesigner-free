@@ -16,7 +16,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4599;
 const BASE = `http://localhost:${PORT}/`;
 
-const dev = spawn(join(root, 'node_modules', '.bin', 'vite'), ['--port', String(PORT), '--strictPort'], {
+// Launch Vite through Node so the smoke suite is portable: Windows cannot
+// spawn the extensionless `.bin/vite` shim directly.
+const viteEntry = join(root, 'node_modules', 'vite', 'bin', 'vite.js');
+const dev = spawn(process.execPath, [viteEntry, '--port', String(PORT), '--strictPort'], {
   cwd: root,
   stdio: 'ignore',
 });

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { Search, Sofa, Lock, History, X } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
@@ -12,8 +13,11 @@ import SymbolIcon from './SymbolIcon';
 // no longer clutter the furniture catalog.
 const CATALOG = FURNITURE_CATALOG.filter((e) => e.category !== 'Openings');
 
-function CatalogItem({ entry }: { entry: CatalogEntry }) {
-  const { pendingFurnitureType, setPendingFurniture } = useDesign();
+function CatalogItem({ entry, onPicked }: { entry: CatalogEntry; onPicked?: () => void }) {
+  const { pendingFurnitureType, setPendingFurniture } = useDesign(useShallow((s) => ({
+    pendingFurnitureType: s.pendingFurnitureType,
+    setPendingFurniture: s.setPendingFurniture,
+  })));
   const isPro = useProStore((s) => s.isPro);
   const t = useI18n();
   const locked = !!entry.pro && !isPro;
@@ -26,6 +30,7 @@ function CatalogItem({ entry }: { entry: CatalogEntry }) {
         // already-placed pro items keep rendering everywhere.
         if (locked && !requirePro('catalog')) return;
         setPendingFurniture(pendingFurnitureType === entry.type ? null : entry.type);
+        onPicked?.();
       }}
       title={locked ? `${name} — Pro` : `${name}`}
     >
@@ -56,6 +61,29 @@ export default function CatalogSidebar({
   const t = useI18n();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>('All');
+  const [desktop, setDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 881px)').matches,
+  );
+  const active = open || (docked && desktop);
+  const [renderContents, setRenderContents] = useState(active);
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 881px)');
+    const update = () => setDesktop(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  // Keep the icon-heavy catalog out of the DOM while its sheet is closed so
+  // canvas gestures do not compete with hidden layout and paint work.
+  useEffect(() => {
+    if (active) {
+      setRenderContents(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setRenderContents(false), 240);
+    return () => window.clearTimeout(timer);
+  }, [active]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -94,7 +122,11 @@ export default function CatalogSidebar({
   }, [query, category]);
 
   return (
-    <aside className={`sidebar catalog ${open ? 'open' : ''} ${docked ? 'docked' : ''}`}>
+    <aside
+      className={`sidebar catalog ${open ? 'open' : ''} ${docked ? 'docked' : ''}`}
+      aria-hidden={!active}
+    >
+      {renderContents && <>
       <div className="sheet-grab" onClick={onClose} />
       <div className="sidebar-head">
         <Sofa className="icon" /> {t('Objects')}
@@ -129,7 +161,7 @@ export default function CatalogSidebar({
             </div>
             <div className="cat-grid">
               {recent.map((e) => (
-                <CatalogItem key={`r-${e.type}`} entry={e} />
+                <CatalogItem key={`r-${e.type}`} entry={e} onPicked={onClose} />
               ))}
             </div>
           </div>
@@ -144,12 +176,13 @@ export default function CatalogSidebar({
             {category === 'All' && <div className="cat-title">{t(cat)}</div>}
             <div className="cat-grid">
               {items.map((e) => (
-                <CatalogItem key={e.type} entry={e} />
+                <CatalogItem key={e.type} entry={e} onPicked={onClose} />
               ))}
             </div>
           </div>
         ))}
       </div>
+      </>}
     </aside>
   );
 }

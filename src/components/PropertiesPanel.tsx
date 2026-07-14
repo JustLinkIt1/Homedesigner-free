@@ -5,6 +5,7 @@ import {
   AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useDesign } from '../store/designStore';
 import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
 import { ROOM_STYLES } from '../data/roomStyles';
@@ -17,7 +18,29 @@ import type { CustomTexture } from '../types';
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 
 export default function PropertiesPanel({ open = false }: { open?: boolean }) {
-  const s = useDesign();
+  const s = useDesign(useShallow((st) => ({
+    selection: st.selection,
+    selectedIds: st.selectedIds,
+    walls: st.walls,
+    rooms: st.rooms,
+    furniture: st.furniture,
+    openings: st.openings,
+    background: st.background,
+    units: st.units,
+    alignSelected: st.alignSelected,
+    applyRoomStyle: st.applyRoomStyle,
+    distributeSelected: st.distributeSelected,
+    duplicateSelection: st.duplicateSelection,
+    deleteSelected: st.deleteSelected,
+    detectRoomsFromWalls: st.detectRoomsFromWalls,
+    deleteById: st.deleteById,
+    setBackground: st.setBackground,
+    updateBackground: st.updateBackground,
+    updateFurniture: st.updateFurniture,
+    updateOpening: st.updateOpening,
+    updateRoom: st.updateRoom,
+    updateWall: st.updateWall,
+  })));
   const { selection } = s;
 
   const multi = s.selectedIds.length > 1;

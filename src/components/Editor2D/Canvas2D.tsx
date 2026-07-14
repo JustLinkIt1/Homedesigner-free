@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { Stage, Layer, Line, Rect, Group, Text, Circle, Arc, Image as KImage } from 'react-konva';
 import Konva from 'konva';
 import { useDesign } from '../../store/designStore';
@@ -59,11 +60,56 @@ export default function Canvas2D() {
   // on release — otherwise every pointermove (up to 120/s on high-refresh
   // phones) re-rendered the whole scene, dragging the plan to ~10fps.
   const panRef = useRef({ x: 0, y: 0 });
+  const zoomRef = useRef(0.35);
+  const viewportChangedRef = useRef(false);
   // Non-null while a pan gesture is in progress (tracks raw pointer deltas).
   const lastPan = useRef<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
 
-  const s = useDesign();
+  const s = useDesign(useShallow((st) => ({
+    walls: st.walls,
+    rooms: st.rooms,
+    furniture: st.furniture,
+    openings: st.openings,
+    background: st.background,
+    tool: st.tool,
+    zoom: st.zoom,
+    pan: st.pan,
+    showGrid: st.showGrid,
+    gridSize: st.gridSize,
+    selection: st.selection,
+    selectedIds: st.selectedIds,
+    showDimensions: st.showDimensions,
+    units: st.units,
+    fitRequest: st.fitRequest,
+    pendingFurnitureType: st.pendingFurnitureType,
+    setViewport: st.setViewport,
+    setTool: st.setTool,
+    select: st.select,
+    clearSelection: st.clearSelection,
+    setPendingFurniture: st.setPendingFurniture,
+    addWall: st.addWall,
+    updateWall: st.updateWall,
+    addRoom: st.addRoom,
+    addFurniture: st.addFurniture,
+    updateFurniture: st.updateFurniture,
+    addOpening: st.addOpening,
+    updateOpening: st.updateOpening,
+    deleteSelected: st.deleteSelected,
+    deleteById: st.deleteById,
+    setSelectedIds: st.setSelectedIds,
+    toggleSelected: st.toggleSelected,
+    moveFurnitureGroup: st.moveFurnitureGroup,
+    duplicateSelection: st.duplicateSelection,
+    copySelection: st.copySelection,
+    paste: st.paste,
+    bringToFront: st.bringToFront,
+    sendToBack: st.sendToBack,
+    scaleDesign: st.scaleDesign,
+    moveCorner: st.moveCorner,
+    undo: st.undo,
+    redo: st.redo,
+  })));
   const {
     walls, rooms, furniture, openings, background,
     tool, zoom, pan, showGrid, gridSize, selection, selectedIds, showDimensions, units,
@@ -158,8 +204,10 @@ export default function Canvas2D() {
     const bh = Math.max(1, max.y - min.y);
     const pad = 90;
     const z = Math.max(0.05, Math.min(2, Math.min(size.w / (bw + pad * 2), size.h / (bh + pad * 2))));
-    s.setZoom(z);
-    s.setPan({ x: size.w / 2 - ((min.x + max.x) / 2) * z, y: size.h / 2 - ((min.y + max.y) / 2) * z });
+    s.setViewport(
+      { x: size.w / 2 - ((min.x + max.x) / 2) * z, y: size.h / 2 - ((min.y + max.y) / 2) * z },
+      z,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.fitRequest, size.w, size.h]);
 
@@ -371,10 +419,25 @@ export default function Canvas2D() {
   // the live pan. endPan() commits it to state once on release.
   const applyPan = (x: number, y: number) => {
     panRef.current = { x, y };
+    viewportChangedRef.current = true;
     const layer = layerRef.current;
     if (!layer) return;
     layer.listening(false); // skip the (expensive) hit-canvas redraw while panning
     layer.position({ x, y });
+    layer.batchDraw();
+  };
+
+  // Pinch gestures update Konva directly and commit the final viewport once on
+  // release. This removes two full React/Konva reconciliations per touch frame.
+  const applyViewport = (nextPan: Point, nextZoom: number) => {
+    panRef.current = nextPan;
+    zoomRef.current = nextZoom;
+    viewportChangedRef.current = true;
+    const layer = layerRef.current;
+    if (!layer) return;
+    layer.listening(false);
+    layer.position(nextPan);
+    layer.scale({ x: nextZoom, y: nextZoom });
     layer.batchDraw();
   };
 
@@ -391,7 +454,7 @@ export default function Canvas2D() {
     if (!ctrlKey && !metaKey && (shiftKey || Math.abs(deltaX) > Math.abs(deltaY))) {
       const dx = shiftKey && deltaX === 0 ? deltaY : deltaX;
       const dy = shiftKey && deltaX === 0 ? 0 : deltaY;
-      s.setPan({ x: pan.x - dx, y: pan.y - dy });
+      s.setViewport({ x: pan.x - dx, y: pan.y - dy }, zoom);
       return;
     }
     const dir = deltaY > 0 ? 0.9 : 1.1;
@@ -399,8 +462,7 @@ export default function Canvas2D() {
     // Keep the point under the cursor fixed.
     const wx = (pointer.x - pan.x) / zoom;
     const wy = (pointer.y - pan.y) / zoom;
-    s.setPan({ x: pointer.x - wx * newZoom, y: pointer.y - wy * newZoom });
-    s.setZoom(newZoom);
+    s.setViewport({ x: pointer.x - wx * newZoom, y: pointer.y - wy * newZoom }, newZoom);
   };
 
   // Hold space to pan with any tool (standard canvas-app affordance).
@@ -614,15 +676,18 @@ export default function Canvas2D() {
       const rect = stage.container().getBoundingClientRect();
       const next = twoFinger(t);
       const sc = { x: next.center.x - rect.left, y: next.center.y - rect.top };
-      const { zoom: z, pan: pn } = useDesign.getState();
+      const z = zoomRef.current;
+      const pn = panRef.current;
       const scale = next.dist / (pinch.current.dist || next.dist);
       const newZoom = Math.max(0.05, Math.min(4, z * scale));
       const wx = (sc.x - pn.x) / z;
       const wy = (sc.y - pn.y) / z;
       // zoom around the pinch centre and pan with finger movement
       const prevSc = { x: pinch.current.center.x - rect.left, y: pinch.current.center.y - rect.top };
-      s.setPan({ x: sc.x - wx * newZoom + (sc.x - prevSc.x), y: sc.y - wy * newZoom + (sc.y - prevSc.y) });
-      s.setZoom(newZoom);
+      applyViewport(
+        { x: sc.x - wx * newZoom + (sc.x - prevSc.x), y: sc.y - wy * newZoom + (sc.y - prevSc.y) },
+        newZoom,
+      );
       pinch.current = next;
     } else if (t.length === 1) {
       const cur = { x: t[0].clientX, y: t[0].clientY };
@@ -688,12 +753,18 @@ export default function Canvas2D() {
     const layer = layerRef.current;
     if (!layer) return;
     layer.listening(true); // restore hit detection now the gesture is over
-    const committed = useDesign.getState().pan;
-    if (committed.x !== panRef.current.x || committed.y !== panRef.current.y) {
-      s.setPan({ ...panRef.current }); // one commit → one re-render, at the end
+    const committed = useDesign.getState();
+    if (
+      viewportChangedRef.current &&
+      (committed.pan.x !== panRef.current.x ||
+        committed.pan.y !== panRef.current.y ||
+        committed.zoom !== zoomRef.current)
+    ) {
+      s.setViewport({ ...panRef.current }, zoomRef.current);
     } else {
       layer.batchDraw(); // rebuild the hit graph if we toggled listening
     }
+    viewportChangedRef.current = false;
   };
 
   // Mouse panning runs on window listeners so the drag keeps working when the
@@ -913,7 +984,10 @@ export default function Canvas2D() {
 
   // Keep the live pan ref in sync with committed state whenever we're not
   // mid-gesture (during a pan, applyPan owns panRef and we skip this).
-  if (!lastPan.current) panRef.current = { x: pan.x, y: pan.y };
+  if (!lastPan.current && !pinch.current) {
+    panRef.current = { x: pan.x, y: pan.y };
+    zoomRef.current = zoom;
+  }
 
   return (
     <div ref={wrapRef} style={{ position: 'absolute', inset: 0 }}>

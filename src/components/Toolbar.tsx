@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import {
   Home,
   Undo2,
@@ -63,7 +64,27 @@ export default function Toolbar({
   onSettings: () => void;
   onHome: () => void;
 }) {
-  const s = useDesign();
+  const s = useDesign(useShallow((st) => ({
+    activeFloorId: st.activeFloorId,
+    background: st.background,
+    floorGeom: st.floorGeom,
+    floors: st.floors,
+    furniture: st.furniture,
+    openings: st.openings,
+    projectName: st.projectName,
+    rooms: st.rooms,
+    savedTick: st.savedTick,
+    view: st.view,
+    walls: st.walls,
+    canRedo: st.canRedo,
+    canUndo: st.canUndo,
+    clearSelection: st.clearSelection,
+    loadSnapshot: st.loadSnapshot,
+    redo: st.redo,
+    setProjectName: st.setProjectName,
+    setView: st.setView,
+    undo: st.undo,
+  })));
   const isPro = useProStore((st) => st.isPro);
   const t = useI18n();
   const [exportOpen, setExportOpen] = useState(false);

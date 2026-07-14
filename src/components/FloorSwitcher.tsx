@@ -24,6 +24,7 @@ export default function FloorSwitcher() {
   const t = useI18n();
   const [editing, setEditing] = useState<string | null>(null);
   const [cloneOpen, setCloneOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   if (floors.length === 0) return null;
   // Highest storey at the top of the list.
@@ -34,17 +35,31 @@ export default function FloorSwitcher() {
   const handleAdd = () => {
     if (floors.length >= 1 && !requirePro('multiFloor')) return;
     addFloor();
+    setMobileOpen(false);
   };
 
   const handleClone = (direction: 'above' | 'below') => {
     setCloneOpen(false);
     if (!requirePro('multiFloor')) return;
     cloneFloor(direction);
+    setMobileOpen(false);
     toast.success(`Copied ${activeFloor?.name ?? 'floor'} ${direction}`);
   };
 
   return (
-    <div className="floor-switcher" aria-label="Storeys">
+    <div className={`floor-switcher ${mobileOpen ? 'expanded' : ''}`} aria-label="Storeys">
+      <button
+        className="floor-current"
+        onClick={() => setMobileOpen((v) => !v)}
+        aria-expanded={mobileOpen}
+        title={t('Choose floor')}
+      >
+        <Layers className="icon" style={{ width: 15, height: 15 }} />
+        <span>{t(activeFloor?.name ?? 'Ground floor')}</span>
+        {mobileOpen
+          ? <ChevronUp className="icon floor-current-caret" />
+          : <ChevronDown className="icon floor-current-caret" />}
+      </button>
       <button className="floor-add" onClick={handleAdd} title="Add an empty floor above">
         <Plus className="icon" style={{ width: 14, height: 14 }} /> {t('Floor')}
         {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
@@ -91,7 +106,10 @@ export default function FloorSwitcher() {
               ) : (
                 <button
                   className="floor-btn"
-                  onClick={() => setActiveFloor(f.id)}
+                  onClick={() => {
+                    setActiveFloor(f.id);
+                    setMobileOpen(false);
+                  }}
                   onDoubleClick={() => setEditing(f.id)}
                   title={`${f.name} — double-click to rename`}
                 >

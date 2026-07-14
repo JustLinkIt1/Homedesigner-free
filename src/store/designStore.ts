@@ -103,6 +103,7 @@ interface DesignState extends DesignSnapshot {
   setView: (v: ViewMode) => void;
   setZoom: (z: number) => void;
   setPan: (p: Point) => void;
+  setViewport: (p: Point, z: number) => void;
   setShowGrid: (b: boolean) => void;
   setShowDimensions: (b: boolean) => void;
   setUnits: (u: Units) => void;
@@ -392,6 +393,7 @@ export const useDesign = create<DesignState>((set, get) => {
     setView: (v) => set({ view: v }),
     setZoom: (z) => set({ zoom: Math.max(0.05, Math.min(4, z)) }),
     setPan: (p) => set({ pan: p }),
+    setViewport: (p, z) => set({ pan: p, zoom: Math.max(0.05, Math.min(4, z)) }),
     setShowGrid: (b) => set({ showGrid: b }),
     setShowDimensions: (b) => set({ showDimensions: b }),
     setUnits: (u) => {

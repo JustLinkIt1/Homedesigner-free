@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import {
   Minus,
   Plus,
@@ -60,7 +61,30 @@ export default function App() {
     walkMode, setWalkMode, pendingFurnitureType, selection,
     units, setUnits,
     sunTime, setSunTime, lightsOn, setLightsOn,
-  } = useDesign();
+  } = useDesign(useShallow((s) => ({
+    view: s.view,
+    setView: s.setView,
+    walls: s.walls,
+    tool: s.tool,
+    zoom: s.zoom,
+    showGrid: s.showGrid,
+    setZoom: s.setZoom,
+    setShowGrid: s.setShowGrid,
+    showDimensions: s.showDimensions,
+    setShowDimensions: s.setShowDimensions,
+    dollhouse: s.dollhouse,
+    setDollhouse: s.setDollhouse,
+    walkMode: s.walkMode,
+    setWalkMode: s.setWalkMode,
+    pendingFurnitureType: s.pendingFurnitureType,
+    selection: s.selection,
+    units: s.units,
+    setUnits: s.setUnits,
+    sunTime: s.sunTime,
+    setSunTime: s.setSunTime,
+    lightsOn: s.lightsOn,
+    setLightsOn: s.setLightsOn,
+  })));
   const t = useI18n();
   const [showImport, setShowImport] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -679,7 +703,7 @@ export default function App() {
             }}
           />
         )}
-        <div className="mobile-tabs">
+        <div className={`mobile-tabs ${view === '3d' ? 'single' : ''}`}>
           {view === '2d' && (
             <button
               className={drawer === 'build' ? 'active' : ''}
