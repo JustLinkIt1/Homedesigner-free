@@ -9,13 +9,18 @@ Last updated: 2026-07-14
 ## Current release state
 
 - Branch: `claude/home-design-app-2d-plans-12y5u5`
-- Current release: `1.0.43`
-- Android version code: `10043`
-- Release commit: `f0a17bb37a5f9602d705495e74f604238e953803`
-- Previous baseline: `b302ec79920c3a4f4cbcff8c54476c2377c43a42`
+- Current release: `1.0.44`
+- Android version code: `10044`
+- Release commit: `86ac0f8308bfe4155a0d72a2c7ed629f3bbfc801`
+  (`1.0.44`, Claude's 3D fog/zoom fixes layered on top of the 1.0.43 work)
+- Previous release: `f0a17bb37a5f9602d705495e74f604238e953803`
+  (`1.0.43`, Codex's 2D gesture-performance + mobile-UX pass — fully preserved)
+- Baseline before that: `b302ec79920c3a4f4cbcff8c54476c2377c43a42`
   (`1.0.42`, Claude's Android autosave and lightweight 3D performance work)
-- The release commit is present on GitHub and the local tree matches its remote
-  tree exactly.
+- Both release commits are on GitHub; the local tree matches remote exactly.
+- Upload only the version-code `10044` AAB to Play. An earlier standalone
+  Claude build was labelled `10043` and must not be uploaded alongside Codex's
+  `10043`; `10044` supersedes both.
 
 ## Work completed in 1.0.43
 
@@ -51,6 +56,32 @@ Last updated: 2026-07-14
 - Added the store-level `setViewport` action used to commit a completed gesture.
 - Updated `tests/smoke.mjs` so the Vite launcher works reliably on Windows by
   invoking the Node entry point directly.
+
+## Work completed in 1.0.44
+
+3D-view fixes for a Pixel 8 report, layered on top of 1.0.43 (the 1.0.43 pass
+did not touch the 3D view). No 1.0.43 work was reverted.
+
+- **Fog whiteout on zoom-out** (`src/components/Viewer3D/Scene3D.tsx`): distance
+  fog ran `radius*5 .. radius*14`, inside the max orbit distance (`radius*8+20`),
+  so zooming out faded the whole model to the fog colour. Moved fog past the
+  orbit range (`radius*8+15 .. radius*18+80`) so it only softens the far
+  ground/grid horizon, never the building. Verified headless at max zoom-out.
+- **Fade-to-black on zoom-in**: raised `OrbitControls` `minDistance` 2 → 3 so a
+  full dolly-in can no longer end up inside the geometry.
+- **Top-left overlap** (`src/App.tsx`): the floor switcher is hidden while a draw
+  gesture is active (`!drawing`), so its top-left controls no longer collide
+  with the centred "Tap points / Finish" pill on phones.
+- The reported 3D shadow trail while dragging furniture was already resolved by
+  1.0.42's low-power tier (touch devices render no shadows).
+
+## RevenueCat note (correction to the 1.0.43 note below)
+
+The Android RevenueCat key is a hardcoded constant in `src/lib/pro.ts`
+(`REVENUECAT_ANDROID_KEY`), not read from `import.meta.env`. So a production web
+build does **not** require `VITE_REVENUECAT_ANDROID_KEY` to ship working
+billing; the key is compiled into the bundle from source. (Migrating it to an
+env var is reasonable future work, but is not currently wired up.)
 
 ## Primary files changed
 
