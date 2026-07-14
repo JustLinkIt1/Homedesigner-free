@@ -683,7 +683,10 @@ export default function App() {
             </>
           )}
 
-          {!walkMode && <FloorSwitcher />}
+          {/* Hidden while actively drawing: the floor buttons sit top-left and
+              the centered "Tap points / Finish" pill would otherwise collide
+              with them on phones (and you never switch floors mid-draw). */}
+          {!walkMode && !drawing && <FloorSwitcher />}
         </div>
         <PropertiesPanel open={drawer === 'props'} />
         {view === '2d' && <BuildSheet open={drawer === 'build'} onClose={() => setDrawer(null)} />}

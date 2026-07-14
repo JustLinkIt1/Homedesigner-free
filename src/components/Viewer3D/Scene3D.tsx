@@ -265,7 +265,11 @@ export default function Scene3D() {
         mieCoefficient={0.004}
         mieDirectionalG={0.85}
       />
-      <fog attach="fog" args={[sun.isNight ? '#0e1420' : '#dfe6ee', radius * 5, radius * 14]} />
+      {/* Distance fog for a soft horizon — kept BEYOND the max orbit distance
+          (radius*8+20) so it only fades the far ground/grid, never the building
+          itself. The old radius*5..14 range sat inside the zoom range, so zooming
+          out washed the whole model to the fog colour ("fades to white"). */}
+      <fog attach="fog" args={[sun.isNight ? '#0e1420' : '#dfe6ee', radius * 8 + 15, radius * 18 + 80]} />
       {!lowPower && <SoftShadows size={24} samples={12} />}
 
       {/* Airier interiors: lifted ambient/hemisphere + softened shadows so
@@ -360,7 +364,7 @@ export default function Scene3D() {
           screenSpacePanning
           minPolarAngle={0.05}
           maxPolarAngle={Math.PI / 2.05}
-          minDistance={2}
+          minDistance={3}
           maxDistance={radius * 8 + 20}
           makeDefault
         />
