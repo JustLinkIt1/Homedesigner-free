@@ -13,8 +13,9 @@ Last updated: 2026-07-15
 - Android version code: `10047`
 - Release commit: `5a0cfd4139bcc433508a8186308f374eef76a35e`
   (`Release build-mode and model catalog upgrades (v1.0.47)`).
-- GitHub delivery: branch `agent/release-1-0-47-model-catalog`, draft PR
-  `https://github.com/JustLinkIt1/Homedesigner-free/pull/1`.
+- GitHub delivery: branch `agent/release-1-0-47-model-catalog`, merged PR
+  `https://github.com/JustLinkIt1/Homedesigner-free/pull/1`, merge commit
+  `9912648103fcb1e37dfc2f660634d4375929d475`.
 - AAB delivery: `HomeDesigner/Releases/HomeDesigner-Free-1.0.47-10047.aab`
   in Google Drive:
   `https://drive.google.com/file/d/1wg3ciljWDTah91ONpSOXcyEQm6Feh99S/view?usp=drivesdk`.
