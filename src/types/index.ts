@@ -19,6 +19,20 @@ export interface CustomTexture {
   metalness?: number;
 }
 
+/** A normalized stretch of one side of a structural wall. `side` is relative
+ * to the wall's start -> end direction: +1 is the left face, -1 the right. */
+export interface WallFaceRange {
+  start: number;
+  end: number;
+  side: -1 | 1;
+}
+
+/** Paint override for one room-facing stretch of a wall. */
+export interface WallFaceFinish extends WallFaceRange {
+  color: string;
+  texture?: CustomTexture;
+}
+
 export interface Wall {
   id: string;
   start: Point;
@@ -30,6 +44,9 @@ export interface Wall {
   color: string;
   /** Optional custom paint image — overrides `color` in the 3D view. */
   texture?: CustomTexture;
+  /** Per-room/per-side finishes. Older projects omit this and keep using the
+   * whole-wall color/texture above. */
+  faceFinishes?: WallFaceFinish[];
 }
 
 export interface Room {
@@ -145,4 +162,6 @@ export type ViewMode = '2d' | '3d';
 export interface Selection {
   kind: 'wall' | 'room' | 'furniture' | 'opening' | null;
   id: string | null;
+  /** Present when a wall was selected from a specific face in 3D. */
+  wallFace?: WallFaceRange;
 }

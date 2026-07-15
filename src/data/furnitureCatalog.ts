@@ -68,6 +68,63 @@ export interface CatalogEntry {
   /** Pro-catalog item: visible to everyone, placement requires the unlock.
    *  Rendering of already-placed pro items is NEVER gated. */
   pro?: true;
+  /** Optional real model. Remote catalog entries use an absolute R2 URL while
+   *  bundled entries continue to resolve through GltfFurniture's local map. */
+  model?: {
+    url: string;
+    yaw?: number;
+    bytes?: number;
+    sha256?: string;
+    source?: {
+      name: string;
+      url: string;
+      author?: string;
+      license: 'CC0';
+    };
+  };
+  /** Set only for entries loaded from the signed-off cloud manifest. */
+  cloud?: true;
+}
+
+/** Alternate catalog navigation that cuts across rooms. Keep this derived so
+ * existing project/catalog data stays backward compatible as the library grows. */
+export const CATALOG_GROUP_ORDER = [
+  'Seating',
+  'Tables',
+  'Storage',
+  'Beds',
+  'Kitchen',
+  'Bathroom fixtures',
+  'Workspace',
+  'Lighting',
+  'Decor',
+  'Outdoor',
+  'Other',
+] as const;
+
+export type CatalogGroup = (typeof CATALOG_GROUP_ORDER)[number];
+
+const SEATING_SHAPES = new Set<Shape3D>(['sofa', 'chair', 'ottoman', 'stool']);
+const DECOR_TYPES = new Set([
+  'rug', 'round_rug', 'plant', 'large_plant', 'clay_planter', 'mirror',
+  'floor_mirror', 'curtains', 'wall_art', 'throw_pillows', 'tv_stand',
+]);
+
+export function catalogGroupFor(entry: CatalogEntry): CatalogGroup {
+  if (entry.category === 'Outdoor') return 'Outdoor';
+  if (entry.category === 'Office') return 'Workspace';
+  if (entry.category === 'Lighting') return 'Lighting';
+  if (entry.category === 'Bathroom') return 'Bathroom fixtures';
+  if (entry.category === 'Kitchen' && !SEATING_SHAPES.has(entry.shape)) return 'Kitchen';
+  if (entry.shape === 'bed' || entry.shape === 'crib') return 'Beds';
+  if (SEATING_SHAPES.has(entry.shape)) return 'Seating';
+  if (entry.shape === 'table' || entry.shape === 'side_table') return 'Tables';
+  if (
+    entry.shape === 'bookshelf' ||
+    ['nightstand', 'wardrobe', 'dresser', 'display_cabinet', 'sideboard', 'chest_of_drawers'].includes(entry.type)
+  ) return 'Storage';
+  if (DECOR_TYPES.has(entry.type) || entry.category === 'Decor') return 'Decor';
+  return 'Other';
 }
 
 export const FURNITURE_CATALOG: CatalogEntry[] = [

@@ -5,10 +5,13 @@ import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
 import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry } from '../../lib/textures';
 import { dist, boundsOf } from '../../lib/geometry';
+import { wallFaceAt } from '../../lib/wallFaces';
+import { useRemoteCatalog } from '../../lib/remoteCatalog';
 import Furniture3D from './Furniture3D';
-import type { FloorGeom, Opening, Room, Wall } from '../../types';
+import type { CustomTexture, FloorGeom, Opening, Point, Room, Wall, WallFaceFinish, WallFaceRange } from '../../types';
 
 export const M = 0.01; // cm -> m
+const NO_FACE_FINISHES: WallFaceFinish[] = [];
 
 interface Span {
   a: number; // start along wall (cm from start)
@@ -57,7 +60,31 @@ export interface WallFade {
 }
 
 /** Screen-space tap on a paintable surface (wall body or room floor). */
-export type SurfaceTap = { kind: 'wall' | 'room'; id: string; x: number; y: number };
+export type SurfaceTap = {
+  kind: 'wall' | 'room';
+  id: string;
+  x: number;
+  y: number;
+  /** Plan-space position for direct placement on a room floor. */
+  position?: Point;
+  /** Exact room-facing stretch when a wall face was tapped. */
+  wallFace?: WallFaceRange;
+};
+
+function wallMaterial(color: string, texture?: CustomTexture): THREE.MeshStandardMaterial {
+  const material = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.92, metalness: 0 });
+  if (texture) {
+    const map = customTexture(texture.src);
+    const patternM = Math.max(0.02, texture.scaleCm * M);
+    map.repeat.set(1 / patternM, 1 / patternM);
+    material.map = map;
+    material.roughness = texture.roughness ?? 0.92;
+    material.metalness = texture.metalness ?? 0;
+  } else {
+    material.color = new THREE.Color(color);
+  }
+  return material;
+}
 
 /** A single opaque wall body chunk. When the wall carries a custom paint
  *  image, we bake real-world UVs into the geometry so pattern scale is
@@ -85,8 +112,44 @@ function WallSpan({
   return <mesh position={position} geometry={geometry} material={material} castShadow receiveShadow />;
 }
 
+/** A paper-thin finish layer on one room-facing portion of a wall. Intersecting
+ * it with the structural spans preserves door/window openings. */
+function WallFaceSpan({
+  position,
+  material,
+  spanW,
+  spanH,
+  side,
+}: {
+  position: [number, number, number];
+  material: THREE.MeshStandardMaterial;
+  spanW: number;
+  spanH: number;
+  side: -1 | 1;
+}) {
+  const geometry = useMemo(() => {
+    const plane = new THREE.PlaneGeometry(spanW, spanH);
+    const uv = plane.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * spanW, uv.getY(i) * spanH);
+    uv.needsUpdate = true;
+    return plane;
+  }, [spanW, spanH]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <mesh
+      position={position}
+      rotation={[0, side === 1 ? 0 : Math.PI, 0]}
+      geometry={geometry}
+      material={material}
+      castShadow
+      receiveShadow
+    />
+  );
+}
+
 function WallMesh({
   wall,
+  rooms,
   openings,
   center,
   register,
@@ -94,6 +157,7 @@ function WallMesh({
   onTap,
 }: {
   wall: Wall;
+  rooms: Room[];
   openings: Opening[];
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
@@ -112,20 +176,15 @@ function WallMesh({
   // One material shared by every span of this wall (no per-span clones). When
   // the wall has a custom paint image, the material carries the map + the
   // per-span geometry has UVs baked in metres so pattern scale is uniform.
-  const mat = useMemo(() => {
-    const m = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.92, metalness: 0 });
-    if (wall.texture) {
-      const tex = customTexture(wall.texture.src);
-      const patternM = Math.max(0.02, wall.texture.scaleCm * M);
-      tex.repeat.set(1 / patternM, 1 / patternM);
-      m.map = tex;
-      m.roughness = wall.texture.roughness ?? 0.92;
-      m.metalness = wall.texture.metalness ?? 0;
-    } else {
-      m.color = new THREE.Color(wall.color);
-    }
-    return m;
-  }, [wall.color, wall.texture?.src, wall.texture?.scaleCm, wall.texture?.roughness, wall.texture?.metalness]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mat = useMemo(
+    () => wallMaterial(wall.color, wall.texture),
+    [wall.color, wall.texture?.src, wall.texture?.scaleCm, wall.texture?.roughness, wall.texture?.metalness], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const faceFinishes = wall.faceFinishes ?? NO_FACE_FINISHES;
+  const faceMats = useMemo(
+    () => faceFinishes.map((finish) => wallMaterial(finish.color, finish.texture)),
+    [faceFinishes],
+  );
 
   // Outward-facing horizontal normal (points away from the building centre).
   const normal = useMemo(() => {
@@ -154,13 +213,20 @@ function WallMesh({
   useEffect(() => {
     register(wall.id, { mat, nx: normal.nx, nz: normal.nz, mx, mz });
     register(`${wall.id}:cap`, { mat: capMat, nx: normal.nx, nz: normal.nz, mx, mz });
+    faceMats.forEach((finishMat, i) => {
+      register(`${wall.id}:face:${i}`, { mat: finishMat, nx: normal.nx, nz: normal.nz, mx, mz });
+    });
     return () => {
       unregister(wall.id);
       unregister(`${wall.id}:cap`);
+      faceMats.forEach((finishMat, i) => {
+        unregister(`${wall.id}:face:${i}`);
+        finishMat.dispose();
+      });
       mat.dispose();
       capMat.dispose();
     };
-  }, [wall.id, mat, capMat, normal, mx, mz, register, unregister]);
+  }, [wall.id, mat, capMat, faceMats, normal, mx, mz, register, unregister]);
 
   return (
     <group
@@ -174,7 +240,15 @@ function WallMesh({
               // through to the floor behind it instead of painting a ghost.
               if (mat.opacity < 0.5) return;
               e.stopPropagation();
-              onTap({ kind: 'wall', id: wall.id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY });
+              const position = { x: e.point.x / M, y: e.point.z / M };
+              onTap({
+                kind: 'wall',
+                id: wall.id,
+                x: e.nativeEvent.clientX,
+                y: e.nativeEvent.clientY,
+                position,
+                wallFace: wallFaceAt(wall, rooms, position),
+              });
             }
           : undefined
       }
@@ -191,6 +265,29 @@ function WallMesh({
           textured={!!wall.texture}
         />
       ))}
+      {faceFinishes.flatMap((finish: WallFaceFinish, finishIndex) => {
+        const from = Math.max(0, Math.min(1, finish.start)) * dist(wall.start, wall.end);
+        const to = Math.max(0, Math.min(1, finish.end)) * dist(wall.start, wall.end);
+        return spans.flatMap((span, spanIndex) => {
+          const a = Math.max(span.a, from);
+          const b = Math.min(span.b, to);
+          if (b - a <= 0.1) return [];
+          return [
+            <WallFaceSpan
+              key={`face-${finishIndex}-${spanIndex}`}
+              position={[
+                ((a + b) / 2) * M,
+                ((span.y0 + span.y1) / 2) * M,
+                finish.side * (t / 2 + 0.0015),
+              ]}
+              material={faceMats[finishIndex]}
+              spanW={(b - a) * M}
+              spanH={(span.y1 - span.y0) * M}
+              side={finish.side}
+            />,
+          ];
+        });
+      })}
       {/* Dark top cap along the full wall (fades with the wall body). */}
       <mesh
         position={[(dist(wall.start, wall.end) / 2) * M, wall.height * M + 0.015, 0]}
@@ -520,7 +617,13 @@ function FloorMesh({ room, onTap }: { room: Room; onTap?: (tap: SurfaceTap) => v
           ? (e) => {
               if (e.delta > 4) return; // orbit drag, not a tap
               e.stopPropagation();
-              onTap({ kind: 'room', id: room.id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY });
+              onTap({
+                kind: 'room',
+                id: room.id,
+                x: e.nativeEvent.clientX,
+                y: e.nativeEvent.clientY,
+                position: { x: e.point.x / M, y: e.point.z / M },
+              });
             }
           : undefined
       }
@@ -608,7 +711,7 @@ function FloorContent({
   // its height, thickness, paint or delete it — wall editing right in 3D) AND
   // opens the quick paint popover at the tap point.
   const tapSurface = (tap: SurfaceTap) => {
-    select({ kind: tap.kind, id: tap.id });
+    select({ kind: tap.kind, id: tap.id, wallFace: tap.kind === 'wall' ? tap.wallFace : undefined });
     onSurfaceTap?.(tap);
   };
   const onTap = interactive ? tapSurface : undefined;
@@ -626,6 +729,7 @@ function FloorContent({
         <WallMesh
           key={w.id}
           wall={w}
+          rooms={geom.rooms}
           openings={openingsByWall.get(w.id) ?? []}
           center={center}
           register={register}
@@ -639,6 +743,7 @@ function FloorContent({
           item={f}
           selected={interactive && selection.kind === 'furniture' && selection.id === f.id}
           onSelect={() => interactive && select({ kind: 'furniture', id: f.id })}
+          interactive={interactive}
           draggable={interactive}
           ceilingHeight={ceilingHeight}
         />
@@ -665,6 +770,10 @@ export default function DesignScene({
   dollhouseInstant?: boolean;
   onSurfaceTap?: (tap: SurfaceTap) => void;
 }) {
+  // Subscribe once for the entire scene so a cached/fetched cloud manifest can
+  // replace procedural fallbacks even if 3D opened before the request finished.
+  const cloudCatalog = useRemoteCatalog();
+  void cloudCatalog.remoteCount;
   const floors = useDesign((s) => s.floors);
   const floorGeom = useDesign((s) => s.floorGeom);
   const activeFloorId = useDesign((s) => s.activeFloorId);
@@ -674,7 +783,8 @@ export default function DesignScene({
   const fades = useRef(new Map<string, WallFade>());
   const register = useCallback((id: string, f: WallFade) => fades.current.set(id, f), []);
   const unregister = useCallback((id: string) => fades.current.delete(id), []);
-  useFrame(({ camera }) => {
+  useFrame(({ camera, invalidate }) => {
+    let transitioning = false;
     fades.current.forEach((w) => {
       const m = w.mat;
       if (!dollhouse) {
@@ -688,9 +798,17 @@ export default function DesignScene({
       const camDot = w.nx * (camera.position.x - w.mx) + w.nz * (camera.position.z - w.mz);
       const target = camDot > 0.25 ? 0.1 : 1;
       m.transparent = true;
-      m.opacity = dollhouseInstant ? target : m.opacity + (target - m.opacity) * 0.2;
+      if (dollhouseInstant || Math.abs(m.opacity - target) < 0.01) {
+        m.opacity = target;
+      } else {
+        m.opacity += (target - m.opacity) * 0.2;
+        transitioning = true;
+      }
       m.depthWrite = m.opacity > 0.85;
     });
+    // Orbit view uses demand rendering. Finish the short wall fade after the
+    // controls stop requesting frames, then sleep again when fully settled.
+    if (transitioning) invalidate();
   });
 
   return (

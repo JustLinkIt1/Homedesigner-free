@@ -1,8 +1,8 @@
-import { Suspense, useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { CATALOG_BY_TYPE, type Shape3D } from '../../data/furnitureCatalog';
-import GltfFurniture, { hasModel } from './GltfFurniture';
+import { ResilientGltfFurniture } from './GltfFurniture';
 import { useDesign } from '../../store/designStore';
 import type { FurnitureItem } from '../../types';
 
@@ -29,12 +29,15 @@ export default function Furniture3D({
   item,
   selected,
   onSelect,
+  interactive = true,
   draggable = false,
   ceilingHeight = 2.7,
 }: {
   item: FurnitureItem;
   selected: boolean;
   onSelect: () => void;
+  /** Whether this object participates in pointer hit-testing. */
+  interactive?: boolean;
   draggable?: boolean;
   /** Storey ceiling height in metres — ceiling fixtures mount against it. */
   ceilingHeight?: number;
@@ -60,6 +63,7 @@ export default function Furniture3D({
   // one undo entry per drag, matching the 2D editor.
   const groupRef = useRef<THREE.Group>(null);
   const controls = useThree((st) => st.controls) as { enabled: boolean } | null;
+  const invalidate = useThree((st) => st.invalidate);
   const drag = useRef<{ plane: THREE.Plane; grab: THREE.Vector3; moved: boolean } | null>(null);
 
   const beginDrag = (e: ThreeEvent<PointerEvent>) => {
@@ -89,6 +93,11 @@ export default function Furniture3D({
     const local = g.parent.worldToLocal(hit.sub(st.grab));
     g.position.set(local.x, mountY, local.z);
     st.moved = true;
+    // The orbit view uses frameloop="demand". This transform is an imperative
+    // ref mutation, so React Three Fiber cannot know that it needs to draw.
+    // Explicit invalidation keeps the object attached to the pointer instead
+    // of appearing to update only when some unrelated UI state changes.
+    invalidate();
   };
 
   const endDrag = (e: ThreeEvent<PointerEvent>) => {
@@ -102,6 +111,7 @@ export default function Furniture3D({
         position: { x: p.x / M, y: p.z / M },
       });
     }
+    invalidate();
   };
 
   return (
@@ -109,37 +119,46 @@ export default function Furniture3D({
       ref={groupRef}
       position={[item.position.x * M, mountY, item.position.y * M]}
       rotation={[0, (-item.rotation * Math.PI) / 180, 0]}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-      onPointerDown={beginDrag}
-      onPointerMove={moveDrag}
-      onPointerUp={endDrag}
-      onPointerOver={(e) => {
-        if (draggable) {
-          e.stopPropagation();
-          document.body.style.cursor = 'grab';
-        }
-      }}
-      onPointerOut={() => {
-        if (draggable && !drag.current) document.body.style.cursor = '';
-      }}
     >
+      {interactive && (
+        // Keep pointer interaction on one cheap cuboid. Attaching handlers to
+        // the parent group makes R3F recursively raycast every decorative mesh
+        // in a sofa/bookshelf/GLB on every pointer move. The material is hidden
+        // from rendering but remains raycastable, so this costs no draw call.
+        <mesh
+          position={[0, h / 2, 0]}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect();
+          }}
+          onPointerDown={beginDrag}
+          onPointerMove={moveDrag}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onPointerOver={(e) => {
+            if (draggable) {
+              e.stopPropagation();
+              document.body.style.cursor = 'grab';
+            }
+          }}
+          onPointerOut={() => {
+            if (draggable && !drag.current) document.body.style.cursor = '';
+          }}
+        >
+          <boxGeometry args={[Math.max(w, 0.05), Math.max(h, 0.05), Math.max(d, 0.05)]} />
+          <meshBasicMaterial visible={false} />
+        </mesh>
+      )}
       {selected && (
         <mesh position={[0, h / 2 + 0.01, 0]}>
           <boxGeometry args={[w + 0.06, h + 0.06, d + 0.06]} />
           <meshBasicMaterial color="#4c8dff" wireframe transparent opacity={0.7} />
         </mesh>
       )}
-      {hasModel(item.type) ? (
-        // Real model loads lazily; show the procedural mesh until it arrives.
-        <Suspense fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} />}>
-          <GltfFurniture item={item} />
-        </Suspense>
-      ) : (
-        <ShapeMesh shape={shape} w={w} d={d} h={h} color={color} />
-      )}
+      <ResilientGltfFurniture
+        item={item}
+        fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} />}
+      />
     </group>
   );
 }
@@ -193,7 +212,7 @@ function FourLegs({
   );
 }
 
-function ShapeMesh({
+export function ShapeMesh({
   shape, w, d, h, color,
 }: { shape: Shape3D; w: number; d: number; h: number; color: string }) {
   switch (shape) {

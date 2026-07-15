@@ -17,6 +17,7 @@ import {
   Sun,
   Moon,
   PenTool,
+  X,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
 import ToolDock from './components/ToolDock';
@@ -38,6 +39,7 @@ import { useProStore } from './store/proStore';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
 import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
+import { TOOLS } from './data/tools';
 import { sceneCapture, planCapture } from './lib/renderBridge';
 import { useDraw, drawBridge, useConfirm } from './lib/ui';
 import { initNative } from './lib/native';
@@ -56,9 +58,9 @@ const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
 
 export default function App() {
   const {
-    view, setView, walls, tool, zoom, showGrid, setZoom, setShowGrid,
+    view, setView, walls, tool, setTool, zoom, showGrid, setZoom, setShowGrid,
     showDimensions, setShowDimensions, dollhouse, setDollhouse,
-    walkMode, setWalkMode, pendingFurnitureType, selection,
+    walkMode, setWalkMode, pendingFurnitureType, setPendingFurniture, selection,
     units, setUnits,
     sunTime, setSunTime, lightsOn, setLightsOn,
   } = useDesign(useShallow((s) => ({
@@ -66,6 +68,7 @@ export default function App() {
     setView: s.setView,
     walls: s.walls,
     tool: s.tool,
+    setTool: s.setTool,
     zoom: s.zoom,
     showGrid: s.showGrid,
     setZoom: s.setZoom,
@@ -77,6 +80,7 @@ export default function App() {
     walkMode: s.walkMode,
     setWalkMode: s.setWalkMode,
     pendingFurnitureType: s.pendingFurnitureType,
+    setPendingFurniture: s.setPendingFurniture,
     selection: s.selection,
     units: s.units,
     setUnits: s.setUnits,
@@ -365,6 +369,19 @@ export default function App() {
     : tool === 'select' && walls.length === 0
     ? t('Pick a tool on the left to start — try ✏️ Draw walls')
     : null;
+  const pendingEntry = pendingFurnitureType ? CATALOG_BY_TYPE[pendingFurnitureType] : undefined;
+  const activeBuildTool = TOOLS.find(
+    (entry) => entry.id === tool && entry.id !== 'select' && entry.id !== 'pan',
+  );
+  const buildModeActive = !!activeBuildTool || !!pendingEntry?.opening;
+  const placementAvailable = !!pendingEntry && (view === '2d' || !pendingEntry.opening);
+
+  const cancelPlacement = () => {
+    setPendingFurniture(null);
+    setTool('select');
+  };
+
+  const toggleObjects = () => setDrawer(drawer === 'catalog' ? null : 'catalog');
 
   if (screen === 'projects') {
     return (
@@ -393,7 +410,7 @@ export default function App() {
         onHome={goHome}
       />
       <div className="body">
-        {view === '2d' && (
+        {!walkMode && (
           <CatalogSidebar
             open={drawer === 'catalog'}
             // Furniture mode docks the catalog in — but not while an opening
@@ -462,6 +479,22 @@ export default function App() {
               </button>
               <button className="cancel-btn" onClick={() => drawBridge.cancel?.()} aria-label={coarsePointer ? t('Cancel') : 'Cancel drawing'}>
                 {coarsePointer ? '✕' : 'Esc'}
+              </button>
+            </div>
+          )}
+
+          {placementAvailable && !drawing && (
+            <div className={`placement-affordance ${view === '3d' ? 'in-3d' : ''}`} role="status">
+              <Sofa className="icon" />
+              <span>
+                {view === '3d'
+                  ? `${t('Tap a floor to place')} ${t(pendingEntry.name)}`
+                  : pendingEntry.opening
+                    ? `${t('Tap a wall to place')} ${t(pendingEntry.name)}`
+                    : `${t('Tap the plan to place')} ${t(pendingEntry.name)}`}
+              </span>
+              <button onClick={cancelPlacement} aria-label={t('Cancel placement')} title={t('Cancel placement')}>
+                <X className="icon" />
               </button>
             </div>
           )}
@@ -634,6 +667,20 @@ export default function App() {
                 </div>
               </div>
               <div className="render-actions">
+                <button
+                  className={`render-btn objects3d-btn ${tool === 'furniture' ? 'active' : ''}`}
+                  onClick={() => {
+                    if (tool === 'furniture') cancelPlacement();
+                    else {
+                      setTool('furniture');
+                      setDrawer('catalog');
+                    }
+                  }}
+                  aria-pressed={tool === 'furniture'}
+                >
+                  <Sofa className="icon" />
+                  <span>{t('Objects')}</span>
+                </button>
                 <div className="export-wrap" ref={renderMenuRef}>
                   <button
                     className="render-btn"
@@ -706,23 +753,24 @@ export default function App() {
             }}
           />
         )}
-        <div className={`mobile-tabs ${view === '3d' ? 'single' : ''}`}>
+        <div className={`mobile-tabs ${view === '3d' ? 'two' : ''}`}>
           {view === '2d' && (
             <button
-              className={drawer === 'build' ? 'active' : ''}
+              className={drawer === 'build' || buildModeActive ? 'active' : ''}
               onClick={() => setDrawer(drawer === 'build' ? null : 'build')}
+              aria-pressed={drawer === 'build' || buildModeActive}
             >
-              <PenTool className="icon" /> {t('Build')}
+              <PenTool className="icon" />{' '}
+              {t(activeBuildTool?.label ?? (pendingEntry?.opening ? pendingEntry.name : 'Build'))}
             </button>
           )}
-          {view === '2d' && (
-            <button
-              className={drawer === 'catalog' ? 'active' : ''}
-              onClick={() => setDrawer(drawer === 'catalog' ? null : 'catalog')}
-            >
-              <Sofa className="icon" /> {t('Objects')}
-            </button>
-          )}
+          <button
+            className={drawer === 'catalog' || tool === 'furniture' ? 'active' : ''}
+            onClick={toggleObjects}
+            aria-pressed={drawer === 'catalog' || tool === 'furniture'}
+          >
+            <Sofa className="icon" /> {t('Objects')}
+          </button>
           <button
             className={drawer === 'props' ? 'active' : ''}
             onClick={() => {

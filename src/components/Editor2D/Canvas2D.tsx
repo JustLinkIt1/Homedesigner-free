@@ -35,11 +35,12 @@ import {
 // Cap the Konva canvas pixel ratio. Ultra-high-DPI phones (e.g. Galaxy S25 at
 // ~1440p report devicePixelRatio ~3.5) otherwise render the full-screen 2D
 // Stage at 3-4x — millions of extra pixels every redraw, so panning/dragging
-// crawls while a lower-DPI phone (S24) stays smooth. 2x is already retina-crisp
-// for line art + text; this is the single biggest 2D perf win. Photo/plan
-// exports pass their own explicit pixelRatio, so they're unaffected.
+// crawls while a lower-DPI phone stays smooth. Touch uses 1.5x (44% fewer
+// backing-buffer pixels than 2x); desktop keeps 2x. Photo/plan exports pass an
+// explicit pixelRatio, so they remain full resolution.
 if (typeof window !== 'undefined') {
-  Konva.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  const touchCap = window.matchMedia?.('(pointer: coarse)').matches ? 1.5 : 2;
+  Konva.pixelRatio = Math.min(window.devicePixelRatio || 1, touchCap);
 }
 
 // Touch devices need ~44px targets; mouse pointers stay precise at 16px.

@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { Component, Suspense, useMemo, type ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { FurnitureItem } from '../../types';
+import { CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
 
 const M = 0.01; // cm -> m
 
@@ -70,8 +71,12 @@ export const FURNITURE_MODELS: Record<string, { url: string; yaw?: number }> = {
   // height) reads better than a flat panel lying on the ground.
 };
 
+export function modelDefinition(type: string): { url: string; yaw?: number } | undefined {
+  return CATALOG_BY_TYPE[type]?.model ?? FURNITURE_MODELS[type];
+}
+
 export function hasModel(type: string): boolean {
-  return type in FURNITURE_MODELS;
+  return !!modelDefinition(type);
 }
 
 /**
@@ -80,7 +85,7 @@ export function hasModel(type: string): boolean {
  * base sits on the floor. The parent group owns world position + rotation.
  */
 export default function GltfFurniture({ item }: { item: FurnitureItem }) {
-  const def = FURNITURE_MODELS[item.type];
+  const def = modelDefinition(item.type)!;
   const { scene } = useGLTF(def.url);
 
   const node = useMemo(() => {
@@ -116,8 +121,47 @@ export default function GltfFurniture({ item }: { item: FurnitureItem }) {
   );
 }
 
-// Warm only the most common models; the rest stream in on first use so a
-// 20-model library doesn't front-load the 3D view.
-for (const t of ['sofa', 'armchair', 'dining_table', 'dining_chair'] as const) {
-  useGLTF.preload(FURNITURE_MODELS[t].url);
+class ModelBoundary extends Component<
+  { resetKey: string; fallback: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidUpdate(previous: Readonly<{ resetKey: string }>) {
+    if (this.state.failed && previous.resetKey !== this.props.resetKey) {
+      this.setState({ failed: false });
+    }
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
 }
+
+/** Load a bundled or R2 model without allowing a missing/corrupt cloud object
+ * to take down the whole 3D view. The procedural representation stays usable
+ * while loading and becomes the permanent fallback on error. */
+export function ResilientGltfFurniture({
+  item,
+  fallback,
+}: {
+  item: FurnitureItem;
+  fallback: ReactNode;
+}) {
+  const definition = modelDefinition(item.type);
+  if (!definition) return fallback;
+  return (
+    <ModelBoundary resetKey={definition.url} fallback={fallback}>
+      <Suspense fallback={fallback}>
+        <GltfFurniture item={item} />
+      </Suspense>
+    </ModelBoundary>
+  );
+}
+
+// Deliberately do not preload a fixed "common" set here. Importing this module
+// happens both when the main 3D scene opens and when the first catalog preview
+// opens; eager preloads made either action decode models the current design did
+// not use. Each mounted GltfFurniture still loads and caches its own URL, so
+// duplicate objects share the normal useGLTF cache without front-loading I/O.

@@ -1,38 +1,44 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import { Search, Sofa, Lock, History, X } from 'lucide-react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Search, Sofa, Lock, History, X, Box, Move3D, Cloud, RefreshCw } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
-import { FURNITURE_CATALOG, CATALOG_BY_TYPE, type CatalogEntry } from '../data/furnitureCatalog';
+import {
+  CATALOG_BY_TYPE,
+  CATALOG_GROUP_ORDER,
+  catalogGroupFor,
+  type CatalogEntry,
+  type CatalogGroup,
+} from '../data/furnitureCatalog';
 import { getRecent } from '../lib/recent';
 import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
+import { loadRemoteCatalog, useRemoteCatalog } from '../lib/remoteCatalog';
 
-// Openings (doors/windows) are placed from the build-mode dock flyout, so they
-// no longer clutter the furniture catalog.
-const CATALOG = FURNITURE_CATALOG.filter((e) => e.category !== 'Openings');
+// Keep Three.js out of the initial 2D editor path; load it only after a user
+// actually asks to inspect an object.
+const CatalogPreview = lazy(() => import('./CatalogPreview'));
 
-function CatalogItem({ entry, onPicked }: { entry: CatalogEntry; onPicked?: () => void }) {
-  const { pendingFurnitureType, setPendingFurniture } = useDesign(useShallow((s) => ({
-    pendingFurnitureType: s.pendingFurnitureType,
-    setPendingFurniture: s.setPendingFurniture,
-  })));
-  const isPro = useProStore((s) => s.isPro);
+function CatalogItem({
+  entry,
+  previewed,
+  onPreview,
+}: {
+  entry: CatalogEntry;
+  previewed: boolean;
+  onPreview: () => void;
+}) {
+  const pendingFurnitureType = useDesign((state) => state.pendingFurnitureType);
+  const isPro = useProStore((state) => state.isPro);
   const t = useI18n();
   const locked = !!entry.pro && !isPro;
   const name = t(entry.name);
+
   return (
     <button
-      className={`cat-item ${pendingFurnitureType === entry.type ? 'active' : ''} ${locked ? 'locked' : ''}`}
-      onClick={() => {
-        // Locked items open the upsell instead of arming placement;
-        // already-placed pro items keep rendering everywhere.
-        if (locked && !requirePro('catalog')) return;
-        setPendingFurniture(pendingFurnitureType === entry.type ? null : entry.type);
-        onPicked?.();
-      }}
-      title={locked ? `${name} — Pro` : `${name}`}
+      className={`cat-item ${previewed || pendingFurnitureType === entry.type ? 'active' : ''} ${locked ? 'locked' : ''}`}
+      onClick={onPreview}
+      title={locked ? `${name} — Pro` : name}
     >
       {locked && (
         <span className="ci-lock" aria-label="Pro item">
@@ -57,10 +63,18 @@ export default function CatalogSidebar({
   /** Close the mobile bottom sheet. */
   onClose?: () => void;
 }) {
-  const pendingFurnitureType = useDesign((s) => s.pendingFurnitureType);
+  const pendingFurnitureType = useDesign((state) => state.pendingFurnitureType);
+  const cloudCatalog = useRemoteCatalog();
+  // Openings are placed from build mode, so they do not clutter this catalog.
+  const catalog = useMemo(
+    () => cloudCatalog.entries.filter((entry) => entry.category !== 'Openings'),
+    [cloudCatalog.entries],
+  );
   const t = useI18n();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<string>('All');
+  const [category, setCategory] = useState('All');
+  const [browseBy, setBrowseBy] = useState<'room' | 'type'>('room');
+  const [previewEntry, setPreviewEntry] = useState<CatalogEntry | null>(null);
   const [desktop, setDesktop] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(min-width: 881px)').matches,
   );
@@ -74,8 +88,7 @@ export default function CatalogSidebar({
     return () => media.removeEventListener('change', update);
   }, []);
 
-  // Keep the icon-heavy catalog out of the DOM while its sheet is closed so
-  // canvas gestures do not compete with hidden layout and paint work.
+  // Keep the model preview and icon grid out of the DOM while the sheet is closed.
   useEffect(() => {
     if (active) {
       setRenderContents(true);
@@ -85,41 +98,70 @@ export default function CatalogSidebar({
     return () => window.clearTimeout(timer);
   }, [active]);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    CATALOG.forEach((e) => set.add(e.category));
-    return ['All', ...set];
-  }, []);
+  useEffect(() => setCategory('All'), [browseBy]);
 
-  // Refreshes exactly when the user arms something new (arming always changes
-  // pendingFurnitureType, which is what records a recent).
+  const categories = useMemo(() => {
+    const values = new Set<string>();
+    catalog.forEach((entry) => values.add(browseBy === 'room' ? entry.category : catalogGroupFor(entry)));
+    const ordered = browseBy === 'type'
+      ? CATALOG_GROUP_ORDER.filter((group) => values.has(group))
+      : [...values];
+    return ['All', ...ordered];
+  }, [browseBy, catalog]);
+
   const recent = useMemo(
-    () => getRecent().map((t) => CATALOG_BY_TYPE[t]).filter((e): e is CatalogEntry => !!e),
+    () => getRecent().map((type) => CATALOG_BY_TYPE[type]).filter((entry): entry is CatalogEntry => !!entry),
+    // Arming a new object updates this value and therefore refreshes recents.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pendingFurnitureType],
   );
 
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const items = CATALOG.filter(
-      (e) =>
-        (category === 'All' || e.category === category) &&
+    const items = catalog.filter((entry) => {
+      const group = browseBy === 'room' ? entry.category : catalogGroupFor(entry);
+      return (
+        (category === 'All' || group === category) &&
         (!q ||
-          e.name.toLowerCase().includes(q) ||
-          t(e.name).toLowerCase().includes(q) ||
-          e.category.toLowerCase().includes(q) ||
-          t(e.category).toLowerCase().includes(q)),
-    );
-    const map = new Map<string, typeof FURNITURE_CATALOG>();
-    for (const e of items) {
-      const arr = map.get(e.category) ?? [];
-      arr.push(e);
-      map.set(e.category, arr);
+          entry.name.toLowerCase().includes(q) ||
+          t(entry.name).toLowerCase().includes(q) ||
+          entry.category.toLowerCase().includes(q) ||
+          t(entry.category).toLowerCase().includes(q) ||
+          catalogGroupFor(entry).toLowerCase().includes(q))
+      );
+    });
+    const map = new Map<string, CatalogEntry[]>();
+    for (const entry of items) {
+      const group = browseBy === 'room' ? entry.category : catalogGroupFor(entry);
+      map.set(group, [...(map.get(group) ?? []), entry]);
     }
-    return [...map.entries()];
-    // t is stable per language; re-grouping on every render would be wasteful.
+    const groups = [...map.entries()];
+    if (browseBy === 'type') {
+      groups.sort(
+        ([a], [b]) => CATALOG_GROUP_ORDER.indexOf(a as CatalogGroup) - CATALOG_GROUP_ORDER.indexOf(b as CatalogGroup),
+      );
+    }
+    return groups;
+    // t is stable for a language; avoid rebuilding on unrelated renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, category]);
+  }, [query, category, browseBy, catalog]);
+
+  const placePreviewed = () => {
+    if (!previewEntry) return;
+    const locked = !!previewEntry.pro && !useProStore.getState().isPro;
+    if (locked && !requirePro('catalog')) return;
+    useDesign.getState().setPendingFurniture(previewEntry.type);
+    onClose?.();
+  };
+
+  const renderItem = (entry: CatalogEntry, key = entry.type) => (
+    <CatalogItem
+      key={key}
+      entry={entry}
+      previewed={previewEntry?.type === entry.type}
+      onPreview={() => setPreviewEntry(entry)}
+    />
+  );
 
   return (
     <aside
@@ -127,61 +169,102 @@ export default function CatalogSidebar({
       aria-hidden={!active}
     >
       {renderContents && <>
-      <div className="sheet-grab" onClick={onClose} />
-      <div className="sidebar-head">
-        <Sofa className="icon" /> {t('Objects')}
-        <button className="sheet-close" onClick={onClose} aria-label={t('Close')}>
-          <X className="icon" />
-        </button>
-      </div>
-      <div className="cat-search">
-        <Search className="icon" />
-        <input
-          placeholder={t('Search objects…')}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-      <div className="cat-chips">
-        {categories.map((c) => (
-          <button
-            key={c}
-            className={`chip ${category === c ? 'active' : ''}`}
-            onClick={() => setCategory(c)}
-          >
-            {t(c)}
+        <div className="sheet-grab" onClick={onClose} />
+        <div className="sidebar-head">
+          <Sofa className="icon" /> {t('Objects')}
+          <button className="sheet-close" onClick={onClose} aria-label={t('Close')}>
+            <X className="icon" />
           </button>
-        ))}
-      </div>
-      <div className="sidebar-scroll">
-        {!query.trim() && category === 'All' && recent.length > 0 && (
-          <div className="cat-section" key="__recent">
-            <div className="cat-title">
-              <History className="icon" style={{ width: 13, height: 13, verticalAlign: -2 }} /> {t('Recent')}
+        </div>
+        <div className="cat-search">
+          <Search className="icon" />
+          <input
+            placeholder={t('Search objects…')}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <div className={`catalog-cloud-status ${cloudCatalog.status}`}>
+          <Cloud className="icon" />
+          <span>
+            {cloudCatalog.status === 'loading'
+              ? t('Loading cloud objects…')
+              : cloudCatalog.status === 'ready'
+                ? `${cloudCatalog.remoteCount} ${t('cloud objects')}`
+                : cloudCatalog.status === 'offline'
+                  ? t('Offline catalog')
+                  : t('Cloud catalog')}
+          </span>
+          {cloudCatalog.status === 'offline' && (
+            <button onClick={() => void loadRemoteCatalog(true)} title={t('Retry')} aria-label={t('Retry')}>
+              <RefreshCw className="icon" />
+            </button>
+          )}
+        </div>
+        <div className="cat-browse-toggle" role="group" aria-label={t('Browse objects by')}>
+          <button className={browseBy === 'room' ? 'active' : ''} onClick={() => setBrowseBy('room')}>
+            <Box className="icon" /> {t('Room')}
+          </button>
+          <button className={browseBy === 'type' ? 'active' : ''} onClick={() => setBrowseBy('type')}>
+            <Sofa className="icon" /> {t('Type')}
+          </button>
+        </div>
+        <div className="cat-chips">
+          {categories.map((value) => (
+            <button
+              key={value}
+              className={`chip ${category === value ? 'active' : ''}`}
+              onClick={() => setCategory(value)}
+            >
+              {t(value)}
+            </button>
+          ))}
+        </div>
+        {previewEntry && (
+          <div className="catalog-preview">
+            <div className="catalog-preview-visual">
+              <Suspense fallback={<div className="catalog-preview-loading">{t('Loading 3D preview…')}</div>}>
+                <CatalogPreview entry={previewEntry} />
+              </Suspense>
+              <span className="catalog-preview-hint"><Move3D className="icon" /> {t('Drag to rotate')}</span>
             </div>
-            <div className="cat-grid">
-              {recent.map((e) => (
-                <CatalogItem key={`r-${e.type}`} entry={e} onPicked={onClose} />
-              ))}
+            <div className="catalog-preview-info">
+              <div>
+                <strong>{t(previewEntry.name)}</strong>
+                <span>{previewEntry.width} × {previewEntry.depth} × {previewEntry.height} cm</span>
+              </div>
+              <button className="btn primary catalog-place" onClick={placePreviewed}>
+                {previewEntry.pro && !useProStore.getState().isPro
+                  ? <><Lock className="icon" /> {t('Unlock to place')}</>
+                  : t('Place item')}
+              </button>
+              <button className="catalog-preview-close" onClick={() => setPreviewEntry(null)} aria-label={t('Close preview')}>
+                <X className="icon" />
+              </button>
             </div>
           </div>
         )}
-        {grouped.length === 0 && (
-          <div className="empty-state" style={{ padding: '28px 20px' }}>
-            <p>{t('No objects match')} “{query}”.</p>
-          </div>
-        )}
-        {grouped.map(([cat, items]) => (
-          <div className="cat-section" key={cat}>
-            {category === 'All' && <div className="cat-title">{t(cat)}</div>}
-            <div className="cat-grid">
-              {items.map((e) => (
-                <CatalogItem key={e.type} entry={e} onPicked={onClose} />
-              ))}
+        <div className="sidebar-scroll">
+          {!query.trim() && category === 'All' && recent.length > 0 && (
+            <div className="cat-section" key="__recent">
+              <div className="cat-title">
+                <History className="icon" style={{ width: 13, height: 13, verticalAlign: -2 }} /> {t('Recent')}
+              </div>
+              <div className="cat-grid">{recent.map((entry) => renderItem(entry, `r-${entry.type}`))}</div>
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+          {grouped.length === 0 && (
+            <div className="empty-state" style={{ padding: '28px 20px' }}>
+              <p>{t('No objects match')} “{query}”.</p>
+            </div>
+          )}
+          {grouped.map(([group, items]) => (
+            <div className="cat-section" key={group}>
+              {category === 'All' && <div className="cat-title">{t(group)}</div>}
+              <div className="cat-grid">{items.map((entry) => renderItem(entry))}</div>
+            </div>
+          ))}
+        </div>
       </>}
     </aside>
   );

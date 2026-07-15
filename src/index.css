@@ -565,6 +565,66 @@ button.brand:hover .brand-name {
   box-shadow: 0 0 0 3px var(--brand-soft);
   background: var(--surface);
 }
+.catalog-cloud-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  margin: -2px 16px 6px;
+  color: var(--text-3);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.catalog-cloud-status.ready {
+  color: var(--brand);
+}
+.catalog-cloud-status.offline {
+  color: var(--text-2);
+}
+.catalog-cloud-status .icon {
+  width: 13px;
+  height: 13px;
+}
+.catalog-cloud-status button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  border-radius: 7px;
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+.cat-browse-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 0 14px 6px;
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.cat-browse-toggle button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 31px;
+  border-radius: 8px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.cat-browse-toggle button.active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.cat-browse-toggle .icon {
+  width: 14px;
+  height: 14px;
+}
 .cat-chips {
   display: flex;
   gap: 6px;
@@ -574,6 +634,107 @@ button.brand:hover .brand-name {
 }
 .cat-chips::-webkit-scrollbar {
   display: none;
+}
+.catalog-preview {
+  position: relative;
+  margin: 0 12px 10px;
+  overflow: hidden;
+  border: 1px solid var(--brand);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 35%, var(--brand-soft), transparent 62%),
+    var(--surface-2);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+  flex: none;
+}
+.catalog-preview-visual {
+  position: relative;
+  height: 142px;
+  touch-action: none;
+}
+.catalog-preview-canvas {
+  width: 100%;
+  height: 100%;
+}
+.catalog-preview-loading {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+}
+.catalog-preview-hint {
+  position: absolute;
+  left: 8px;
+  bottom: 7px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--text-3);
+  font-size: 9.5px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.catalog-preview-hint .icon {
+  width: 11px;
+  height: 11px;
+}
+.catalog-preview-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px 10px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+.catalog-preview-info strong,
+.catalog-preview-info span {
+  display: block;
+}
+.catalog-preview-info strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.catalog-preview-info span {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 9.5px;
+}
+.catalog-place {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.catalog-place .icon {
+  width: 12px;
+  height: 12px;
+}
+.catalog-preview-close {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 999px;
+  color: var(--text-2);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+.catalog-preview-close .icon {
+  width: 14px;
+  height: 14px;
 }
 .chip {
   flex: none;
@@ -1619,6 +1780,69 @@ button.brand:hover .brand-name {
 .cancel-btn:hover {
   background: var(--surface-3);
 }
+
+/* Persistent placement status for both editors. The catalog closes after a
+   pick on phones, so this keeps the armed object and the next action obvious. */
+.placement-affordance {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  max-width: min(520px, calc(100% - 32px));
+  padding: 6px 7px 6px 13px;
+  border: 1px solid var(--brand);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.placement-affordance > .icon {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: var(--brand);
+}
+.placement-affordance span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.placement-affordance button {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.placement-affordance button:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.placement-affordance button .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.objects3d-btn {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.objects3d-btn.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
 @media (max-width: 880px) {
   /* Clear the fixed toolbar and give the finish/cancel comfortable tap targets. */
   .draw-affordance {
@@ -1630,6 +1854,11 @@ button.brand:hover .brand-name {
   .cancel-btn {
     height: 44px;
     min-width: 44px;
+  }
+  .placement-affordance {
+    top: calc(60px + env(safe-area-inset-top));
+    max-width: calc(100vw - 24px);
+    min-height: 46px;
   }
 }
 
@@ -3202,13 +3431,18 @@ button.brand:hover .brand-name {
   .render-actions::-webkit-scrollbar {
     display: none;
   }
+  /* Objects has a dedicated bottom tab on phones; keep this desktop entry
+     point out of the already-busy render strip. */
+  .objects3d-btn {
+    display: none;
+  }
   /* The render-actions strip lives at the bottom on phones and scrolls
      horizontally (clipping its children), so its quality menu breaks out as a
      fixed panel just above the strip instead of being cut off. */
   .render-menu {
     position: fixed;
     top: auto;
-    bottom: calc(112px + env(safe-area-inset-bottom));
+    bottom: calc(168px + env(safe-area-inset-bottom));
     left: 12px;
     right: auto;
     z-index: 60;
@@ -3225,7 +3459,7 @@ button.brand:hover .brand-name {
   }
   /* Sit the rotate pill above the render-actions strip. */
   .rotate3d-pill {
-    bottom: calc(120px + env(safe-area-inset-bottom));
+    bottom: calc(172px + env(safe-area-inset-bottom));
   }
   /* Phones use the grouped Build sheet (opened from the Build tab) instead of a
      floating dock — a flat 7-icon row overflowed the screen edge. */
@@ -3256,12 +3490,12 @@ button.brand:hover .brand-name {
   .hud-2d .hud-txt {
     display: none;
   }
-  /* 3D HUD is a single compact "View" pill bottom-left, clearing the Edit tab. */
+  /* 3D HUD sits above the render strip and the two-tab Objects/Edit bar. */
   .hud-3d {
     left: 12px;
-    right: 116px;
+    right: 12px;
     transform: none;
-    bottom: calc(16px + env(safe-area-inset-bottom));
+    bottom: calc(116px + env(safe-area-inset-bottom));
     justify-content: flex-start;
     padding: 2px;
   }
@@ -3280,7 +3514,7 @@ button.brand:hover .brand-name {
   .view-menu {
     position: fixed;
     top: auto;
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    bottom: calc(168px + env(safe-area-inset-bottom));
     left: 12px;
     right: auto;
     z-index: 65;
@@ -3438,26 +3672,8 @@ button.brand:hover .brand-name {
   .mobile-tabs button:active {
     transform: scale(0.96);
   }
-  .mobile-tabs.single {
-    display: flex;
-    justify-content: flex-end;
-    left: auto;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-  }
-  .mobile-tabs.single button {
-    min-width: 104px;
-    padding: 0 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-md);
-    color: var(--text);
-  }
-  .mobile-tabs.single button.active {
-    background: var(--brand-soft-2);
-    color: var(--brand);
+  .mobile-tabs.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .welcome-cards {
     grid-template-columns: 1fr;
