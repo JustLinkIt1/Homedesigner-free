@@ -52,6 +52,37 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
 
+// Keep the smoke suite deterministic and exercise the versioned cloud catalog
+// without depending on the public R2 endpoint or downloading a GLB.
+await page.route('https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/catalog/v1/catalog.json', (route) =>
+  route.fulfill({
+    contentType: 'application/json',
+    headers: { 'access-control-allow-origin': '*' },
+    body: JSON.stringify({
+      version: 1,
+      entries: [{
+        type: 'cloud_smoke_chair',
+        name: 'Cloud Smoke Chair',
+        category: 'Living',
+        width: 62,
+        depth: 68,
+        height: 84,
+        color: '#8a735f',
+        shape: 'chair',
+        icon: 'C',
+        model: {
+          url: 'https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/models/tests/cloud-smoke-chair.glb',
+          source: {
+            name: 'Smoke test fixture',
+            url: 'https://example.com/smoke-fixture',
+            license: 'CC0',
+          },
+        },
+      }],
+    }),
+  }),
+);
+
 let failures = 0;
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : ` — ${detail}`}`);
@@ -66,6 +97,31 @@ await page.getByRole('button', { name: /Sunlit open-plan home/ }).first().click(
 check('editor opens', await page.waitForSelector('.toolbar', { timeout: 15000 }).then(() => true).catch(() => false));
 await page.locator('.coach-skip').click().catch(() => {});
 check('2D canvas mounts', (await page.locator('.konvajs-content canvas').count()) > 0);
+
+// A single structural wall can border several rooms. Painting from 3D must
+// resolve to the room-bounded face under the tap instead of the whole length.
+const faceRanges = await page.evaluate(async () => {
+  const { wallFaceAt, withFaceFinish } = await import('/src/lib/wallFaces.ts');
+  const wall = {
+    id: 'long', start: { x: 0, y: 0 }, end: { x: 1000, y: 0 },
+    thickness: 12, height: 270, color: '#ffffff',
+  };
+  const rooms = [
+    { id: 'a', name: 'A', points: [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 300 }, { x: 0, y: 300 }], floorMaterial: 'oak', color: '#fff' },
+    { id: 'b', name: 'B', points: [{ x: 400, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 300 }, { x: 400, y: 300 }], floorMaterial: 'oak', color: '#fff' },
+  ];
+  const a = wallFaceAt(wall, rooms, { x: 200, y: 6 });
+  const b = wallFaceAt(wall, rooms, { x: 700, y: 6 });
+  const finishes = withFaceFinish(
+    { ...wall, faceFinishes: [{ ...a, color: '#ff0000' }] },
+    b,
+    { color: '#0000ff' },
+  );
+  return { a, b, finishes };
+});
+check('wall paint resolves first room face', faceRanges.a.start === 0 && faceRanges.a.end === 0.4 && faceRanges.a.side === 1);
+check('wall paint resolves adjacent room face', faceRanges.b.start === 0.4 && faceRanges.b.end === 1 && faceRanges.b.side === 1);
+check('adjacent wall finishes stay separate', faceRanges.finishes.length === 2);
 
 // ---- 2. Place, select, nudge, undo toast ----------------------------------
 const before = await store(() => window.useDesign.getState().furniture.length);
@@ -119,6 +175,25 @@ if (process.env.SMOKE_SKIP_3D) {
   await page.waitForTimeout(15000);
   const webglMissing = await page.locator('.webgl-missing').isVisible().catch(() => false);
   check('3D mounts (no webgl-missing)', !webglMissing);
+  const objectsButton = page.locator('.objects3d-btn');
+  check('3D Objects entry point appears', await objectsButton.isVisible().catch(() => false));
+  await objectsButton.click();
+  check('3D object catalog opens', await page.locator('.catalog.docked').isVisible().catch(() => false));
+  check(
+    'cloud catalog manifest loads',
+    await page.locator('.catalog.docked .cat-item', { hasText: 'Cloud Smoke Chair' })
+      .waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false),
+  );
+  await page.locator('.catalog.docked .cat-item[title="Side Table"]').click();
+  check(
+    'catalog opens 3D model preview',
+    await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: 15000 }).then(() => true).catch(() => false),
+  );
+  await page.locator('.catalog.docked .catalog-place').click();
+  check(
+    '3D placement guidance appears',
+    await page.locator('.placement-affordance', { hasText: 'Tap a floor to place Side Table' }).isVisible().catch(() => false),
+  );
   // Rotate pill drives store rotation.
   await store(() => {
     const s = window.useDesign.getState();

@@ -1,6 +1,6 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Sky } from '@react-three/drei';
+import { AdaptiveDpr, OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Sky } from '@react-three/drei';
 import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
@@ -14,7 +14,8 @@ import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
 import { slugify } from '../../lib/appInfo';
 import { sunModel } from '../../lib/sun';
-import { FLOOR_MATERIALS } from '../../data/furnitureCatalog';
+import { finishForFace, withFaceFinish } from '../../lib/wallFaces';
+import { CATALOG_BY_TYPE, FLOOR_MATERIALS } from '../../data/furnitureCatalog';
 import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl } from '../../data/materials';
 
 export { sunModel };
@@ -39,11 +40,23 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
   const top = Math.max(86, tap.y - 14);
   const st = useDesign.getState();
   const items = tap.kind === 'wall' ? wallMaterials() : floorMaterials();
-  const activeSrc = tap.kind === 'wall' ? wall?.texture?.src : room?.texture?.src;
+  const faceFinish = wall ? finishForFace(wall, tap.wallFace) : undefined;
+  const activeWallColor = faceFinish?.color ?? wall?.color;
+  const activeWallTexture = faceFinish?.texture ?? wall?.texture;
+  const activeSrc = tap.kind === 'wall' ? activeWallTexture?.src : room?.texture?.src;
+  const paintWall = (color: string, texture?: NonNullable<typeof wall>['texture']) => {
+    const current = useDesign.getState().walls.find((candidate) => candidate.id === tap.id);
+    if (!current) return;
+    if (tap.wallFace) {
+      st.updateWall(tap.id, { faceFinishes: withFaceFinish(current, tap.wallFace, { color, texture }) });
+    } else {
+      st.updateWall(tap.id, { color, texture });
+    }
+  };
   const pickMaterial = (m: (typeof items)[number]) => {
     const src = materialUrl(m.id);
     const texture = { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness };
-    if (tap.kind === 'wall') st.updateWall(tap.id, { texture });
+    if (tap.kind === 'wall') paintWall(activeWallColor ?? m.color, texture);
     else st.updateRoom(tap.id, { floorMaterial: '', color: m.color, texture });
   };
 
@@ -51,7 +64,7 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
     <div className="paint-pop" style={{ left, top }}>
       <div className="pp-head">
         <Paintbrush className="icon" />
-        {tap.kind === 'wall' ? 'Wall paint' : 'Flooring'}
+        {tap.kind === 'wall' ? (tap.wallFace ? 'Wall section' : 'Wall paint') : 'Flooring'}
         <button className="pp-close" onClick={onClose} aria-label="Close">
           <X className="icon" />
         </button>
@@ -63,10 +76,10 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
             ? WALL_PAINTS.map((c) => (
                 <button
                   key={c}
-                  className={`pp-swatch ${!wall?.texture && wall?.color === c ? 'on' : ''}`}
+                  className={`pp-swatch ${!activeWallTexture && activeWallColor === c ? 'on' : ''}`}
                   style={{ background: c }}
                   title={c}
-                  onClick={() => st.updateWall(tap.id, { color: c, texture: undefined })}
+                  onClick={() => paintWall(c, undefined)}
                 />
               ))
             : FLOOR_MATERIALS.map((m) => (
@@ -116,10 +129,10 @@ const IS_TOUCH =
 /** Soft, fully-offline image-based lighting (no CDN HDR fetch). `day` (0..1)
  *  scales the sky-dome contribution so night actually reads dark and interior
  *  fixtures take over. Re-keyed on the day bucket so the env map rebakes. */
-function StudioEnvironment({ day }: { day: number }) {
+function StudioEnvironment({ day, lowPower }: { day: number; lowPower: boolean }) {
   const k = 0.24 + day * 0.96; // keep a dim floor so nothing goes pure black
   return (
-    <Environment resolution={256} frames={1}>
+    <Environment resolution={lowPower ? 128 : 256} frames={1}>
       <Lightformer intensity={1.35 * k} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
       <Lightformer intensity={0.95 * k} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
       <Lightformer intensity={0.7 * k} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
@@ -237,6 +250,23 @@ export default function Scene3D() {
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
 
+  const handleSurfaceTap = (tap: SurfaceTap) => {
+    const st = useDesign.getState();
+    const pending = st.pendingFurnitureType;
+    if (pending) {
+      const entry = CATALOG_BY_TYPE[pending];
+      if (!entry?.opening && tap.kind === 'room' && tap.position) {
+        const id = st.addFurniture(pending, tap.position);
+        st.select({ kind: 'furniture', id });
+      }
+      // Placement mode owns surface taps; never open the paint palette while
+      // the user is trying to add an object.
+      setPaintTap(null);
+      return;
+    }
+    setPaintTap(tap);
+  };
+
   return (
     <>
     <Canvas
@@ -245,7 +275,9 @@ export default function Scene3D() {
       // (High-res photo/plan exports are separate and stay full quality.)
       flat={!noPost} // when post is dropped, let three apply its own tone mapping
       shadows={!lowPower}
-      dpr={lowPower ? [1, 1.5] : [1, 2]}
+      frameloop={walkMode ? 'always' : 'demand'}
+      dpr={lowPower ? [0.85, 1.25] : [1, 2]}
+      performance={{ min: lowPower ? 0.65 : 0.5, debounce: 250 }}
       gl={{ antialias: !lowPower, preserveDrawingBuffer: false, powerPreference: 'high-performance' }}
       camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
       style={{ position: 'absolute', inset: 0 }}
@@ -254,6 +286,9 @@ export default function Scene3D() {
         setPaintTap(null);
       }}
     >
+      {/* Demand rendering keeps 120 Hz phones from redrawing an idle scene;
+          AdaptiveDpr lowers interaction cost further if a frame budget slips. */}
+      <AdaptiveDpr pixelated={lowPower} />
       {/* Soft daytime sky + gentle distance fog: gives renders a horizon and
           natural light falloff instead of a flat grey void. */}
       {/* Dome radius must sit inside the camera far plane (default 1000). */}
@@ -298,7 +333,7 @@ export default function Scene3D() {
         intensity={0.1 + sun.day * 0.24}
         color="#cdd8ff"
       />
-      <StudioEnvironment key={Math.round(sun.day * 4)} day={sun.day} />
+      <StudioEnvironment key={Math.round(sun.day * 4)} day={sun.day} lowPower={lowPower} />
 
       {/* Soft contact shadows ground the furniture & walls realistically
           (desktop only — they re-render the scene each frame). */}
@@ -334,7 +369,7 @@ export default function Scene3D() {
       <DesignScene
         interactive
         dollhouse={walkMode ? false : dollhouse}
-        onSurfaceTap={walkMode ? undefined : setPaintTap}
+        onSurfaceTap={walkMode ? undefined : handleSurfaceTap}
       />
 
       {!noPost && (
@@ -367,6 +402,7 @@ export default function Scene3D() {
           minDistance={3}
           maxDistance={radius * 8 + 20}
           makeDefault
+          regress
         />
       )}
     </Canvas>

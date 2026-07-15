@@ -13,6 +13,7 @@ import { floorThumbnail, prepareTextureImage } from '../lib/textures';
 import { toast } from '../lib/ui';
 import { dist, polygonArea } from '../lib/geometry';
 import { formatLength, formatArea } from '../lib/units';
+import { finishForFace, withFaceFinish } from '../lib/wallFaces';
 import type { CustomTexture } from '../types';
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
@@ -51,6 +52,20 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   // Opening offset is a 0..1 fraction; show/edit its position in cm via the wall length.
   const openingWall = opening ? s.walls.find((w) => w.id === opening.wallId) : null;
   const openingWallLen = openingWall ? dist(openingWall.start, openingWall.end) : 0;
+  const selectedWallFace = selection.kind === 'wall' ? selection.wallFace : undefined;
+  const wallFaceFinish = wall ? finishForFace(wall, selectedWallFace) : undefined;
+  const displayedWallColor = wallFaceFinish?.color ?? wall?.color ?? '#ffffff';
+  const displayedWallTexture = wallFaceFinish?.texture ?? wall?.texture;
+  const paintSelectedWall = (color: string, texture?: CustomTexture) => {
+    if (!wall) return;
+    if (selectedWallFace) {
+      s.updateWall(wall.id, {
+        faceFinishes: withFaceFinish(wall, selectedWallFace, { color, texture }),
+      });
+    } else {
+      s.updateWall(wall.id, { color, texture });
+    }
+  };
 
   return (
     <aside className={`sidebar right ${open ? 'open' : ''}`}>
@@ -145,23 +160,23 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 onChange={(v) => s.updateWall(wall.id, { height: v })} />
             </div>
             <div className="prop-card">
-              <div className="prop-label">Wall paint</div>
+              <div className="prop-label">{selectedWallFace ? 'Wall section paint' : 'Wall paint'}</div>
               <div className="paint-row">
                 {WALL_PAINTS.map((c) => (
                   <button
                     key={c}
-                    className={`paint-dot ${!wall.texture && wall.color.toLowerCase() === c.toLowerCase() ? 'active' : ''}`}
+                    className={`paint-dot ${!displayedWallTexture && displayedWallColor.toLowerCase() === c.toLowerCase() ? 'active' : ''}`}
                     style={{ background: c }}
                     title={c}
-                    onClick={() => s.updateWall(wall.id, { color: c, texture: undefined })}
+                    onClick={() => paintSelectedWall(c, undefined)}
                   />
                 ))}
-                <label className="paint-dot" style={{ background: wall.color, display: 'grid', placeItems: 'center', cursor: 'pointer' }} title="Custom color">
-                  <input type="color" value={wall.color} onChange={(e) => s.updateWall(wall.id, { color: e.target.value, texture: undefined })} style={{ opacity: 0, width: 0, height: 0 }} />
+                <label className="paint-dot" style={{ background: displayedWallColor, display: 'grid', placeItems: 'center', cursor: 'pointer' }} title="Custom color">
+                  <input type="color" value={displayedWallColor} onChange={(e) => paintSelectedWall(e.target.value, undefined)} style={{ opacity: 0, width: 0, height: 0 }} />
                 </label>
               </div>
               <button className="btn block" style={{ marginTop: 12, height: 36 }}
-                onClick={() => { for (const w of s.walls) s.updateWall(w.id, { color: wall.color, texture: undefined }); }}>
+                onClick={() => { for (const w of s.walls) s.updateWall(w.id, { color: displayedWallColor, texture: undefined, faceFinishes: undefined }); }}>
                 Apply to all walls
               </button>
               {MATERIAL_GROUPS.map((g) => {
@@ -176,9 +191,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                         return (
                           <button
                             key={m.id}
-                            className={`swatch ${wall.texture?.src === src ? 'active' : ''}`}
+                            className={`swatch ${displayedWallTexture?.src === src ? 'active' : ''}`}
                             style={{ backgroundImage: `url(${src})` }}
-                            onClick={() => s.updateWall(wall.id, { texture: { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness } })}
+                            onClick={() => paintSelectedWall(displayedWallColor, { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness })}
                             title={m.name}
                           >
                             <span className="sw-name">{m.name}</span>
@@ -192,10 +207,10 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
             </div>
             <TextureCard
               label="Custom paint image"
-              texture={wall.texture}
+              texture={displayedWallTexture}
               defaultScale={100}
-              onChange={(t) => s.updateWall(wall.id, { texture: t })}
-              onApplyAll={(t) => { for (const w of s.walls) s.updateWall(w.id, { texture: t }); }}
+              onChange={(t) => paintSelectedWall(displayedWallColor, t)}
+              onApplyAll={(t) => { for (const w of s.walls) s.updateWall(w.id, { texture: t, faceFinishes: undefined }); }}
               applyAllLabel="Apply to all walls"
             />
             <button className="btn-danger" onClick={() => s.deleteById('wall', wall.id)}>

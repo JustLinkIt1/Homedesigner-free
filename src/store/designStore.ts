@@ -843,7 +843,9 @@ export const useDesign = create<DesignState>((set, get) => {
             : r,
         );
         d.walls = d.walls.map((w) =>
-          wallIds.has(w.id) ? { ...w, color: style.wallColor, texture: undefined } : w,
+          wallIds.has(w.id)
+            ? { ...w, color: style.wallColor, texture: undefined, faceFinishes: undefined }
+            : w,
         );
       });
       haptics.tapLight();
