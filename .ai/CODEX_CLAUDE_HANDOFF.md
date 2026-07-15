@@ -11,8 +11,8 @@ Last updated: 2026-07-15
 - Branch: `agent/release-1-0-47-model-catalog`
 - Current release: `1.0.47`
 - Android version code: `10047`
-- Release commit: pending Git commit and push; all validation and bundle
-  verification are complete.
+- Release commit: `5a0cfd4139bcc433508a8186308f374eef76a35e`
+  (`Release build-mode and model catalog upgrades (v1.0.47)`).
 - Previous release code: `86ac0f8308bfe4155a0d72a2c7ed629f3bbfc801`
   (`1.0.44`, Claude's 3D fog/zoom fixes layered on top of the 1.0.43 work)
 - Previous release handoff: `453fb85` (documentation-only follow-up for 1.0.44)
