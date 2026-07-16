@@ -69,6 +69,10 @@ export interface CatalogEntry {
   /** Pro-catalog item: visible to everyone, placement requires the unlock.
    *  Rendering of already-placed pro items is NEVER gated. */
   pro?: true;
+  /** Wall-mounted items rest their base this many cm above the floor instead of
+   *  on it (e.g. upper kitchen cabinets at 140). Ceiling fixtures use their own
+   *  logic and ignore this. */
+  mountY?: number;
   /** Optional real model. Remote catalog entries use an absolute R2 URL while
    *  bundled entries continue to resolve through GltfFurniture's local map. */
   model?: {
@@ -168,6 +172,7 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'kitchen_base_cabinet', name: 'Base Cabinet', category: 'Kitchen', width: 55, depth: 60, height: 62, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
   { type: 'kitchen_drawer_cabinet', pro: true, name: 'Drawer Unit', category: 'Kitchen', width: 55, depth: 60, height: 62, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
   { type: 'kitchen_corner_cabinet', pro: true, name: 'Corner Cabinet', category: 'Kitchen', width: 90, depth: 90, height: 62, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
+  { type: 'wall_cabinet', pro: true, name: 'Wall Cabinet', category: 'Kitchen', width: 80, depth: 35, height: 60, color: '#cfd2d6', shape: 'cabinets', icon: '🗄️', mountY: 120 },
   { type: 'dishwasher', pro: true, name: 'Dishwasher', category: 'Kitchen', width: 60, depth: 60, height: 85, color: '#c9cdd2', shape: 'dishwasher', icon: '🧼' },
   { type: 'bar_stool', pro: true, name: 'Bar Stool', category: 'Kitchen', width: 38, depth: 38, height: 75, color: '#4a3a28', shape: 'stool', icon: '🪑' },
 

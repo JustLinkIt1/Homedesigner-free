@@ -31,6 +31,7 @@ const LIST = [
   ['kitchen_base_cabinet', 'kitchenCabinet'],
   ['kitchen_drawer_cabinet', 'kitchenCabinetDrawer'],
   ['kitchen_corner_cabinet', 'kitchenCabinetCornerRound'],
+  ['wall_cabinet', 'kitchenCabinetUpperDouble'],
 ];
 
 mkdirSync(OUT, { recursive: true });

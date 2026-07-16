@@ -72,6 +72,7 @@ export const FURNITURE_MODELS: Record<string, { url: string; yaw?: number }> = {
   kitchen_base_cabinet: { url: U('kitchen_base_cabinet') },
   kitchen_drawer_cabinet: { url: U('kitchen_drawer_cabinet') },
   kitchen_corner_cabinet: { url: U('kitchen_corner_cabinet') },
+  wall_cabinet: { url: U('wall_cabinet') },
   // NB: no pendant/tv model — the fitter rests bases on the floor, which is
   // wrong for hanging lights, and the procedural TV (emissive screen at stand
   // height) reads better than a flat panel lying on the ground.

@@ -56,7 +56,9 @@ export default function Furniture3D({
     ? shape === 'pendant'
       ? ceilingHeight - h * 1.9
       : ceilingHeight - h
-    : 0;
+    : entry?.mountY != null
+      ? entry.mountY * M // wall-mounted (e.g. upper cabinets) — base above floor
+      : 0;
 
   // Drag-to-move on the storey's floor plane. The group's position is moved
   // live (no store churn); a single updateFurniture commit on release keeps

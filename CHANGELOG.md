@@ -16,10 +16,13 @@ changes and add an entry when you ship one.
   replace procedural boxes; the stove replaces the Poly Haven model so the whole
   kitchen zone is stylistically cohesive. Upgraded procedural meshes stay as the
   offline/load fallback.
-- Modular kitchen units — **Base Cabinet**, **Drawer Unit**, **Corner Cabinet**
-  (Kenney CC0) — place a row of them to build a custom kitchen run. These are
-  the building blocks for the upcoming auto-run kitchen designer. (Wall cabinets
-  + microwave are deferred until models can mount above the floor.)
+- Modular kitchen units — **Base Cabinet**, **Drawer Unit**, **Corner Cabinet**,
+  and **Wall Cabinet** (Kenney CC0) — place a row of them to build a custom
+  kitchen run. These are the building blocks for the upcoming auto-run kitchen
+  designer.
+- **Wall-mount support** for furniture (`mountY` on catalog entries): items rest
+  their base a set height above the floor instead of on it, so upper cabinets
+  hang at counter-clearance height. (`src/components/Viewer3D/Furniture3D.tsx`)
 
 ### Improved
 
