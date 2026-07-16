@@ -7,11 +7,18 @@ changes and add an entry when you ship one.
 
 ## Unreleased
 
+### Added
+
+- Real 3D models for the **fridge** and **kitchen sink** from the Kenney CC0
+  Furniture Kit (`scripts/fetch-kenney.mjs`, bundled in `public/models/`) —
+  Poly Haven has no modern kitchen appliances, and Kenney ships ready-made glTF
+  so no Blender/cloud step is needed. These replace the procedural boxes; the
+  upgraded procedural meshes below stay as the offline/load fallback.
+
 ### Improved
 
-- Better procedural kitchen + TV meshes (no new assets — Poly Haven only has
-  vintage CRTs and no modern kitchen appliances; real modern GLBs for these need
-  the Quaternius→Blender→R2 cloud pipeline). (`src/components/Viewer3D/Furniture3D.tsx`)
+- Better procedural kitchen + TV meshes (fallbacks behind the real models where
+  available). (`src/components/Viewer3D/Furniture3D.tsx`)
   - New `counter` shape for `counter` and `island`: recessed toe-kick, cabinet
     body, overhanging countertop, and footprint-derived door fronts with bar
     handles (was a featureless box).

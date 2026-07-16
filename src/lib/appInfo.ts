@@ -53,4 +53,9 @@ export const CREDITS: { name: string; license: string; url: string }[] = [
     license: 'CC0 1.0',
     url: 'https://polyhaven.com/textures',
   },
+  {
+    name: 'Kitchen 3D models — Kenney Furniture Kit',
+    license: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/furniture-kit',
+  },
 ];
