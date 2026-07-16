@@ -5,6 +5,21 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## Unreleased
+
+### Improved
+
+- Better procedural kitchen + TV meshes (no new assets — Poly Haven only has
+  vintage CRTs and no modern kitchen appliances; real modern GLBs for these need
+  the Quaternius→Blender→R2 cloud pipeline). (`src/components/Viewer3D/Furniture3D.tsx`)
+  - New `counter` shape for `counter` and `island`: recessed toe-kick, cabinet
+    body, overhanging countertop, and footprint-derived door fronts with bar
+    handles (was a featureless box).
+  - `fridge`: modern two-door stainless body with a seam and vertical bar
+    handles (was a plain box + stub handle).
+  - `tv`: flat panel on a slim central stand with a thin bezel and emissive
+    screen (was a floating slab).
+
 ## 1.0.47 - 2026-07-15
 
 ### Added

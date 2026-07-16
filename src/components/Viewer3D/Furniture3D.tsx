@@ -335,23 +335,54 @@ export function ShapeMesh({
           <meshStandardMaterial color={color} roughness={1} />
         </mesh>
       );
-    case 'tv':
+    case 'tv': {
+      // Flat panel on a slim central stand (reads as a modern TV rather than a
+      // floating slab). Panel occupies the upper ~60% of the height.
+      const panelH = h * 0.62;
+      const panelD = Math.max(d * 0.16, 0.03);
+      const cy = h * 0.64; // panel centre height
+      const neckH = cy - panelH * 0.5;
       return (
         <group>
-          <Box w={w} d={d} h={h} y={h * 0.5 + 0.4} color={'#111114'} />
-          <mesh position={[0, h * 0.5 + 0.4, d * 0.55]}>
-            <planeGeometry args={[w * 0.92, h * 0.86]} />
-            <meshStandardMaterial color="#2a3a5a" emissive="#1a2a4a" emissiveIntensity={0.5} />
+          {/* stand foot + neck */}
+          <Box w={w * 0.34} d={d * 0.9} h={h * 0.02} y={h * 0.012} color={'#26262b'} roughness={0.4} metalness={0.4} />
+          <Box w={w * 0.1} d={d * 0.5} h={neckH} y={neckH * 0.5} color={'#2a2a30'} roughness={0.5} metalness={0.35} />
+          {/* bezel / panel body */}
+          <Box w={w * 0.98} d={panelD} h={panelH} y={cy} color={'#111114'} roughness={0.4} metalness={0.2} />
+          {/* emissive screen */}
+          <mesh position={[0, cy, panelD * 0.5 + 0.006]}>
+            <planeGeometry args={[w * 0.92, panelH * 0.9]} />
+            <meshStandardMaterial color="#2b3c60" emissive="#26406e" emissiveIntensity={0.55} roughness={0.18} />
           </mesh>
         </group>
       );
-    case 'fridge':
+    }
+    case 'fridge': {
+      // Modern two-door: tall fridge over a shorter freezer, brushed-metal body
+      // with a slim seam and two vertical bar handles.
+      const upH = h * 0.6;
+      const loH = h * 0.34;
+      const upCy = h - upH * 0.5 - h * 0.02;
+      const loCy = loH * 0.5 + h * 0.02;
       return (
         <group>
-          <Box w={w} d={d} h={h} y={h * 0.5} color={color} radius={0.04} />
-          <Box w={w * 0.05} d={d * 0.05} h={h * 0.3} y={h * 0.6} dx={w * 0.4} dz={d * 0.5} color={'#888'} />
+          {/* stainless body */}
+          <Box w={w} d={d} h={h} y={h * 0.5} color={color} roughness={0.3} metalness={0.6} />
+          {/* door fronts, slightly proud + a touch darker for definition */}
+          <mesh position={[0, upCy, d * 0.5 + 0.004]}>
+            <planeGeometry args={[w * 0.94, upH]} />
+            <meshStandardMaterial color={shade(color, -6)} roughness={0.28} metalness={0.6} />
+          </mesh>
+          <mesh position={[0, loCy, d * 0.5 + 0.004]}>
+            <planeGeometry args={[w * 0.94, loH]} />
+            <meshStandardMaterial color={shade(color, -6)} roughness={0.28} metalness={0.6} />
+          </mesh>
+          {/* vertical bar handles near the centre seam */}
+          <Box w={w * 0.03} d={d * 0.05} h={upH * 0.7} y={upCy} dx={w * 0.38} dz={d * 0.53} color={'#9aa0a6'} roughness={0.25} metalness={0.8} />
+          <Box w={w * 0.03} d={d * 0.05} h={loH * 0.6} y={loCy} dx={w * 0.38} dz={d * 0.53} color={'#9aa0a6'} roughness={0.25} metalness={0.8} />
         </group>
       );
+    }
     case 'toilet':
       return (
         <group>
@@ -664,6 +695,40 @@ export function ShapeMesh({
           <Box w={w * 0.015} d={d * 0.04} h={h * 0.18} y={h * 0.45} dx={w * 0.05} dz={d * 0.54} color={'#888'} metalness={0.7} />
         </group>
       );
+    case 'counter': {
+      // Base run / island: recessed toe-kick, cabinet body, an overhanging
+      // countertop, and evenly split door fronts with bar handles. Sized from
+      // the footprint so a 2 m counter reads as ~4 doors, an island fewer.
+      const toeH = h * 0.1;
+      const topH = h * 0.05;
+      const bodyH = h - toeH - topH;
+      const bodyCy = toeH + bodyH * 0.5;
+      const doors = Math.max(1, Math.min(6, Math.round(w / 0.55)));
+      const doorW = (w * 0.96) / doors;
+      return (
+        <group>
+          {/* toe kick */}
+          <Box w={w * 0.94} d={d * 0.88} h={toeH} y={toeH * 0.5} color={'#38352f'} roughness={0.85} />
+          {/* cabinet body */}
+          <Box w={w} d={d} h={bodyH} y={bodyCy} color={color} roughness={0.55} />
+          {/* countertop with a slight overhang all round */}
+          <Box w={w * 1.02} d={d * 1.06} h={topH} y={toeH + bodyH + topH * 0.5} color={shade(color, -32)} roughness={0.28} metalness={0.12} />
+          {/* door fronts + handles */}
+          {Array.from({ length: doors }).map((_, i) => {
+            const cx = -w * 0.48 + doorW * (i + 0.5);
+            return (
+              <group key={i}>
+                <mesh position={[cx, bodyCy, d * 0.5 + 0.004]}>
+                  <planeGeometry args={[doorW * 0.9, bodyH * 0.9]} />
+                  <meshStandardMaterial color={shade(color, -10)} roughness={0.6} />
+                </mesh>
+                <Box w={doorW * 0.06} d={d * 0.04} h={bodyH * 0.16} y={toeH + bodyH * 0.82} dx={cx + doorW * 0.34} dz={d * 0.54} color={'#8a9096'} roughness={0.3} metalness={0.75} />
+              </group>
+            );
+          })}
+        </group>
+      );
+    }
     case 'dishwasher':
     case 'washer':
       return (

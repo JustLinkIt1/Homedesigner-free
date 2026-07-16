@@ -29,6 +29,7 @@ export type Shape3D =
   | 'stove'
   | 'sink'
   | 'cabinets'
+  | 'counter'
   | 'dishwasher'
   | 'washer'
   | 'shower'
@@ -157,8 +158,8 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'round_dining_table', pro: true, name: 'Round Table', category: 'Dining', width: 120, depth: 120, height: 75, color: '#9c6b3f', shape: 'table', icon: '🍽️' },
   { type: 'dining_chair', name: 'Dining Chair', category: 'Dining', width: 45, depth: 50, height: 90, color: '#6e5236', shape: 'chair', icon: '🪑' },
   { type: 'fridge', name: 'Refrigerator', category: 'Kitchen', width: 70, depth: 70, height: 180, color: '#d6d9dd', shape: 'fridge', icon: '🧊' },
-  { type: 'counter', name: 'Counter', category: 'Kitchen', width: 200, depth: 60, height: 90, color: '#cfd2d6', shape: 'box', icon: '🍳' },
-  { type: 'island', pro: true, name: 'Kitchen Island', category: 'Kitchen', width: 180, depth: 90, height: 90, color: '#bfc3c8', shape: 'box', icon: '🍳' },
+  { type: 'counter', name: 'Counter', category: 'Kitchen', width: 200, depth: 60, height: 90, color: '#cfd2d6', shape: 'counter', icon: '🍳' },
+  { type: 'island', pro: true, name: 'Kitchen Island', category: 'Kitchen', width: 180, depth: 90, height: 90, color: '#bfc3c8', shape: 'counter', icon: '🍳' },
   { type: 'stove', name: 'Stove / Oven', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cdd0d4', shape: 'stove', icon: '🍳' },
   { type: 'kitchen_sink', name: 'Kitchen Sink', category: 'Kitchen', width: 90, depth: 60, height: 90, color: '#cfd2d6', shape: 'sink', icon: '🚰' },
   { type: 'cabinets', name: 'Kitchen Cabinets', category: 'Kitchen', width: 120, depth: 35, height: 70, color: '#e6e2da', shape: 'cabinets', icon: '🗄️' },
