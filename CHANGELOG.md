@@ -5,7 +5,7 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
-## Unreleased
+## 1.0.48 - 2026-07-16 (versionCode 10048)
 
 ### Added
 
