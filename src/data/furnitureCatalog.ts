@@ -163,6 +163,11 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'stove', name: 'Stove / Oven', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cdd0d4', shape: 'stove', icon: '🍳' },
   { type: 'kitchen_sink', name: 'Kitchen Sink', category: 'Kitchen', width: 90, depth: 60, height: 90, color: '#cfd2d6', shape: 'sink', icon: '🚰' },
   { type: 'cabinets', name: 'Kitchen Cabinets', category: 'Kitchen', width: 120, depth: 35, height: 70, color: '#e6e2da', shape: 'cabinets', icon: '🗄️' },
+  // Modular Kenney base units — place in a row to build a custom kitchen run
+  // (each is a single ~60 cm cabinet with its own countertop).
+  { type: 'kitchen_base_cabinet', name: 'Base Cabinet', category: 'Kitchen', width: 55, depth: 60, height: 62, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
+  { type: 'kitchen_drawer_cabinet', pro: true, name: 'Drawer Unit', category: 'Kitchen', width: 55, depth: 60, height: 62, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
+  { type: 'kitchen_corner_cabinet', pro: true, name: 'Corner Cabinet', category: 'Kitchen', width: 90, depth: 90, height: 62, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
   { type: 'dishwasher', pro: true, name: 'Dishwasher', category: 'Kitchen', width: 60, depth: 60, height: 85, color: '#c9cdd2', shape: 'dishwasher', icon: '🧼' },
   { type: 'bar_stool', pro: true, name: 'Bar Stool', category: 'Kitchen', width: 38, depth: 38, height: 75, color: '#4a3a28', shape: 'stool', icon: '🪑' },
 

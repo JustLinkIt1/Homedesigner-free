@@ -66,9 +66,12 @@ export const FURNITURE_MODELS: Record<string, { url: string; yaw?: number }> = {
   throw_pillows: { url: U('throw_pillows') },
   clay_planter: { url: U('clay_planter') },
   picnic_table: { url: U('picnic_table') },
-  // Kenney CC0 Furniture Kit (test) — kitchen items Poly Haven lacks.
+  // Kenney CC0 Furniture Kit — kitchen items Poly Haven lacks + modular units.
   fridge: { url: U('fridge') },
   kitchen_sink: { url: U('kitchen_sink') },
+  kitchen_base_cabinet: { url: U('kitchen_base_cabinet') },
+  kitchen_drawer_cabinet: { url: U('kitchen_drawer_cabinet') },
+  kitchen_corner_cabinet: { url: U('kitchen_corner_cabinet') },
   // NB: no pendant/tv model — the fitter rests bases on the floor, which is
   // wrong for hanging lights, and the procedural TV (emissive screen at stand
   // height) reads better than a flat panel lying on the ground.

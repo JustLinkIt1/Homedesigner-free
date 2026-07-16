@@ -27,6 +27,10 @@ const LIST = [
   ['fridge', 'kitchenFridge'],
   ['kitchen_sink', 'kitchenSink'],
   ['stove', 'kitchenStove'],
+  // Modular base units for building custom kitchen runs.
+  ['kitchen_base_cabinet', 'kitchenCabinet'],
+  ['kitchen_drawer_cabinet', 'kitchenCabinetDrawer'],
+  ['kitchen_corner_cabinet', 'kitchenCabinetCornerRound'],
 ];
 
 mkdirSync(OUT, { recursive: true });
