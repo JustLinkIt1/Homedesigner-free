@@ -21,10 +21,12 @@ const BIN = join(ROOT, 'node_modules', '.bin', 'gltf-transform');
 const ZIP_URL =
   'https://kenney.nl/media/pages/assets/furniture-kit/440e0608a4-1677580847/kenney_furniture-kit.zip';
 
-// [catalog type, Kenney model basename]  — only kitchen types Poly Haven lacks.
+// [catalog type, Kenney model basename]  — cohesive Kenney kitchen appliances.
+// (Poly Haven has no fridge; its stove is replaced so the kitchen zone matches.)
 const LIST = [
   ['fridge', 'kitchenFridge'],
   ['kitchen_sink', 'kitchenSink'],
+  ['stove', 'kitchenStove'],
 ];
 
 mkdirSync(OUT, { recursive: true });

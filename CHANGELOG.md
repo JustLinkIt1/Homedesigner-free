@@ -9,11 +9,13 @@ changes and add an entry when you ship one.
 
 ### Added
 
-- Real 3D models for the **fridge** and **kitchen sink** from the Kenney CC0
-  Furniture Kit (`scripts/fetch-kenney.mjs`, bundled in `public/models/`) —
-  Poly Haven has no modern kitchen appliances, and Kenney ships ready-made glTF
-  so no Blender/cloud step is needed. These replace the procedural boxes; the
-  upgraded procedural meshes below stay as the offline/load fallback.
+- Real 3D models for the **fridge**, **kitchen sink**, and **stove** from the
+  Kenney CC0 Furniture Kit (`scripts/fetch-kenney.mjs`, bundled in
+  `public/models/`) — Poly Haven has no modern kitchen appliances, and Kenney
+  ships ready-made glTF so no Blender/cloud step is needed. The fridge/sink
+  replace procedural boxes; the stove replaces the Poly Haven model so the whole
+  kitchen zone is stylistically cohesive. Upgraded procedural meshes stay as the
+  offline/load fallback.
 
 ### Improved
 
