@@ -1431,10 +1431,12 @@ export default function Canvas2D() {
                   x={position.x}
                   y={position.y}
                   rotation={rotation}
-                  // On touch an item must be selected before it can be dragged —
-                  // the first tap only selects (brushing a stray item can't move
-                  // it), a second drag moves it. Mouse keeps one-gesture drag.
-                  draggable={tool === 'select' && !moveLock && (!IS_COARSE || sel || selectedIds.includes(f.id))}
+                  // One-gesture drag on every pointer type (tester: "moving
+                  // furniture takes time to actually move" — the old rule made
+                  // the first touch-drag only select). The 8px dragDistance slop
+                  // still separates taps from drags, and the explicit Lock
+                  // toggle is now the accidental-move protection.
+                  draggable={tool === 'select' && !moveLock}
                   onMouseDown={(e) => {
                     if (tool !== 'select') return;
                     e.cancelBubble = true; // don't let the stage re-select

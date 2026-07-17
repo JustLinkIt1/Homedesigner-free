@@ -1,5 +1,5 @@
-import { Component, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { AdaptiveDpr, OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Sky } from '@react-three/drei';
 import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
@@ -141,6 +141,155 @@ function StudioEnvironment({ day, lowPower }: { day: number; lowPower: boolean }
   );
 }
 
+/** Draws the anchor-puck icon (white directional triangles around a disc with
+ *  a blue move-cross) onto a canvas texture — matches the IKEA-style widget. */
+function makeAnchorTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d')!;
+  const cx = 128;
+  const cy = 128;
+  g.fillStyle = 'rgba(255,255,255,0.96)';
+  g.strokeStyle = 'rgba(40,50,60,0.25)';
+  g.lineWidth = 4;
+  const tri = (angle: number) => {
+    g.save(); g.translate(cx, cy); g.rotate(angle);
+    g.beginPath(); g.moveTo(0, -120); g.lineTo(-30, -80); g.lineTo(30, -80); g.closePath();
+    g.fill(); g.stroke(); g.restore();
+  };
+  for (let i = 0; i < 4; i++) tri((i * Math.PI) / 2);
+  g.beginPath();
+  g.arc(cx, cy, 62, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
+  g.strokeStyle = '#4c9fc8';
+  g.fillStyle = '#4c9fc8';
+  g.lineWidth = 9;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(cx - 32, cy); g.lineTo(cx + 32, cy);
+  g.moveTo(cx, cy - 32); g.lineTo(cx, cy + 32);
+  g.stroke();
+  const head = (angle: number) => {
+    g.save(); g.translate(cx, cy); g.rotate(angle);
+    g.beginPath(); g.moveTo(0, -52); g.lineTo(-13, -32); g.lineTo(13, -32); g.closePath();
+    g.fill(); g.restore();
+  };
+  for (let i = 0; i < 4; i++) head((i * Math.PI) / 2);
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = 4;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/**
+ * Movable camera anchor (IKEA-kitchen-planner style): a puck lying on the floor
+ * at the orbit target. Dragging it pans camera + target together, so orbit and
+ * pinch-zoom then revolve around wherever it was parked — the discoverable
+ * replacement for the old hidden double-tap focus gesture.
+ */
+function FocusAnchor() {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as
+    | (THREE.EventDispatcher & { target: THREE.Vector3; enabled: boolean; update: () => void })
+    | null;
+  const invalidate = useThree((s) => s.invalidate);
+  const group = useRef<THREE.Group>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+  const texture = useMemo(() => makeAnchorTexture(), []);
+  // Gizmo grab priority: report our hits at distance 0 so R3F sorts the puck
+  // before furniture proxies that are physically nearer the camera — otherwise
+  // the anchor is visible above objects (depthTest off) but ungrabbable there.
+  useEffect(() => {
+    const m = meshRef.current;
+    if (!m) return;
+    const base = m.raycast.bind(m);
+    m.raycast = (rc: THREE.Raycaster, hits: THREE.Intersection[]) => {
+      const tmp: THREE.Intersection[] = [];
+      base(rc, tmp);
+      for (const h of tmp) {
+        h.distance = 0;
+        hits.push(h);
+      }
+    };
+  }, []);
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const FLOOR = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
+  const drag = useRef<{
+    cam: THREE.Camera; hit0: THREE.Vector3; target0: THREE.Vector3; camPos0: THREE.Vector3;
+  } | null>(null);
+
+  // Follow the live orbit target; keep a roughly constant screen size.
+  useFrame(() => {
+    const g = group.current;
+    if (!g || !controls) return;
+    g.position.set(controls.target.x, 0.02, controls.target.z);
+    const s = Math.min(1.8, Math.max(0.55, camera.position.distanceTo(controls.target) * 0.075));
+    g.scale.setScalar(s);
+  });
+
+  // Intersections use a camera FROZEN at pointer-down: the live camera pans
+  // during the drag, and raycasting from it would feed its own motion back
+  // into the delta (runaway pan).
+  const planeHit = (e: ThreeEvent<PointerEvent>, cam: THREE.Camera): THREE.Vector3 | null => {
+    raycaster.setFromCamera(e.pointer, cam as THREE.PerspectiveCamera);
+    const out = new THREE.Vector3();
+    return raycaster.ray.intersectPlane(FLOOR, out) ? out : null;
+  };
+
+  const down = (e: ThreeEvent<PointerEvent>) => {
+    if (!controls) return;
+    e.stopPropagation();
+    (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
+    const cam = camera.clone();
+    cam.updateMatrixWorld(true);
+    const hit0 = planeHit(e, cam);
+    if (!hit0) return;
+    drag.current = { cam, hit0, target0: controls.target.clone(), camPos0: camera.position.clone() };
+    controls.enabled = false; // orbit pauses while the anchor is being moved
+  };
+  const move = (e: ThreeEvent<PointerEvent>) => {
+    const st = drag.current;
+    if (!st || !controls) return;
+    e.stopPropagation();
+    const hit = planeHit(e, st.cam);
+    if (!hit) return;
+    const dx = hit.x - st.hit0.x;
+    const dz = hit.z - st.hit0.z;
+    controls.target.set(st.target0.x + dx, st.target0.y, st.target0.z + dz);
+    camera.position.set(st.camPos0.x + dx, st.camPos0.y, st.camPos0.z + dz);
+    controls.update();
+    invalidate();
+  };
+  const up = (e: ThreeEvent<PointerEvent>) => {
+    if (!drag.current) return;
+    e.stopPropagation();
+    drag.current = null;
+    if (controls) controls.enabled = true;
+    invalidate();
+  };
+
+  return (
+    <group ref={group}>
+      {/* Gizmo semantics: always visible (depthTest off, late renderOrder) so
+          the anchor can be found even when it sits among furniture. */}
+      <mesh
+        ref={meshRef}
+        rotation={[-Math.PI / 2, 0, 0]}
+        renderOrder={999}
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <circleGeometry args={[0.5, 24]} />
+        <meshBasicMaterial map={texture} transparent depthWrite={false} depthTest={false} opacity={0.92} />
+      </mesh>
+    </group>
+  );
+}
+
 /** Registers a dolly function so the on-screen +/- buttons can zoom the orbit
  *  camera (moving it toward/away from the controls' target). */
 function ZoomBridge() {
@@ -263,13 +412,6 @@ export default function Scene3D() {
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
 
-  // Double-tap a floor to anchor the camera there (IKEA-style): the orbit
-  // target moves to the tapped spot and zoom dives into that area. The floor
-  // paint popover opens AT the tap point, so it would swallow the second tap —
-  // room popovers are therefore deferred ~300ms and cancelled by a double-tap.
-  const lastFloorTap = useRef<{ t: number; x: number; y: number } | null>(null);
-  const popTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (popTimer.current) clearTimeout(popTimer.current); }, []);
   const handleSurfaceTap = (tap: SurfaceTap) => {
     const st = useDesign.getState();
     const pending = st.pendingFurnitureType;
@@ -282,23 +424,6 @@ export default function Scene3D() {
       // Placement mode owns surface taps; never open the paint palette while
       // the user is trying to add an object.
       setPaintTap(null);
-      return;
-    }
-    if (tap.kind === 'room' && tap.position) {
-      const now = Date.now();
-      const prev = lastFloorTap.current;
-      lastFloorTap.current = { t: now, x: tap.x, y: tap.y };
-      if (prev && now - prev.t < 400 && Math.hypot(tap.x - prev.x, tap.y - prev.y) < 48) {
-        // Second tap of a double-tap: focus instead of opening the palette.
-        if (popTimer.current) { clearTimeout(popTimer.current); popTimer.current = null; }
-        orbitFocus.current?.(tap.position.x * 0.01, tap.position.y * 0.01);
-        setPaintTap(null);
-        lastFloorTap.current = null;
-        return;
-      }
-      // First tap: defer the flooring palette long enough to see a double-tap.
-      if (popTimer.current) clearTimeout(popTimer.current);
-      popTimer.current = setTimeout(() => { popTimer.current = null; setPaintTap(tap); }, 300);
       return;
     }
     setPaintTap(tap);
@@ -450,6 +575,7 @@ export default function Scene3D() {
 
       <CaptureBridge composerRef={composerRef} />
       {!walkMode && <ZoomBridge />}
+      {!walkMode && <FocusAnchor />}
 
       {walkMode ? (
         <WalkControls isTouch={IS_TOUCH} moveRef={moveRef} lookRef={lookRef} />

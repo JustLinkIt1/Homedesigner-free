@@ -5,6 +5,48 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.52 - 2026-07-17 (versionCode 10052)
+
+Owner + tester follow-ups on 1.0.51.
+
+### Changed
+
+- **Camera anchor is now a visible, movable puck** (owner: "instead of double
+  tap do an icon that can be moved like in IKEA kitchen builder"). An
+  IKEA-style widget (white directional arrows + blue move-cross) lies on the
+  floor at the orbit target; dragging it pans camera + target together, so
+  orbit/pinch-zoom revolve around wherever it's parked. Drawn as a gizmo
+  (depth-test off, late render order) so it's visible over furniture, with
+  raycast distance forced to 0 so it wins the grab even when objects are
+  physically closer. 1.0.51's double-tap + deferred palette are removed — the
+  flooring palette opens instantly again. (`FocusAnchor` + `makeAnchorTexture`
+  in `Scene3D.tsx`; `orbitFocus` bridge kept for programmatic focus, e.g. a
+  future photo-mode anchor.)
+- **One-gesture furniture drag on touch** (tester chat: "when I'm moving
+  furniture around it's taking some time to actually move" — the "fluidity"
+  report from 4/13 clarified). The old rule made the first touch-drag only
+  select; now dragging moves immediately on all pointer types. The 8px
+  drag-slop still separates taps from drags, and the 1.0.51 **Lock** toggle is
+  the explicit accidental-move protection (undo also covers mistakes).
+  (`Canvas2D.tsx` furniture `draggable`.)
+
+### Tester-report coverage map (Phase 2, for Codex)
+
+- 2/13 "import output from complex software": PDF/DXF/image import already
+  exists (Import plan); **DWG import** stays on the roadmap. Reply to the
+  tester pointing at Import plan.
+- 4/13 "fluidity" + chat: addressed by 1.0.50 (orbit frames) + the one-gesture
+  drag above. Follow up with the tester on-device.
+- 5/13: 2D pan lag (largely fixed 1.0.43/1.0.50 — owner reports improvement);
+  "bottom navigation bar sometimes covers buttons" — could not reproduce from
+  the report alone, likely device nav-bar/safe-area overlap on specific
+  phones: ask for a screenshot + device model; **"some parts not fully
+  translated" is REAL** — known gap: Properties panel labels, material and
+  furniture names are English-only across all 12 locales. That's the next
+  meaty i18n task (wrap PropertiesPanel strings in t(), add name keys for
+  catalog entries + materials to every locale).
+- 10/13 rotation input + lock: shipped in 1.0.51.
+
 ## 1.0.51 - 2026-07-17 (versionCode 10051)
 
 Tester-feedback batch (Phase-2 reports) + billing hardening.
