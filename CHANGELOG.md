@@ -15,6 +15,12 @@ changes and add an entry when you ship one.
   unit rotated so its back is to the wall and its front faces the room (orients
   toward the nearest room's centre, so it's correct on any wall). Snaps to
   walls/grid like the wall tool.
+  - **Live ghost preview**: while dragging the run, translucent cabinet
+    footprints tile from the start tap to the cursor, each with a front-edge
+    tick, so you see the row and its facing before committing (matches the
+    single-furniture placement ghost).
+  - Tiling + facing math is shared by the ghost and the commit
+    (`src/lib/kitchenRun.ts`) so they can't drift.
   - Store: `addKitchenRun(a, b)` (`src/store/designStore.ts`).
   - Wiring: `src/data/tools.ts`, `src/components/Editor2D/Canvas2D.tsx`,
     `src/types/index.ts` (`ToolMode` += `'kitchen'`), tool hint in `src/App.tsx`.
@@ -28,13 +34,16 @@ Remaining, roughly in priority order:
 
 1. **Appliance slots** — let the run reserve gaps and drop fridge/stove/sink/
    dishwasher into them (currently only tiles base cabinets).
-2. **Ghost preview while drawing** — show translucent cabinet outlines along the
-   drag before the second tap (today only the draft line shows).
-3. **Unit mix** — interleave Drawer Units / end panels; a matching **upper-cabinet
+2. **Unit mix** — interleave Drawer Units / end panels; a matching **upper-cabinet
    run** at `mountY` 120.
-4. **2D symbol** — a proper cabinet symbol for `shape: 'counter'` (falls back to a
+3. **2D symbol** — a proper cabinet symbol for `shape: 'counter'` (falls back to a
    plain box outline now).
-5. Consider a `groupId` on run items so a run can be moved/deleted as one.
+4. Consider a `groupId` on run items so a run can be moved/deleted as one.
+
+Note: the ghost-preview item is done (see above). Investigated adding a 3D
+placement ghost too — deferred: 3D placement is tap-to-place and touch has no
+hover, so a follow-cursor ghost only helps desktop-web; the live drag already
+previews after placement. Low ROI for the mobile-first app.
 
 Bigger roadmap bets still open: **Fit & Flow Coach** (spatial "does it work"
 scoring — the strongest differentiator), **DWG import**, and moving the model

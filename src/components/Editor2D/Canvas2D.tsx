@@ -20,6 +20,7 @@ import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { planCapture } from '../../lib/renderBridge';
 import FurnitureSymbol from './FurnitureSymbol';
 import { buildSnapElements, nearestSnap, type SnapKind, type GuideLine } from '../../lib/snapping';
+import { kitchenRunUnits, RUN_UNIT } from '../../lib/kitchenRun';
 import { computeWallPolygons } from '../../lib/wallGeometry';
 import { formatLength, type Units } from '../../lib/units';
 import { selectionTick, tapMedium } from '../../lib/haptics';
@@ -1552,6 +1553,12 @@ export default function Canvas2D() {
             <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} units={units} lengthInput={lengthInput} />
           )}
 
+          {/* Live kitchen-run ghost: tiled cabinet outlines from the start tap to
+              the cursor, each showing its facing, before the second tap commits. */}
+          {tool === 'kitchen' && draft.length === 1 && cursor && (
+            <KitchenRunGhost a={draft[0]} b={cursor} rooms={rooms} walls={walls} zoom={zoom} color={C.selection} />
+          )}
+
           {/* Inference guide line (axis / extension / parallel / perpendicular). */}
           {(tool === 'wall' || tool === 'room') && snapKind === 'guide' && snapGuide && (
             <Line
@@ -1745,6 +1752,39 @@ function FurnitureGhost({
       />
       <FurnitureSymbol shape={entry.shape} width={entry.width} depth={entry.depth} color={C.selection} />
     </Group>
+  );
+}
+
+/** Ghost preview for the kitchen-run tool: dashed base-cabinet footprints tiled
+ *  from a→b, each with a front-edge tick showing which way it faces. */
+function KitchenRunGhost({
+  a, b, rooms, walls, zoom, color,
+}: {
+  a: Point; b: Point; rooms: { points: Point[] }[]; walls: { start: Point; end: Point }[]; zoom: number; color: string;
+}) {
+  const units = kitchenRunUnits(a, b, rooms, walls);
+  const w = RUN_UNIT.width;
+  const d = RUN_UNIT.depth;
+  return (
+    <>
+      {units.map((u, i) => (
+        <Group key={i} x={u.position.x} y={u.position.y} rotation={u.rotation} listening={false} opacity={0.7}>
+          <Rect
+            x={-w / 2}
+            y={-d / 2}
+            width={w}
+            height={d}
+            fill="rgba(59,99,246,0.14)"
+            stroke={color}
+            strokeWidth={1.5 / zoom}
+            dash={[8 / zoom, 5 / zoom]}
+            cornerRadius={4}
+          />
+          {/* front edge (faces +Y at rotation 0) */}
+          <Line points={[-w * 0.34, d * 0.42, w * 0.34, d * 0.42]} stroke={color} strokeWidth={2.5 / zoom} listening={false} />
+        </Group>
+      ))}
+    </>
   );
 }
 
