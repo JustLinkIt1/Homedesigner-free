@@ -18,6 +18,7 @@ import {
   Moon,
   PenTool,
   X,
+  Lock,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
 import ToolDock from './components/ToolDock';
@@ -64,6 +65,7 @@ export default function App() {
     units, setUnits,
     sunTime, setSunTime, lightsOn, setLightsOn,
     kitchenUppers, setKitchenUppers,
+    moveLock, setMoveLock,
   } = useDesign(useShallow((s) => ({
     view: s.view,
     setView: s.setView,
@@ -91,6 +93,8 @@ export default function App() {
     setLightsOn: s.setLightsOn,
     kitchenUppers: s.kitchenUppers,
     setKitchenUppers: s.setKitchenUppers,
+    moveLock: s.moveLock,
+    setMoveLock: s.setMoveLock,
   })));
   const t = useI18n();
   const [showImport, setShowImport] = useState(false);
@@ -521,6 +525,10 @@ export default function App() {
                   <input type="checkbox" checked={showDimensions} onChange={(e) => setShowDimensions(e.target.checked)} />
                   <Ruler className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Dimensions')}</span>
                 </label>
+                <label className="toggle" title={t('Lock objects so they cannot be moved')}>
+                  <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
+                  <Lock className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Lock')}</span>
+                </label>
               </div>
               <div className="pill units-pill" role="group" aria-label="Display units">
                 <button
@@ -574,6 +582,10 @@ export default function App() {
                   <button className="toggle" onClick={() => setWalkMode(true)} style={{ fontWeight: 600 }}>
                     <Footprints className="icon" style={{ width: 16, height: 16 }} /> {t('Walk through')}
                   </button>
+                  <label className="toggle" title={t('Lock objects so they cannot be moved')}>
+                    <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
+                    <Lock className="icon" style={{ width: 15, height: 15 }} /> {t('Lock')}
+                  </label>
                 </div>
                 {/* Lighting folds the lamps toggle + time-of-day slider into a
                     popover so the HUD stays compact on phones (it used to run
@@ -642,6 +654,10 @@ export default function App() {
                       <label className="toggle">
                         <input type="checkbox" checked={dollhouse} onChange={(e) => setDollhouse(e.target.checked)} />
                         <House className="icon" style={{ width: 15, height: 15 }} /> {t('Dollhouse')}
+                      </label>
+                      <label className="toggle">
+                        <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
+                        <Lock className="icon" style={{ width: 15, height: 15 }} /> {t('Lock objects')}
                       </label>
                       <button
                         className="toggle"

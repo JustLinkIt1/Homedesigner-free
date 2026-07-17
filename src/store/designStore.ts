@@ -85,6 +85,9 @@ interface DesignState extends DesignSnapshot {
   showDimensions: boolean; // 2D: architectural dimension annotations
   dollhouse: boolean; // 3D: fade walls between camera and interior
   walkMode: boolean; // 3D: first-person walk-through mode
+  /** Lock objects: selection still works but nothing can be dragged/moved, so
+   *  the view can be navigated without accidentally shifting furniture. */
+  moveLock: boolean;
   sunTime: number; // 3D: time of day 0..24 driving sun angle/colour (renders)
   lightsOn: boolean; // 3D: artificial (lamp/LED) fixtures emit light
   defaultWallHeight: number;
@@ -110,6 +113,7 @@ interface DesignState extends DesignSnapshot {
   setUnits: (u: Units) => void;
   setDollhouse: (b: boolean) => void;
   setWalkMode: (b: boolean) => void;
+  setMoveLock: (b: boolean) => void;
   setSunTime: (t: number) => void;
   setLightsOn: (b: boolean) => void;
   requestFit: () => void;
@@ -386,6 +390,7 @@ export const useDesign = create<DesignState>((set, get) => {
     showDimensions: true,
     dollhouse: true,
     walkMode: false,
+    moveLock: false,
     defaultWallHeight: 270,
     defaultWallThickness: 12,
     pendingFurnitureType: null,
@@ -412,6 +417,7 @@ export const useDesign = create<DesignState>((set, get) => {
     },
     setDollhouse: (b) => set({ dollhouse: b }),
     setWalkMode: (b) => set({ walkMode: b }),
+    setMoveLock: (b) => set({ moveLock: b }),
     setSunTime: (t) => {
       const v = Math.min(24, Math.max(0, t));
       persistSettings({ sunTime: v });

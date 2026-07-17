@@ -105,7 +105,14 @@ class RevenueCatProvider implements ProProvider {
     const pkg = firstAvailablePackage(offerings);
     if (!pkg) throw new Error('Pro upgrade is not available right now. Please try again later.');
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
-    return hasProEntitlement(customerInfo);
+    // purchasePackage resolving (not throwing) means Play charged the user, so
+    // the transaction itself succeeded. If the entitlement is missing from
+    // customerInfo (product not attached to an entitlement in the RevenueCat
+    // dashboard), falling through to `false` would silently swallow a PAID
+    // purchase — treat any owned product as success instead.
+    if (hasProEntitlement(customerInfo)) return true;
+    const owned: string[] = customerInfo?.allPurchasedProductIdentifiers ?? [];
+    return owned.length > 0;
   }
 
   async restore(): Promise<boolean> {

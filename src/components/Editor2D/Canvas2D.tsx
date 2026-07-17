@@ -80,6 +80,7 @@ export default function Canvas2D() {
     showGrid: st.showGrid,
     gridSize: st.gridSize,
     selection: st.selection,
+    moveLock: st.moveLock,
     selectedIds: st.selectedIds,
     showDimensions: st.showDimensions,
     units: st.units,
@@ -115,7 +116,7 @@ export default function Canvas2D() {
   })));
   const {
     walls, rooms, furniture, openings, background,
-    tool, zoom, pan, showGrid, gridSize, selection, selectedIds, showDimensions, units,
+    tool, zoom, pan, showGrid, gridSize, selection, selectedIds, showDimensions, units, moveLock,
   } = s;
   const multi = selectedIds.length > 1;
   const fmtLen = (cm: number) => formatLength(cm, units);
@@ -1433,7 +1434,7 @@ export default function Canvas2D() {
                   // On touch an item must be selected before it can be dragged —
                   // the first tap only selects (brushing a stray item can't move
                   // it), a second drag moves it. Mouse keeps one-gesture drag.
-                  draggable={tool === 'select' && (!IS_COARSE || sel || selectedIds.includes(f.id))}
+                  draggable={tool === 'select' && !moveLock && (!IS_COARSE || sel || selectedIds.includes(f.id))}
                   onMouseDown={(e) => {
                     if (tool !== 'select') return;
                     e.cancelBubble = true; // don't let the stage re-select

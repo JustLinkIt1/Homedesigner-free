@@ -317,8 +317,12 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <input type="range" min={0} max={360} step={5} value={item.rotation}
                   onChange={(e) => s.updateFurniture(item.id, { rotation: Number(e.target.value) })} />
               </div>
+              {/* Exact angle entry (tester ask): the slider is coarse on small
+                  phones — Blender-style numeric input for precise rotations. */}
+              <NumberRow label="Angle (°)" value={item.rotation} min={0} max={360}
+                onChange={(v) => s.updateFurniture(item.id, { rotation: v })} />
               <div className="prop-row">
-                <label>{item.rotation}°</label>
+                <label>Colour</label>
                 <input type="color" value={item.color} onChange={(e) => s.updateFurniture(item.id, { color: e.target.value })} />
               </div>
             </div>

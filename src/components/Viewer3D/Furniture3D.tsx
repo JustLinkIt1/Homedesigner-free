@@ -71,7 +71,9 @@ export default function Furniture3D({
   const beginDrag = (e: ThreeEvent<PointerEvent>) => {
     const g = groupRef.current;
     // Non-interactive storeys keep normal camera behaviour over furniture.
-    if (!draggable || !g || useDesign.getState().walkMode) return;
+    // moveLock: objects stay put so the camera can be navigated freely.
+    const st = useDesign.getState();
+    if (!draggable || !g || st.walkMode || st.moveLock) return;
     e.stopPropagation();
     onSelect();
     const wp = new THREE.Vector3();

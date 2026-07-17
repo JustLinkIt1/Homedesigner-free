@@ -2,9 +2,11 @@ import { Capacitor } from '@capacitor/core';
 
 const REFERRAL_KEY = 'homedesigner.referral.v1';
 
-const VALID_CODES: Record<string, boolean> = {
-  HOMEDESIGN50: true,
-};
+// Referral program retired (enough test users) — no codes are currently
+// redeemable. Devices that already redeemed keep Pro via redeemedReferralCode();
+// to run a new campaign, add codes here and restore the entry UI in
+// ProUpsellModal (see git history).
+const VALID_CODES: Record<string, boolean> = {};
 
 function normalize(code: string): string {
   return code.trim().toUpperCase().replace(/[\s-]/g, '');

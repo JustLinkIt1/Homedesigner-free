@@ -5,6 +5,77 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.51 - 2026-07-17 (versionCode 10051)
+
+Tester-feedback batch (Phase-2 reports) + billing hardening.
+
+### Added
+
+- **Lock objects** (tester ask: "a lock button… fixes the objects and allows you
+  to freely navigate"). New `moveLock` toggle — 2D HUD pill ("Lock"), the 3D
+  desktop pill and the phone View popover ("Lock objects"). When on, furniture
+  can't be dragged in 2D or 3D (selection still works); in 3D, drags fall
+  through to the camera, so touch navigation can't shift objects.
+  (`designStore.moveLock`, gates in `Canvas2D` `draggable` + `Furniture3D.beginDrag`.)
+- **Exact rotation entry** (tester ask: slider too coarse on small phones) — a
+  Blender-style "Angle (°)" numeric input under the rotation slider in the
+  Properties panel.
+- **Camera focus anchor, IKEA-style** (owner ask): **double-tap a floor in 3D**
+  to move the orbit target there and dolly part-way in — pinch/wheel then zooms
+  into that exact area. The floor paint palette now opens after a ~300 ms
+  single-tap delay so the double-tap can win (the palette used to swallow the
+  second tap). Focus aims at 0.6 m height so the view doesn't tilt into the
+  boards. (`renderBridge.orbitFocus` registered by `ZoomBridge`; double-tap
+  detection in `Scene3D.handleSurfaceTap`.)
+
+### Changed
+
+- **Referral program retired** (enough test users): no codes are redeemable —
+  `HOMEDESIGN50` removed from `lib/referral.ts` and the "Have a referral code?"
+  entry UI removed from the upsell modal. Devices that already redeemed KEEP
+  Pro (redemption is honored locally; nothing is revoked). Orphaned locale
+  strings left in place for a future campaign.
+
+### Fixed
+
+- **Purchase flow hardening** (owner report: "not sure the purchase flow
+  works"): if Play completed the transaction but the RevenueCat dashboard
+  doesn't map the product to an entitlement, the app used to swallow the paid
+  purchase silently (no unlock, no message). Now any owned product after a
+  successful `purchasePackage` counts as Pro, and a false result without an
+  error shows "Purchase didn't complete… use Restore purchase" instead of
+  nothing. (`pro.ts` purchase(), `proStore.purchase`.)
+
+### Handoff — billing verification + Google Sign-In plan (for Codex / next session)
+
+**Verifying the purchase flow end-to-end** (can't be done from a sandbox; needs
+the owner + a device): add your Google account as a **License tester** in Play
+Console → Settings → License testing; install from the **internal testing**
+track (not a sideloaded AAB); trigger any Pro gate → buy (license testers see
+"Test card, always approves"); then in RevenueCat dashboard confirm the
+customer shows the `pro_unlock` purchase AND the `Pro` entitlement turns
+active. If the purchase appears WITHOUT the entitlement, the product isn't
+attached to the entitlement in RevenueCat → attach it (the 1.0.51 client
+hardening keeps users unlocked either way). Also test "Restore purchase" after
+clearing app data.
+
+**Google Sign-In / Pro on other devices & web** (owner ask: "how can someone
+access their premium account on the website"): today Pro is device+Play-account
+bound (RevenueCat anonymous IDs; the web build is a free demo with no billing).
+Recommended architecture, no custom backend needed:
+1. Add Google Sign-In via a Capacitor plugin (e.g. `@capgo/capacitor-social-login`)
+   + Google Identity Services on web.
+2. On sign-in call `Purchases.logIn(googleUserId)` so the RevenueCat customer —
+   and the Pro entitlement — follows the account across installs/devices.
+3. Web Pro then works either by (a) RevenueCat Web Billing (Stripe) to sell on
+   web too, or (b) read-only entitlement check on web via logIn + getCustomerInfo.
+4. OWNER PREREQS (only the owner can do these): create OAuth clients in Google
+   Cloud Console — a Web client ID + an Android client ID bound to package
+   `com.homedesigner.app` and the upload key SHA-1
+   (`keytool -list -keystore homedesigner-upload.jks` → SHA-1); if using
+   RevenueCat Web Billing, connect Stripe in the RevenueCat dashboard.
+Scope estimate: 1–2 sessions once the OAuth client IDs exist.
+
 ## 1.0.50 - 2026-07-17 (versionCode 10050)
 
 ### Fixed

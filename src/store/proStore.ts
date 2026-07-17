@@ -100,6 +100,13 @@ export const useProStore = create<ProState>((set, get) => ({
         set({ isPro: true, upsellFeature: null });
         writeCache(true);
         toast.success('Pro unlocked — thank you!');
+      } else if (Capacitor.isNativePlatform()) {
+        // The provider resolved false without throwing: the flow ended without a
+        // confirmed transaction (e.g. sheet dismissed in a way that isn't
+        // reported as a cancel error). Never leave the user with zero feedback —
+        // and if they WERE charged, Restore is the recovery path. (Web's mock
+        // provider intentionally returns false after opening the Play listing.)
+        toast.info("Purchase didn't complete. If you were charged, use Restore purchase.");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';

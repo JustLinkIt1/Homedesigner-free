@@ -7,7 +7,7 @@ import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
 import WalkControls, { WalkTouchControls } from './WalkControls';
 import * as THREE from 'three';
-import { sceneCapture, orbitZoom } from '../../lib/renderBridge';
+import { sceneCapture, orbitZoom, orbitFocus } from '../../lib/renderBridge';
 import { saveImage } from '../../lib/native';
 import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
@@ -157,8 +157,21 @@ function ZoomBridge() {
       camera.position.copy(controls.target).add(offset);
       controls.update();
     };
+    // Focus anchor (IKEA-style): move the orbit target to a floor point and
+    // dolly part-way in, so subsequent pinch/orbit revolve around that area.
+    orbitFocus.current = (x: number, z: number) => {
+      const offset = camera.position.clone().sub(controls.target);
+      const dist = Math.max(3.5, offset.length() * 0.55);
+      offset.setLength(dist);
+      // Aim slightly above the floor (counter height) so the view doesn't tilt
+      // straight down at the boards.
+      controls.target.set(x, 0.6, z);
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    };
     return () => {
       orbitZoom.current = null;
+      orbitFocus.current = null;
     };
   }, [camera, controls]);
   return null;
@@ -250,6 +263,13 @@ export default function Scene3D() {
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
 
+  // Double-tap a floor to anchor the camera there (IKEA-style): the orbit
+  // target moves to the tapped spot and zoom dives into that area. The floor
+  // paint popover opens AT the tap point, so it would swallow the second tap —
+  // room popovers are therefore deferred ~300ms and cancelled by a double-tap.
+  const lastFloorTap = useRef<{ t: number; x: number; y: number } | null>(null);
+  const popTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (popTimer.current) clearTimeout(popTimer.current); }, []);
   const handleSurfaceTap = (tap: SurfaceTap) => {
     const st = useDesign.getState();
     const pending = st.pendingFurnitureType;
@@ -262,6 +282,23 @@ export default function Scene3D() {
       // Placement mode owns surface taps; never open the paint palette while
       // the user is trying to add an object.
       setPaintTap(null);
+      return;
+    }
+    if (tap.kind === 'room' && tap.position) {
+      const now = Date.now();
+      const prev = lastFloorTap.current;
+      lastFloorTap.current = { t: now, x: tap.x, y: tap.y };
+      if (prev && now - prev.t < 400 && Math.hypot(tap.x - prev.x, tap.y - prev.y) < 48) {
+        // Second tap of a double-tap: focus instead of opening the palette.
+        if (popTimer.current) { clearTimeout(popTimer.current); popTimer.current = null; }
+        orbitFocus.current?.(tap.position.x * 0.01, tap.position.y * 0.01);
+        setPaintTap(null);
+        lastFloorTap.current = null;
+        return;
+      }
+      // First tap: defer the flooring palette long enough to see a double-tap.
+      if (popTimer.current) clearTimeout(popTimer.current);
+      popTimer.current = setTimeout(() => { popTimer.current = null; setPaintTap(tap); }, 300);
       return;
     }
     setPaintTap(tap);

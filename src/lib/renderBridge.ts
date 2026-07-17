@@ -17,3 +17,9 @@ export const planCapture: { current: PlanCaptureFn | null } = { current: null };
 // in (closer to target), > 1 zooms out.
 type ZoomFn = (factor: number) => void;
 export const orbitZoom: { current: ZoomFn | null } = { current: null };
+
+// 3D focus anchor (IKEA-style): re-target the orbit camera on a world point
+// (metres) so pinch/wheel zoom dives into that spot. Registered by ZoomBridge,
+// invoked on double-tapping a floor.
+type FocusFn = (x: number, z: number) => void;
+export const orbitFocus: { current: FocusFn | null } = { current: null };
