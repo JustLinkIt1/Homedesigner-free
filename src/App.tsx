@@ -360,6 +360,8 @@ export default function App() {
     ? t('Click to add wall points — or type a length (e.g. 4.5) and press Enter for exact walls')
     : tool === 'room'
     ? t('Click corners to outline a room · click the first point to close it')
+    : tool === 'kitchen'
+    ? t('Click along a wall, then click again — base cabinets tile the run and face the room')
     : tool === 'furniture' && pendingFurnitureType
     ? t('Click in the plan to place it · switch to Select to move & rotate')
     : tool === 'erase'

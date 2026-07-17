@@ -121,6 +121,8 @@ interface DesignState extends DesignSnapshot {
   addRoom: (points: Point[]) => string;
   updateRoom: (id: string, patch: Partial<Room>) => void;
   addFurniture: (type: string, position: Point) => string;
+  /** Tile a run of base cabinets from a→b (the kitchen-run tool). One undo step. */
+  addKitchenRun: (a: Point, b: Point) => void;
   updateFurniture: (id: string, patch: Partial<FurnitureItem>) => void;
   /** `type` is a catalog key (door, double_door, sliding_door, window, french_window…). */
   addOpening: (wallId: string, offset: number, type: string) => string;
@@ -485,6 +487,64 @@ export const useDesign = create<DesignState>((set, get) => {
       haptics.tapLight();
       return id;
     },
+
+    addKitchenRun: (a, b) =>
+      commit((d) => {
+        const entry = CATALOG_BY_TYPE['kitchen_base_cabinet'];
+        if (!entry) return;
+        const wUnit = entry.width; // single base-cabinet width (cm)
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy);
+        const n = Math.max(1, Math.round(len / wUnit));
+        const ux = dx / (len || 1);
+        const uy = dy / (len || 1);
+        // Rotation so each unit's width lies along the run; front faces the
+        // perpendicular. Furniture rotation is CW degrees with 0 facing +Y.
+        let rotation = (Math.atan2(uy, ux) * 180) / Math.PI;
+        // Face the interior: flip 180° if the front points away from the nearest
+        // room's centre (else the whole design's centre), so cabinet backs sit
+        // against the wall regardless of which way the run was drawn.
+        const mx = a.x + ux * (len / 2);
+        const my = a.y + uy * (len / 2);
+        let ref: { x: number; y: number } | null = null;
+        let best = Infinity;
+        for (const r of d.rooms) {
+          const k = r.points.length || 1;
+          const c = r.points.reduce((s, p) => ({ x: s.x + p.x / k, y: s.y + p.y / k }), { x: 0, y: 0 });
+          const dd = (c.x - mx) ** 2 + (c.y - my) ** 2;
+          if (dd < best) { best = dd; ref = c; }
+        }
+        if (!ref && d.walls.length) {
+          const k = d.walls.length;
+          ref = d.walls.reduce(
+            (s, w) => ({ x: s.x + (w.start.x + w.end.x) / (2 * k), y: s.y + (w.start.y + w.end.y) / (2 * k) }),
+            { x: 0, y: 0 },
+          );
+        }
+        if (ref) {
+          const rad = (rotation * Math.PI) / 180;
+          const fx = -Math.sin(rad);
+          const fy = Math.cos(rad);
+          if (fx * (ref.x - mx) + fy * (ref.y - my) < 0) rotation += 180;
+        }
+        const used = n * wUnit;
+        const start = (len - used) / 2; // centre the units within the drawn span
+        for (let i = 0; i < n; i++) {
+          const at = start + (i + 0.5) * wUnit;
+          d.furniture.push({
+            id: uid(),
+            type: 'kitchen_base_cabinet',
+            name: entry.name,
+            position: { x: a.x + ux * at, y: a.y + uy * at },
+            rotation,
+            width: entry.width,
+            depth: entry.depth,
+            height: entry.height,
+            color: entry.color,
+          });
+        }
+      }),
 
     updateFurniture: (id, patch) =>
       commit((d) => {

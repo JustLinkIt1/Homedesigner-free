@@ -136,6 +136,7 @@ export type ToolMode =
   | 'wall'
   | 'room'
   | 'furniture'
+  | 'kitchen'
   | 'pan'
   | 'erase'
   | 'measure';

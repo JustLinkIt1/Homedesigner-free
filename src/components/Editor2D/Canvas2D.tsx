@@ -92,6 +92,7 @@ export default function Canvas2D() {
     addWall: st.addWall,
     updateWall: st.updateWall,
     addRoom: st.addRoom,
+    addKitchenRun: st.addKitchenRun,
     addFurniture: st.addFurniture,
     updateFurniture: st.updateFurniture,
     addOpening: st.addOpening,
@@ -380,7 +381,7 @@ export default function Canvas2D() {
   const applySnaps = (p: Point): Point => {
     // Wider catch radius on touch so a fingertip reliably grabs endpoints/guides.
     const radius = (IS_COARSE ? 22 : 14) / zoom;
-    if (tool === 'wall' || tool === 'room') {
+    if (tool === 'wall' || tool === 'room' || tool === 'kitchen') {
       const prev = draft.length > 0 ? draft[draft.length - 1] : null;
       const els = buildSnapElements({ walls, draft, prev, radius, guides: true });
       const snap = nearestSnap(els, p);
@@ -497,6 +498,13 @@ export default function Canvas2D() {
         setDraft([]);
       } else {
         setDraft((d) => [...d, snapped]);
+      }
+    } else if (tool === 'kitchen') {
+      // Two taps define the run: first sets the start, second tiles cabinets.
+      if (draft.length === 0) setDraft([snapped]);
+      else {
+        s.addKitchenRun(draft[0], snapped);
+        setDraft([]);
       }
     } else if (tool === 'furniture' && s.pendingFurnitureType) {
       const type = s.pendingFurnitureType;
@@ -796,6 +804,8 @@ export default function Canvas2D() {
       for (let i = 0; i < draft.length - 1; i++) s.addWall(draft[i], draft[i + 1]);
     } else if (tool === 'room' && draft.length >= 3) {
       s.addRoom(draft);
+    } else if (tool === 'kitchen' && draft.length >= 1 && cursor) {
+      s.addKitchenRun(draft[0], cursor);
     }
     setDraft([]);
   };
@@ -804,8 +814,12 @@ export default function Canvas2D() {
   useEffect(() => {
     drawBridge.finish = finishDraft;
     drawBridge.cancel = () => setDraft([]);
-    const min = tool === 'room' ? 3 : 2;
-    useDraw.getState().setActive((tool === 'wall' || tool === 'room') && draft.length >= min);
+    const active =
+      tool === 'room' ? draft.length >= 3
+      : tool === 'wall' ? draft.length >= 2
+      : tool === 'kitchen' ? draft.length >= 1
+      : false;
+    useDraw.getState().setActive(active);
     return () => {
       drawBridge.finish = null;
       drawBridge.cancel = null;

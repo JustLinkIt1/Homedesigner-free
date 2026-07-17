@@ -5,6 +5,41 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## Unreleased
+
+### Added
+
+- **Kitchen-run tool** (Phase 2b of the modular kitchen designer) — a new build
+  tool (`CookingPot` icon, `tool: 'kitchen'`). Tap along a wall, tap again, and
+  it auto-tiles Base Cabinets end-to-end across the span in one undo step, each
+  unit rotated so its back is to the wall and its front faces the room (orients
+  toward the nearest room's centre, so it's correct on any wall). Snaps to
+  walls/grid like the wall tool.
+  - Store: `addKitchenRun(a, b)` (`src/store/designStore.ts`).
+  - Wiring: `src/data/tools.ts`, `src/components/Editor2D/Canvas2D.tsx`,
+    `src/types/index.ts` (`ToolMode` += `'kitchen'`), tool hint in `src/App.tsx`.
+
+### Handoff — where this is and what's next (for Codex / next session)
+
+Phase 2a shipped in 1.0.48: real Kenney CC0 kitchen models (fridge/sink/stove)
++ modular units (base/drawer/corner/wall cabinet) + `mountY` wall-mount support.
+Phase 2b (above) adds the auto-run tiling tool for **base cabinets only**.
+Remaining, roughly in priority order:
+
+1. **Appliance slots** — let the run reserve gaps and drop fridge/stove/sink/
+   dishwasher into them (currently only tiles base cabinets).
+2. **Ghost preview while drawing** — show translucent cabinet outlines along the
+   drag before the second tap (today only the draft line shows).
+3. **Unit mix** — interleave Drawer Units / end panels; a matching **upper-cabinet
+   run** at `mountY` 120.
+4. **2D symbol** — a proper cabinet symbol for `shape: 'counter'` (falls back to a
+   plain box outline now).
+5. Consider a `groupId` on run items so a run can be moved/deleted as one.
+
+Bigger roadmap bets still open: **Fit & Flow Coach** (spatial "does it work"
+scoring — the strongest differentiator), **DWG import**, and moving the model
+long-tail to Codex's Quaternius→Blender→R2 cloud pipeline for more realism.
+
 ## 1.0.48 - 2026-07-16 (versionCode 10048)
 
 ### Added
