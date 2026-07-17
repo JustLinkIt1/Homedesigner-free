@@ -5,6 +5,25 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.50 - 2026-07-17 (versionCode 10050)
+
+### Fixed
+
+- **3D orbit fluidity** (tester report: "struggling with the fluidity of the
+  movements"). 1.0.47's demand-rendering (`frameloop='demand'`) saves battery on
+  an idle scene, but OrbitControls **damping** depends on an
+  invalidate-per-frame chain — on a loaded phone any dropped link kills the
+  inertia, so orbiting feels sticky/stuttery. The canvas now switches to
+  continuous rendering **while a pointer is down / wheel is active** and falls
+  back to demand ~1.2 s after the gesture ends (long enough for the damping tail
+  to ease out). Idle battery behaviour is unchanged.
+  (`src/components/Viewer3D/Scene3D.tsx` — `interacting` state wrapping the
+  Canvas; `frameloop={walkMode || interacting ? 'always' : 'demand'}`.)
+- For Codex: if testers still report stutter after this, the next suspects are
+  (a) `AdaptiveDpr` interacting with demand mode, (b) first-interaction jank
+  from GLB decode on the main thread, (c) the composer cost on non-lowPower
+  devices. Ask testers for device + 2D/3D specifics.
+
 ## 1.0.49 - 2026-07-16 (versionCode 10049)
 
 Phase 2b — the modular kitchen designer's auto-run tool. Feature-complete for

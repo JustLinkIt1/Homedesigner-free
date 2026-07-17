@@ -267,15 +267,44 @@ export default function Scene3D() {
     setPaintTap(tap);
   };
 
+  // Fluid interaction on demand-rendering: 'demand' keeps an idle scene at
+  // 0 fps (battery), but orbit damping needs continuous frames — relying on the
+  // invalidate chain stutters on loaded phones (each dropped link kills the
+  // inertia). So while a pointer is down (or a wheel/pinch is happening) we
+  // switch to 'always', then fall back to 'demand' shortly after the gesture —
+  // long enough for the damping tail to ease out smoothly.
+  const [interacting, setInteracting] = useState(false);
+  const interactEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const beginInteract = () => {
+    if (interactEndTimer.current) clearTimeout(interactEndTimer.current);
+    setInteracting(true);
+  };
+  const scheduleInteractEnd = () => {
+    if (interactEndTimer.current) clearTimeout(interactEndTimer.current);
+    interactEndTimer.current = setTimeout(() => setInteracting(false), 1200);
+  };
+  useEffect(() => () => {
+    if (interactEndTimer.current) clearTimeout(interactEndTimer.current);
+  }, []);
+
   return (
-    <>
+    <div
+      style={{ position: 'absolute', inset: 0 }}
+      onPointerDownCapture={beginInteract}
+      onPointerUpCapture={scheduleInteractEnd}
+      onPointerCancelCapture={scheduleInteractEnd}
+      onWheelCapture={() => {
+        beginInteract();
+        scheduleInteractEnd();
+      }}
+    >
     <Canvas
       // Mobile perf tier: touch devices drop post-processing + shadows and cap
       // DPR — the biggest GPU costs — to keep 3D navigation smooth on Android.
       // (High-res photo/plan exports are separate and stay full quality.)
       flat={!noPost} // when post is dropped, let three apply its own tone mapping
       shadows={!lowPower}
-      frameloop={walkMode ? 'always' : 'demand'}
+      frameloop={walkMode || interacting ? 'always' : 'demand'}
       dpr={lowPower ? [0.85, 1.25] : [1, 2]}
       performance={{ min: lowPower ? 0.65 : 0.5, debounce: 250 }}
       gl={{ antialias: !lowPower, preserveDrawingBuffer: false, powerPreference: 'high-performance' }}
@@ -424,6 +453,6 @@ export default function Scene3D() {
         {IS_TOUCH && <WalkTouchControls moveRef={moveRef} lookRef={lookRef} />}
       </>
     )}
-    </>
+    </div>
   );
 }
