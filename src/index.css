@@ -921,6 +921,31 @@ button.brand:hover .brand-name {
   margin-bottom: 8px;
 }
 
+/* Kitchen-unit swap chips (cabinet ↔ appliance for a selected run unit). */
+.swap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.swap-chip {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  min-height: 34px;
+}
+.swap-chip:hover {
+  border-color: var(--brand);
+}
+.swap-chip.on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
 /* Material family sub-header (Planner-5D-style grouping in the pickers). */
 .mat-group-title {
   font-size: 11px;

@@ -24,6 +24,10 @@ changes and add an entry when you ship one.
   - Store: `addKitchenRun(a, b)` (`src/store/designStore.ts`).
   - Wiring: `src/data/tools.ts`, `src/components/Editor2D/Canvas2D.tsx`,
     `src/types/index.ts` (`ToolMode` += `'kitchen'`), tool hint in `src/App.tsx`.
+- **Appliance slots** — select any unit in a run and swap it in place between
+  Cabinet / Drawers / Stove / Sink / Dishwasher via chips in the Properties panel
+  ("Kitchen unit" section). The swap keeps the unit's slot footprint, position and
+  facing, so the run stays aligned. Store: `swapFurnitureType(id, newType)`.
 
 ### Handoff — where this is and what's next (for Codex / next session)
 
@@ -32,13 +36,14 @@ Phase 2a shipped in 1.0.48: real Kenney CC0 kitchen models (fridge/sink/stove)
 Phase 2b (above) adds the auto-run tiling tool for **base cabinets only**.
 Remaining, roughly in priority order:
 
-1. **Appliance slots** — let the run reserve gaps and drop fridge/stove/sink/
-   dishwasher into them (currently only tiles base cabinets).
-2. **Unit mix** — interleave Drawer Units / end panels; a matching **upper-cabinet
-   run** at `mountY` 120.
-3. **2D symbol** — a proper cabinet symbol for `shape: 'counter'` (falls back to a
+1. **Upper-cabinet run** — a second pass that tiles Wall Cabinets at `mountY` 120
+   above a base run (the auto-run tool only does base units today).
+2. **2D symbol** — a proper cabinet symbol for `shape: 'counter'` (falls back to a
    plain box outline now).
-4. Consider a `groupId` on run items so a run can be moved/deleted as one.
+3. Consider a `groupId` on run items so a run can be moved/deleted as one.
+
+Done since: kitchen-run tool, ghost preview, and appliance slots (swap a run
+unit to stove/sink/dishwasher/drawers in place, keeping the slot footprint).
 
 Note: the ghost-preview item is done (see above). Investigated adding a 3D
 placement ghost too — deferred: 3D placement is tap-to-place and touch has no

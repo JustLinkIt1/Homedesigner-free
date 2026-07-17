@@ -18,6 +18,17 @@ import type { CustomTexture } from '../types';
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 
+// Kitchen-run slot types: a selected unit can be swapped between these in place
+// (cabinet ↔ appliance) while keeping its slot footprint and facing.
+const KITCHEN_SLOTS: { type: string; label: string }[] = [
+  { type: 'kitchen_base_cabinet', label: 'Cabinet' },
+  { type: 'kitchen_drawer_cabinet', label: 'Drawers' },
+  { type: 'stove', label: 'Stove' },
+  { type: 'kitchen_sink', label: 'Sink' },
+  { type: 'dishwasher', label: 'Dishwasher' },
+];
+const KITCHEN_SLOT_TYPES = new Set(KITCHEN_SLOTS.map((k) => k.type));
+
 export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   const s = useDesign(useShallow((st) => ({
     selection: st.selection,
@@ -38,6 +49,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
     setBackground: st.setBackground,
     updateBackground: st.updateBackground,
     updateFurniture: st.updateFurniture,
+    swapFurnitureType: st.swapFurnitureType,
     updateOpening: st.updateOpening,
     updateRoom: st.updateRoom,
     updateWall: st.updateWall,
@@ -310,6 +322,22 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <input type="color" value={item.color} onChange={(e) => s.updateFurniture(item.id, { color: e.target.value })} />
               </div>
             </div>
+            {KITCHEN_SLOT_TYPES.has(item.type) && (
+              <div className="prop-card">
+                <div className="prop-label">Kitchen unit</div>
+                <div className="swap-chips">
+                  {KITCHEN_SLOTS.map((k) => (
+                    <button
+                      key={k.type}
+                      className={`swap-chip ${item.type === k.type ? 'on' : ''}`}
+                      onClick={() => s.swapFurnitureType(item.id, k.type)}
+                    >
+                      {k.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <button className="btn-danger" onClick={() => s.deleteById('furniture', item.id)}>
               <Trash2 className="icon" /> Delete object
             </button>

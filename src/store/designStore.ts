@@ -124,6 +124,9 @@ interface DesignState extends DesignSnapshot {
   addFurniture: (type: string, position: Point) => string;
   /** Tile a run of base cabinets from a→b (the kitchen-run tool). One undo step. */
   addKitchenRun: (a: Point, b: Point) => void;
+  /** Change a placed item's type in place (kitchen slot swaps: cabinet↔appliance),
+   *  keeping its slot footprint, position and facing so the run stays aligned. */
+  swapFurnitureType: (id: string, newType: string) => void;
   updateFurniture: (id: string, patch: Partial<FurnitureItem>) => void;
   /** `type` is a catalog key (door, double_door, sliding_door, window, french_window…). */
   addOpening: (wallId: string, offset: number, type: string) => string;
@@ -506,6 +509,23 @@ export const useDesign = create<DesignState>((set, get) => {
             color: entry.color,
           });
         }
+      }),
+
+    swapFurnitureType: (id, newType) =>
+      commit((d) => {
+        const i = d.furniture.findIndex((f) => f.id === id);
+        if (i < 0) return;
+        const entry = CATALOG_BY_TYPE[newType];
+        if (!entry) return;
+        // Keep the slot footprint (width/depth), position, rotation so a run
+        // stays aligned; take name/height/colour from the new type.
+        d.furniture[i] = {
+          ...d.furniture[i],
+          type: newType,
+          name: entry.name,
+          height: entry.height,
+          color: entry.color,
+        };
       }),
 
     updateFurniture: (id, patch) =>
