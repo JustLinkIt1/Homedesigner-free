@@ -14,7 +14,7 @@ import type {
 } from '../types';
 import { uid, dist } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
-import { kitchenRunUnits } from '../lib/kitchenRun';
+import { kitchenRunUnits, kitchenUpperUnits } from '../lib/kitchenRun';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { SAMPLE_BY_ID, SAMPLES } from '../data/samples';
@@ -122,7 +122,11 @@ interface DesignState extends DesignSnapshot {
   addRoom: (points: Point[]) => string;
   updateRoom: (id: string, patch: Partial<Room>) => void;
   addFurniture: (type: string, position: Point) => string;
-  /** Tile a run of base cabinets from a→b (the kitchen-run tool). One undo step. */
+  /** Whether the kitchen-run tool also tiles wall cabinets above the base run. */
+  kitchenUppers: boolean;
+  setKitchenUppers: (v: boolean) => void;
+  /** Tile a run of base cabinets from a→b (the kitchen-run tool). One undo step.
+   *  Adds wall cabinets above when `kitchenUppers` is on. */
   addKitchenRun: (a: Point, b: Point) => void;
   /** Change a placed item's type in place (kitchen slot swaps: cabinet↔appliance),
    *  keeping its slot footprint, position and facing so the run stays aligned. */
@@ -492,14 +496,18 @@ export const useDesign = create<DesignState>((set, get) => {
       return id;
     },
 
-    addKitchenRun: (a, b) =>
+    kitchenUppers: true,
+    setKitchenUppers: (v) => set({ kitchenUppers: v }),
+
+    addKitchenRun: (a, b) => {
+      const withUppers = get().kitchenUppers;
       commit((d) => {
-        const entry = CATALOG_BY_TYPE['kitchen_base_cabinet'];
-        if (!entry) return;
-        for (const u of kitchenRunUnits(a, b, d.rooms, d.walls)) {
+        const push = (type: string, u: { position: Point; rotation: number }) => {
+          const entry = CATALOG_BY_TYPE[type];
+          if (!entry) return;
           d.furniture.push({
             id: uid(),
-            type: 'kitchen_base_cabinet',
+            type,
             name: entry.name,
             position: u.position,
             rotation: u.rotation,
@@ -508,8 +516,11 @@ export const useDesign = create<DesignState>((set, get) => {
             height: entry.height,
             color: entry.color,
           });
-        }
-      }),
+        };
+        for (const u of kitchenRunUnits(a, b, d.rooms, d.walls)) push('kitchen_base_cabinet', u);
+        if (withUppers) for (const u of kitchenUpperUnits(a, b, d.rooms, d.walls)) push('wall_cabinet', u);
+      });
+    },
 
     swapFurnitureType: (id, newType) =>
       commit((d) => {

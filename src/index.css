@@ -1761,6 +1761,21 @@ button.brand:hover .brand-name {
 }
 
 /* ---------- Active-drawing affordance ---------- */
+.draw-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.draw-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand);
+}
 .draw-affordance {
   position: absolute;
   top: 16px;

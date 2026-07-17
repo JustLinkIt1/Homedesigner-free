@@ -63,6 +63,7 @@ export default function App() {
     walkMode, setWalkMode, pendingFurnitureType, setPendingFurniture, selection,
     units, setUnits,
     sunTime, setSunTime, lightsOn, setLightsOn,
+    kitchenUppers, setKitchenUppers,
   } = useDesign(useShallow((s) => ({
     view: s.view,
     setView: s.setView,
@@ -88,6 +89,8 @@ export default function App() {
     setSunTime: s.setSunTime,
     lightsOn: s.lightsOn,
     setLightsOn: s.setLightsOn,
+    kitchenUppers: s.kitchenUppers,
+    setKitchenUppers: s.setKitchenUppers,
   })));
   const t = useI18n();
   const [showImport, setShowImport] = useState(false);
@@ -476,6 +479,12 @@ export default function App() {
                     : t('Tap points, then finish')
                   : `${tool === 'room' ? t('Click the first point or') : t('Double-click or')} ${t('press Enter to finish')}`}
               </span>
+              {tool === 'kitchen' && (
+                <label className="draw-toggle" title={t('Also add wall cabinets above the counter')}>
+                  <input type="checkbox" checked={kitchenUppers} onChange={(e) => setKitchenUppers(e.target.checked)} />
+                  {t('Wall cabinets')}
+                </label>
+              )}
               <button className="finish-btn" onClick={() => drawBridge.finish?.()}>
                 ✓ {t('Finish')}
               </button>

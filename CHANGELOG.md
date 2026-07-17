@@ -5,25 +5,31 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
-## Unreleased
+## 1.0.49 - 2026-07-16 (versionCode 10049)
+
+Phase 2b — the modular kitchen designer's auto-run tool. Feature-complete for
+base + upper cabinet runs with appliance slots.
 
 ### Added
 
-- **Kitchen-run tool** (Phase 2b of the modular kitchen designer) — a new build
-  tool (`CookingPot` icon, `tool: 'kitchen'`). Tap along a wall, tap again, and
-  it auto-tiles Base Cabinets end-to-end across the span in one undo step, each
-  unit rotated so its back is to the wall and its front faces the room (orients
-  toward the nearest room's centre, so it's correct on any wall). Snaps to
-  walls/grid like the wall tool.
-  - **Live ghost preview**: while dragging the run, translucent cabinet
-    footprints tile from the start tap to the cursor, each with a front-edge
-    tick, so you see the row and its facing before committing (matches the
-    single-furniture placement ghost).
+- **Kitchen-run tool** — a new build tool (`CookingPot` icon, `tool: 'kitchen'`).
+  Tap along a wall, tap again, and it auto-tiles Base Cabinets end-to-end across
+  the span in one undo step, each unit rotated so its back is to the wall and its
+  front faces the room (orients toward the nearest room's centre, so it's correct
+  on any wall). Snaps to walls/grid like the wall tool.
+  - **Live ghost preview**: while dragging, translucent cabinet footprints tile
+    from the start tap to the cursor, each with a front-edge tick, so you see the
+    row and its facing before committing (matches the furniture placement ghost).
+  - **Upper cabinets in the same gesture**: a "Wall cabinets" toggle in the draw
+    bar (default on, persisted) also tiles Wall Cabinets above the base run — set
+    back so their backs align with the deeper base units, mounted at `mountY` 120.
   - Tiling + facing math is shared by the ghost and the commit
-    (`src/lib/kitchenRun.ts`) so they can't drift.
-  - Store: `addKitchenRun(a, b)` (`src/store/designStore.ts`).
+    (`src/lib/kitchenRun.ts` → `kitchenRunUnits` / `kitchenUpperUnits`) so they
+    can't drift.
+  - Store: `addKitchenRun(a, b)`, `kitchenUppers` flag + `setKitchenUppers`.
   - Wiring: `src/data/tools.ts`, `src/components/Editor2D/Canvas2D.tsx`,
-    `src/types/index.ts` (`ToolMode` += `'kitchen'`), tool hint in `src/App.tsx`.
+    `src/types/index.ts` (`ToolMode` += `'kitchen'`), tool hint + toggle in
+    `src/App.tsx`.
 - **Appliance slots** — select any unit in a run and swap it in place between
   Cabinet / Drawers / Stove / Sink / Dishwasher via chips in the Properties panel
   ("Kitchen unit" section). The swap keeps the unit's slot footprint, position and
@@ -31,24 +37,20 @@ changes and add an entry when you ship one.
 
 ### Handoff — where this is and what's next (for Codex / next session)
 
-Phase 2a shipped in 1.0.48: real Kenney CC0 kitchen models (fridge/sink/stove)
-+ modular units (base/drawer/corner/wall cabinet) + `mountY` wall-mount support.
-Phase 2b (above) adds the auto-run tiling tool for **base cabinets only**.
-Remaining, roughly in priority order:
+The kitchen designer core loop is done: draw a run → ghost preview → auto-tiles
+base + wall cabinets facing the room → swap any slot to an appliance. Built on
+1.0.48's real Kenney CC0 kitchen models + modular units + `mountY` support.
 
-1. **Upper-cabinet run** — a second pass that tiles Wall Cabinets at `mountY` 120
-   above a base run (the auto-run tool only does base units today).
-2. **2D symbol** — a proper cabinet symbol for `shape: 'counter'` (falls back to a
-   plain box outline now).
-3. Consider a `groupId` on run items so a run can be moved/deleted as one.
+Remaining polish (low priority, none blocking):
+1. **2D symbol** — a proper cabinet symbol for `shape: 'counter'` (falls back to a
+   plain box outline in the 2D plan now).
+2. **Run grouping** — a `groupId` on run items so a whole run can be
+   moved/deleted/duplicated as one (today each unit is independent).
+3. Optional: snap a run's ends to adjacent walls/corners for a perfect fit.
 
-Done since: kitchen-run tool, ghost preview, and appliance slots (swap a run
-unit to stove/sink/dishwasher/drawers in place, keeping the slot footprint).
-
-Note: the ghost-preview item is done (see above). Investigated adding a 3D
-placement ghost too — deferred: 3D placement is tap-to-place and touch has no
-hover, so a follow-cursor ghost only helps desktop-web; the live drag already
-previews after placement. Low ROI for the mobile-first app.
+Deferred with reason: a **3D placement ghost** — 3D placement is tap-to-place and
+touch has no hover, so a follow-cursor ghost only helps desktop-web; the live 3D
+drag already previews after placement. Low ROI for a mobile-first app.
 
 Bigger roadmap bets still open: **Fit & Flow Coach** (spatial "does it work"
 scoring — the strongest differentiator), **DWG import**, and moving the model
