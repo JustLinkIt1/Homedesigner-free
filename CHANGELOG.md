@@ -5,6 +5,45 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.54 - 2026-07-18 (versionCode 10054)
+
+Owner asks: build inside 3D, and one render button instead of two.
+
+### Added
+
+- **Build in 3D** (phones): the Build tab + sheet now also appear in 3D with
+  the floor-drawing tools — Select, Draw walls, Draw room, Kitchen run. Arm a
+  tool and tap the 3D floor/ground: taps place draft points (grid-snapped),
+  a translucent blue ghost previews the wall chain (posts + slabs), and the
+  same Finish/Cancel pill as 2D commits — walls chain via `addWall` (including
+  the 1.0.53 room-splitting), rooms via `addRoom`, kitchen runs tile on the
+  second tap. The camera anchor puck hides while a tool is armed so it can't
+  steal floor taps. Openings (doors/windows) and measure/erase stay 2D-only;
+  desktop 3D keeps the 2D dock workflow (sheet is phone-styled).
+  (`Scene3D.tsx` — draft/ghost + tap routing; `BuildSheet` `limited` prop;
+  `App.tsx` tab/sheet/affordance gates.)
+- **Photo mode folded into Render image** (owner: "so we don't have two
+  buttons"): the standalone Photo button is gone; the Render menu now offers
+  Photo mode (path-traced, top tier) above Standard/High/Ultra.
+
+### Fixed
+
+- **Kitchen runs are hard-capped at 60 units.** A mis-tap near the 3D horizon
+  could intersect the ground plane hundreds of metres out and explode a run
+  into thousands of cabinets (hit in headless testing: 11k items).
+  (`lib/kitchenRun.ts` tile().)
+
+### For Codex / next session
+
+- R3F gotchas learned here (they cost hours — don't rediscover them):
+  in-canvas pointer handlers can hold **stale closures** (read the zustand
+  store via `getState()` at event time, never trust captured props), and
+  **store commits must never run inside a setState updater** (React dev
+  double-invokes updaters → double walls).
+- 3D build possible follow-ups: openings placement from 3D wall taps (needs a
+  position-along-wall on `SurfaceTap`), a desktop-3D entry point for the build
+  tools, and hover ghost-to-cursor on desktop.
+
 ## 1.0.53 - 2026-07-18 (versionCode 10053)
 
 The owner's two asks (full translations, DWG import) + two tester bug fixes.

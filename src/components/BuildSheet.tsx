@@ -14,8 +14,11 @@ import type { ToolMode } from '../types';
 // stays clear and nothing runs off-screen (Planner-5D-style grouping). Tapping a
 // tool arms it and dismisses the sheet so you can draw straight away.
 const SHEET_TOOLS = TOOLS.filter((t) => t.id !== 'pan'); // two-finger drag pans on touch
+// 3D build mode supports the floor-drawing tools (walls / rooms / kitchen runs)
+// plus select; measure/erase and wall openings stay 2D-only for now.
+const SHEET_TOOLS_3D = TOOLS.filter((t) => ['select', 'wall', 'room', 'kitchen'].includes(t.id));
 
-export default function BuildSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function BuildSheet({ open, onClose, limited = false }: { open: boolean; onClose: () => void; limited?: boolean }) {
   const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign(useShallow((s) => ({
     tool: s.tool,
     setTool: s.setTool,
@@ -56,7 +59,7 @@ export default function BuildSheet({ open, onClose }: { open: boolean; onClose: 
       </div>
 
       <div className="bs-grid">
-        {SHEET_TOOLS.map((t) => {
+        {(limited ? SHEET_TOOLS_3D : SHEET_TOOLS).map((t) => {
           const Icon = t.icon;
           const active = tool === t.id && !openingActive;
           return (
@@ -73,6 +76,7 @@ export default function BuildSheet({ open, onClose }: { open: boolean; onClose: 
         })}
       </div>
 
+      {!limited && (<>
       <div className="bs-section-title">{tr('Doors & windows')}</div>
       <div className="bs-grid">
         {OPENINGS.map((e) => {
@@ -92,6 +96,7 @@ export default function BuildSheet({ open, onClose }: { open: boolean; onClose: 
           );
         })}
       </div>
+      </>)}
     </div>
   );
 }

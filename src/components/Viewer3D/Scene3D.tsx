@@ -5,6 +5,9 @@ import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postproce
 import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
+import { snapToGrid } from '../../lib/geometry';
+import { drawBridge, useDraw } from '../../lib/ui';
+import type { Point } from '../../types';
 import WalkControls, { WalkTouchControls } from './WalkControls';
 import * as THREE from 'three';
 import { sceneCapture, orbitZoom, orbitFocus } from '../../lib/renderBridge';
@@ -292,6 +295,44 @@ function FocusAnchor() {
   );
 }
 
+/** Translucent preview of the wall/room chain (or kitchen-run start post)
+ *  being drawn on the 3D floor — build-in-3D's equivalent of the 2D draft. */
+function BuildGhost({ draft, tool }: { draft: Point[]; tool: string }) {
+  const st = useDesign.getState();
+  const h = st.defaultWallHeight * 0.01;
+  const th = Math.max(st.defaultWallThickness * 0.01, 0.06);
+  const segs: { mid: Point; len: number; yaw: number }[] = [];
+  if (tool !== 'kitchen') {
+    for (let i = 0; i < draft.length - 1; i++) {
+      const a = draft[i];
+      const b = draft[i + 1];
+      const len = Math.hypot(b.x - a.x, b.y - a.y) * 0.01;
+      if (len < 0.01) continue;
+      segs.push({
+        mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+        len,
+        yaw: -Math.atan2(b.y - a.y, b.x - a.x),
+      });
+    }
+  }
+  return (
+    <group>
+      {draft.map((pt, i) => (
+        <mesh key={`p${i}`} position={[pt.x * 0.01, h / 2, pt.y * 0.01]}>
+          <cylinderGeometry args={[0.05, 0.05, h, 10]} />
+          <meshBasicMaterial color="#4c6ef5" transparent opacity={0.85} depthWrite={false} />
+        </mesh>
+      ))}
+      {segs.map((sg, i) => (
+        <mesh key={`s${i}`} position={[sg.mid.x * 0.01, h / 2, sg.mid.y * 0.01]} rotation={[0, sg.yaw, 0]}>
+          <boxGeometry args={[sg.len, h, th]} />
+          <meshBasicMaterial color="#4c6ef5" transparent opacity={0.4} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 /** Registers a dolly function so the on-screen +/- buttons can zoom the orbit
  *  camera (moving it toward/away from the controls' target). */
 function ZoomBridge() {
@@ -385,6 +426,25 @@ export default function Scene3D() {
   const composerRef = useRef<any>(null);
   const dollhouse = useDesign((s) => s.dollhouse);
   const walkMode = useDesign((s) => s.walkMode);
+  // Build-in-3D: when a floor-drawing tool is armed (from the Build sheet),
+  // floor taps place draft points instead of opening the paint palette.
+  const tool = useDesign((s) => s.tool);
+  const buildArmed = !walkMode && (tool === 'wall' || tool === 'room' || tool === 'kitchen');
+  // In-canvas pointer handlers can hold stale closures (R3F doesn't reliably
+  // refresh an object's handler set), so they re-read the store at event time.
+  const armedTool = (): string | null => {
+    const st = useDesign.getState();
+    return !st.walkMode && (st.tool === 'wall' || st.tool === 'room' || st.tool === 'kitchen') ? st.tool : null;
+  };
+  const [draft, setDraftState] = useState<Point[]>([]);
+  // Handlers fire from stale R3F closures, so the live draft also lives in a
+  // ref; and store commits must NEVER run inside a setState updater (React dev
+  // double-invokes updaters — that shipped a double-wall bug once).
+  const draftRef = useRef<Point[]>([]);
+  const setDraft = (d: Point[]) => {
+    draftRef.current = d;
+    setDraftState(d);
+  };
   const setWalkMode = useDesign((s) => s.setWalkMode);
   const sunTime = useDesign((s) => s.sunTime);
 
@@ -414,7 +474,60 @@ export default function Scene3D() {
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
 
+  const snapPoint = (p: Point): Point => {
+    const st = useDesign.getState();
+    return st.showGrid ? snapToGrid(p, st.gridSize) : p;
+  };
+  const addDraftPoint = (raw: Point) => {
+    const p = snapPoint(raw);
+    const st = useDesign.getState();
+    const d = draftRef.current;
+    if (st.tool === 'kitchen') {
+      if (d.length === 0) {
+        setDraft([p]);
+      } else {
+        const a = d[0];
+        setDraft([]);
+        st.addKitchenRun(a, p);
+      }
+    } else {
+      setDraft([...d, p]);
+    }
+  };
+  const finishDraft = () => {
+    const st = useDesign.getState();
+    const d = draftRef.current;
+    setDraft([]);
+    if (st.tool === 'wall' && d.length >= 2) {
+      for (let i = 0; i < d.length - 1; i++) st.addWall(d[i], d[i + 1]);
+    } else if (st.tool === 'room' && d.length >= 3) {
+      st.addRoom(d);
+    }
+  };
+  // Reset the draft when the tool changes; expose Finish/Cancel to the shared
+  // draw affordance (the same pill the 2D editor shows).
+  useEffect(() => setDraft([]), [tool]);
+  useEffect(() => {
+    if (!buildArmed) return;
+    drawBridge.finish = finishDraft;
+    drawBridge.cancel = () => setDraft([]);
+    const min = tool === 'room' ? 3 : tool === 'wall' ? 2 : 1;
+    useDraw.getState().setActive(draft.length >= min);
+    return () => {
+      drawBridge.finish = null;
+      drawBridge.cancel = null;
+      useDraw.getState().setActive(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildArmed, draft, tool]);
+
   const handleSurfaceTap = (tap: SurfaceTap) => {
+    if (armedTool()) {
+      // Drawing owns floor taps; wall taps are ignored while drawing.
+      if (tap.kind === 'room' && tap.position) addDraftPoint(tap.position);
+      setPaintTap(null);
+      return;
+    }
     const st = useDesign.getState();
     const pending = st.pendingFurnitureType;
     if (pending) {
@@ -543,7 +656,18 @@ export default function Scene3D() {
       )}
 
       {/* Ground + grid */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center[0], -0.01, center[2]]} receiveShadow>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[center[0], -0.01, center[2]]}
+        receiveShadow
+        // NB: attached unconditionally — R3F doesn't reliably re-register an
+        // object whose handler toggles between undefined and a function.
+        onClick={(e) => {
+          if (!armedTool()) return;
+          e.stopPropagation();
+          addDraftPoint({ x: e.point.x / 0.01, y: e.point.z / 0.01 });
+        }}
+      >
         <planeGeometry args={[400, 400]} />
         <meshStandardMaterial color="#eceae4" roughness={1} />
       </mesh>
@@ -577,7 +701,8 @@ export default function Scene3D() {
 
       <CaptureBridge composerRef={composerRef} />
       {!walkMode && <ZoomBridge />}
-      {!walkMode && <FocusAnchor />}
+      {!walkMode && !buildArmed && <FocusAnchor />}
+      {buildArmed && draft.length > 0 && <BuildGhost draft={draft} tool={tool} />}
 
       {walkMode ? (
         <WalkControls isTouch={IS_TOUCH} moveRef={moveRef} lookRef={lookRef} />

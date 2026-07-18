@@ -65,7 +65,9 @@ function runGeometry(a: Point, b: Point, rooms: RoomLike[], walls: WallLike[]) {
 
 /** Tile `unitW`-wide units centred along a→b, offset `back` cm toward the wall. */
 function tile(a: Point, g: ReturnType<typeof runGeometry>, unitW: number, back: number): RunUnit[] {
-  const n = Math.max(1, Math.round(g.len / unitW));
+  // Hard cap: a mis-tap (e.g. a 3D ground hit near the horizon, hundreds of
+  // metres out) must never explode into thousands of cabinets.
+  const n = Math.min(60, Math.max(1, Math.round(g.len / unitW)));
   const used = n * unitW;
   const start = (g.len - used) / 2;
   const units: RunUnit[] = [];

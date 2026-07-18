@@ -474,7 +474,7 @@ export default function App() {
               </button>
             </div>
           )}
-          {view === '2d' && drawing && (
+          {drawing && (
             <div className="draw-affordance">
               <span>
                 {coarsePointer
@@ -723,6 +723,17 @@ export default function App() {
                   </button>
                   {renderMenuOpen && (
                     <div className="export-menu render-menu" role="menu">
+                      {/* Photo mode folded in here as the top quality tier —
+                          it used to be its own button next to this one. */}
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setRenderMenuOpen(false);
+                          setPhotoMode(true);
+                        }}
+                      >
+                        <Camera className="icon" /> {t('Photo mode')}
+                      </button>
                       {([[2, 'Standard'], [3, 'High'], [4, 'Ultra']] as const).map(([scale, label]) => (
                         <button
                           key={scale}
@@ -739,10 +750,6 @@ export default function App() {
                     </div>
                   )}
                 </div>
-                <button className="render-btn photo" onClick={() => setPhotoMode(true)}>
-                  <Camera className="icon" />
-                  <span>{t('Photo mode')}</span>
-                </button>
               </div>
               {/* Zoom the orbit camera (matches the 2D plan's zoom buttons). */}
               <div className="zoom-buttons" role="group" aria-label="Zoom">
@@ -769,7 +776,7 @@ export default function App() {
           )}
         </div>
         <PropertiesPanel open={drawer === 'props'} />
-        {view === '2d' && <BuildSheet open={drawer === 'build'} onClose={() => setDrawer(null)} />}
+        <BuildSheet open={drawer === 'build'} onClose={() => setDrawer(null)} limited={view === '3d'} />
 
         {/* The Objects catalog opens as a partial-height bottom sheet, so no
             backdrop — the plan stays visible above it and tappable for placing
@@ -786,17 +793,15 @@ export default function App() {
             }}
           />
         )}
-        <div className={`mobile-tabs ${view === '3d' ? 'two' : ''}`}>
-          {view === '2d' && (
-            <button
-              className={drawer === 'build' || buildModeActive ? 'active' : ''}
-              onClick={() => setDrawer(drawer === 'build' ? null : 'build')}
-              aria-pressed={drawer === 'build' || buildModeActive}
-            >
-              <PenTool className="icon" />{' '}
-              {t(activeBuildTool?.label ?? (pendingEntry?.opening ? pendingEntry.name : 'Build'))}
-            </button>
-          )}
+        <div className="mobile-tabs">
+          <button
+            className={drawer === 'build' || buildModeActive ? 'active' : ''}
+            onClick={() => setDrawer(drawer === 'build' ? null : 'build')}
+            aria-pressed={drawer === 'build' || buildModeActive}
+          >
+            <PenTool className="icon" />{' '}
+            {t(activeBuildTool?.label ?? (pendingEntry?.opening ? pendingEntry.name : 'Build'))}
+          </button>
           <button
             className={drawer === 'catalog' || tool === 'furniture' ? 'active' : ''}
             onClick={toggleObjects}
