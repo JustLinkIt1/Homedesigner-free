@@ -692,6 +692,14 @@ export default function App() {
                     </div>
                   )}
                 </div>
+                {/* Phones: Lock stays directly visible beside View — buried in
+                    the popover alone, testers reported "no lock button in 3D". */}
+                <div className="pill lock-pill-3d">
+                  <label className="toggle" title={t('Lock objects so they cannot be moved')}>
+                    <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
+                    <Lock className="icon" style={{ width: 15, height: 15 }} /> {t('Lock')}
+                  </label>
+                </div>
               </div>
               <div className="render-actions">
                 <button

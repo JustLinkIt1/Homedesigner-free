@@ -5,6 +5,23 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.55 - 2026-07-18 (versionCode 10055)
+
+Owner report on 1.0.54: "There's no lock button on 3d now."
+
+### Fixed
+
+- **Lock is directly visible in phone 3D again.** The Lock toggle was never
+  removed — since 1.0.51 the phone 3D HUD folds Dollhouse/Walk/Lighting/Lock
+  into the "View ▾" popover, so on a phone there was no *visible* lock button
+  (2D shows one in the HUD row, 3D didn't — hence the report). A dedicated
+  `Lock` pill now sits beside the View pill on phones (`.lock-pill-3d`,
+  hidden ≥881px where the inline pill already shows it); the copy inside the
+  View popover stays, and both bind the same `moveLock` store flag so they
+  can't drift. Verified headless (390×844 touch): pill visible, toggle flips
+  `moveLock`, popover checkbox mirrors it; desktop unchanged.
+  (`App.tsx` hud-3d; `index.css` `.lock-pill-3d` show/hide.)
+
 ## 1.0.54 - 2026-07-18 (versionCode 10054)
 
 Owner asks: build inside 3D, and one render button instead of two.

@@ -3381,7 +3381,8 @@ button.brand:hover .brand-name {
 .hud-inline {
   display: contents;
 }
-.view-pill {
+.view-pill,
+.lock-pill-3d {
   display: none;
 }
 .view-menu-sep {
@@ -3546,7 +3547,8 @@ button.brand:hover .brand-name {
   .hud-inline {
     display: none;
   }
-  .view-pill {
+  .view-pill,
+  .lock-pill-3d {
     display: flex;
   }
   /* The View popover breaks out as a fixed panel above the HUD row rather than
