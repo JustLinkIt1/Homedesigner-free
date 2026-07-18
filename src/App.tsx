@@ -760,7 +760,13 @@ export default function App() {
           {/* Hidden while actively drawing: the floor buttons sit top-left and
               the centered "Tap points / Finish" pill would otherwise collide
               with them on phones (and you never switch floors mid-draw). */}
-          {!walkMode && !drawing && <FloorSwitcher />}
+          {/* Hidden while drawing AND while a draw tool is armed in 2D: the
+              armed-tool tip bubble renders top-centre and collided with the
+              top-left floor pills on phones (tester screenshot, v1.0.53). */}
+          {!walkMode && !drawing &&
+            !(view === '2d' && (tool === 'wall' || tool === 'room' || tool === 'kitchen') && !tipsDismissed) && (
+            <FloorSwitcher />
+          )}
         </div>
         <PropertiesPanel open={drawer === 'props'} />
         {view === '2d' && <BuildSheet open={drawer === 'build'} onClose={() => setDrawer(null)} />}

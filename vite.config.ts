@@ -19,7 +19,9 @@ export default defineConfig({
   optimizeDeps: {
     include: ['pdfjs-dist'],
     // The path tracer + BVH ship large modules; pre-bundling avoids dev hiccups.
-    exclude: ['three-gpu-pathtracer', '@react-three/gpu-pathtracer'],
+    // libredwg ships an emscripten wasm next to its glue; optimizing it would
+    // relocate the glue away from the wasm (404 → HTML → magic-word crash).
+    exclude: ['three-gpu-pathtracer', '@react-three/gpu-pathtracer', '@mlightcad/libredwg-web'],
   },
   build: {
     chunkSizeWarningLimit: 1200,

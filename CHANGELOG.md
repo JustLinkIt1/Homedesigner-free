@@ -5,6 +5,44 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.53 - 2026-07-18 (versionCode 10053)
+
+The owner's two asks (full translations, DWG import) + two tester bug fixes.
+
+### Added
+
+- **Complete translations** (tester: "some parts not fully translated"). ~160
+  new keys across all 12 locales in three batches (`scripts/add-translations*.py`,
+  kept for reference): the whole Properties panel (labels, options, toasts,
+  alignment tooltips, texture cards, background props), all furniture catalog
+  names, material names + family groups, floor materials, room styles, catalog
+  categories/groups, kitchen-unit chips, lock/kitchen-run strings, sample room
+  names, and the empty-state copy. PropertiesPanel + the 3D paint palette now
+  render through t(); stored room/item names display-translate via t() so
+  catalog-derived names localize while user-renamed ones pass through.
+  Verified visually in French and Japanese.
+- **DWG import** (tester ask: "import the output from complex software").
+  Import plan now accepts `.dwg` directly: the file converts to DXF **in the
+  browser** via LibreDWG compiled to WASM (`@mlightcad/libredwg-web`,
+  `dwg_write_dxf`) and feeds the existing DXF pipeline unchanged (unit
+  detection, wall extraction, editable geometry). The ~10 MB WASM lives in a
+  lazy chunk fetched only when a .dwg is picked. Verified headless with a real
+  AutoCAD 2000 file → "found 66 wall segments". Note: the dep must stay in
+  `optimizeDeps.exclude` (vite pre-bundling separates the emscripten glue from
+  its wasm → magic-word crash).
+
+### Fixed
+
+- **Flooring now stays inside walls** (owner report: "when I draw a new wall
+  the flooring doesn't stay in the boundary of the room"). Drawing a wall
+  across a room splits the room polygon along the wall (`src/lib/roomSplit.ts`
+  + `addWall`): the larger half keeps the room's identity/finish, the smaller
+  half becomes a new "Room" with the same finish. One undo step reverts wall +
+  split. Same family as 1.0.47's room-bounded wall paint, now for floors.
+- **Floor pills / tip bubble overlap** (owner screenshot): the floor switcher
+  also hides while a draw tool is armed in 2D (the armed-tool tip renders
+  top-centre and collided with the top-left pills on phones).
+
 ## 1.0.52 - 2026-07-17 (versionCode 10052)
 
 Owner + tester follow-ups on 1.0.51.

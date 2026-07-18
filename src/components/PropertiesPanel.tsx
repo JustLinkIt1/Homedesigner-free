@@ -14,6 +14,7 @@ import { toast } from '../lib/ui';
 import { dist, polygonArea } from '../lib/geometry';
 import { formatLength, formatArea } from '../lib/units';
 import { finishForFace, withFaceFinish } from '../lib/wallFaces';
+import { useI18n } from '../lib/i18n';
 import type { CustomTexture } from '../types';
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
@@ -54,6 +55,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
     updateRoom: st.updateRoom,
     updateWall: st.updateWall,
   })));
+  const t = useI18n();
   const { selection } = s;
 
   const multi = s.selectedIds.length > 1;
@@ -82,36 +84,36 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   return (
     <aside className={`sidebar right ${open ? 'open' : ''}`}>
       <div className="sidebar-head">
-        <SlidersHorizontal className="icon" /> Properties
+        <SlidersHorizontal className="icon" /> {t('Properties')}
       </div>
       <div className="sidebar-scroll">
         {multi && (
           <div className="props">
             <div className="prop-card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Boxes className="icon" style={{ color: 'var(--brand)' }} />
-              <strong>{s.selectedIds.length} objects selected</strong>
+              <strong>{s.selectedIds.length} {t('objects selected')}</strong>
             </div>
             <div className="prop-card">
-              <div className="prop-label">Align</div>
+              <div className="prop-label">{t('Align')}</div>
               <div className="align-grid">
-                <button title="Align left" onClick={() => s.alignSelected('left')}><AlignStartVertical className="icon" /></button>
-                <button title="Align horizontal centres" onClick={() => s.alignSelected('hcenter')}><AlignCenterVertical className="icon" /></button>
-                <button title="Align right" onClick={() => s.alignSelected('right')}><AlignEndVertical className="icon" /></button>
-                <button title="Align top" onClick={() => s.alignSelected('top')}><AlignStartHorizontal className="icon" /></button>
-                <button title="Align vertical centres" onClick={() => s.alignSelected('vmiddle')}><AlignCenterHorizontal className="icon" /></button>
-                <button title="Align bottom" onClick={() => s.alignSelected('bottom')}><AlignEndHorizontal className="icon" /></button>
+                <button title={t('Align left')} onClick={() => s.alignSelected('left')}><AlignStartVertical className="icon" /></button>
+                <button title={t('Align horizontal centres')} onClick={() => s.alignSelected('hcenter')}><AlignCenterVertical className="icon" /></button>
+                <button title={t('Align right')} onClick={() => s.alignSelected('right')}><AlignEndVertical className="icon" /></button>
+                <button title={t('Align top')} onClick={() => s.alignSelected('top')}><AlignStartHorizontal className="icon" /></button>
+                <button title={t('Align vertical centres')} onClick={() => s.alignSelected('vmiddle')}><AlignCenterHorizontal className="icon" /></button>
+                <button title={t('Align bottom')} onClick={() => s.alignSelected('bottom')}><AlignEndHorizontal className="icon" /></button>
               </div>
-              <div className="prop-label" style={{ marginTop: 10 }}>Distribute (3+)</div>
+              <div className="prop-label" style={{ marginTop: 10 }}>{t('Distribute (3+)')}</div>
               <div className="align-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 <button
-                  title="Distribute horizontally"
+                  title={t('Distribute horizontally')}
                   disabled={s.selectedIds.length < 3}
                   onClick={() => s.distributeSelected('h')}
                 >
                   <AlignHorizontalDistributeCenter className="icon" />
                 </button>
                 <button
-                  title="Distribute vertically"
+                  title={t('Distribute vertically')}
                   disabled={s.selectedIds.length < 3}
                   onClick={() => s.distributeSelected('v')}
                 >
@@ -120,10 +122,10 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               </div>
             </div>
             <button className="btn block" style={{ marginBottom: 8 }} onClick={() => s.duplicateSelection()}>
-              <Copy className="icon" /> Duplicate
+              <Copy className="icon" /> {t('Duplicate')}
             </button>
             <button className="btn-danger" onClick={() => s.deleteSelected()}>
-              <Trash2 className="icon" /> Delete {s.selectedIds.length} objects
+              <Trash2 className="icon" /> {t('Delete')} {s.selectedIds.length} {t('objects')}
             </button>
           </div>
         )}
@@ -135,11 +137,11 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 className="btn primary block"
                 onClick={() => {
                   const n = s.detectRoomsFromWalls();
-                  if (n === 0) toast.info('No new enclosed rooms found — make sure walls form closed loops.');
-                  else toast.success(`Added ${n} room${n > 1 ? 's' : ''}`);
+                  if (n === 0) toast.info(t('No new enclosed rooms found — make sure walls form closed loops.'));
+                  else toast.success(`${t('Added')} ${n} ${n > 1 ? t('rooms') : t('room')}`);
                 }}
               >
-                <Sparkles className="icon" /> Auto-detect rooms
+                <Sparkles className="icon" /> {t('Auto-detect rooms')}
               </button>
             </div>
             {s.background ? (
@@ -149,11 +151,8 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <div className="es-icon">
                   <MousePointer2 className="icon" />
                 </div>
-                <h3>Nothing selected</h3>
-                <p>
-                  Pick a wall, room or object to edit it. Or import a plan, then
-                  auto-detect rooms and start decorating.
-                </p>
+                <h3>{t('Nothing selected')}</h3>
+                <p>{t('Pick a wall, room or object to edit it. Or import a plan, then auto-detect rooms and start decorating.')}</p>
               </div>
             )}
           </>
@@ -163,16 +162,16 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
           <div className="props">
             <div className="prop-card">
               <div className="prop-row">
-                <label>Length</label>
+                <label>{t('Length')}</label>
                 <span className="field-val">{formatLength(dist(wall.start, wall.end), s.units)}</span>
               </div>
-              <NumberRow label="Thickness (cm)" value={wall.thickness} min={4} max={50}
+              <NumberRow label={t('Thickness (cm)')} value={wall.thickness} min={4} max={50}
                 onChange={(v) => s.updateWall(wall.id, { thickness: v })} />
-              <NumberRow label="Height (cm)" value={wall.height} min={100} max={400}
+              <NumberRow label={t('Height (cm)')} value={wall.height} min={100} max={400}
                 onChange={(v) => s.updateWall(wall.id, { height: v })} />
             </div>
             <div className="prop-card">
-              <div className="prop-label">{selectedWallFace ? 'Wall section paint' : 'Wall paint'}</div>
+              <div className="prop-label">{selectedWallFace ? t('Wall section paint') : t('Wall paint')}</div>
               <div className="paint-row">
                 {WALL_PAINTS.map((c) => (
                   <button
@@ -183,20 +182,20 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     onClick={() => paintSelectedWall(c, undefined)}
                   />
                 ))}
-                <label className="paint-dot" style={{ background: displayedWallColor, display: 'grid', placeItems: 'center', cursor: 'pointer' }} title="Custom color">
+                <label className="paint-dot" style={{ background: displayedWallColor, display: 'grid', placeItems: 'center', cursor: 'pointer' }} title={t('Custom color')}>
                   <input type="color" value={displayedWallColor} onChange={(e) => paintSelectedWall(e.target.value, undefined)} style={{ opacity: 0, width: 0, height: 0 }} />
                 </label>
               </div>
               <button className="btn block" style={{ marginTop: 12, height: 36 }}
                 onClick={() => { for (const w of s.walls) s.updateWall(w.id, { color: displayedWallColor, texture: undefined, faceFinishes: undefined }); }}>
-                Apply to all walls
+                {t('Apply to all walls')}
               </button>
               {MATERIAL_GROUPS.map((g) => {
                 const items = wallMaterials().filter((m) => m.group === g);
                 if (!items.length) return null;
                 return (
                   <div key={g}>
-                    <div className="mat-group-title">{g}</div>
+                    <div className="mat-group-title">{t(g)}</div>
                     <div className="swatches">
                       {items.map((m) => {
                         const src = materialUrl(m.id);
@@ -206,9 +205,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                             className={`swatch ${displayedWallTexture?.src === src ? 'active' : ''}`}
                             style={{ backgroundImage: `url(${src})` }}
                             onClick={() => paintSelectedWall(displayedWallColor, { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness })}
-                            title={m.name}
+                            title={t(m.name)}
                           >
-                            <span className="sw-name">{m.name}</span>
+                            <span className="sw-name">{t(m.name)}</span>
                           </button>
                         );
                       })}
@@ -218,15 +217,15 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               })}
             </div>
             <TextureCard
-              label="Custom paint image"
+              label={t('Custom paint image')}
               texture={displayedWallTexture}
               defaultScale={100}
               onChange={(t) => paintSelectedWall(displayedWallColor, t)}
               onApplyAll={(t) => { for (const w of s.walls) s.updateWall(w.id, { texture: t, faceFinishes: undefined }); }}
-              applyAllLabel="Apply to all walls"
+              applyAllLabel={t('Apply to all walls')}
             />
             <button className="btn-danger" onClick={() => s.deleteById('wall', wall.id)}>
-              <Trash2 className="icon" /> Delete wall
+              <Trash2 className="icon" /> {t('Delete wall')}
             </button>
           </div>
         )}
@@ -235,18 +234,18 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
           <div className="props">
             <div className="prop-card">
               <div className="prop-row">
-                <label>Name</label>
-                <input type="text" value={room.name} onChange={(e) => s.updateRoom(room.id, { name: e.target.value })} />
+                <label>{t('Name')}</label>
+                <input type="text" value={t(room.name)} onChange={(e) => s.updateRoom(room.id, { name: e.target.value })} />
               </div>
               <div className="prop-row">
-                <label>Floor area</label>
+                <label>{t('Floor area')}</label>
                 <span className="field-val">{formatArea(polygonArea(room.points), s.units)}</span>
               </div>
             </div>
             <StyleCard roomId={room.id} />
             <div className="prop-card">
-              <div className="prop-label">Flooring</div>
-              <div className="mat-group-title">Basic</div>
+              <div className="prop-label">{t('Flooring')}</div>
+              <div className="mat-group-title">{t('Basic')}</div>
               <div className="swatches">
                 {FLOOR_MATERIALS.map((m) => (
                   <button
@@ -254,9 +253,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     className={`swatch ${!room.texture && room.floorMaterial === m.id ? 'active' : ''}`}
                     style={{ backgroundImage: `url(${floorThumbnail(m.kind, m.color)})` }}
                     onClick={() => s.updateRoom(room.id, { floorMaterial: m.id, texture: undefined })}
-                    title={m.name}
+                    title={t(m.name)}
                   >
-                    <span className="sw-name">{m.name}</span>
+                    <span className="sw-name">{t(m.name)}</span>
                   </button>
                 ))}
               </div>
@@ -265,7 +264,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 if (!items.length) return null;
                 return (
                   <div key={g}>
-                    <div className="mat-group-title">{g}</div>
+                    <div className="mat-group-title">{t(g)}</div>
                     <div className="swatches">
                       {items.map((m) => {
                         const src = materialUrl(m.id);
@@ -275,9 +274,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                             className={`swatch ${room.texture?.src === src ? 'active' : ''}`}
                             style={{ backgroundImage: `url(${src})` }}
                             onClick={() => s.updateRoom(room.id, { floorMaterial: '', color: m.color, texture: { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness } })}
-                            title={m.name}
+                            title={t(m.name)}
                           >
-                            <span className="sw-name">{m.name}</span>
+                            <span className="sw-name">{t(m.name)}</span>
                           </button>
                         );
                       })}
@@ -287,15 +286,15 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               })}
             </div>
             <TextureCard
-              label="Custom floor image"
+              label={t('Custom floor image')}
               texture={room.texture}
               defaultScale={60}
               onChange={(t) => s.updateRoom(room.id, { texture: t })}
               onApplyAll={(t) => { for (const r of s.rooms) s.updateRoom(r.id, { texture: t }); }}
-              applyAllLabel="Apply to all rooms"
+              applyAllLabel={t('Apply to all rooms')}
             />
             <button className="btn-danger" onClick={() => s.deleteById('room', room.id)}>
-              <Trash2 className="icon" /> Delete room
+              <Trash2 className="icon" /> {t('Delete room')}
             </button>
           </div>
         )}
@@ -304,31 +303,31 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
           <div className="props">
             <div className="prop-card">
               <div className="prop-row">
-                <label>Name</label>
-                <input type="text" value={item.name} onChange={(e) => s.updateFurniture(item.id, { name: e.target.value })} />
+                <label>{t('Name')}</label>
+                <input type="text" value={t(item.name)} onChange={(e) => s.updateFurniture(item.id, { name: e.target.value })} />
               </div>
-              <NumberRow label="Width (cm)" value={item.width} min={10} max={500} onChange={(v) => s.updateFurniture(item.id, { width: v })} />
-              <NumberRow label="Depth (cm)" value={item.depth} min={10} max={500} onChange={(v) => s.updateFurniture(item.id, { depth: v })} />
-              <NumberRow label="Height (cm)" value={item.height} min={1} max={300} onChange={(v) => s.updateFurniture(item.id, { height: v })} />
+              <NumberRow label={t('Width (cm)')} value={item.width} min={10} max={500} onChange={(v) => s.updateFurniture(item.id, { width: v })} />
+              <NumberRow label={t('Depth (cm)')} value={item.depth} min={10} max={500} onChange={(v) => s.updateFurniture(item.id, { depth: v })} />
+              <NumberRow label={t('Height (cm)')} value={item.height} min={1} max={300} onChange={(v) => s.updateFurniture(item.id, { height: v })} />
             </div>
             <div className="prop-card">
               <div className="prop-row">
-                <label>Rotation</label>
+                <label>{t('Rotation')}</label>
                 <input type="range" min={0} max={360} step={5} value={item.rotation}
                   onChange={(e) => s.updateFurniture(item.id, { rotation: Number(e.target.value) })} />
               </div>
               {/* Exact angle entry (tester ask): the slider is coarse on small
                   phones — Blender-style numeric input for precise rotations. */}
-              <NumberRow label="Angle (°)" value={item.rotation} min={0} max={360}
+              <NumberRow label={t('Angle (°)')} value={item.rotation} min={0} max={360}
                 onChange={(v) => s.updateFurniture(item.id, { rotation: v })} />
               <div className="prop-row">
-                <label>Colour</label>
+                <label>{t('Colour')}</label>
                 <input type="color" value={item.color} onChange={(e) => s.updateFurniture(item.id, { color: e.target.value })} />
               </div>
             </div>
             {KITCHEN_SLOT_TYPES.has(item.type) && (
               <div className="prop-card">
-                <div className="prop-label">Kitchen unit</div>
+                <div className="prop-label">{t('Kitchen unit')}</div>
                 <div className="swap-chips">
                   {KITCHEN_SLOTS.map((k) => (
                     <button
@@ -336,14 +335,14 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                       className={`swap-chip ${item.type === k.type ? 'on' : ''}`}
                       onClick={() => s.swapFurnitureType(item.id, k.type)}
                     >
-                      {k.label}
+                      {t(k.label)}
                     </button>
                   ))}
                 </div>
               </div>
             )}
             <button className="btn-danger" onClick={() => s.deleteById('furniture', item.id)}>
-              <Trash2 className="icon" /> Delete object
+              <Trash2 className="icon" /> {t('Delete object')}
             </button>
           </div>
         )}
@@ -352,7 +351,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
           <div className="props">
             <div className="prop-card">
               <div className="prop-row">
-                <label>Type</label>
+                <label>{t('Type')}</label>
                 <select
                   value={opening.type}
                   onChange={(e) => {
@@ -365,24 +364,24 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     });
                   }}
                 >
-                  <option value="door">Door</option>
-                  <option value="window">Window</option>
+                  <option value="door">{t('Door')}</option>
+                  <option value="window">{t('Window')}</option>
                 </select>
               </div>
               <div className="prop-row">
-                <label>Style</label>
+                <label>{t('Style')}</label>
                 {opening.type === 'door' ? (
                   <select
                     value={opening.style ?? 'single'}
                     onChange={(e) => s.updateOpening(opening.id, { style: e.target.value as never })}
                   >
-                    <option value="single">Single</option>
-                    <option value="double">Double</option>
-                    <option value="sliding">Sliding</option>
-                    <option value="pocket">Pocket</option>
-                    <option value="bifold">Bi-fold</option>
-                    <option value="passage">Passage (no leaf)</option>
-                    <option value="arch">Arch (no leaf)</option>
+                    <option value="single">{t('Single')}</option>
+                    <option value="double">{t('Double')}</option>
+                    <option value="sliding">{t('Sliding')}</option>
+                    <option value="pocket">{t('Pocket')}</option>
+                    <option value="bifold">{t('Bi-fold')}</option>
+                    <option value="passage">{t('Passage (no leaf)')}</option>
+                    <option value="arch">{t('Arch (no leaf)')}</option>
                   </select>
                 ) : (
                   <select
@@ -395,20 +394,20 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                       });
                     }}
                   >
-                    <option value="standard">Standard</option>
-                    <option value="french">French (full height)</option>
-                    <option value="casement">Casement</option>
-                    <option value="sliding">Sliding</option>
+                    <option value="standard">{t('Standard')}</option>
+                    <option value="french">{t('French (full height)')}</option>
+                    <option value="casement">{t('Casement')}</option>
+                    <option value="sliding">{t('Sliding')}</option>
                   </select>
                 )}
               </div>
-              <NumberRow label="Width (cm)" value={opening.width} min={40} max={400} onChange={(v) => s.updateOpening(opening.id, { width: v })} />
-              <NumberRow label="Height (cm)" value={opening.height} min={40} max={300} onChange={(v) => s.updateOpening(opening.id, { height: v })} />
+              <NumberRow label={t('Width (cm)')} value={opening.width} min={40} max={400} onChange={(v) => s.updateOpening(opening.id, { width: v })} />
+              <NumberRow label={t('Height (cm)')} value={opening.height} min={40} max={300} onChange={(v) => s.updateOpening(opening.id, { height: v })} />
               {opening.type === 'window' && (
-                <NumberRow label="Sill height (cm)" value={opening.sill} min={0} max={200} onChange={(v) => s.updateOpening(opening.id, { sill: v })} />
+                <NumberRow label={t('Sill height (cm)')} value={opening.sill} min={0} max={200} onChange={(v) => s.updateOpening(opening.id, { sill: v })} />
               )}
               <NumberRow
-                label="Position (cm)"
+                label={t('Position (cm)')}
                 value={Math.round(opening.offset * openingWallLen)}
                 min={0}
                 max={Math.round(openingWallLen)}
@@ -416,7 +415,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               />
             </div>
             <button className="btn-danger" onClick={() => s.deleteById('opening', opening.id)}>
-              <Trash2 className="icon" /> Delete {opening.type}
+              <Trash2 className="icon" /> {opening.type === 'door' ? t('Delete door') : t('Delete window')}
             </button>
           </div>
         )}
@@ -428,14 +427,15 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
 /** One-tap coordinated looks: wall paint + flooring, per room or whole home. */
 function StyleCard({ roomId }: { roomId: string }) {
   const s = useDesign();
+  const t = useI18n();
   const [wholeHome, setWholeHome] = useState(false);
   return (
     <div className="prop-card">
       <div className="prop-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        Room styles
+        {t('Room styles')}
         <label className="style-scope">
           <input type="checkbox" checked={wholeHome} onChange={(e) => setWholeHome(e.target.checked)} />
-          Whole home
+          {t('Whole home')}
         </label>
       </div>
       <div className="style-grid">
@@ -445,7 +445,7 @@ function StyleCard({ roomId }: { roomId: string }) {
             <button
               key={st.id}
               className="style-chip"
-              title={`${st.name} — ${mat?.name ?? ''} floor`}
+              title={`${t(st.name)} — ${t(mat?.name ?? '')}`}
               onClick={() => s.applyRoomStyle(wholeHome ? 'all' : roomId, st.id)}
             >
               <span
@@ -454,7 +454,7 @@ function StyleCard({ roomId }: { roomId: string }) {
               >
                 <span className="style-wall" style={{ background: st.wallColor }} />
               </span>
-              <span className="style-name">{st.name}</span>
+              <span className="style-name">{t(st.name)}</span>
             </button>
           );
         })}
@@ -479,13 +479,14 @@ function TextureCard({
   onApplyAll?: (texture: CustomTexture | undefined) => void;
   applyAllLabel?: string;
 }) {
+  const t = useI18n();
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     try {
       const { src } = await prepareTextureImage(file);
       onChange({ src, scaleCm: texture?.scaleCm ?? defaultScale });
     } catch {
-      toast.error("Couldn't load that image.");
+      toast.error(t("Couldn't load that image."));
     }
   };
   return (
@@ -508,16 +509,16 @@ function TextureCard({
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label className="btn block" style={{ height: 30, fontSize: 12, cursor: 'pointer' }}>
-                <ImageIcon className="icon" /> Replace
+                <ImageIcon className="icon" /> {t('Replace')}
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => onFile(e.target.files?.[0])} />
               </label>
               <button className="btn block" style={{ height: 30, fontSize: 12 }} onClick={() => onChange(undefined)}>
-                Remove
+                {t('Remove')}
               </button>
             </div>
           </div>
           <div className="prop-row" style={{ alignItems: 'center' }}>
-            <label style={{ minWidth: 0 }}>Pattern size (cm)</label>
+            <label style={{ minWidth: 0 }}>{t('Pattern size (cm)')}</label>
             <input
               type="range"
               min={5}
@@ -528,7 +529,7 @@ function TextureCard({
             />
           </div>
           <div className="prop-row">
-            <label>Real-world tile size</label>
+            <label>{t('Real-world tile size')}</label>
             <input
               type="number"
               min={5}
@@ -540,13 +541,13 @@ function TextureCard({
           </div>
           {onApplyAll && (
             <button className="btn block" style={{ marginTop: 8, height: 34 }} onClick={() => onApplyAll(texture)}>
-              {applyAllLabel ?? 'Apply everywhere'}
+              {applyAllLabel ?? t('Apply everywhere')}
             </button>
           )}
         </>
       ) : (
         <label className="btn primary block" style={{ height: 38, cursor: 'pointer' }}>
-          <ImageIcon className="icon" /> Upload image
+          <ImageIcon className="icon" /> {t('Upload image')}
           <input
             type="file"
             accept="image/*"
@@ -578,29 +579,30 @@ function NumberRow({
 
 function BackgroundProps() {
   const s = useDesign();
+  const t = useI18n();
   const bg = s.background!;
   return (
     <div className="props">
       <div className="prop-card">
-        <div className="prop-label">Imported plan</div>
+        <div className="prop-label">{t('Imported plan')}</div>
         <div className="prop-row">
-          <label>Opacity</label>
+          <label>{t('Opacity')}</label>
           <input type="range" min={0.1} max={1} step={0.05} value={bg.opacity}
             onChange={(e) => s.updateBackground({ opacity: Number(e.target.value) })} />
         </div>
         <div className="prop-row">
-          <label>Scale (cm/px)</label>
+          <label>{t('Scale (cm/px)')}</label>
           <input type="number" step={0.01} value={Number(bg.scale.toFixed(3))}
             onChange={(e) => s.updateBackground({ scale: Math.max(0.01, Number(e.target.value)) })} />
         </div>
         <div className="prop-row">
-          <label>Rotation</label>
+          <label>{t('Rotation')}</label>
           <input type="range" min={0} max={360} step={1} value={bg.rotation}
             onChange={(e) => s.updateBackground({ rotation: Number(e.target.value) })} />
         </div>
       </div>
       <button className="btn-danger" onClick={() => s.setBackground(null)}>
-        <Trash2 className="icon" /> Remove background plan
+        <Trash2 className="icon" /> {t('Remove background plan')}
       </button>
     </div>
   );

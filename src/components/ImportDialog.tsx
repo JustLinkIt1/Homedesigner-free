@@ -61,9 +61,23 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
   const handleFile = async (file: File) => {
     setError(null);
     const isDxf = /\.dxf$/i.test(file.name);
+    const isDwg = /\.dwg$/i.test(file.name);
     try {
-      if (isDxf) {
-        const text = await file.text();
+      if (isDxf || isDwg) {
+        let text: string;
+        if (isDwg) {
+          // DWG is a proprietary binary format — convert to DXF in the browser
+          // via LibreDWG (WASM, ~lazy-loaded only here) and reuse the whole DXF
+          // pipeline below unchanged.
+          setStage('busy');
+          const { LibreDwg } = await import('@mlightcad/libredwg-web');
+          const lib = await LibreDwg.create();
+          const dxfBytes = lib.dwg_write_dxf(await file.arrayBuffer());
+          if (!dxfBytes) throw new Error('Could not convert this DWG file. Try exporting it as DXF from your CAD app.');
+          text = new TextDecoder('utf-8').decode(dxfBytes);
+        } else {
+          text = await file.text();
+        }
         setDxfText(text);
         const res = importDxf(text, {
           wallHeight: s.defaultWallHeight,
@@ -172,14 +186,14 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
                 </p>
                 <p className="muted">
                   PDF &amp; images → traced over with auto wall detection.<br />
-                  DXF (CAD) → walls imported automatically as real geometry.
+                  DXF / DWG (CAD) → walls imported automatically as real geometry.
                 </p>
               </div>
               {error && <p style={{ color: 'var(--danger)', marginTop: 12 }}>{error}</p>}
               <input
                 ref={fileRef}
                 type="file"
-                accept=".pdf,.dxf,image/*"
+                accept=".pdf,.dxf,.dwg,image/*"
                 style={{ display: 'none' }}
                 onChange={onPick}
               />

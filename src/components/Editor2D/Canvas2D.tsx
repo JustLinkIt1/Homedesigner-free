@@ -17,6 +17,7 @@ import {
 import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
 import DimensionsLayer from './DimensionsLayer';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
+import { useI18n } from '../../lib/i18n';
 import { planCapture } from '../../lib/renderBridge';
 import FurnitureSymbol from './FurnitureSymbol';
 import { buildSnapElements, nearestSnap, type SnapKind, type GuideLine } from '../../lib/snapping';
@@ -53,6 +54,7 @@ const HANDLE_R = IS_COARSE ? 14 : 8; // radius in screen px (÷ zoom at render)
 
 export default function Canvas2D() {
   const C = canvasColors(useTheme((t) => t.theme));
+  const tr = useI18n();
   const wrapRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const layerRef = useRef<Konva.Layer>(null);
@@ -1093,7 +1095,7 @@ export default function Canvas2D() {
                   y={c.y - 8}
                   width={100}
                   align="center"
-                  text={r.name}
+                  text={tr(r.name)}
                   fontSize={14 / zoom}
                   fill={C.labelInk}
                   fontStyle="bold"

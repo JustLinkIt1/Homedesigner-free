@@ -15,6 +15,7 @@ import type {
 import { uid, dist } from '../lib/geometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { kitchenRunUnits, kitchenUpperUnits } from '../lib/kitchenRun';
+import { splitPolygonBySegment } from '../lib/roomSplit';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
 import { SAMPLE_BY_ID, SAMPLES } from '../data/samples';
@@ -450,6 +451,17 @@ export const useDesign = create<DesignState>((set, get) => {
           height: defaultWallHeight,
           color: '#ece6db',
         });
+        // A wall drawn across a room subdivides it: split the polygon so the
+        // flooring stays bounded by the walls the user sees (each half keeps
+        // the original finish; the smaller half becomes its own room).
+        for (const room of [...d.rooms]) {
+          const halves = splitPolygonBySegment(room.points, start, end);
+          if (!halves) continue;
+          const i = d.rooms.findIndex((r) => r.id === room.id);
+          if (i < 0) continue;
+          d.rooms[i] = { ...room, points: halves[0] };
+          d.rooms.push({ ...room, id: uid(), name: 'Room', points: halves[1] });
+        }
       });
       return id;
     },

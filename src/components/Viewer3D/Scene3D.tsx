@@ -17,6 +17,7 @@ import { sunModel } from '../../lib/sun';
 import { finishForFace, withFaceFinish } from '../../lib/wallFaces';
 import { CATALOG_BY_TYPE, FLOOR_MATERIALS } from '../../data/furnitureCatalog';
 import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl } from '../../data/materials';
+import { useI18n } from '../../lib/i18n';
 
 export { sunModel };
 
@@ -27,6 +28,7 @@ export { sunModel };
  * paint jobs are undoable from the 2D editor).
  */
 function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }) {
+  const t = useI18n();
   const wall = useDesign((st) => (tap.kind === 'wall' ? st.walls.find((w) => w.id === tap.id) : undefined));
   const room = useDesign((st) => (tap.kind === 'room' ? st.rooms.find((r) => r.id === tap.id) : undefined));
   const exists = tap.kind === 'wall' ? !!wall : !!room;
@@ -64,13 +66,13 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
     <div className="paint-pop" style={{ left, top }}>
       <div className="pp-head">
         <Paintbrush className="icon" />
-        {tap.kind === 'wall' ? (tap.wallFace ? 'Wall section' : 'Wall paint') : 'Flooring'}
+        {tap.kind === 'wall' ? (tap.wallFace ? t('Wall section') : t('Wall paint')) : t('Flooring')}
         <button className="pp-close" onClick={onClose} aria-label="Close">
           <X className="icon" />
         </button>
       </div>
       <div className="pp-scroll">
-        <div className="mat-group-title">{tap.kind === 'wall' ? 'Paint' : 'Basic'}</div>
+        <div className="mat-group-title">{tap.kind === 'wall' ? t('Paint') : t('Basic')}</div>
         <div className="pp-swatches">
           {tap.kind === 'wall'
             ? WALL_PAINTS.map((c) => (
@@ -87,7 +89,7 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
                   key={m.id}
                   className={`pp-swatch ${!room?.texture && room?.floorMaterial === m.id ? 'on' : ''}`}
                   style={{ background: m.color }}
-                  title={m.name}
+                  title={t(m.name)}
                   onClick={() => st.updateRoom(tap.id, { floorMaterial: m.id, texture: undefined })}
                 />
               ))}
@@ -97,7 +99,7 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
           if (!group.length) return null;
           return (
             <div key={g}>
-              <div className="mat-group-title">{g}</div>
+              <div className="mat-group-title">{t(g)}</div>
               <div className="pp-swatches">
                 {group.map((m) => {
                   const src = materialUrl(m.id);
@@ -106,7 +108,7 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
                       key={m.id}
                       className={`pp-swatch ${activeSrc === src ? 'on' : ''}`}
                       style={{ backgroundImage: `url(${src})`, backgroundSize: 'cover' }}
-                      title={m.name}
+                      title={t(m.name)}
                       onClick={() => pickMaterial(m)}
                     />
                   );
