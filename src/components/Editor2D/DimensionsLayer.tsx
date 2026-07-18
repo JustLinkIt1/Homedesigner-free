@@ -4,6 +4,7 @@ import { useDesign } from '../../store/designStore';
 import { dist, midpoint, boundsOf, polygonArea, polygonCentroid } from '../../lib/geometry';
 import { formatLength, formatArea, type Units } from '../../lib/units';
 import { useTheme, canvasColors } from '../../lib/theme';
+import { t } from '../../lib/i18n';
 import type { Point, Wall, Room } from '../../types';
 
 /**
@@ -223,11 +224,14 @@ function RoomDimension({ room, px, units }: { room: Room; px: (n: number) => num
   if (room.points.length < 3) return null;
   const c = polygonCentroid(room.points);
   const fs = px(12.5);
-  // The room name is drawn ~at the centroid in Canvas2D; sit the area below it.
+  // The room name is drawn ~at the centroid in Canvas2D (14px text wrapped in
+  // a 100cm box). Estimate how many lines it wraps to (~7.7px per glyph) so
+  // long names like "Kitchen & Dining" don't collide with the area label.
+  const nameLines = Math.max(1, Math.ceil((t(room.name).length * px(7.7)) / 100));
   return (
     <Text
       x={c.x}
-      y={c.y + px(12)}
+      y={c.y - 8 + nameLines * px(17)}
       text={formatArea(polygonArea(room.points), units)}
       fontSize={fs}
       fill={TEXT_COLOR}

@@ -231,7 +231,9 @@ export default function Canvas2D() {
       ];
       if (pts.length === 0) return null;
       const { min, max } = boundsOf(pts);
-      const padCm = 70; // breathing room around the design (cm)
+      // Breathing room around the design (cm) — wide enough that the overall
+      // dimension lines + their text (drawn outside the walls) aren't clipped.
+      const padCm = 120;
       const z = st.zoom;
       const rx = (min.x - padCm) * z + st.pan.x;
       const ry = (min.y - padCm) * z + st.pan.y;
@@ -244,7 +246,8 @@ export default function Canvas2D() {
       if (grid) grid.visible(false);
       stage.draw();
       try {
-        return stage.toDataURL({ x: rx, y: ry, width: rw, height: rh, pixelRatio, mimeType: 'image/png' });
+        const url = stage.toDataURL({ x: rx, y: ry, width: rw, height: rh, pixelRatio, mimeType: 'image/png' });
+        return { url, pxPerCm: z * pixelRatio };
       } finally {
         if (grid && gridWasVisible) grid.visible(true);
         stage.draw();

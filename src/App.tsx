@@ -223,7 +223,7 @@ export default function App() {
   // itself when the write lands.
   const goHome = () => {
     const id = projects.getActiveId();
-    const full = planCapture.current?.();
+    const full = planCapture.current?.()?.url;
     setScreen('projects');
     if (!id || !full) return;
     (async () => {

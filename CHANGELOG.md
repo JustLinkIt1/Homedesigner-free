@@ -5,6 +5,53 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.56 - 2026-07-18 (versionCode 10056)
+
+Owner: "keep working on making something people will actually pay for." PDF
+export is already a Pro gate, so this release turns it from a screenshot-on-A4
+into a professional **plan pack** — output you can hand to a builder,
+landlord or kitchen fitter.
+
+### Added
+
+- **PDF plan pack** (`lib/planExport.ts` rewrite + new `lib/planSchedule.ts`):
+  - Every floor page now carries a **true paper scale bar** (round length,
+    e.g. 3.00 m, plus an approximate ratio like "~ 1:65") and the storey's
+    **floor area** bottom-right. The capture bridge (`renderBridge.planCapture`)
+    now returns `{ url, pxPerCm }` so the PDF knows the raster's real scale —
+    `Canvas2D` computes it as `zoom × pixelRatio`.
+  - A final **Summary page**: per-storey room schedule (name, bounding size,
+    area — largest room first), floor totals, **Total living area**, and a
+    **Doors & windows schedule** grouped by kind + size (uses the shared
+    `openingLabel()` naming: Single/Double/Sliding/Pocket/Bi-fold door,
+    Passage, Arch, Window/French/Casement/Sliding window).
+  - PDF text translates via `t()` for cp1252-safe locales (en fr es de it pt
+    nl); others keep English labels because jsPDF's built-in Helvetica can't
+    encode them (mojibake would be worse). ~14 new keys added to all 12
+    locales (`scripts/add-translations4.py`).
+
+### Fixed
+
+- **Plan capture no longer clips the overall dimensions.** The framed PNG/PDF
+  capture pad grew 70 → 120 cm, so the building's outer "10.00 m"-style
+  dimension lines and text render fully instead of being cut mid-glyph.
+- **Room area labels no longer collide with wrapped names.**
+  `DimensionsLayer.RoomDimension` estimates how many lines the room name
+  wraps to (translated name, ~7.7 px/glyph in the 100 cm label box) and sits
+  the area below — "Kitchen & Dining" no longer overprints "20.00 m²".
+
+### For Codex / next session
+
+- Verified headless by driving the real export in the dev server
+  (`import('/src/lib/planExport.ts')` in page context + Playwright download
+  capture, then text-grepping the PDF and re-rendering pages via pdfjs):
+  3 pages for the two-storey sample, all schedule strings present, French
+  labels translate, scale bar "3.00 m" at ~1:60–65, no label collisions.
+- Possible follow-ups: imperial-first summary formatting for US users is
+  already handled by `formatArea/formatLength(units)`; a wall-length (linear
+  metre) row per floor would help paint/skirting estimates; the Summary page
+  could also embed the shopping list (`lib/bom.ts`) as a page 4.
+
 ## 1.0.55 - 2026-07-18 (versionCode 10055)
 
 Owner report on 1.0.54: "There's no lock button on 3d now."
