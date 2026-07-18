@@ -477,4 +477,5 @@ export const KO: Record<string, string> = {
   'French window': '프렌치 창',
   'Casement window': '여닫이 창',
   'Sliding window': '미닫이 창',
+  'Wall length': '벽 길이',
 };

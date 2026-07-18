@@ -205,6 +205,19 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: 'M4,22 H96 M4,40 H96 M4,58 H96 M4,76 H96', sw: 2 },
     { d: 'M50,90 V14 M50,14 L42,26 M50,14 L58,26', sw: 2.5 },
   ],
+  // Kitchen worktop / base cabinet: outline + front-edge line (the worktop
+  // overhang) + a centred pull. Backs sit at y=0 like the 3D meshes.
+  counter: [
+    { d: rect(4, 4, 92, 92) },
+    { d: 'M4,82 H96', sw: 2 },
+    { d: 'M40,90 H60', sw: 2 },
+  ],
+  // Generic closed volume (chests, boxes): outline + light diagonals so it
+  // doesn't read as an unstyled fallback rectangle.
+  box: [
+    { d: rect(4, 4, 92, 92, 4) },
+    { d: 'M4,4 L96,96 M96,4 L4,96', sw: 1.2 },
+  ],
 };
 
 /** Sidebar/canvas fallback for shapes without dedicated art (plain box). */

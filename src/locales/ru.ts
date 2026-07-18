@@ -477,4 +477,5 @@ export const RU: Record<string, string> = {
   'French window': 'Французское окно',
   'Casement window': 'Створчатое окно',
   'Sliding window': 'Раздвижное окно',
+  'Wall length': 'Длина стен',
 };

@@ -477,4 +477,5 @@ export const ZH: Record<string, string> = {
   'French window': '落地窗',
   'Casement window': '平开窗',
   'Sliding window': '推拉窗',
+  'Wall length': '墙体长度',
 };

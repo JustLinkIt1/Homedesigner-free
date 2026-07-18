@@ -477,4 +477,5 @@ export const JA: Record<string, string> = {
   'French window': '掃き出し窓',
   'Casement window': '開き窓',
   'Sliding window': '引き違い窓',
+  'Wall length': '壁の長さ',
 };

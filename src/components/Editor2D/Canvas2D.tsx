@@ -1491,6 +1491,7 @@ export default function Canvas2D() {
                     width={width}
                     depth={depth}
                     color={sel ? C.selection : C.symbolInk}
+                    dashed={(entry?.mountY ?? 0) > 0}
                   />
                 </Group>
                 {editing && draggingFurnId !== f.id && (

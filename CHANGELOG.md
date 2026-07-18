@@ -5,6 +5,37 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.57 - 2026-07-18 (versionCode 10057)
+
+Owner: "keep up the quality improvements." 2D kitchen drawing quality + two
+plan-pack completions.
+
+### Added
+
+- **Real 2D symbols for kitchen casework** (`lib/symbols.ts`): shape
+  `'counter'` (counters, islands, base/drawer/corner cabinets) now draws as a
+  proper plan symbol — outline, worktop front-edge line, centred pull —
+  instead of the unstyled fallback rectangle; shape `'box'` gets light
+  crossed diagonals so generic volumes stop looking like placeholders.
+- **Wall-mounted items draw dashed in 2D** (plan convention): `FurnitureSymbol`
+  takes `dashed`, and `Canvas2D` sets it for any catalog entry with
+  `mountY > 0` (wall cabinets). Kitchen runs with uppers now read like a real
+  kitchen drawing — dashed uppers over solid base cabinets — instead of two
+  overlapping solid rectangles.
+- **Plan-pack summary additions** (`lib/planExport.ts` / `planSchedule.ts`):
+  each storey section gains a **Wall length** row (total linear wall run —
+  paint/skirting estimates), and the pack ends with the **Shopping list**
+  (same `lib/bom.ts` aggregation as the in-app panel: item, footprint,
+  quantity). One new key ('Wall length') added to all 12 locales.
+
+### For Codex / next session
+
+- Verified headless: kitchen run placed via `addKitchenRun`, zoomed 2D
+  screenshot shows solid base + dashed uppers + stove burners/sink bowl; PDF
+  re-exported and text-grepped for "Wall length" / "Shopping list".
+- 2D symbol registry now covers every `Shape3D` (the `comm -23` diff of
+  catalog shapes vs symbols is empty).
+
 ## 1.0.56 - 2026-07-18 (versionCode 10056)
 
 Owner: "keep working on making something people will actually pay for." PDF

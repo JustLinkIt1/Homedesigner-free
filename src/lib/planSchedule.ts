@@ -18,6 +18,8 @@ export interface FloorSchedule {
   rooms: RoomRow[];
   /** Sum of room areas on this storey (cm²). */
   totalArea: number;
+  /** Total wall run on this storey (cm) — for paint/skirting estimates. */
+  wallLength: number;
 }
 
 export interface OpeningRow {
@@ -75,6 +77,10 @@ export function buildFloorSchedules(
       floorName: floor.name,
       rooms,
       totalArea: rooms.reduce((sum, r) => sum + r.area, 0),
+      wallLength: (geom?.walls ?? []).reduce(
+        (sum, w) => sum + Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y),
+        0,
+      ),
     };
   });
 }

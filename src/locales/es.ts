@@ -477,4 +477,5 @@ export const ES: Record<string, string> = {
   'French window': 'Puerta ventana',
   'Casement window': 'Ventana batiente',
   'Sliding window': 'Ventana corredera',
+  'Wall length': 'Longitud de muros',
 };

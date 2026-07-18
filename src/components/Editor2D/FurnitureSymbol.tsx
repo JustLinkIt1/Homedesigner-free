@@ -13,12 +13,15 @@ export default function FurnitureSymbol({
   depth,
   color = '#242a33',
   opacity = 0.85,
+  dashed = false,
 }: {
   shape: Shape3D;
   width: number;
   depth: number;
   color?: string;
   opacity?: number;
+  /** Plan convention for wall-mounted items above the worktop (dashed). */
+  dashed?: boolean;
 }) {
   const spec = SYMBOLS[shape] ?? FALLBACK_SYMBOL;
   return (
@@ -38,6 +41,7 @@ export default function FurnitureSymbol({
           strokeWidth={p.sw ? p.sw * 0.55 : 1.6}
           strokeScaleEnabled={false}
           fill={p.fill ? color : undefined}
+          dash={dashed ? [5, 4] : undefined}
           lineCap="round"
           lineJoin="round"
           perfectDrawEnabled={false}

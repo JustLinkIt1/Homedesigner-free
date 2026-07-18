@@ -18,6 +18,7 @@ KEYS = {
   'French window': ['Porte-fenêtre','Puerta ventana','Fransız penceresi','Fenstertür','Porta-finestra','Porta-janela','Openslaande deur','Okno balkonowe','Французское окно','掃き出し窓','프렌치 창','落地窗'],
   'Casement window': ['Fenêtre à battant','Ventana batiente','Kanatlı pencere','Flügelfenster','Finestra a battente','Janela de batente','Draairaam','Okno rozwierne','Створчатое окно','開き窓','여닫이 창','平开窗'],
   'Sliding window': ['Fenêtre coulissante','Ventana corredera','Sürgülü pencere','Schiebefenster','Finestra scorrevole','Janela de correr','Schuifraam','Okno przesuwne','Раздвижное окно','引き違い窓','미닫이 창','推拉窗'],
+  'Wall length': ['Longueur des murs','Longitud de muros','Duvar uzunluğu','Wandlänge','Lunghezza pareti','Comprimento das paredes','Muurlengte','Długość ścian','Длина стен','壁の長さ','벽 길이','墙体长度'],
 }
 for i, lang in enumerate(LANGS):
     path = os.path.join(ROOT, f'{lang}.ts')

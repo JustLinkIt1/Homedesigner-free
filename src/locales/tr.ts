@@ -477,4 +477,5 @@ export const TR: Record<string, string> = {
   'French window': 'Fransız penceresi',
   'Casement window': 'Kanatlı pencere',
   'Sliding window': 'Sürgülü pencere',
+  'Wall length': 'Duvar uzunluğu',
 };

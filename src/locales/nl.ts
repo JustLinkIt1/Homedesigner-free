@@ -477,4 +477,5 @@ export const NL: Record<string, string> = {
   'French window': 'Openslaande deur',
   'Casement window': 'Draairaam',
   'Sliding window': 'Schuifraam',
+  'Wall length': 'Muurlengte',
 };

@@ -477,4 +477,5 @@ export const PL: Record<string, string> = {
   'French window': 'Okno balkonowe',
   'Casement window': 'Okno rozwierne',
   'Sliding window': 'Okno przesuwne',
+  'Wall length': 'Długość ścian',
 };

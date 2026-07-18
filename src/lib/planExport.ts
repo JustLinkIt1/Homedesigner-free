@@ -11,6 +11,7 @@ import { useProStore } from '../store/proStore';
 import { useDesign } from '../store/designStore';
 import { formatArea, formatLength, type Units } from './units';
 import { buildFloorSchedules, buildOpeningSchedule } from './planSchedule';
+import { buildBom } from './bom';
 import { t, useLang } from './i18n';
 
 /** Capture the current design as a framed PNG data URL (null if empty). */
@@ -265,6 +266,9 @@ export async function exportPlanPDF(projectName: string): Promise<number> {
     for (const r of floor.rooms) {
       sum.row(tp(r.name), dims(r.width, r.depth), formatArea(r.area, units), { rule: true });
     }
+    if (floor.wallLength > 0) {
+      sum.row(tp('Wall length'), '', formatLength(floor.wallLength, units), { rule: true });
+    }
     sum.row(tp('Floor total'), '', formatArea(floor.totalArea, units), { bold: true, rule: true });
   }
   if (living > 0) {
@@ -275,6 +279,14 @@ export async function exportPlanPDF(projectName: string): Promise<number> {
     sum.section(tp('Doors & windows'));
     for (const o of openings) {
       sum.row(tp(o.label), dims(o.width, o.height), `× ${o.count}`, { rule: true });
+    }
+  }
+  // Furniture shopping list — same aggregation as the in-app panel.
+  const bom = buildBom(st.floors, st.floorGeom);
+  if (bom.length > 0) {
+    sum.section(tp('Shopping list'));
+    for (const b of bom) {
+      sum.row(tp(b.name), dims(b.width, b.depth), `× ${b.count}`, { rule: true });
     }
   }
   {

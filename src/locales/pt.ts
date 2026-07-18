@@ -477,4 +477,5 @@ export const PT: Record<string, string> = {
   'French window': 'Porta-janela',
   'Casement window': 'Janela de batente',
   'Sliding window': 'Janela de correr',
+  'Wall length': 'Comprimento das paredes',
 };

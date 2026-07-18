@@ -477,4 +477,5 @@ export const FR: Record<string, string> = {
   'French window': 'Porte-fenêtre',
   'Casement window': 'Fenêtre à battant',
   'Sliding window': 'Fenêtre coulissante',
+  'Wall length': 'Longueur des murs',
 };
