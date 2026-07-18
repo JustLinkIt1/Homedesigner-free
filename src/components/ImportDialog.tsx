@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Ruler, UploadCloud, Wand2, SlidersHorizontal } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useDesign } from '../store/designStore';
+import { useI18n } from '../lib/i18n';
 import { renderPlanFile, type RenderedPlan } from '../lib/pdfImport';
 import { importDxf } from '../lib/dxfImport';
 import { autoThreshold, type PixelSegment } from '../lib/autoTrace';
@@ -10,7 +12,19 @@ import { segmentsToWalls } from '../lib/wallBuilder';
 type Stage = 'pick' | 'raster' | 'dxf' | 'busy';
 
 export default function ImportDialog({ onClose }: { onClose: () => void }) {
-  const s = useDesign();
+  // Narrow selection: this dialog only needs defaults + actions, so it must
+  // not re-render on every design edit (it used to subscribe to everything).
+  const s = useDesign(useShallow((st) => ({
+    defaultWallHeight: st.defaultWallHeight,
+    defaultWallThickness: st.defaultWallThickness,
+    setBackground: st.setBackground,
+    updateBackground: st.updateBackground,
+    importWalls: st.importWalls,
+    detectRoomsFromWalls: st.detectRoomsFromWalls,
+    requestFit: st.requestFit,
+    setView: st.setView,
+  })));
+  const t = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
   const [stage, setStage] = useState<Stage>('pick');
   const [drag, setDrag] = useState(false);
@@ -73,7 +87,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
           const { LibreDwg } = await import('@mlightcad/libredwg-web');
           const lib = await LibreDwg.create();
           const dxfBytes = lib.dwg_write_dxf(await file.arrayBuffer());
-          if (!dxfBytes) throw new Error('Could not convert this DWG file. Try exporting it as DXF from your CAD app.');
+          if (!dxfBytes) throw new Error(t('Could not convert this DWG file. Try exporting it as DXF from your CAD app.'));
           text = new TextDecoder('utf-8').decode(dxfBytes);
         } else {
           text = await file.text();
@@ -104,7 +118,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
       }
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Could not read that file.');
+      setError(err instanceof Error ? err.message : t('Could not read that file.'));
       setStage('pick');
     }
   };
@@ -133,7 +147,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     });
     if (walls.length === 0) {
       setShowAdvanced(true);
-      setTraceInfo('No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.');
+      setTraceInfo(t('No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.'));
       return;
     }
     s.importWalls(walls, replace);
@@ -160,7 +174,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <Ruler className="icon" /> Import a 2D plan
+          <Ruler className="icon" /> {t('Import a 2D plan')}
         </div>
         <div className="modal-body">
           {stage === 'pick' && (
@@ -182,11 +196,11 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
               >
                 <UploadCloud className="big" />
                 <p>
-                  <strong>Drop a file here</strong> or click to browse
+                  <strong>{t('Drop a file here')}</strong> {t('or click to browse')}
                 </p>
                 <p className="muted">
-                  PDF &amp; images → traced over with auto wall detection.<br />
-                  DXF / DWG (CAD) → walls imported automatically as real geometry.
+                  {t('PDF & images → traced over with auto wall detection.')}<br />
+                  {t('DXF / DWG (CAD) → walls imported automatically as real geometry.')}
                 </p>
               </div>
               {error && <p style={{ color: 'var(--danger)', marginTop: 12 }}>{error}</p>}
@@ -202,7 +216,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
 
           {stage === 'busy' && (
             <div style={{ textAlign: 'center', padding: 30 }}>
-              <span className="spin" /> <span className="muted">Rendering plan…</span>
+              <span className="spin" /> <span className="muted">{t('Rendering plan…')}</span>
             </div>
           )}
 
@@ -211,7 +225,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
               {/* Preview with detected walls overlaid so the result is visible
                   before committing — the trace re-runs live as inputs change. */}
               <div className="trace-preview">
-                <img className="preview-img" src={rendered.src} alt="plan preview" />
+                <img className="preview-img" src={rendered.src} alt={t('plan preview')} />
                 <svg
                   className="trace-overlay"
                   viewBox={`0 0 ${rendered.width} ${rendered.height}`}
@@ -235,14 +249,14 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
               <div className="trace-status">
                 <Wand2 className="icon" style={{ color: 'var(--brand)' }} />
                 {previewCount > 0 ? (
-                  <span><strong>{previewCount}</strong> walls detected — ready to trace.</span>
+                  <span><strong>{previewCount}</strong> {t('walls detected — ready to trace.')}</span>
                 ) : (
-                  <span>No walls found yet — adjust the options below.</span>
+                  <span>{t('No walls found yet — adjust the options below.')}</span>
                 )}
               </div>
 
               <div className="field">
-                <label>Real-world width of the plan: <span className="field-val">{realWidthM} m</span></label>
+                <label>{t('Real-world width of the plan:')} <span className="field-val">{realWidthM} m</span></label>
                 <input
                   type="range"
                   min={3}
@@ -252,24 +266,24 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
                   onChange={(e) => setRealWidthM(Number(e.target.value))}
                   onMouseUp={recalibrate}
                 />
-                <p className="muted">Sets the scale so dimensions come out correct (~{cmPerPx.toFixed(1)} cm/px).</p>
+                <p className="muted">{t('Sets the scale so dimensions come out correct')} (~{cmPerPx.toFixed(1)} cm/px).</p>
               </div>
 
               <label className="auto-row">
                 <input type="checkbox" checked={autoMode} onChange={(e) => setAutoMode(e.target.checked)} />
-                <span><strong>Auto sensitivity</strong> — pick the best threshold automatically{autoMode ? ` (${effThreshold})` : ''}</span>
+                <span><strong>{t('Auto sensitivity')}</strong> — {t('pick the best threshold automatically')}{autoMode ? ` (${effThreshold})` : ''}</span>
               </label>
 
               <button className="link-btn" onClick={() => setShowAdvanced((v) => !v)}>
                 <SlidersHorizontal className="icon" style={{ width: 14, height: 14 }} />
-                {showAdvanced ? 'Hide manual options' : 'Adjust manually'}
+                {showAdvanced ? t('Hide manual options') : t('Adjust manually')}
               </button>
 
               {showAdvanced && (
                 <>
                   {!autoMode && (
                     <div className="field">
-                      <label>Detection sensitivity: <span className="field-val">{sensitivity}</span></label>
+                      <label>{t('Detection sensitivity:')} <span className="field-val">{sensitivity}</span></label>
                       <input
                         type="range"
                         min={80}
@@ -281,7 +295,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
                     </div>
                   )}
                   <div className="field">
-                    <label>Min wall length: <span className="field-val">{minLenCm} cm</span></label>
+                    <label>{t('Min wall length:')} <span className="field-val">{minLenCm} cm</span></label>
                     <input
                       type="range"
                       min={15}
@@ -300,12 +314,12 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
           {stage === 'dxf' && dxfInfo && (
             <div>
               <p className="muted">
-                Parsed the DXF and found <strong style={{ color: 'var(--text)' }}>{dxfInfo.count}</strong>{' '}
-                wall segments.
+                {t('Parsed the DXF and found')} <strong style={{ color: 'var(--text)' }}>{dxfInfo.count}</strong>{' '}
+                {t('wall segments.')}
               </p>
               <p className="muted">
-                Estimated unit scale: <strong style={{ color: 'var(--text)' }}>{dxfInfo.unit} cm</strong> per drawing
-                unit (auto-detected). Walls will be created as editable geometry.
+                {t('Estimated unit scale:')} <strong style={{ color: 'var(--text)' }}>{dxfInfo.unit} cm</strong>{' '}
+                {t('per drawing unit (auto-detected). Walls will be created as editable geometry.')}
               </p>
             </div>
           )}
@@ -313,21 +327,21 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
 
         <div className="modal-foot">
           <button className="btn" onClick={onClose}>
-            Cancel
+            {t('Cancel')}
           </button>
           {stage === 'raster' && (
             <>
               <button className="btn" onClick={() => { recalibrate(); onClose(); }}>
-                Use as tracing background
+                {t('Use as tracing background')}
               </button>
               <button className="btn primary" onClick={() => runTrace(true)} disabled={previewCount === 0}>
-                {previewCount > 0 ? `Trace ${previewCount} walls` : 'Auto-trace walls'}
+                {previewCount > 0 ? `${t('Trace')} ${previewCount} ${t('walls')}` : t('Auto-trace walls')}
               </button>
             </>
           )}
           {stage === 'dxf' && (
             <button className="btn primary" onClick={importDxfWalls} disabled={!dxfInfo?.count}>
-              Import {dxfInfo?.count ?? 0} walls
+              {t('Import')} {dxfInfo?.count ?? 0} {t('walls')}
             </button>
           )}
         </div>

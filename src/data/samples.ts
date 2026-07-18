@@ -4,7 +4,7 @@
 // withFloors() wraps them; the two-storey house returns full floor data.
 import type { MaybeFloored } from '../store/designStore';
 import type { FurnitureItem, Opening, OpeningStyle, Wall, Room, FloorGeom } from '../types';
-import { CATALOG_BY_TYPE } from './furnitureCatalog';
+import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from './furnitureCatalog';
 import { uid } from '../lib/geometry';
 
 let n = 0;
@@ -14,7 +14,7 @@ const wall = (a: [number, number], b: [number, number], color = '#eae4d8'): Wall
   id: id('w'),
   start: { x: a[0], y: a[1] },
   end: { x: b[0], y: b[1] },
-  thickness: 12,
+  thickness: DEFAULT_WALL_THICKNESS,
   height: 275,
   color,
 });

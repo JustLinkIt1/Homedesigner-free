@@ -13,7 +13,7 @@ import type {
   Wall,
 } from '../types';
 import { uid, dist } from '../lib/geometry';
-import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
+import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from '../data/furnitureCatalog';
 import { kitchenRunUnits, kitchenUpperUnits } from '../lib/kitchenRun';
 import { splitPolygonBySegment } from '../lib/roomSplit';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
@@ -23,6 +23,7 @@ import { toast } from '../lib/ui';
 import { t } from '../lib/i18n';
 import * as haptics from '../lib/haptics';
 import { recordRecent } from '../lib/recent';
+import { useProStore } from './proStore';
 import * as projects from '../lib/projects';
 import type { Units } from '../lib/units';
 
@@ -393,7 +394,7 @@ export const useDesign = create<DesignState>((set, get) => {
     walkMode: false,
     moveLock: false,
     defaultWallHeight: 270,
-    defaultWallThickness: 12,
+    defaultWallThickness: DEFAULT_WALL_THICKNESS,
     pendingFurnitureType: null,
     fitRequest: 0,
     selectedIds: [],
@@ -518,7 +519,8 @@ export const useDesign = create<DesignState>((set, get) => {
     setKitchenUppers: (v) => set({ kitchenUppers: v }),
 
     addKitchenRun: (a, b) => {
-      const withUppers = get().kitchenUppers;
+      // Uppers are a Pro catalog item (wall_cabinet) — free runs place bases only.
+      const withUppers = get().kitchenUppers && useProStore.getState().isPro;
       commit((d) => {
         const push = (type: string, u: { position: Point; rotation: number }) => {
           const entry = CATALOG_BY_TYPE[type];

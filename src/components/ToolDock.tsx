@@ -68,7 +68,7 @@ export default function ToolDock() {
         <button
           className={`dock-btn ${openingActive ? 'active' : ''}`}
           data-tip={tr('Doors & windows')}
-          aria-label="Doors and windows"
+          aria-label={tr('Doors and windows')}
           aria-haspopup="menu"
           aria-expanded={openingsOpen}
           onClick={() => setOpeningsOpen((o) => !o)}
@@ -105,7 +105,7 @@ export default function ToolDock() {
       <button
         className={`dock-btn furniture-toggle ${tool === 'furniture' && !openingActive ? 'active' : ''}`}
         data-tip={tr('Furnish (open catalog)')}
-        aria-label="Furnish — open the furniture catalog"
+        aria-label={tr('Furnish — open the furniture catalog')}
         aria-pressed={tool === 'furniture' && !openingActive}
         onClick={() => {
           if (tool === 'furniture') {

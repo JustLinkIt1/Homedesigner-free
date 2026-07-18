@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Home, Plus, Ruler, FolderOpen, Copy, Trash2, Pencil, Sofa, ChevronRight } from 'lucide-react';
-import { useDesign } from '../store/designStore';
+import { useDesign, type MaybeFloored } from '../store/designStore';
 import { confirmDialog, toast } from '../lib/ui';
 import { openProjectFile } from '../lib/projectIO';
 import { requirePro } from '../lib/pro';
@@ -10,13 +10,13 @@ import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
 import * as projects from '../lib/projects';
 
-function timeAgo(ts: number): string {
+function timeAgo(ts: number, t: (en: string) => string): string {
   const mins = Math.max(1, Math.round((Date.now() - ts) / 60000));
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 60) return `${mins} ${t('min ago')}`;
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours} h ago`;
+  if (hours < 24) return `${hours} ${t('h ago')}`;
   const days = Math.round(hours / 24);
-  return days === 1 ? 'yesterday' : `${days} days ago`;
+  return days === 1 ? t('yesterday') : `${days} ${t('days ago')}`;
 }
 
 /**
@@ -30,7 +30,11 @@ export default function ProjectsScreen({
   onOpenEditor: () => void;
   onImport: () => void;
 }) {
-  const s = useDesign();
+  // Only actions are needed here — select them individually so this screen
+  // doesn't re-render on every design edit (actions are stable references).
+  const loadSnapshot = useDesign((st) => st.loadSnapshot);
+  const newProjectAction = useDesign((st) => st.newProject);
+  const loadSample = useDesign((st) => st.loadSample);
   const t = useI18n();
   const [list, setList] = useState<projects.ProjectMeta[]>(() => projects.listProjects());
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -43,13 +47,15 @@ export default function ProjectsScreen({
   }, []);
 
   const openProject = (id: string) => {
-    const snap = projects.readProject(id);
+    // readProject returns unvalidated storage JSON; loadSnapshot's
+    // MaybeFloored contract tolerates missing multi-floor fields.
+    const snap = projects.readProject(id) as MaybeFloored | null;
     if (!snap) {
-      toast.error("Couldn't open that project — its data is missing.");
+      toast.error(t('Could not open that project — its data is missing.'));
       return;
     }
     projects.setActiveId(id);
-    s.loadSnapshot(snap as never);
+    loadSnapshot(snap);
     onOpenEditor();
   };
 
@@ -57,7 +63,7 @@ export default function ProjectsScreen({
     // Second-and-later projects are the Pro 'projects' feature.
     if (list.length >= 1 && !requirePro('projects')) return;
     projects.createProject();
-    s.newProject();
+    newProjectAction();
     onOpenEditor();
     then?.();
   };
@@ -65,7 +71,7 @@ export default function ProjectsScreen({
   const openSample = (sampleId: string, name: string) => {
     if (list.length >= 1 && !requirePro('projects')) return;
     projects.createProject(name);
-    s.loadSample(sampleId);
+    loadSample(sampleId);
     onOpenEditor();
   };
 
@@ -105,7 +111,7 @@ export default function ProjectsScreen({
                 className="welcome-card"
                 onClick={() => {
                   projects.createProject('Imported plan');
-                  s.newProject();
+                  newProjectAction();
                   onOpenEditor();
                   onImport();
                 }}
@@ -132,7 +138,7 @@ export default function ProjectsScreen({
                     const snap = await openProjectFile();
                     if (snap) {
                       projects.createProject(snap.projectName || 'Imported home');
-                      s.loadSnapshot(snap);
+                      loadSnapshot(snap);
                       onOpenEditor();
                     }
                   }}
@@ -155,7 +161,7 @@ export default function ProjectsScreen({
             <div className="ps-grid">
               {list.map((p) => (
                 <div key={p.id} className="ps-card">
-                  <button className="ps-thumb" onClick={() => openProject(p.id)} aria-label={`Open ${p.name}`}>
+                  <button className="ps-thumb" onClick={() => openProject(p.id)} aria-label={`${t('Open')} ${p.name}`}>
                     {p.thumbnail ? (
                       <img src={p.thumbnail} alt="" />
                     ) : (
@@ -186,21 +192,21 @@ export default function ProjectsScreen({
                     ) : (
                       <span className="ps-name" title={p.name}>{p.name}</span>
                     )}
-                    <span className="ps-date">{timeAgo(p.updatedAt)}</span>
+                    <span className="ps-date">{timeAgo(p.updatedAt, t)}</span>
                   </div>
                   <div className="ps-card-actions">
-                    <button title={t('Rename')} aria-label={`Rename ${p.name}`} onClick={() => setRenaming(p.id)}>
+                    <button title={t('Rename')} aria-label={`${t('Rename')} ${p.name}`} onClick={() => setRenaming(p.id)}>
                       <Pencil className="icon" />
                     </button>
                     <button
                       title={t('Duplicate')}
-                      aria-label={`Duplicate ${p.name}`}
+                      aria-label={`${t('Duplicate')} ${p.name}`}
                       onClick={() => {
                         if (!requirePro('projects')) return;
                         const id = projects.duplicateProject(p.id);
                         if (id) {
                           refresh();
-                          toast.success('Project duplicated');
+                          toast.success(t('Project duplicated'));
                         }
                       }}
                     >
@@ -208,18 +214,18 @@ export default function ProjectsScreen({
                     </button>
                     <button
                       title={t('Delete')}
-                      aria-label={`Delete ${p.name}`}
+                      aria-label={`${t('Delete')} ${p.name}`}
                       className="danger"
                       onClick={async () => {
                         const ok = await confirmDialog(
-                          `Delete “${p.name}”?`,
-                          'This permanently removes the project from this device.',
-                          { confirmLabel: 'Delete', danger: true },
+                          `${t('Delete')} “${p.name}”?`,
+                          t('This permanently removes the project from this device.'),
+                          { confirmLabel: t('Delete'), danger: true },
                         );
                         if (ok) {
                           projects.deleteProject(p.id);
                           refresh();
-                          toast.info('Project deleted');
+                          toast.info(t('Project deleted'));
                         }
                       }}
                     >

@@ -249,6 +249,10 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'casement_window', pro: true, name: 'Casement Window', category: 'Openings', width: 60, depth: 12, height: 120, color: '#bfe3f2', shape: 'window_casement', icon: '🪟', opening: { kind: 'window', style: 'casement', sill: 90 } },
 ];
 
+/** Default wall thickness (cm) — single source for the store default and the
+ *  bundled samples, so a future change can't make them diverge. */
+export const DEFAULT_WALL_THICKNESS = 12;
+
 export const CATALOG_BY_TYPE: Record<string, CatalogEntry> = Object.fromEntries(
   FURNITURE_CATALOG.map((e) => [e.type, e]),
 );

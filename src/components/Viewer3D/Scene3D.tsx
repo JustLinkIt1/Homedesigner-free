@@ -70,7 +70,7 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
       <div className="pp-head">
         <Paintbrush className="icon" />
         {tap.kind === 'wall' ? (tap.wallFace ? t('Wall section') : t('Wall paint')) : t('Flooring')}
-        <button className="pp-close" onClick={onClose} aria-label="Close">
+        <button className="pp-close" onClick={onClose} aria-label={t('Close')}>
           <X className="icon" />
         </button>
       </div>

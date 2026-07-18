@@ -73,6 +73,8 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
 
   render() {
     if (!this.state.error) return this.props.children;
+    // Deliberately NOT internationalized: the i18n module (or a locale file)
+    // may itself be what crashed, and this screen must always render.
     return (
       <div className="crash-screen" role="alert">
         <div className="crash-card">

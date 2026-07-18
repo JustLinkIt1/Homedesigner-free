@@ -52,12 +52,12 @@ export async function saveText(text: string, filename: string, mime = 'applicati
     webDownload(`data:${mime};charset=utf-8,${encodeURIComponent(text)}`, filename);
     return;
   }
-  const { Filesystem, Directory } = await import('@capacitor/filesystem');
+  const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
   await Filesystem.writeFile({
     path: `projects/${filename}`,
     data: text,
     directory: Directory.Documents,
-    encoding: 'utf8' as any,
+    encoding: Encoding.UTF8,
     recursive: true,
   });
 }

@@ -113,25 +113,33 @@ export default function Toolbar({
   }, [moreOpen]);
 
   const saveToFile = async () => {
-    await exportProject({
-      walls: s.walls,
-      rooms: s.rooms,
-      furniture: s.furniture,
-      openings: s.openings,
-      background: s.background,
-      projectName: s.projectName,
-      floors: s.floors,
-      floorGeom: s.floorGeom,
-      activeFloorId: s.activeFloorId,
-    });
-    toast.success('Project file downloaded');
+    try {
+      await exportProject({
+        walls: s.walls,
+        rooms: s.rooms,
+        furniture: s.furniture,
+        openings: s.openings,
+        background: s.background,
+        projectName: s.projectName,
+        floors: s.floors,
+        floorGeom: s.floorGeom,
+        activeFloorId: s.activeFloorId,
+      });
+      toast.success(t('Project file downloaded'));
+    } catch {
+      toast.error(t('Save failed'));
+    }
   };
 
   const openFromFile = async () => {
-    const snap = await openProjectFile();
-    if (snap) {
-      s.loadSnapshot(snap);
-      toast.success('Project opened');
+    try {
+      const snap = await openProjectFile();
+      if (snap) {
+        s.loadSnapshot(snap);
+        toast.success(t('Project opened'));
+      }
+    } catch {
+      toast.error(t('Could not open that file'));
     }
   };
 
@@ -146,22 +154,22 @@ export default function Toolbar({
     try {
       if (kind === 'png') {
         const ok = await exportPlanPNG(s.projectName);
-        if (ok) toast.success('Plan exported as PNG');
-        else toast.info('Nothing to export yet — add walls or rooms first');
+        if (ok) toast.success(t('Plan exported as PNG'));
+        else toast.info(t('Nothing to export yet — add walls or rooms first'));
       } else {
         const pages = await exportPlanPDF(s.projectName);
-        if (pages > 1) toast.success(`PDF exported — one page per floor (${pages})`);
-        else if (pages === 1) toast.success('Plan exported as PDF');
-        else toast.info('Nothing to export yet — add walls or rooms first');
+        if (pages > 1) toast.success(`${t('PDF exported — one page per floor')} (${pages})`);
+        else if (pages === 1) toast.success(t('Plan exported as PDF'));
+        else toast.info(t('Nothing to export yet — add walls or rooms first'));
       }
     } catch {
-      toast.error('Export failed');
+      toast.error(t('Export failed'));
     }
   };
 
   return (
     <div className="toolbar">
-      <button className="brand" onClick={onHome} title="Back to my projects" aria-label="Back to my projects">
+      <button className="brand" onClick={onHome} title={t('Back to my projects')} aria-label={t('Back to my projects')}>
         <div className="brand-mark">
           <Home className="icon" />
         </div>
@@ -177,23 +185,23 @@ export default function Toolbar({
           value={s.projectName}
           onChange={(e) => s.setProjectName(e.target.value)}
           onFocus={(e) => e.target.select()}
-          aria-label="Project name"
+          aria-label={t('Project name')}
           spellCheck={false}
         />
         <SavedBadge tick={s.savedTick} />
       </div>
 
       <div className="tool-group">
-        <button className="tbtn icon-only" disabled={!s.canUndo()} onClick={() => s.undo()} title="Undo (⌘Z)" aria-label="Undo">
+        <button className="tbtn icon-only" disabled={!s.canUndo()} onClick={() => s.undo()} title={`${t('Undo')} (⌘Z)`} aria-label={t('Undo')}>
           <Undo2 className="icon" />
         </button>
-        <button className="tbtn icon-only" disabled={!s.canRedo()} onClick={() => s.redo()} title="Redo (⇧⌘Z)" aria-label="Redo">
+        <button className="tbtn icon-only" disabled={!s.canRedo()} onClick={() => s.redo()} title={`${t('Redo')} (⇧⌘Z)`} aria-label={t('Redo')}>
           <Redo2 className="icon" />
         </button>
       </div>
 
       <div className="tool-group">
-        <button className="tbtn ghost" onClick={onImport} title="Import a 2D plan (PDF / DXF / image)">
+        <button className="tbtn ghost" onClick={onImport} title={t('Import a 2D plan (PDF / DXF / image)')}>
           <Import className="icon" />
           <span>{t('Import plan')}</span>
         </button>
@@ -201,7 +209,7 @@ export default function Toolbar({
           <div className="export-wrap" ref={exportRef}>
             <button
               className="tbtn ghost"
-              title="Export the 2D plan as PNG or PDF"
+              title={t('Export the 2D plan as PNG or PDF')}
               aria-haspopup="menu"
               aria-expanded={exportOpen}
               onClick={() => setExportOpen((o) => !o)}

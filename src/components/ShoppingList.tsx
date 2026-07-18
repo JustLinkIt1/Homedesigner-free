@@ -25,18 +25,18 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
   const copyText = async () => {
     try {
       await navigator.clipboard.writeText(bomToText(rows, projectName));
-      toast.success('Shopping list copied');
+      toast.success(t('Shopping list copied'));
     } catch {
-      toast.error("Couldn't copy — try Save CSV instead");
+      toast.error(t('Could not copy — try Save CSV instead'));
     }
   };
 
   const saveCsv = async () => {
     try {
       await saveText(bomToCsv(rows), `${slugify(projectName)}-shopping-list.csv`, 'text/csv');
-      toast.success('Shopping list saved as CSV');
+      toast.success(t('Shopping list saved as CSV'));
     } catch {
-      toast.error('Save failed');
+      toast.error(t('Save failed'));
     }
   };
 

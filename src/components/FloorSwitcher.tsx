@@ -47,7 +47,7 @@ export default function FloorSwitcher() {
   };
 
   return (
-    <div className={`floor-switcher ${mobileOpen ? 'expanded' : ''}`} aria-label="Storeys">
+    <div className={`floor-switcher ${mobileOpen ? 'expanded' : ''}`} aria-label={t('Storeys')}>
       <button
         className="floor-current"
         onClick={() => setMobileOpen((v) => !v)}
@@ -60,7 +60,7 @@ export default function FloorSwitcher() {
           ? <ChevronUp className="icon floor-current-caret" />
           : <ChevronDown className="icon floor-current-caret" />}
       </button>
-      <button className="floor-add" onClick={handleAdd} title="Add an empty floor above">
+      <button className="floor-add" onClick={handleAdd} title={t('Add an empty floor above')}>
         <Plus className="icon" style={{ width: 14, height: 14 }} /> {t('Floor')}
         {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
       </button>
@@ -68,7 +68,7 @@ export default function FloorSwitcher() {
         <button
           className="floor-add floor-clone"
           onClick={() => setCloneOpen((v) => !v)}
-          title="Copy this floor's walls onto a new storey"
+          title={t("Copy this floor's walls onto a new storey")}
         >
           <Copy className="icon" style={{ width: 13, height: 13 }} /> {t('Copy floor')}
           {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}

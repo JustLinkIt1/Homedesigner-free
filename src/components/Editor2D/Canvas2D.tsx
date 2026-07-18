@@ -26,7 +26,7 @@ import { computeWallPolygons } from '../../lib/wallGeometry';
 import { formatLength, type Units } from '../../lib/units';
 import { selectionTick, tapMedium } from '../../lib/haptics';
 import { useTheme, canvasColors } from '../../lib/theme';
-import type { Point } from '../../types';
+import type { Point, Selection } from '../../types';
 import {
   resizeBox,
   norm360,
@@ -654,7 +654,7 @@ export default function Canvas2D() {
       // pans the viewport with ANY tool — taps still act as before.
       const target = e.target as Konva.Node;
       touchPanEligible.current =
-        target === (target.getStage() as unknown as Konva.Node) || target.name() === 'bg-plan';
+        target === target.getStage() || target.name() === 'bg-plan';
       if (tool === 'pan') {
         setIsPanning(true);
         lastPan.current = { x: t[0].clientX, y: t[0].clientY };
@@ -672,7 +672,7 @@ export default function Canvas2D() {
           const hit = pickAt(wp);
           if (hit) {
             if (!(hit.kind === 'furniture' && selectedIds.includes(hit.id))) {
-              s.select({ kind: hit.kind as never, id: hit.id });
+              s.select({ kind: hit.kind, id: hit.id });
             }
             openMenu(cx, cy, hit.kind, hit.id);
           } else {
@@ -853,7 +853,7 @@ export default function Canvas2D() {
   };
 
   // What sits under a world point (top-most first), without selecting.
-  const pickAt = (p: Point): { kind: string; id: string } | null => {
+  const pickAt = (p: Point): { kind: NonNullable<Selection['kind']>; id: string } | null => {
     for (const o of openings) {
       const op = openingPoint(o);
       if (op && dist(p, op.pt) <= Math.max(o.width / 2, 16 / zoom)) return { kind: 'opening', id: o.id };
@@ -1034,7 +1034,7 @@ export default function Canvas2D() {
           const hit = pickAt(p);
           if (hit) {
             if (!(hit.kind === 'furniture' && selectedIds.includes(hit.id))) {
-              s.select({ kind: hit.kind as never, id: hit.id });
+              s.select({ kind: hit.kind, id: hit.id });
             }
             openMenu(e.evt.clientX, e.evt.clientY, hit.kind, hit.id);
           } else {

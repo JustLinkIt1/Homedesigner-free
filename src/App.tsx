@@ -19,6 +19,7 @@ import {
   PenTool,
   X,
   Lock,
+  Crown,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
 import ToolDock from './components/ToolDock';
@@ -37,12 +38,13 @@ import ShoppingList from './components/ShoppingList';
 import ProUpsellModal from './components/ProUpsellModal';
 import ProjectsScreen from './components/ProjectsScreen';
 import { useProStore } from './store/proStore';
+import { requirePro } from './lib/pro';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
 import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
 import { TOOLS } from './data/tools';
 import { sceneCapture, planCapture } from './lib/renderBridge';
-import { useDraw, drawBridge, useConfirm } from './lib/ui';
+import { useDraw, drawBridge, useConfirm, toast } from './lib/ui';
 import { initNative } from './lib/native';
 import { isWebGLAvailable } from './lib/webgl';
 import { orbitZoom } from './lib/renderBridge';
@@ -97,6 +99,7 @@ export default function App() {
     setMoveLock: s.setMoveLock,
   })));
   const t = useI18n();
+  const isPro = useProStore((st) => st.isPro);
   const [showImport, setShowImport] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -356,6 +359,8 @@ export default function App() {
     await new Promise((r) => setTimeout(r, 30));
     try {
       await sceneCapture.current(scale);
+    } catch {
+      toast.error(t('Render failed — try a lower quality'));
     } finally {
       setRendering(false);
     }
@@ -460,7 +465,7 @@ export default function App() {
               <span>{tip}</span>
               <button
                 className="tip-x"
-                aria-label="Hide tips"
+                aria-label={t('Hide tips')}
                 onClick={() => {
                   setTipsDismissed(true);
                   try {
@@ -485,8 +490,17 @@ export default function App() {
               </span>
               {tool === 'kitchen' && (
                 <label className="draw-toggle" title={t('Also add wall cabinets above the counter')}>
-                  <input type="checkbox" checked={kitchenUppers} onChange={(e) => setKitchenUppers(e.target.checked)} />
+                  <input
+                    type="checkbox"
+                    checked={kitchenUppers && isPro}
+                    onChange={(e) => {
+                      // Uppers place Pro wall cabinets — gate behind the upsell.
+                      if (e.target.checked && !requirePro('catalog')) return;
+                      setKitchenUppers(e.target.checked);
+                    }}
+                  />
                   {t('Wall cabinets')}
+                  {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
                 </label>
               )}
               <button className="finish-btn" onClick={() => drawBridge.finish?.()}>
@@ -530,12 +544,12 @@ export default function App() {
                   <Lock className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Lock')}</span>
                 </label>
               </div>
-              <div className="pill units-pill" role="group" aria-label="Display units">
+              <div className="pill units-pill" role="group" aria-label={t('Display units')}>
                 <button
                   className={units === 'metric' ? 'unit active' : 'unit'}
                   onClick={() => setUnits('metric')}
                   aria-pressed={units === 'metric'}
-                  title="Metric (m / cm)"
+                  title={t('Metric (m / cm)')}
                 >
                   m
                 </button>
@@ -543,7 +557,7 @@ export default function App() {
                   className={units === 'imperial' ? 'unit active' : 'unit'}
                   onClick={() => setUnits('imperial')}
                   aria-pressed={units === 'imperial'}
-                  title="Imperial (ft / in)"
+                  title={t('Imperial (ft / in)')}
                 >
                   ft
                 </button>
@@ -554,14 +568,14 @@ export default function App() {
           {/* 2D zoom on the right edge (mirrors 3D) so the bottom HUD row isn't
               crowded and the units pill no longer clips off-screen. */}
           {view === '2d' && (
-            <div className="zoom-buttons" role="group" aria-label="Zoom">
-              <button onClick={() => setZoom(zoom * 1.2)} aria-label="Zoom in" title="Zoom in">
+            <div className="zoom-buttons" role="group" aria-label={t('Zoom')}>
+              <button onClick={() => setZoom(zoom * 1.2)} aria-label={t('Zoom in')} title={t('Zoom in')}>
                 <Plus className="icon" />
               </button>
-              <button onClick={() => setZoom(zoom / 1.2)} aria-label="Zoom out" title="Zoom out">
+              <button onClick={() => setZoom(zoom / 1.2)} aria-label={t('Zoom out')} title={t('Zoom out')}>
                 <Minus className="icon" />
               </button>
-              <button onClick={() => useDesign.getState().requestFit()} aria-label="Fit to view" title="Fit to view">
+              <button onClick={() => useDesign.getState().requestFit()} aria-label={t('Fit to view')} title={t('Fit to view')}>
                 <Maximize2 className="icon" />
               </button>
             </div>
@@ -760,11 +774,11 @@ export default function App() {
                 </div>
               </div>
               {/* Zoom the orbit camera (matches the 2D plan's zoom buttons). */}
-              <div className="zoom-buttons" role="group" aria-label="Zoom">
-                <button onClick={() => orbitZoom.current?.(0.8)} aria-label="Zoom in" title="Zoom in">
+              <div className="zoom-buttons" role="group" aria-label={t('Zoom')}>
+                <button onClick={() => orbitZoom.current?.(0.8)} aria-label={t('Zoom in')} title={t('Zoom in')}>
                   <Plus className="icon" />
                 </button>
-                <button onClick={() => orbitZoom.current?.(1.25)} aria-label="Zoom out" title="Zoom out">
+                <button onClick={() => orbitZoom.current?.(1.25)} aria-label={t('Zoom out')} title={t('Zoom out')}>
                   <Minus className="icon" />
                 </button>
               </div>

@@ -5,6 +5,73 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.58 - 2026-07-18 (versionCode 10058)
+
+Full quality-control audit (owner: "quality control audit let's go"). A
+read-only sweep produced 21 findings; everything actionable ships here.
+
+### Fixed — Pro paywall bypasses (owner chose: gate with upsell)
+
+- **Kitchen-run uppers**: `addKitchenRun` only places `wall_cabinet` (Pro)
+  uppers for Pro users; the "Wall cabinets" toggle in the draw affordance
+  shows a crown and routes through `requirePro('catalog')` for free users.
+  Base-cabinet runs stay free.
+- **Appliance-slot swaps**: Pro slot chips (Drawers, Dishwasher) show a crown
+  and open the upsell for free users; free slots (Cabinet/Stove/Sink) still
+  swap instantly.
+- **Opening styles**: Pro door/window styles in the Style dropdowns (double,
+  sliding, pocket, bi-fold, arch, french, casement) show 👑 and gate through
+  `requirePro('catalog')`. The Pro set is DERIVED from the catalog's `pro`
+  flags (`PRO_OPENING_STYLES` in PropertiesPanel) so it can't drift.
+
+### Fixed — i18n batch (~68 new keys × 12 locales, `scripts/add-translations5.py`)
+
+- **ImportDialog fully translated** (was 100% English): title, dropzone,
+  status, trace options, DXF summary, buttons, error strings.
+- **Toolbar**: all toasts + every title/aria-label.
+- **ProjectsScreen**: `timeAgo`, the destructive delete confirm, toasts,
+  per-card aria-labels. **ShoppingList**: copy/save toasts.
+- Hardcoded aria-labels/titles across App (zoom/units/tips), ToolDock,
+  FloorSwitcher, RotateControls, Scene3D popover close, texture preview.
+- `ErrorBoundary` deliberately stays English (i18n may be the crashing
+  module) — now documented in a comment.
+
+### Fixed — robustness & types
+
+- `Toolbar.saveToFile`/`openFromFile` and `App.handleRender` no longer leak
+  unhandled promise rejections — try/catch with translated error toasts.
+- `native.ts` uses the real `Encoding.UTF8` enum (was `'utf8' as any`).
+- Project import validates `floorGeom[*].openings` per storey (orphan
+  openings whose wall is gone are dropped on EVERY floor, not just the
+  active one). `version: 1` fallback strategy documented in `projectIO.ts`.
+- Removed `as never` casts: opening Style selects are typed `OpeningStyle`,
+  `pickAt` in Canvas2D returns `Selection['kind']`, ProjectsScreen loads
+  snapshots as `MaybeFloored`, stage comparison cast dropped.
+
+### Fixed — perf & consistency
+
+- `ImportDialog` + `ProjectsScreen` now use narrow store selectors (they
+  subscribed to the whole design store and re-rendered on every edit).
+- Wall-thickness default (12 cm) unified: `DEFAULT_WALL_THICKNESS` in
+  `furnitureCatalog.ts` feeds both the store default and the samples.
+
+### Known warts (documented, not fixed — for Codex)
+
+- `setActiveFloor` isn't undoable: undo after switching floors restores the
+  edit-time active floor. Mild UX wart.
+- PDF export switches active floors during capture (restored in `finally`)
+  — a "read-only" export churns autosave state.
+- Refactor candidates: Canvas2D.tsx (~2100 lines), DesignScene.tsx (~840),
+  Scene3D.tsx (~750).
+
+### Verified headless
+
+Free user: kitchen run adds 6 bases + 0 uppers; Drawers chip → upsell, type
+unchanged; Stove chip works; style→double → upsell, style unchanged. Pro:
+uppers place (+4), style change works. Undo/redo around kitchen runs intact.
+Orphan-opening project file: orphans dropped on both storeys, valid opening
+kept. French: ImportDialog + delete confirm fully translated (screenshots).
+
 ## 1.0.57 - 2026-07-18 (versionCode 10057)
 
 Owner: "keep up the quality improvements." 2D kitchen drawing quality + two

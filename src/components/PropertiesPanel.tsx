@@ -2,12 +2,14 @@ import {
   SlidersHorizontal, Sparkles, Trash2, MousePointer2, Copy, Boxes, Image as ImageIcon,
   AlignStartVertical, AlignCenterVertical, AlignEndVertical,
   AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
-  AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter,
+  AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Crown,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useDesign } from '../store/designStore';
-import { FLOOR_MATERIALS } from '../data/furnitureCatalog';
+import { FLOOR_MATERIALS, CATALOG_BY_TYPE, FURNITURE_CATALOG } from '../data/furnitureCatalog';
+import { requirePro } from '../lib/pro';
+import { useProStore } from '../store/proStore';
 import { ROOM_STYLES } from '../data/roomStyles';
 import { floorThumbnail, prepareTextureImage } from '../lib/textures';
 import { toast } from '../lib/ui';
@@ -15,7 +17,7 @@ import { dist, polygonArea } from '../lib/geometry';
 import { formatLength, formatArea } from '../lib/units';
 import { finishForFace, withFaceFinish } from '../lib/wallFaces';
 import { useI18n } from '../lib/i18n';
-import type { CustomTexture } from '../types';
+import type { CustomTexture, OpeningStyle } from '../types';
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 
@@ -29,6 +31,16 @@ const KITCHEN_SLOTS: { type: string; label: string }[] = [
   { type: 'dishwasher', label: 'Dishwasher' },
 ];
 const KITCHEN_SLOT_TYPES = new Set(KITCHEN_SLOTS.map((k) => k.type));
+
+// Opening styles whose catalog entry is Pro — derived from the catalog's
+// `pro` flags so the Style dropdown gate can never drift from it.
+const PRO_OPENING_STYLES = new Set(
+  FURNITURE_CATALOG.filter((e) => e.pro && e.opening?.style).map(
+    (e) => `${e.opening!.kind}:${e.opening!.style}`,
+  ),
+);
+const isProStyle = (kind: 'door' | 'window', style: OpeningStyle) =>
+  PRO_OPENING_STYLES.has(`${kind}:${style}`);
 
 export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   const s = useDesign(useShallow((st) => ({
@@ -56,6 +68,10 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
     updateWall: st.updateWall,
   })));
   const t = useI18n();
+  const isPro = useProStore((st) => st.isPro);
+  // Crown marker inside <option> text (options can't render components).
+  const proMark = (kind: 'door' | 'window', style: OpeningStyle) =>
+    !isPro && isProStyle(kind, style) ? ' 👑' : '';
   const { selection } = s;
 
   const multi = s.selectedIds.length > 1;
@@ -329,15 +345,23 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               <div className="prop-card">
                 <div className="prop-label">{t('Kitchen unit')}</div>
                 <div className="swap-chips">
-                  {KITCHEN_SLOTS.map((k) => (
-                    <button
-                      key={k.type}
-                      className={`swap-chip ${item.type === k.type ? 'on' : ''}`}
-                      onClick={() => s.swapFurnitureType(item.id, k.type)}
-                    >
-                      {t(k.label)}
-                    </button>
-                  ))}
+                  {KITCHEN_SLOTS.map((k) => {
+                    const gated = !isPro && !!CATALOG_BY_TYPE[k.type]?.pro;
+                    return (
+                      <button
+                        key={k.type}
+                        className={`swap-chip ${item.type === k.type ? 'on' : ''}`}
+                        onClick={() => {
+                          // Pro appliances stay behind the same gate as the catalog.
+                          if (gated && !requirePro('catalog')) return;
+                          s.swapFurnitureType(item.id, k.type);
+                        }}
+                      >
+                        {t(k.label)}
+                        {gated && <Crown className="icon pro-pill" style={{ width: 11, height: 11 }} />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -373,21 +397,26 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 {opening.type === 'door' ? (
                   <select
                     value={opening.style ?? 'single'}
-                    onChange={(e) => s.updateOpening(opening.id, { style: e.target.value as never })}
+                    onChange={(e) => {
+                      const style = e.target.value as OpeningStyle;
+                      if (isProStyle('door', style) && !requirePro('catalog')) return;
+                      s.updateOpening(opening.id, { style });
+                    }}
                   >
                     <option value="single">{t('Single')}</option>
-                    <option value="double">{t('Double')}</option>
-                    <option value="sliding">{t('Sliding')}</option>
-                    <option value="pocket">{t('Pocket')}</option>
-                    <option value="bifold">{t('Bi-fold')}</option>
+                    <option value="double">{t('Double')}{proMark('door', 'double')}</option>
+                    <option value="sliding">{t('Sliding')}{proMark('door', 'sliding')}</option>
+                    <option value="pocket">{t('Pocket')}{proMark('door', 'pocket')}</option>
+                    <option value="bifold">{t('Bi-fold')}{proMark('door', 'bifold')}</option>
                     <option value="passage">{t('Passage (no leaf)')}</option>
-                    <option value="arch">{t('Arch (no leaf)')}</option>
+                    <option value="arch">{t('Arch (no leaf)')}{proMark('door', 'arch')}</option>
                   </select>
                 ) : (
                   <select
                     value={opening.style ?? 'standard'}
                     onChange={(e) => {
-                      const style = e.target.value as never;
+                      const style = e.target.value as OpeningStyle;
+                      if (isProStyle('window', style) && !requirePro('catalog')) return;
                       s.updateOpening(opening.id, {
                         style,
                         ...(style === 'french' ? { sill: 0, height: 220 } : {}),
@@ -395,9 +424,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     }}
                   >
                     <option value="standard">{t('Standard')}</option>
-                    <option value="french">{t('French (full height)')}</option>
-                    <option value="casement">{t('Casement')}</option>
-                    <option value="sliding">{t('Sliding')}</option>
+                    <option value="french">{t('French (full height)')}{proMark('window', 'french')}</option>
+                    <option value="casement">{t('Casement')}{proMark('window', 'casement')}</option>
+                    <option value="sliding">{t('Sliding')}{proMark('window', 'sliding')}</option>
                   </select>
                 )}
               </div>
@@ -505,7 +534,7 @@ function TextureCard({
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
-              aria-label="Texture preview"
+              aria-label={t('Texture preview')}
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label className="btn block" style={{ height: 30, fontSize: 12, cursor: 'pointer' }}>
