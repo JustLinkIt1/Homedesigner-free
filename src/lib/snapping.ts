@@ -134,6 +134,41 @@ export function buildSnapElements(opts: BuildOpts): SnapEl[] {
   return els;
 }
 
+/** Snap window (radians) around each 45° multiple for the angle lock. */
+export const ANGLE_LOCK_RAD = (12 * Math.PI) / 180;
+
+/**
+ * IKEA-style "square to grid" angle lock, shared by the 2D and 3D wall
+ * drawing so they behave identically. If the segment `prev`→`p` lands within
+ * `ANGLE_LOCK_RAD` of a 45° multiple, rotate it exactly onto that angle
+ * (keeping its length). For cardinal (horizontal/vertical) results, `grid`
+ * (when supplied) snaps the free coordinate to the grid while pinning the
+ * shared coordinate exactly on `prev`, so walls stay truly square. Returns
+ * `p` unchanged when nothing is within the window.
+ */
+export function lockToAngle(
+  prev: Point,
+  p: Point,
+  grid?: (pt: Point) => Point,
+): Point {
+  const dx = p.x - prev.x;
+  const dy = p.y - prev.y;
+  const len = Math.hypot(dx, dy);
+  if (len <= 1) return p;
+  const step = Math.PI / 4;
+  const ang = Math.atan2(dy, dx);
+  const snapped = Math.round(ang / step) * step;
+  if (Math.abs(ang - snapped) >= ANGLE_LOCK_RAD) return p;
+  const out = { x: prev.x + Math.cos(snapped) * len, y: prev.y + Math.sin(snapped) * len };
+  const horiz = Math.abs(Math.sin(snapped)) < 1e-6;
+  const vert = Math.abs(Math.cos(snapped)) < 1e-6;
+  if (grid && (horiz || vert)) {
+    const g = grid(out);
+    return horiz ? { x: g.x, y: prev.y } : { x: prev.x, y: g.y };
+  }
+  return out;
+}
+
 /** Highest-priority snap element within range; null if nothing is close. */
 export function nearestSnap(els: SnapEl[], p: Point): SnapResult | null {
   let best: { el: SnapEl; point: Point; distance: number } | null = null;

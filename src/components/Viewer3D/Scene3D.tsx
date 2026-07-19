@@ -6,7 +6,7 @@ import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
 import { snapToGrid } from '../../lib/geometry';
-import { buildSnapElements, nearestSnap } from '../../lib/snapping';
+import { buildSnapElements, nearestSnap, lockToAngle } from '../../lib/snapping';
 import { formatLength } from '../../lib/units';
 import { drawBridge, useDraw } from '../../lib/ui';
 import type { Point } from '../../types';
@@ -442,41 +442,23 @@ function WallEndpointHandles() {
 
 /** World-cm snap radius for 3D drafting (finger-scale taps are coarse). */
 const SNAP_RADIUS_CM = 30;
-const ANGLE_SNAP_RAD = (12 * Math.PI) / 180;
 
 /** Snap a 3D-drafted point IKEA-style: existing wall endpoints/edges win
- *  (same prioritized engine as the 2D editor), then segments square up —
- *  taps within 12° of a 45° multiple from the previous point lock to it,
- *  and cardinal segments keep the shared coordinate exactly on the previous
- *  point so walls stay truly square to the grid. */
+ *  (same prioritized engine as the 2D editor), then segments square up via
+ *  the shared `lockToAngle` (identical to 2D) so walls stay truly square. */
 export function snapDraftPoint(raw: Point, draft: Point[]): Point {
   const st = useDesign.getState();
   const prev = draft.length ? draft[draft.length - 1] : null;
   const els = buildSnapElements({ walls: st.walls, draft, prev, radius: SNAP_RADIUS_CM, guides: true });
   const hit = nearestSnap(els, raw);
   if (hit && hit.kind !== 'guide') return { ...hit.point };
-  let p = hit ? { ...hit.point } : { ...raw };
+  const p = hit ? { ...hit.point } : { ...raw };
+  const grid = st.showGrid ? (pt: Point) => snapToGrid(pt, st.gridSize) : undefined;
   if (prev) {
-    const dx = p.x - prev.x;
-    const dy = p.y - prev.y;
-    const len = Math.hypot(dx, dy);
-    if (len > 1) {
-      const step = Math.PI / 4;
-      const ang = Math.atan2(dy, dx);
-      const snapped = Math.round(ang / step) * step;
-      if (Math.abs(ang - snapped) < ANGLE_SNAP_RAD) {
-        p = { x: prev.x + Math.cos(snapped) * len, y: prev.y + Math.sin(snapped) * len };
-        const horiz = Math.abs(Math.sin(snapped)) < 1e-6;
-        const vert = Math.abs(Math.cos(snapped)) < 1e-6;
-        if (st.showGrid && (horiz || vert)) {
-          const g = snapToGrid(p, st.gridSize);
-          return horiz ? { x: g.x, y: prev.y } : { x: prev.x, y: g.y };
-        }
-        return p;
-      }
-    }
+    const locked = lockToAngle(prev, p, grid);
+    if (locked !== p) return locked;
   }
-  return st.showGrid ? snapToGrid(p, st.gridSize) : p;
+  return grid ? grid(p) : p;
 }
 
 /** Snap for dragging an existing corner: joins to another wall's endpoint
@@ -498,25 +480,10 @@ export function snapCornerPoint(raw: Point, other: Point, orig: Point): Point {
   }
   if (best) return { ...best };
   const p = { ...raw };
-  const dx = p.x - other.x;
-  const dy = p.y - other.y;
-  const len = Math.hypot(dx, dy);
-  if (len > 1) {
-    const step = Math.PI / 4;
-    const ang = Math.atan2(dy, dx);
-    const snapped = Math.round(ang / step) * step;
-    if (Math.abs(ang - snapped) < ANGLE_SNAP_RAD) {
-      const q = { x: other.x + Math.cos(snapped) * len, y: other.y + Math.sin(snapped) * len };
-      const horiz = Math.abs(Math.sin(snapped)) < 1e-6;
-      const vert = Math.abs(Math.cos(snapped)) < 1e-6;
-      if (st.showGrid && (horiz || vert)) {
-        const g = snapToGrid(q, st.gridSize);
-        return horiz ? { x: g.x, y: other.y } : { x: other.x, y: g.y };
-      }
-      return q;
-    }
-  }
-  return st.showGrid ? snapToGrid(p, st.gridSize) : p;
+  const grid = st.showGrid ? (pt: Point) => snapToGrid(pt, st.gridSize) : undefined;
+  const locked = lockToAngle(other, p, grid);
+  if (locked !== p) return locked;
+  return grid ? grid(p) : p;
 }
 
 /** IKEA-style yellow guide: a long thin strip on the floor through `at`,

@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
-import { Group, Line, Text } from 'react-konva';
+import { Group, Line, Text, Rect } from 'react-konva';
 import { useDesign } from '../../store/designStore';
-import { dist, midpoint, boundsOf, polygonArea, polygonCentroid } from '../../lib/geometry';
-import { formatLength, formatArea, type Units } from '../../lib/units';
+import { dist, midpoint, boundsOf } from '../../lib/geometry';
+import { formatLength, type Units } from '../../lib/units';
 import { useTheme, canvasColors } from '../../lib/theme';
-import { t } from '../../lib/i18n';
-import type { Point, Wall, Room } from '../../types';
+import type { Point, Wall } from '../../types';
 
 /**
  * Architectural dimension annotations drawn over the 2D plan.
@@ -40,9 +39,6 @@ export default function DimensionsLayer({ zoom, onEditWall }: Props) {
   }, [walls]);
 
   if (walls.length === 0 && rooms.length === 0) return null;
-  const center = bounds
-    ? { x: (bounds.min.x + bounds.max.x) / 2, y: (bounds.min.y + bounds.max.y) / 2 }
-    : null;
 
   // Interactive only enables the small clickable wall labels; every decorative
   // shape stays listening={false} so clicks still fall through to the walls.
@@ -50,20 +46,14 @@ export default function DimensionsLayer({ zoom, onEditWall }: Props) {
     <Group listening={!!onEditWall}>
       {/* Per-wall dimensions (skips perimeter walls that duplicate the overall,
           and walls too short to label legibly at the current zoom). */}
-      {center &&
-        bounds &&
+      {bounds &&
         walls.map((w) => {
           if (dist(w.start, w.end) * zoom < 30) return null;
           if (isPerimeterDuplicate(w, bounds)) return null;
           return (
-            <WallDimension key={w.id} wall={w} center={center} px={px} units={units} onEdit={onEditWall} />
+            <WallDimension key={w.id} wall={w} px={px} units={units} onEdit={onEditWall} />
           );
         })}
-
-      {/* Per-room area label (sizes come from wall/overall dims) */}
-      {rooms.map((r) => (
-        <RoomDimension key={r.id} room={r} px={px} units={units} />
-      ))}
 
       {/* Building overall dimensions (top + left exterior) */}
       <OverallDimension walls={walls} px={px} units={units} />
@@ -94,104 +84,65 @@ function isPerimeterDuplicate(
 
 const near = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
 
-/** A dimension line offset just outside a single wall. */
+/** A small length label centered on a single interior wall. */
 function WallDimension({
   wall,
-  center,
   px,
   units,
   onEdit,
 }: {
   wall: Wall;
-  center: Point;
   px: (n: number) => number;
   units: Units;
   onEdit?: (wallId: string) => void;
 }) {
   // Themed inks (legible on the light or dark canvas).
   const C = canvasColors(useTheme((t) => t.theme));
-  const COLOR = C.dimensionInk;
   const TEXT_COLOR = C.dimensionText;
+  const PLATE_FILL = C.dimensionPlate;
+  const PLATE_STROKE = C.dimensionPlateStroke;
   const a = wall.start;
   const b = wall.end;
   const len = dist(a, b);
   if (len < 1) return null;
 
-  // Unit direction along the wall and its (left-hand) normal.
   const dx = (b.x - a.x) / len;
   const dy = (b.y - a.y) / len;
-  let nx = -dy;
-  let ny = dx;
 
-  // Point the normal toward the side AWAY from the building centre.
-  const mid = midpoint(a, b);
-  const toCenter = { x: center.x - mid.x, y: center.y - mid.y };
-  if (nx * toCenter.x + ny * toCenter.y > 0) {
-    nx = -nx;
-    ny = -ny;
-  }
-
-  const offset = px(18) + wall.thickness / 2; // clear the wall body
-  const tick = px(6);
-
-  const off = (p: Point, d: number): Point => ({
-    x: p.x + nx * d,
-    y: p.y + ny * d,
-  });
-
-  const a1 = off(a, offset);
-  const b1 = off(b, offset);
-
-  // Witness (extension) lines from the wall ends out to the dimension line.
-  const wGap = px(4); // small gap so witness lines don't touch the wall
-  const aw0 = off(a, wGap);
-  const bw0 = off(b, wGap);
-  const aw1 = off(a, offset + tick);
-  const bw1 = off(b, offset + tick);
-
-  // 45° architectural ticks at each end of the dimension line.
-  const tickVec = { x: (dx + nx) * tick, y: (dy + ny) * tick };
-
-  // Label: upright/readable. Konva rotation is clockwise in degrees.
+  // Inline label centered ON the wall (no offset dimension line): the old
+  // offset pushed interior-wall numbers into the neighbouring room, over its
+  // name and furniture. A small rounded plate keeps the number legible over
+  // any floor fill; click-to-edit is preserved. Perimeter lengths still read
+  // cleanly from the overall building dimensions.
   let rot = (Math.atan2(dy, dx) * 180) / Math.PI;
   if (rot > 90 || rot < -90) rot += 180; // keep text from being upside-down
-  const lc = midpoint(a1, b1);
-  const fs = px(12);
-  const labelLift = px(3);
-  // Lift the text slightly off the line, on the outer side.
-  const lp = { x: lc.x + nx * labelLift, y: lc.y + ny * labelLift };
+  const lc = midpoint(a, b);
+  const fs = px(11.5);
+  const label = formatLength(len, units);
+  const plateW = px(7) + label.length * fs * 0.56;
+  const plateH = fs + px(5);
 
   return (
-    <Group>
-      {/* witness lines */}
-      <Line points={[aw0.x, aw0.y, aw1.x, aw1.y]} stroke={COLOR} strokeWidth={px(0.8)} listening={false} />
-      <Line points={[bw0.x, bw0.y, bw1.x, bw1.y]} stroke={COLOR} strokeWidth={px(0.8)} listening={false} />
-      {/* dimension line */}
-      <Line points={[a1.x, a1.y, b1.x, b1.y]} stroke={COLOR} strokeWidth={px(0.9)} listening={false} />
-      {/* end ticks (45°) */}
-      <Line
-        points={[a1.x - tickVec.x, a1.y - tickVec.y, a1.x + tickVec.x, a1.y + tickVec.y]}
-        stroke={COLOR}
-        strokeWidth={px(1)}
+    <Group x={lc.x} y={lc.y} rotation={rot}>
+      <Rect
+        x={-plateW / 2}
+        y={-plateH / 2}
+        width={plateW}
+        height={plateH}
+        cornerRadius={plateH / 2}
+        fill={PLATE_FILL}
+        stroke={PLATE_STROKE}
+        strokeWidth={px(0.6)}
         listening={false}
       />
-      <Line
-        points={[b1.x - tickVec.x, b1.y - tickVec.y, b1.x + tickVec.x, b1.y + tickVec.y]}
-        stroke={COLOR}
-        strokeWidth={px(1)}
-        listening={false}
-      />
-      {/* length label — click to type an exact length (rescales the wall). */}
       <Text
-        x={lp.x}
-        y={lp.y}
-        text={formatLength(len, units)}
+        x={-plateW / 2}
+        y={-fs / 2}
+        text={label}
         fontSize={fs}
+        fontStyle="bold"
         fill={TEXT_COLOR}
-        rotation={rot}
-        offsetX={px(28)}
-        offsetY={fs}
-        width={px(56)}
+        width={plateW}
         align="center"
         listening={!!onEdit}
         hitStrokeWidth={px(20)}
@@ -215,31 +166,6 @@ function WallDimension({
         }}
       />
     </Group>
-  );
-}
-
-/** A single, legible area label placed just below the room name. */
-function RoomDimension({ room, px, units }: { room: Room; px: (n: number) => number; units: Units }) {
-  const TEXT_COLOR = canvasColors(useTheme((t) => t.theme)).dimensionText;
-  if (room.points.length < 3) return null;
-  const c = polygonCentroid(room.points);
-  const fs = px(12.5);
-  // The room name is drawn ~at the centroid in Canvas2D (14px text wrapped in
-  // a 100cm box). Estimate how many lines it wraps to (~7.7px per glyph) so
-  // long names like "Kitchen & Dining" don't collide with the area label.
-  const nameLines = Math.max(1, Math.ceil((t(room.name).length * px(7.7)) / 100));
-  return (
-    <Text
-      x={c.x}
-      y={c.y - 8 + nameLines * px(17)}
-      text={formatArea(polygonArea(room.points), units)}
-      fontSize={fs}
-      fill={TEXT_COLOR}
-      offsetX={px(40)}
-      width={px(80)}
-      align="center"
-      listening={false}
-    />
   );
 }
 

@@ -102,6 +102,9 @@ export interface CanvasColors {
   dimensionInk: string;
   dimensionText: string;
   dimensionOverall: string;
+  /** Rounded plate behind an inline wall-length label (legible over any fill). */
+  dimensionPlate: string;
+  dimensionPlateStroke: string;
   symbolInk: string;
   accent: string;
 }
@@ -118,6 +121,8 @@ const LIGHT: CanvasColors = {
   dimensionInk: '#7c8493',
   dimensionText: '#3f4753',
   dimensionOverall: '#2b3340',
+  dimensionPlate: 'rgba(255,255,255,0.86)',
+  dimensionPlateStroke: 'rgba(20,26,38,0.12)',
   symbolInk: '#242a33',
   accent: '#e0533d',
 };
@@ -132,8 +137,10 @@ const DARK: CanvasColors = {
   labelInk: '#e2e6ed',
   furnitureOutline: '#ffffff2e',
   dimensionInk: '#8b93a1',
-  dimensionText: '#c3c9d4',
+  dimensionText: '#e7ebf1',
   dimensionOverall: '#dfe3ea',
+  dimensionPlate: 'rgba(24,28,36,0.82)',
+  dimensionPlateStroke: 'rgba(255,255,255,0.14)',
   symbolInk: '#c9cfd9',
   accent: '#ff6b52',
 };

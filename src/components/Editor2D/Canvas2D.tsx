@@ -12,6 +12,7 @@ import {
   snapToGrid,
   pointToSegment,
   polygonCentroid,
+  polygonArea,
   boundsOf,
 } from '../../lib/geometry';
 import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
@@ -20,10 +21,10 @@ import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { useI18n } from '../../lib/i18n';
 import { planCapture } from '../../lib/renderBridge';
 import FurnitureSymbol from './FurnitureSymbol';
-import { buildSnapElements, nearestSnap, type SnapKind, type GuideLine } from '../../lib/snapping';
+import { buildSnapElements, nearestSnap, lockToAngle, type SnapKind, type GuideLine } from '../../lib/snapping';
 import { kitchenRunUnits, RUN_UNIT } from '../../lib/kitchenRun';
 import { computeWallPolygons } from '../../lib/wallGeometry';
-import { formatLength, type Units } from '../../lib/units';
+import { formatLength, formatArea, type Units } from '../../lib/units';
 import { selectionTick, tapMedium } from '../../lib/haptics';
 import { useTheme, canvasColors } from '../../lib/theme';
 import type { Point, Selection } from '../../types';
@@ -407,6 +408,14 @@ export default function Canvas2D() {
     snapGuideRef.current = null;
     // Grid — skipped while tracing over a background so free angles aren't fought.
     if (showGrid && !background) {
+      // Square-to-grid angle lock (identical to the 3D drawing): when drawing
+      // a chain, pull near-45° segments exactly onto the axis so beginners get
+      // straight walls without hunting for the guide line.
+      if ((tool === 'wall' || tool === 'room') && draft.length > 0) {
+        const locked = lockToAngle(draft[draft.length - 1], p, (pt) => snapToGrid(pt, gridSize));
+        snapKindRef.current = 'grid';
+        return locked;
+      }
       snapKindRef.current = 'grid';
       return snapToGrid(p, gridSize);
     }
@@ -1072,38 +1081,103 @@ export default function Canvas2D() {
             ))}
           </Group>
 
-          {/* Rooms (floors) */}
-          {rooms.map((r) => {
+          {/* Rooms (floors) — selected one drawn last so its outline sits
+              above its neighbours (mirrors the wall ordering below). */}
+          {[...rooms]
+            .sort((a, b) => (selection.kind === 'room' && a.id === selection.id ? 1 : 0)
+              - (selection.kind === 'room' && b.id === selection.id ? 1 : 0))
+            .map((r) => {
             const fill = FLOOR_BY_ID[r.floorMaterial]?.color ?? r.color;
             const sel = selection.kind === 'room' && selection.id === r.id;
             const c = polygonCentroid(r.points);
+            // Label sizing is SCREEN-space: font + box scale by 1/zoom so names
+            // never wrap mid-word when zoomed out (the old fixed 100 cm box did
+            // exactly that — "Great Room" became "Gre / at / Roo / m").
+            const { min, max } = boundsOf(r.points);
+            const screenW = (max.x - min.x) * zoom;
+            const screenH = (max.y - min.y) * zoom;
+            const nameFs = 13 / zoom;
+            const areaFs = 11 / zoom;
+            const boxW = 168 / zoom; // ~168 screen px
+            const lineGap = 3 / zoom;
+            // Only show the label when the room is big enough on screen to hold
+            // it (avoids clipped text spilling out of tiny rooms).
+            const showName = screenW > 34 && screenH > 20;
+            const showArea = showName && screenH > 40;
             return (
               <Group key={r.id}>
                 <Line
                   points={r.points.flatMap((p) => [p.x, p.y])}
                   closed
                   fill={fill}
-                  opacity={sel ? 0.7 : 0.55}
+                  opacity={sel ? 0.72 : 0.55}
                   stroke={sel ? C.selection : 'transparent'}
-                  strokeWidth={(sel ? 4 : 3) / zoom}
+                  strokeWidth={(sel ? 5 : 3) / zoom}
                   shadowColor={sel ? C.selection : undefined}
-                  shadowBlur={sel ? 14 / zoom : 0}
-                  shadowOpacity={sel ? 0.5 : 0}
+                  shadowBlur={sel ? 20 / zoom : 0}
+                  shadowOpacity={sel ? 0.75 : 0}
                   perfectDrawEnabled={false}
                   shadowForStrokeEnabled={false}
                   onMouseDown={() => tool === 'select' && s.select({ kind: 'room', id: r.id })}
                 />
-                <Text
-                  x={c.x - 50}
-                  y={c.y - 8}
-                  width={100}
-                  align="center"
-                  text={tr(r.name)}
-                  fontSize={14 / zoom}
-                  fill={C.labelInk}
-                  fontStyle="bold"
-                  listening={false}
-                />
+                {showName && (() => {
+                  // A soft rounded plate lifts the name+area off any floor fill
+                  // or furniture beneath the centroid (same idea as the wall
+                  // dimension pills), sized to the wider of the two lines.
+                  const nameText = tr(r.name);
+                  const areaText = formatArea(polygonArea(r.points), units);
+                  const textW = Math.min(
+                    boxW,
+                    Math.max(nameText.length * nameFs * 0.56, showArea ? areaText.length * areaFs * 0.62 : 0),
+                  );
+                  const padX = 9 / zoom;
+                  const padY = 6 / zoom;
+                  const plateW = textW + padX * 2;
+                  const plateH = (showArea ? nameFs + areaFs + lineGap : nameFs) + padY * 2;
+                  return (
+                    <Rect
+                      x={c.x - plateW / 2}
+                      y={c.y - plateH / 2}
+                      width={plateW}
+                      height={plateH}
+                      cornerRadius={Math.min(plateH / 2, 10 / zoom)}
+                      fill={C.dimensionPlate}
+                      stroke={C.dimensionPlateStroke}
+                      strokeWidth={0.6 / zoom}
+                      listening={false}
+                    />
+                  );
+                })()}
+                {showName && (
+                  <Text
+                    x={c.x - boxW / 2}
+                    y={c.y - (showArea ? nameFs + lineGap / 2 : nameFs / 2)}
+                    width={boxW}
+                    align="center"
+                    text={tr(r.name)}
+                    fontSize={nameFs}
+                    fill={C.labelInk}
+                    fontStyle="bold"
+                    wrap="none"
+                    ellipsis
+                    listening={false}
+                  />
+                )}
+                {showArea && (
+                  <Text
+                    x={c.x - boxW / 2}
+                    y={c.y + lineGap / 2}
+                    width={boxW}
+                    align="center"
+                    text={formatArea(polygonArea(r.points), units)}
+                    fontSize={areaFs}
+                    fill={C.labelInk}
+                    opacity={0.72}
+                    wrap="none"
+                    ellipsis
+                    listening={false}
+                  />
+                )}
               </Group>
             );
           })}

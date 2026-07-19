@@ -5,6 +5,59 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.60 - 2026-07-19 (versionCode 10060)
+
+Owner: "more quality improvement for 2D." A hands-on 2D audit (14 headless
+screenshots, desktop + phone) found the labels were the glaring gap.
+
+### Fixed
+
+- **Room names no longer shatter into fragments.** The Konva room-name
+  `<Text>` used a fixed `width={100}` (100 **cm**, world units) with
+  `fontSize={14/zoom}`, so zoomed out the font grew while the box didn't —
+  "Great Room" wrapped to "Gre / at / Roo / m", "Bedroom" → "Bed / roo / m".
+  The name is now a **screen-space** label (`fontSize`, box width, gaps all
+  scale by `1/zoom`) with `wrap="none"` + `ellipsis`, so names always render
+  on one line and truncate cleanly if genuinely too long. Verified headless:
+  every sample room name renders on exactly 1 line, phone + desktop.
+- **Name + area are one unified block** on a soft rounded plate (same idea as
+  the wall-dimension pills) so they lift off any floor fill / furniture at the
+  room centroid and never drift apart. Deletes the old dual-file split
+  (name in `Canvas2D`, area in `DimensionsLayer.RoomDimension`) and its
+  fragile glyph-count `nameLines` collision heuristic. Small rooms hide the
+  label rather than overflow it.
+- **Interior wall dimensions sit inline on the wall** instead of being offset
+  `px(18)` into the neighbouring room (where "3.50 m" / "12.25 m" landed on
+  top of that room's name and fixtures). Each interior wall length is now a
+  small rounded pill centred on the wall centreline, rotated upright, over a
+  legible plate; click-to-edit preserved. Perimeter lengths still read from
+  the overall building dimensions. (`DimensionsLayer.tsx` — WallDimension
+  rewritten; new `dimensionPlate` / `dimensionPlateStroke` theme colours.)
+- **Room selection is now obvious**: selected room outline thickened
+  (3→5 /zoom), full-contrast selection stroke, stronger shadow, and the
+  selected room draws LAST so its outline sits above neighbours.
+
+### Changed
+
+- **2D wall drawing squares up like 3D** (owner: square-to-grid everywhere).
+  Extracted the 1.0.59 angle lock into a shared `lockToAngle(prev, p, grid)`
+  in `lib/snapping.ts`, now used by BOTH 2D `applySnaps` and 3D
+  `snapDraftPoint`/`snapCornerPoint` so they can't drift. A near-axis 2D wall
+  snaps exactly to 0/45/90°; the existing free-angle exemption while tracing
+  over an imported background is kept. Verified: near-horizontal draw commits
+  at mod-45 ≈ 0.00; with a background set the same draw keeps its free angle.
+- Tool-dock buttons get a native `title` (they already had aria-label +
+  data-tip).
+
+### For Codex / next session
+
+- Konva label probing: `window.Konva.stages[0].find('Text')`, check
+  `textArr.length` for wrap lines; duplicate-length walls make text-matching
+  ambiguous (match on the unique length or the parent Group position).
+- Room label still sits at the polygon centroid — a future nicety is to place
+  it at the pole-of-inaccessibility (largest inscribed circle) so L-shaped
+  rooms label in the open area, not on a wall.
+
 ## 1.0.59 - 2026-07-19 (versionCode 10059)
 
 The "actual app quality" release. Owner (with IKEA planner screenshots):
