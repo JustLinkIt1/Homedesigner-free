@@ -5,6 +5,67 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.59 - 2026-07-19 (versionCode 10059)
+
+The "actual app quality" release. Owner (with IKEA planner screenshots):
+"Drawing walls in 3D is clunky and nearly unusable — it needs to snap to
+existing walls and stay square to the grid; after, you should be able to
+drag the points to change the wall. Exact dimensions need to be an option
+too. From beginner to architect." Plus a full UX audit of 18 headless
+screenshots that found 3D (not 2D) is the quality gap vs Planner 5D.
+
+### Added — IKEA-grade wall drawing in 3D (`Scene3D.tsx`)
+
+- **Snapping**: every 3D draft point runs through the SAME prioritized snap
+  engine as 2D (`snapping.ts` buildSnapElements/nearestSnap: wall endpoints >
+  midpoints > guides > edges) via new `snapDraftPoint()`; taps within 12° of
+  a 45° multiple from the previous point lock to that angle, and cardinal
+  segments keep the shared coordinate exactly (truly square walls).
+- **IKEA-style guides + live dimensions**: while drafting, yellow guide
+  strips show the axis cross through the latest point + the extension of the
+  segment just drawn; every ghost segment carries a floating dimension pill
+  (drei `Html`, `.ghost-dim`).
+- **Exact dimensions**: the draw affordance gains a length input in 3D
+  (type 3.5 + Enter → the just-drawn segment becomes exactly 3.50 m along
+  its snapped direction) via new `drawBridge.setLength`.
+- **Drag points after drawing**: selecting a wall in 3D shows yellow ring
+  gizmos at both endpoints (`WallEndpointHandles`; same raycast-distance-0 /
+  frozen-camera / controls-pause tricks as the anchor puck). Dragging
+  previews with a guide + live length and commits through the corner-aware
+  `moveCorner`, snapped to other walls' endpoints (`snapCornerPoint`).
+- **Furniture yields while drawing**: `Furniture3D` ignores taps when a
+  build tool is armed so they fall through to the floor (a tap on the dining
+  table used to hijack the draft — the actual "clunky" bug). Wall taps also
+  draft now (their plan position is used), so kitchen runs can be tapped out
+  along a wall.
+
+### Changed — storey visibility + camera + walk (the audit fixes)
+
+- **Storeys above the active floor hide in 3D** (`DesignScene.tsx`): zooming
+  into a ground-floor room is no longer blocked by the upper storey's slab —
+  the blank-white-screen zoom (tester report, reproduced in renders) is
+  gone. FloorSwitcher reveals upper storeys by switching. Dollhouse fade now
+  applies only to the ACTIVE storey (context floors stay solid); faded
+  opacity 0.1 → 0.18.
+- **Camera target clamps**: anchor-puck drags and `orbitFocus` clamp to the
+  design bounds + 2 m, so the camera can never be parked in the void.
+- **Walk mode spawns in the largest room** at eye height facing its
+  furniture (was: building centroid, often nose-first into a wall).
+- Fixed a crash-frame during walk-mode transitions (PointerLockControls
+  have no `.target`; FocusAnchor/orbitZoom/orbitFocus now guard).
+
+### For Codex / next session
+
+- Verified headless: snap math (endpoint join / square / corner-join all
+  exact), real 3D taps → +1 wall snapped to 45° and typed 350 cm length,
+  kitchen run along a wall (+3 cabinets), closeup + max-zoom screenshots
+  show interiors (not blank slabs), focus-clamp, paint popover + undo/redo
+  regressions green, no page errors.
+- Screen-fraction click probes are camera-dependent — drive the camera to a
+  known state (orbitFocus + orbitZoom) before click-based steps.
+- 3D build follow-ups still open: openings from 3D wall taps, desktop-3D
+  entry point, hover ghost-to-cursor on desktop.
+
 ## 1.0.58 - 2026-07-18 (versionCode 10058)
 
 Full quality-control audit (owner: "quality control audit let's go"). A

@@ -1771,6 +1771,39 @@ button.brand:hover .brand-name {
   white-space: nowrap;
   cursor: pointer;
 }
+/* Exact-length entry in the 3D draw affordance ("type 3.5 → 3.50 m wall"). */
+.draw-length {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.draw-length input {
+  width: 58px;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+/* Floating dimension pill over 3D draft segments (drei Html). */
+.ghost-dim {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(20, 26, 38, 0.14);
+  color: #1c2433;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(20, 26, 38, 0.18);
+}
 .draw-toggle input {
   width: 16px;
   height: 16px;

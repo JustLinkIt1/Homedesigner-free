@@ -1,11 +1,13 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { AdaptiveDpr, OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Sky } from '@react-three/drei';
+import { AdaptiveDpr, OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Sky, Html } from '@react-three/drei';
 import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
 import { snapToGrid } from '../../lib/geometry';
+import { buildSnapElements, nearestSnap } from '../../lib/snapping';
+import { formatLength } from '../../lib/units';
 import { drawBridge, useDraw } from '../../lib/ui';
 import type { Point } from '../../types';
 import WalkControls, { WalkTouchControls } from './WalkControls';
@@ -199,6 +201,7 @@ function FocusAnchor() {
     | (THREE.EventDispatcher & { target: THREE.Vector3; enabled: boolean; update: () => void })
     | null;
   const invalidate = useThree((s) => s.invalidate);
+  const { center, radius } = useDesignBounds();
   const group = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const texture = useMemo(() => makeAnchorTexture(), []);
@@ -227,7 +230,9 @@ function FocusAnchor() {
   // Follow the live orbit target; keep a roughly constant screen size.
   useFrame(() => {
     const g = group.current;
-    if (!g || !controls) return;
+    // During walk-mode transitions the default controls are briefly
+    // PointerLockControls, which have no target — skip those frames.
+    if (!g || !controls || !controls.target) return;
     g.position.set(controls.target.x, 0.02, controls.target.z);
     const s = Math.min(1.8, Math.max(0.55, camera.position.distanceTo(controls.target) * 0.075));
     g.scale.setScalar(s);
@@ -259,9 +264,14 @@ function FocusAnchor() {
     e.stopPropagation();
     const hit = planeHit(e, st.cam);
     if (!hit) return;
-    const dx = hit.x - st.hit0.x;
-    const dz = hit.z - st.hit0.z;
-    controls.target.set(st.target0.x + dx, st.target0.y, st.target0.z + dz);
+    // Clamp the anchor to the design's neighbourhood — parking the camera
+    // target far outside (or dragging toward the horizon) ends in blank views.
+    const m = radius + 2;
+    const tx = Math.min(center[0] + m, Math.max(center[0] - m, st.target0.x + (hit.x - st.hit0.x)));
+    const tz = Math.min(center[2] + m, Math.max(center[2] - m, st.target0.z + (hit.z - st.hit0.z)));
+    const dx = tx - st.target0.x;
+    const dz = tz - st.target0.z;
+    controls.target.set(tx, st.target0.y, tz);
     camera.position.set(st.camPos0.x + dx, st.camPos0.y, st.camPos0.z + dz);
     controls.update();
     invalidate();
@@ -295,6 +305,244 @@ function FocusAnchor() {
   );
 }
 
+/** Draggable endpoint gizmos for the selected wall — "after [drawing] you
+ *  should be able to drag the points to change the wall". Live preview shows
+ *  a guide + dimension; release commits through the corner-aware moveCorner
+ *  so joined walls stay joined. Same gizmo tricks as FocusAnchor: raycast
+ *  distance forced to 0 (grab priority), frozen camera for drag raycasts,
+ *  orbit paused during the drag. */
+function WallEndpointHandles() {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as (THREE.EventDispatcher & { enabled: boolean }) | null;
+  const invalidate = useThree((s) => s.invalidate);
+  const wall = useDesign((s) =>
+    s.selection.kind === 'wall' ? s.walls.find((w) => w.id === s.selection.id) : undefined,
+  );
+  const units = useDesign((s) => s.units);
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const FLOOR = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
+  const [preview, setPreviewState] = useState<{ end: 'start' | 'end'; p: Point } | null>(null);
+  // Handlers fire from stale R3F closures — mirror live values in refs.
+  const previewRef = useRef<typeof preview>(null);
+  const setPreview = (v: typeof preview) => {
+    previewRef.current = v;
+    setPreviewState(v);
+  };
+  const dragRef = useRef<{ end: 'start' | 'end'; cam: THREE.Camera; orig: Point; wallId: string } | null>(null);
+  const meshA = useRef<THREE.Mesh>(null);
+  const meshB = useRef<THREE.Mesh>(null);
+  useEffect(() => {
+    for (const r of [meshA, meshB]) {
+      const m = r.current;
+      if (!m) continue;
+      const base = m.raycast.bind(m);
+      m.raycast = (rc: THREE.Raycaster, hits: THREE.Intersection[]) => {
+        const tmp: THREE.Intersection[] = [];
+        base(rc, tmp);
+        for (const h of tmp) {
+          h.distance = 0;
+          hits.push(h);
+        }
+      };
+    }
+  }, [wall?.id]);
+  useEffect(() => setPreview(null), [wall?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const planeHit = (e: ThreeEvent<PointerEvent>, cam: THREE.Camera): THREE.Vector3 | null => {
+    raycaster.setFromCamera(e.pointer, cam as THREE.PerspectiveCamera);
+    const out = new THREE.Vector3();
+    return raycaster.ray.intersectPlane(FLOOR, out) ? out : null;
+  };
+  const down = (end: 'start' | 'end') => (e: ThreeEvent<PointerEvent>) => {
+    const st = useDesign.getState();
+    const w = st.selection.kind === 'wall' ? st.walls.find((x) => x.id === st.selection.id) : undefined;
+    if (!w || !controls) return;
+    e.stopPropagation();
+    (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
+    const cam = camera.clone();
+    cam.updateMatrixWorld(true);
+    dragRef.current = { end, cam, orig: { ...w[end] }, wallId: w.id };
+    controls.enabled = false;
+  };
+  const move = (e: ThreeEvent<PointerEvent>) => {
+    const dg = dragRef.current;
+    if (!dg) return;
+    e.stopPropagation();
+    const hit = planeHit(e, dg.cam);
+    if (!hit) return;
+    const st = useDesign.getState();
+    const w = st.walls.find((x) => x.id === dg.wallId);
+    if (!w) return;
+    const other = dg.end === 'start' ? w.end : w.start;
+    const p = snapCornerPoint({ x: hit.x * 100, y: hit.z * 100 }, other, dg.orig);
+    setPreview({ end: dg.end, p });
+    invalidate();
+  };
+  const up = (e: ThreeEvent<PointerEvent>) => {
+    const dg = dragRef.current;
+    if (!dg) return;
+    e.stopPropagation();
+    dragRef.current = null;
+    if (controls) controls.enabled = true;
+    const pv = previewRef.current;
+    setPreview(null);
+    if (pv && Math.hypot(pv.p.x - dg.orig.x, pv.p.y - dg.orig.y) > 1) {
+      // Corner-aware: every wall sharing the original corner moves with it.
+      useDesign.getState().moveCorner(dg.orig, pv.p, 3);
+    }
+    invalidate();
+  };
+
+  if (!wall) return null;
+  const at = (end: 'start' | 'end'): Point =>
+    preview && preview.end === end ? preview.p : wall[end];
+  const a = at('start');
+  const b = at('end');
+  const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+  const handle = (end: 'start' | 'end', ref: typeof meshA) => {
+    const p = at(end);
+    return (
+      <mesh
+        ref={ref}
+        position={[p.x * 0.01, 0.03, p.y * 0.01]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        renderOrder={999}
+        onPointerDown={down(end)}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ringGeometry args={[0.1, 0.24, 24]} />
+        <meshBasicMaterial color="#f2b705" transparent depthWrite={false} depthTest={false} opacity={0.95} />
+      </mesh>
+    );
+  };
+  return (
+    <group>
+      {handle('start', meshA)}
+      {handle('end', meshB)}
+      {preview && (
+        <>
+          <GuideStrip
+            at={preview.end === 'start' ? b : a}
+            dir={Math.atan2(b.y - a.y, b.x - a.x)}
+          />
+          <GhostDim
+            x={((a.x + b.x) / 2) * 0.01}
+            z={((a.y + b.y) / 2) * 0.01}
+            y={0.6}
+            text={formatLength(segLen, units)}
+          />
+        </>
+      )}
+    </group>
+  );
+}
+
+/** World-cm snap radius for 3D drafting (finger-scale taps are coarse). */
+const SNAP_RADIUS_CM = 30;
+const ANGLE_SNAP_RAD = (12 * Math.PI) / 180;
+
+/** Snap a 3D-drafted point IKEA-style: existing wall endpoints/edges win
+ *  (same prioritized engine as the 2D editor), then segments square up —
+ *  taps within 12° of a 45° multiple from the previous point lock to it,
+ *  and cardinal segments keep the shared coordinate exactly on the previous
+ *  point so walls stay truly square to the grid. */
+export function snapDraftPoint(raw: Point, draft: Point[]): Point {
+  const st = useDesign.getState();
+  const prev = draft.length ? draft[draft.length - 1] : null;
+  const els = buildSnapElements({ walls: st.walls, draft, prev, radius: SNAP_RADIUS_CM, guides: true });
+  const hit = nearestSnap(els, raw);
+  if (hit && hit.kind !== 'guide') return { ...hit.point };
+  let p = hit ? { ...hit.point } : { ...raw };
+  if (prev) {
+    const dx = p.x - prev.x;
+    const dy = p.y - prev.y;
+    const len = Math.hypot(dx, dy);
+    if (len > 1) {
+      const step = Math.PI / 4;
+      const ang = Math.atan2(dy, dx);
+      const snapped = Math.round(ang / step) * step;
+      if (Math.abs(ang - snapped) < ANGLE_SNAP_RAD) {
+        p = { x: prev.x + Math.cos(snapped) * len, y: prev.y + Math.sin(snapped) * len };
+        const horiz = Math.abs(Math.sin(snapped)) < 1e-6;
+        const vert = Math.abs(Math.cos(snapped)) < 1e-6;
+        if (st.showGrid && (horiz || vert)) {
+          const g = snapToGrid(p, st.gridSize);
+          return horiz ? { x: g.x, y: prev.y } : { x: prev.x, y: g.y };
+        }
+        return p;
+      }
+    }
+  }
+  return st.showGrid ? snapToGrid(p, st.gridSize) : p;
+}
+
+/** Snap for dragging an existing corner: joins to another wall's endpoint
+ *  when close (ignoring the corner being moved), else squares up against the
+ *  wall's fixed endpoint like snapDraftPoint. */
+export function snapCornerPoint(raw: Point, other: Point, orig: Point): Point {
+  const st = useDesign.getState();
+  let best: Point | null = null;
+  let bd = SNAP_RADIUS_CM;
+  for (const w of st.walls) {
+    for (const q of [w.start, w.end]) {
+      if (Math.hypot(q.x - orig.x, q.y - orig.y) < 5) continue;
+      const d = Math.hypot(q.x - raw.x, q.y - raw.y);
+      if (d < bd) {
+        bd = d;
+        best = q;
+      }
+    }
+  }
+  if (best) return { ...best };
+  const p = { ...raw };
+  const dx = p.x - other.x;
+  const dy = p.y - other.y;
+  const len = Math.hypot(dx, dy);
+  if (len > 1) {
+    const step = Math.PI / 4;
+    const ang = Math.atan2(dy, dx);
+    const snapped = Math.round(ang / step) * step;
+    if (Math.abs(ang - snapped) < ANGLE_SNAP_RAD) {
+      const q = { x: other.x + Math.cos(snapped) * len, y: other.y + Math.sin(snapped) * len };
+      const horiz = Math.abs(Math.sin(snapped)) < 1e-6;
+      const vert = Math.abs(Math.cos(snapped)) < 1e-6;
+      if (st.showGrid && (horiz || vert)) {
+        const g = snapToGrid(q, st.gridSize);
+        return horiz ? { x: g.x, y: other.y } : { x: other.x, y: g.y };
+      }
+      return q;
+    }
+  }
+  return st.showGrid ? snapToGrid(p, st.gridSize) : p;
+}
+
+/** IKEA-style yellow guide: a long thin strip on the floor through `at`,
+ *  along `dir` (radians). */
+function GuideStrip({ at, dir }: { at: Point; dir: number }) {
+  return (
+    <mesh
+      position={[at.x * 0.01, 0.015, at.y * 0.01]}
+      rotation={[0, -dir, 0]}
+      renderOrder={997}
+    >
+      <boxGeometry args={[80, 0.002, 0.02]} />
+      <meshBasicMaterial color="#f2b705" transparent opacity={0.55} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/** Floating dimension pill over a drafted segment. */
+function GhostDim({ x, z, y, text }: { x: number; z: number; y: number; text: string }) {
+  return (
+    <Html position={[x, y, z]} center zIndexRange={[30, 0]} style={{ pointerEvents: 'none' }}>
+      <div className="ghost-dim">{text}</div>
+    </Html>
+  );
+}
+
 /** Translucent preview of the wall/room chain (or kitchen-run start post)
  *  being drawn on the 3D floor — build-in-3D's equivalent of the 2D draft. */
 function BuildGhost({ draft, tool }: { draft: Point[]; tool: string }) {
@@ -315,8 +563,22 @@ function BuildGhost({ draft, tool }: { draft: Point[]; tool: string }) {
       });
     }
   }
+  const units = st.units;
+  const last = draft[draft.length - 1];
+  const prev = draft.length >= 2 ? draft[draft.length - 2] : null;
+  const lastDir = prev ? Math.atan2(last.y - prev.y, last.x - prev.x) : 0;
   return (
     <group>
+      {/* IKEA-style guides: axis cross through the latest point, plus the
+          extended line of the segment just drawn — the next tap will snap
+          along these, so show where "square" is. */}
+      {tool !== 'kitchen' && last && (
+        <>
+          <GuideStrip at={last} dir={0} />
+          <GuideStrip at={last} dir={Math.PI / 2} />
+          {prev && <GuideStrip at={last} dir={lastDir} />}
+        </>
+      )}
       {draft.map((pt, i) => (
         <mesh key={`p${i}`} position={[pt.x * 0.01, h / 2, pt.y * 0.01]}>
           <cylinderGeometry args={[0.05, 0.05, h, 10]} />
@@ -329,6 +591,17 @@ function BuildGhost({ draft, tool }: { draft: Point[]; tool: string }) {
           <meshBasicMaterial color="#4c6ef5" transparent opacity={0.4} depthWrite={false} />
         </mesh>
       ))}
+      {/* Live dimensions over every drafted segment (exact lengths matter —
+          "beginner to architect"). */}
+      {segs.map((sg, i) => (
+        <GhostDim
+          key={`d${i}`}
+          x={sg.mid.x * 0.01}
+          z={sg.mid.y * 0.01}
+          y={h + 0.25}
+          text={formatLength(sg.len * 100, units)}
+        />
+      ))}
     </group>
   );
 }
@@ -340,9 +613,11 @@ function ZoomBridge() {
   const controls = useThree((s) => s.controls) as
     | (THREE.EventDispatcher & { target: THREE.Vector3; minDistance: number; maxDistance: number; update: () => void })
     | null;
+  const { center, radius } = useDesignBounds();
   useEffect(() => {
     if (!controls) return;
     orbitZoom.current = (factor: number) => {
+      if (!controls.target) return; // walk-transition frame
       const offset = camera.position.clone().sub(controls.target);
       const dist = Math.max(controls.minDistance, Math.min(controls.maxDistance, offset.length() * factor));
       offset.setLength(dist);
@@ -352,12 +627,17 @@ function ZoomBridge() {
     // Focus anchor (IKEA-style): move the orbit target to a floor point and
     // dolly part-way in, so subsequent pinch/orbit revolve around that area.
     orbitFocus.current = (x: number, z: number) => {
+      if (!controls.target) return; // walk-transition frame
       const offset = camera.position.clone().sub(controls.target);
       const dist = Math.max(3.5, offset.length() * 0.55);
       offset.setLength(dist);
       // Aim slightly above the floor (counter height) so the view doesn't tilt
-      // straight down at the boards.
-      controls.target.set(x, 0.6, z);
+      // straight down at the boards; clamp to the design's neighbourhood so a
+      // programmatic focus can never park the camera in the void.
+      const m = radius + 2;
+      const tx = Math.min(center[0] + m, Math.max(center[0] - m, x));
+      const tz = Math.min(center[2] + m, Math.max(center[2] - m, z));
+      controls.target.set(tx, 0.6, tz);
       camera.position.copy(controls.target).add(offset);
       controls.update();
     };
@@ -365,7 +645,7 @@ function ZoomBridge() {
       orbitZoom.current = null;
       orbitFocus.current = null;
     };
-  }, [camera, controls]);
+  }, [camera, controls, center, radius]);
   return null;
 }
 
@@ -474,14 +754,11 @@ export default function Scene3D() {
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
 
-  const snapPoint = (p: Point): Point => {
-    const st = useDesign.getState();
-    return st.showGrid ? snapToGrid(p, st.gridSize) : p;
-  };
   const addDraftPoint = (raw: Point) => {
-    const p = snapPoint(raw);
     const st = useDesign.getState();
     const d = draftRef.current;
+    // IKEA-grade snapping: existing wall points/edges, then square-to-grid.
+    const p = snapDraftPoint(raw, d);
     if (st.tool === 'kitchen') {
       if (d.length === 0) {
         setDraft([p]);
@@ -511,11 +788,25 @@ export default function Scene3D() {
     if (!buildArmed) return;
     drawBridge.finish = finishDraft;
     drawBridge.cancel = () => setDraft([]);
+    // Exact dimensions: retype the just-drawn segment to a precise length
+    // along its (snapped) direction — wired to the draw-affordance input.
+    drawBridge.setLength = (cm: number) => {
+      const st = useDesign.getState();
+      if (st.tool === 'kitchen' || !(cm > 0)) return;
+      const d = draftRef.current;
+      if (d.length < 2) return;
+      const a = d[d.length - 2];
+      const b = d[d.length - 1];
+      const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const nb = { x: a.x + ((b.x - a.x) / len) * cm, y: a.y + ((b.y - a.y) / len) * cm };
+      setDraft([...d.slice(0, -1), nb]);
+    };
     const min = tool === 'room' ? 3 : tool === 'wall' ? 2 : 1;
     useDraw.getState().setActive(draft.length >= min);
     return () => {
       drawBridge.finish = null;
       drawBridge.cancel = null;
+      drawBridge.setLength = null;
       useDraw.getState().setActive(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -523,8 +814,10 @@ export default function Scene3D() {
 
   const handleSurfaceTap = (tap: SurfaceTap) => {
     if (armedTool()) {
-      // Drawing owns floor taps; wall taps are ignored while drawing.
-      if (tap.kind === 'room' && tap.position) addDraftPoint(tap.position);
+      // Drawing owns surface taps — floors AND walls (wall taps carry their
+      // plan position too, so a kitchen run can be tapped out along a wall,
+      // and the snap engine tidies the point onto the wall line).
+      if (tap.position) addDraftPoint(tap.position);
       setPaintTap(null);
       return;
     }
@@ -702,6 +995,7 @@ export default function Scene3D() {
       <CaptureBridge composerRef={composerRef} />
       {!walkMode && <ZoomBridge />}
       {!walkMode && !buildArmed && <FocusAnchor />}
+      {!walkMode && !buildArmed && <WallEndpointHandles />}
       {buildArmed && draft.length > 0 && <BuildGhost draft={draft} tool={tool} />}
 
       {walkMode ? (

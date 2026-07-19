@@ -796,7 +796,7 @@ export default function DesignScene({
         return;
       }
       const camDot = w.nx * (camera.position.x - w.mx) + w.nz * (camera.position.z - w.mz);
-      const target = camDot > 0.25 ? 0.1 : 1;
+      const target = camDot > 0.25 ? 0.18 : 1;
       m.transparent = true;
       if (dollhouseInstant || Math.abs(m.opacity - target) < 0.01) {
         m.opacity = target;
@@ -811,12 +811,17 @@ export default function DesignScene({
     if (transitioning) invalidate();
   });
 
+  // Planner-style storey visibility: storeys ABOVE the active floor hide, so
+  // zooming into (say) the ground floor is never blocked by the slab of the
+  // storey above — switching floors in the FloorSwitcher reveals them again.
+  const activeElevation = floors.find((f) => f.id === activeFloorId)?.elevation ?? 0;
+  const visible = floors.filter((f) => f.elevation <= activeElevation);
+  const topElevation = Math.max(...visible.map((x) => x.elevation));
   return (
     <>
-      {floors.map((f) => {
+      {visible.map((f) => {
         const geom = floorGeom[f.id];
         if (!geom) return null;
-        const topElevation = Math.max(...floors.map((x) => x.elevation));
         return (
           <FloorContent
             key={f.id}
@@ -824,7 +829,9 @@ export default function DesignScene({
             elevation={f.elevation}
             interactive={interactive && f.id === activeFloorId}
             isTop={f.elevation >= topElevation}
-            dollhouse={dollhouse}
+            // Dollhouse fade cuts open only the storey being edited; the
+            // storeys below stay solid (context, not subject).
+            dollhouse={dollhouse && f.id === activeFloorId}
             center={center}
             onSurfaceTap={onSurfaceTap}
             register={register}

@@ -68,11 +68,20 @@ export default function Furniture3D({
   const invalidate = useThree((st) => st.invalidate);
   const drag = useRef<{ plane: THREE.Plane; grab: THREE.Vector3; moved: boolean } | null>(null);
 
+  // While a build tool is armed, furniture must not swallow taps — the tap
+  // belongs to the floor beneath (draft points). Read at event time (R3F
+  // handlers hold stale closures).
+  const buildToolArmed = () => {
+    const st = useDesign.getState();
+    return !st.walkMode && (st.tool === 'wall' || st.tool === 'room' || st.tool === 'kitchen');
+  };
+
   const beginDrag = (e: ThreeEvent<PointerEvent>) => {
     const g = groupRef.current;
     // Non-interactive storeys keep normal camera behaviour over furniture.
     // moveLock: objects stay put so the camera can be navigated freely.
     const st = useDesign.getState();
+    if (buildToolArmed()) return; // let the tap fall through to the floor
     if (!draggable || !g || st.walkMode || st.moveLock) return;
     e.stopPropagation();
     onSelect();
@@ -132,6 +141,7 @@ export default function Furniture3D({
         <mesh
           position={[0, h / 2, 0]}
           onClick={(e) => {
+            if (buildToolArmed()) return; // tap belongs to the floor beneath
             e.stopPropagation();
             onSelect();
           }}
@@ -140,7 +150,7 @@ export default function Furniture3D({
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
           onPointerOver={(e) => {
-            if (draggable) {
+            if (draggable && !buildToolArmed()) {
               e.stopPropagation();
               document.body.style.cursor = 'grab';
             }

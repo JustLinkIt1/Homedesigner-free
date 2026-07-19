@@ -488,6 +488,30 @@ export default function App() {
                     : t('Tap points, then finish')
                   : `${tool === 'room' ? t('Click the first point or') : t('Double-click or')} ${t('press Enter to finish')}`}
               </span>
+              {/* Exact dimensions in 3D ("beginner to architect"): retype the
+                  just-drawn segment to a precise length. 2D keeps its inline
+                  keyboard flow. */}
+              {view === '3d' && (tool === 'wall' || tool === 'room') && (
+                <span className="draw-length">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0.1}
+                    step={0.1}
+                    placeholder={units === 'imperial' ? '10' : '3.5'}
+                    aria-label={t('Exact length')}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter') return;
+                      const v = parseFloat(e.currentTarget.value);
+                      if (v > 0) {
+                        drawBridge.setLength?.(units === 'imperial' ? v * 30.48 : v * 100);
+                        e.currentTarget.value = '';
+                      }
+                    }}
+                  />
+                  {units === 'imperial' ? 'ft' : 'm'}
+                </span>
+              )}
               {tool === 'kitchen' && (
                 <label className="draw-toggle" title={t('Also add wall cabinets above the counter')}>
                   <input

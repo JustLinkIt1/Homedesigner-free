@@ -107,9 +107,16 @@ export const useDraw = create<DrawState>((set) => ({
   setActive: (b) => set((s) => (s.active === b ? s : { active: b })),
 }));
 /** Lets the on-canvas affordance call into Canvas2D's draft handlers. */
-export const drawBridge: { finish: (() => void) | null; cancel: (() => void) | null } = {
+export const drawBridge: {
+  finish: (() => void) | null;
+  cancel: (() => void) | null;
+  /** Set the just-drawn segment to an exact length in cm (3D exact-dimension
+   *  input; registered by the 3D drafting layer while a chain is active). */
+  setLength: ((cm: number) => void) | null;
+} = {
   finish: null,
   cancel: null,
+  setLength: null,
 };
 
 /** Promise-based confirm matching the app's modal style. */

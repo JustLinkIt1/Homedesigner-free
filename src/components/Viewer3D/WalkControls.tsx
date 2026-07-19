@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
+import { polygonArea, polygonCentroid, pointInPolygon } from '../../lib/geometry';
 import { useDesignBounds, M } from './DesignScene';
 
 /**
@@ -196,11 +197,42 @@ export default function WalkControls({
   // Touch look orientation (yaw/pitch) so it survives across frames.
   const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
 
-  // Place the walker near the building centre at eye height on entry.
+  // Spawn inside the LARGEST room at eye height, facing that room's
+  // furniture (falls back to the design centre) — entering walk mode used to
+  // drop the walker at the building centroid, often nose-first into a wall.
   useEffect(() => {
-    camera.position.set(center[0], EYE_HEIGHT, center[2]);
-    euler.current.setFromQuaternion(camera.quaternion);
-    euler.current.x = 0; // look at the horizon
+    const st = useDesign.getState();
+    let px = center[0];
+    let pz = center[2];
+    let lookX = center[0];
+    let lookZ = center[2] + 1;
+    const rooms = st.rooms.filter((r) => r.points.length >= 3);
+    if (rooms.length) {
+      const best = rooms.reduce((a, b) =>
+        Math.abs(polygonArea(b.points)) > Math.abs(polygonArea(a.points)) ? b : a,
+      );
+      const c = polygonCentroid(best.points);
+      px = c.x * M;
+      pz = c.y * M;
+      const inside = st.furniture.filter((f) => pointInPolygon(f.position, best.points));
+      if (inside.length) {
+        const k = inside.length;
+        const fc = inside.reduce(
+          (s, f) => ({ x: s.x + f.position.x / k, y: s.y + f.position.y / k }),
+          { x: 0, y: 0 },
+        );
+        lookX = fc.x * M;
+        lookZ = fc.y * M;
+      } else {
+        lookX = center[0];
+        lookZ = center[2];
+      }
+    }
+    camera.position.set(px, EYE_HEIGHT, pz);
+    const dx = lookX - px;
+    const dz = lookZ - pz;
+    // Camera forward is -Z at yaw 0 (YXZ): yaw that points it at the target.
+    euler.current.set(0, dx || dz ? Math.atan2(-dx, -dz) : 0, 0, 'YXZ');
     camera.quaternion.setFromEuler(euler.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
