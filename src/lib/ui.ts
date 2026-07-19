@@ -101,10 +101,16 @@ export const useConfirm = create<ConfirmState>((set, get) => ({
 interface DrawState {
   active: boolean;
   setActive: (b: boolean) => void;
+  /** A measurement is frozen and the scale-calibration card is open — the
+   *  measure tip bubble hides so the two top-centre overlays don't collide. */
+  calibrating: boolean;
+  setCalibrating: (b: boolean) => void;
 }
 export const useDraw = create<DrawState>((set) => ({
   active: false,
   setActive: (b) => set((s) => (s.active === b ? s : { active: b })),
+  calibrating: false,
+  setCalibrating: (b) => set((s) => (s.calibrating === b ? s : { calibrating: b })),
 }));
 /** Lets the on-canvas affordance call into Canvas2D's draft handlers. */
 export const drawBridge: {

@@ -175,8 +175,12 @@ export async function loadRemoteCatalog(force = false): Promise<void> {
   if (!force && snapshot.status === 'ready') return;
   emit({ ...snapshot, status: 'loading', error: undefined });
   inflight = (async () => {
+    // Abort a hanging network after 6 s so the sidebar falls back to bundled
+    // items ("Offline catalog") instead of spinning "Loading…" forever.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
     try {
-      const response = await fetch(MANIFEST_URL, { cache: 'no-cache' });
+      const response = await fetch(MANIFEST_URL, { cache: 'no-cache', signal: controller.signal });
       if (!response.ok) throw new Error(`Catalog request failed (${response.status})`);
       const text = await response.text();
       if (text.length > MAX_MANIFEST_BYTES) throw new Error('Catalog manifest is too large');
@@ -192,6 +196,7 @@ export async function loadRemoteCatalog(force = false): Promise<void> {
         error: error instanceof Error ? error.message : 'Cloud catalog unavailable',
       });
     } finally {
+      clearTimeout(timer);
       inflight = null;
     }
   })();

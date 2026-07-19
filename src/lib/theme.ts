@@ -14,9 +14,12 @@ const KEY = 'homedesigner.theme.v1';
 const readPref = (): ThemePref => {
   try {
     const v = localStorage.getItem(KEY);
-    return v === 'light' || v === 'dark' ? v : 'system';
+    if (v === 'light' || v === 'dark' || v === 'system') return v;
+    // v1.0.62: the app is dark-first. New installs (no stored pref) default to
+    // dark; System/Light stay one tap away in Settings.
+    return 'dark';
   } catch {
-    return 'system';
+    return 'dark';
   }
 };
 
@@ -26,7 +29,7 @@ const systemDark = () =>
 export const resolve = (pref: ThemePref): ResolvedTheme =>
   pref === 'system' ? (systemDark() ? 'dark' : 'light') : pref;
 
-const CHROME = { light: '#f6f5f2', dark: '#15171c' } as const;
+const CHROME = { light: '#f6f5f2', dark: '#0a0d14' } as const;
 
 function applyChrome(theme: ResolvedTheme) {
   document.documentElement.setAttribute('data-theme', theme);

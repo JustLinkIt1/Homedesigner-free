@@ -127,3 +127,65 @@ export const boundsOf = (pts: Point[]): { min: Point; max: Point } => {
   }
   return { min, max };
 };
+
+/** Signed distance from p to the polygon outline: +inside, −outside (cm). */
+const signedEdgeDistance = (p: Point, poly: Point[]): number => {
+  let min = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    min = Math.min(min, pointToSegment(p, poly[i], poly[j]).dist);
+  }
+  return (pointInPolygon(p, poly) ? 1 : -1) * min;
+};
+
+/**
+ * The polygon's "visual centre" — the point farthest from any edge (the centre
+ * of the largest inscribed circle), a.k.a. pole of inaccessibility. A concave
+ * room's `polygonCentroid` can fall on a partition or outside the shape; this
+ * always lands in the open interior, so room labels sit in clear floor.
+ * Compact port of mapbox/polylabel (ISC). `precision` in cm.
+ */
+export const polygonVisualCenter = (poly: Point[], precision = 15): Point => {
+  if (poly.length < 3) return polygonCentroid(poly);
+  const { min, max } = boundsOf(poly);
+  const w = max.x - min.x;
+  const h = max.y - min.y;
+  const cell = Math.min(w, h);
+  if (cell === 0) return { x: min.x, y: min.y };
+  const half = cell / 2;
+
+  // A candidate square cell + its max possible distance (centre dist + radius).
+  const makeCell = (cx: number, cy: number, hh: number) => {
+    const d = signedEdgeDistance({ x: cx, y: cy }, poly);
+    return { cx, cy, hh, d, max: d + hh * Math.SQRT2 };
+  };
+
+  // Priority queue by `max` (largest first) — small N, a sorted array is fine.
+  const queue: ReturnType<typeof makeCell>[] = [];
+  for (let x = min.x; x < max.x; x += cell) {
+    for (let y = min.y; y < max.y; y += cell) {
+      queue.push(makeCell(x + half, y + half, half));
+    }
+  }
+  const cen = polygonCentroid(poly);
+  let best = makeCell(cen.x, cen.y, 0);
+  // Also seed with the bbox centre.
+  const bboxCell = makeCell(min.x + w / 2, min.y + h / 2, 0);
+  if (bboxCell.d > best.d) best = bboxCell;
+
+  let guard = 0;
+  while (queue.length && guard++ < 100000) {
+    // Pop the most promising cell.
+    let bi = 0;
+    for (let i = 1; i < queue.length; i++) if (queue[i].max > queue[bi].max) bi = i;
+    const c = queue.splice(bi, 1)[0];
+    if (c.d > best.d) best = c;
+    // Not worth subdividing if it can't beat the best by the precision margin.
+    if (c.max - best.d <= precision) continue;
+    const hh = c.hh / 2;
+    queue.push(makeCell(c.cx - hh, c.cy - hh, hh));
+    queue.push(makeCell(c.cx + hh, c.cy - hh, hh));
+    queue.push(makeCell(c.cx - hh, c.cy + hh, hh));
+    queue.push(makeCell(c.cx + hh, c.cy + hh, hh));
+  }
+  return { x: best.cx, y: best.cy };
+};

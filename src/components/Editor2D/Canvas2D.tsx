@@ -12,6 +12,7 @@ import {
   snapToGrid,
   pointToSegment,
   polygonCentroid,
+  polygonVisualCenter,
   polygonArea,
   boundsOf,
 } from '../../lib/geometry';
@@ -844,6 +845,14 @@ export default function Canvas2D() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, tool]);
 
+  // A frozen measurement opens the calibration card (top-centre). Signal it so
+  // App hides the measure tip bubble, which would otherwise overlap the card.
+  useEffect(() => {
+    const on = tool === 'measure' && !!measureSeg;
+    useDraw.getState().setCalibrating(on);
+    return () => useDraw.getState().setCalibrating(false);
+  }, [tool, measureSeg]);
+
   // Nearest wall to a point, with the parametric position along it.
   const nearestWall = (p: Point): { wall: (typeof walls)[number]; t: number; dist: number } | null => {
     let best: { wall: (typeof walls)[number]; t: number; dist: number } | null = null;
@@ -1012,6 +1021,14 @@ export default function Canvas2D() {
     });
   }, [walls, wallEdit, cornerDrag]);
   const wallPolys = useMemo(() => computeWallPolygons(liveWalls), [liveWalls]);
+  // Label anchor per room: the visual centre (pole of inaccessibility), so
+  // concave / L-shaped rooms label in open floor rather than on a partition.
+  // Memoised on room geometry so it never recomputes during pan/zoom.
+  const roomLabelCenters = useMemo(() => {
+    const m = new Map<string, Point>();
+    for (const r of rooms) m.set(r.id, polygonVisualCenter(r.points));
+    return m;
+  }, [rooms]);
 
   // Keep the live pan ref in sync with committed state whenever we're not
   // mid-gesture (during a pan, applyPan owns panRef and we skip this).
@@ -1089,7 +1106,7 @@ export default function Canvas2D() {
             .map((r) => {
             const fill = FLOOR_BY_ID[r.floorMaterial]?.color ?? r.color;
             const sel = selection.kind === 'room' && selection.id === r.id;
-            const c = polygonCentroid(r.points);
+            const c = roomLabelCenters.get(r.id) ?? polygonCentroid(r.points);
             // Label sizing is SCREEN-space: font + box scale by 1/zoom so names
             // never wrap mid-word when zoomed out (the old fixed 100 cm box did
             // exactly that — "Great Room" became "Gre / at / Roo / m").
@@ -1705,10 +1722,10 @@ export default function Canvas2D() {
       {/* Scale-from-wall calibration card (after a measurement is frozen). */}
       {tool === 'measure' && measureSeg && (
         <div className="measure-card">
-          <div className="mc-title">Set scale from this wall</div>
-          <div className="mc-sub">Measured: {formatLength(dist(measureSeg.a, measureSeg.b), units)}</div>
+          <div className="mc-title">{tr('Set scale from this wall')}</div>
+          <div className="mc-sub">{tr('Measured:')} {formatLength(dist(measureSeg.a, measureSeg.b), units)}</div>
           <div className="mc-row">
-            <span>Real length</span>
+            <span>{tr('Real length')}</span>
             <input
               type="number"
               min="0"
@@ -1723,7 +1740,7 @@ export default function Canvas2D() {
             <span className="mc-unit">{units === 'imperial' ? 'ft' : 'm'}</span>
           </div>
           <div className="mc-actions">
-            <button className="mc-apply" onClick={applyScale}>Scale drawing</button>
+            <button className="mc-apply" onClick={applyScale}>{tr('Scale drawing')}</button>
             <button
               className="mc-dismiss"
               onClick={() => {
@@ -1731,7 +1748,7 @@ export default function Canvas2D() {
                 setMeasureA(null);
               }}
             >
-              Dismiss
+              {tr('Dismiss')}
             </button>
           </div>
         </div>

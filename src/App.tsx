@@ -118,6 +118,7 @@ export default function App() {
   // Projects home first — the editor opens a specific project.
   const [screen, setScreen] = useState<'projects' | 'editor'>('projects');
   const drawing = useDraw((s) => s.active);
+  const calibrating = useDraw((s) => s.calibrating);
   // One-time first-run tour + dismissible tip bar.
   const [showTour, setShowTour] = useState(false);
   const [offerTour, setOfferTour] = useState(false);
@@ -379,7 +380,9 @@ export default function App() {
     : tool === 'erase'
     ? t('Click any wall, room or object to delete it')
     : tool === 'measure'
-    ? t('Measure a wall, then enter its real length to scale the whole drawing · Esc to clear')
+    ? calibrating
+      ? null // the scale-calibration card takes over the top-centre slot
+      : t('Measure a wall, then enter its real length to scale the whole drawing · Esc to clear')
     : tool === 'select' && walls.length === 0
     ? t('Pick a tool on the left to start — try ✏️ Draw walls')
     : null;
@@ -400,7 +403,12 @@ export default function App() {
   if (screen === 'projects') {
     return (
       <div className="app">
-        <ProjectsScreen onOpenEditor={() => setScreen('editor')} onImport={() => setShowImport(true)} />
+        <ProjectsScreen
+          onOpenEditor={() => setScreen('editor')}
+          onImport={() => setShowImport(true)}
+          onHelp={() => setShowHelp(true)}
+          onSettings={() => setShowSettings(true)}
+        />
         {showImport && (
           <Suspense fallback={null}>
             <ImportDialog onClose={() => setShowImport(false)} />
@@ -563,6 +571,14 @@ export default function App() {
                   <input type="checkbox" checked={showDimensions} onChange={(e) => setShowDimensions(e.target.checked)} />
                   <Ruler className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Dimensions')}</span>
                 </label>
+                <button
+                  className={`toggle ${tool === 'measure' ? 'on' : ''}`}
+                  title={t('Measure a wall to scale the drawing')}
+                  onClick={() => setTool(tool === 'measure' ? 'select' : 'measure')}
+                  aria-pressed={tool === 'measure'}
+                >
+                  <Ruler className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Measure')}</span>
+                </button>
                 <label className="toggle" title={t('Lock objects so they cannot be moved')}>
                   <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
                   <Lock className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Lock')}</span>

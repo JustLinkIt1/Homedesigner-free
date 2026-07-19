@@ -5,6 +5,59 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.62 - 2026-07-19 (versionCode 10062)
+
+Premium dark UI redesign toward two owner-supplied mockups (dark-first home
+screen + dark 2D editor). Owner decisions: **dark by default** (light/System
+still selectable), **home + editor chrome together**, **adapt aspirational
+bits to real data** (no fake completion %; bottom nav → real destinations;
+"Explore ideas" → the built-in Tips).
+
+### Changed — theme
+- Deepened `:root[data-theme='dark']` to a premium near-black navy
+  (`--bg #0a0d14`, card `--surface #141924`, brand `#4c6ef5`), added
+  `--grad-brand` / `--grad-hero` gradient tokens. Token NAMES unchanged so
+  every component inherited the new look. Android status-bar chrome updated.
+- `theme.ts` `readPref()` defaults unset installs to **dark** (was system).
+  Settings still exposes System / Light / Dark.
+
+### Changed — home screen (`ProjectsScreen.tsx`)
+- Rebuilt to the mockup with REAL data: "Welcome back 👋" hero + primary
+  **New project** button; a horizontally-scrollable **Start a project**
+  template row (samples + Import + Blank, first accent-bordered); restyled
+  **Your projects** cards with an Edit / Duplicate / Delete label row (no
+  progress bars — completion isn't tracked); a **Need inspiration?** gradient
+  banner whose "Explore ideas" opens Tips; a phone **bottom nav**
+  (Home / Templates / Settings) where every tab is a real destination
+  (new `onHelp` / `onSettings` props from `App`).
+
+### Changed — editor chrome
+- Active **Build / Objects / Edit** tab is a solid blue gradient pill.
+- Added a **Measure** shortcut to the 2D bottom control bar (arms the measure
+  tool, highlights when active via `.pill .toggle.on`). Segmented 2D/3D
+  toggle, Ground-floor pill, dimensions inherit the premium palette.
+
+### i18n
+- 11 new home/editor strings × 12 locales (`scripts/add-translations7.py`).
+
+### Folded in (previously unshipped 1.0.61 polish)
+- Room labels use the **visual centre** (pole of inaccessibility,
+  `geometry.polygonVisualCenter`) so concave/L-shaped rooms label in open
+  floor. Measure calibration card no longer overlaps its tip
+  (`useDraw.calibrating`) and is fully translated (`add-translations6.py`).
+  Remote-catalog fetch has a 6 s AbortController timeout → "Offline catalog"
+  instead of an eternal spinner.
+
+### For Codex / next session
+- Mockup elements deliberately NOT built (no real data yet): user
+  accounts/avatars, marketing photos for templates, a content/inspiration
+  feed, completion tracking. Revisit once accounts land (Google sign-in).
+- Verified headless: dark default; Settings-from-nav; Measure arms tool;
+  2D/3D toggle; FR home translates via the language picker. Vite gotcha —
+  driving i18n by dynamic-importing the store from page context can bind a
+  second module instance; switch language via the real `.lang-btn` UI in
+  probes.
+
 ## 1.0.60 - 2026-07-19 (versionCode 10060)
 
 Owner: "more quality improvement for 2D." A hands-on 2D audit (14 headless

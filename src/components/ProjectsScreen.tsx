@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Home, Plus, Ruler, FolderOpen, Copy, Trash2, Pencil, Sofa, ChevronRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Home, Plus, Ruler, FolderOpen, Copy, Trash2, Pencil, Sofa, ChevronRight,
+  LayoutGrid, Settings, Lightbulb, PenTool,
+} from 'lucide-react';
 import { useDesign, type MaybeFloored } from '../store/designStore';
 import { confirmDialog, toast } from '../lib/ui';
 import { openProjectFile } from '../lib/projectIO';
@@ -26,9 +29,13 @@ function timeAgo(ts: number, t: (en: string) => string): string {
 export default function ProjectsScreen({
   onOpenEditor,
   onImport,
+  onHelp,
+  onSettings,
 }: {
   onOpenEditor: () => void;
   onImport: () => void;
+  onHelp: () => void;
+  onSettings: () => void;
 }) {
   // Only actions are needed here — select them individually so this screen
   // doesn't re-render on every design edit (actions are stable references).
@@ -38,6 +45,7 @@ export default function ProjectsScreen({
   const t = useI18n();
   const [list, setList] = useState<projects.ProjectMeta[]>(() => projects.listProjects());
   const [renaming, setRenaming] = useState<string | null>(null);
+  const templatesRef = useRef<HTMLDivElement>(null);
   const refresh = () => setList(projects.listProjects());
   useEffect(() => {
     refresh();
@@ -75,6 +83,36 @@ export default function ProjectsScreen({
     onOpenEditor();
   };
 
+  // Template row = the bundled samples plus Import + Blank actions.
+  const templates = [
+    ...SAMPLES.map((smp) => ({
+      key: smp.id,
+      title: t(smp.name),
+      sub: t(smp.blurb),
+      icon: <Sofa className="icon" />,
+      onClick: () => openSample(smp.id, smp.name),
+    })),
+    {
+      key: '__import',
+      title: t('Import a 2D plan'),
+      sub: t('PDF / image / DXF'),
+      icon: <Ruler className="icon" />,
+      onClick: () => {
+        projects.createProject('Imported plan');
+        newProjectAction();
+        onOpenEditor();
+        onImport();
+      },
+    },
+    {
+      key: '__blank',
+      title: t('Start from scratch'),
+      sub: t('Draw walls and rooms yourself'),
+      icon: <PenTool className="icon" />,
+      onClick: () => newProject(),
+    },
+  ];
+
   return (
     <div className="projects-screen">
       <header className="ps-head">
@@ -91,73 +129,61 @@ export default function ProjectsScreen({
       </header>
 
       <main className="ps-main">
-        {list.length === 0 ? (
-          <section className="ps-welcome">
-            <h1>{t('Design your dream home')}</h1>
-            <p>{t('Draw floor plans in 2D, furnish every room, and walk through it in 3D.')}</p>
-            <div className="welcome-cards">
-              {SAMPLES.map((smp, i) => (
-                <button
-                  key={smp.id}
-                  className={`welcome-card ${i === 0 ? 'primary' : ''}`}
-                  onClick={() => openSample(smp.id, smp.name)}
-                >
-                  <span className="wc-ico"><Sofa className="icon" /></span>
-                  <span className="wc-title">{t(smp.name)}</span>
-                  <span className="wc-sub">{t(smp.blurb)}</span>
-                </button>
-              ))}
+        {/* Hero */}
+        <section className="ps-hero">
+          <div className="ps-hero-text">
+            <h1>{t('Welcome back')} <span className="ps-wave">👋</span></h1>
+            <p>{t('Design your dream home')}</p>
+          </div>
+          <button className="btn primary ps-hero-new" onClick={() => newProject()}>
+            <Plus className="icon" /> {t('New project')}
+          </button>
+        </section>
+
+        {/* Start a project — template row */}
+        <section className="ps-section">
+          <div className="ps-section-head">
+            <h2>{t('Start a project')}</h2>
+          </div>
+          <div className="ps-templates-row" ref={templatesRef}>
+            {templates.map((tpl, i) => (
               <button
-                className="welcome-card"
-                onClick={() => {
-                  projects.createProject('Imported plan');
-                  newProjectAction();
-                  onOpenEditor();
-                  onImport();
-                }}
+                key={tpl.key}
+                className={`tpl-card ${i === 0 ? 'accent' : ''}`}
+                onClick={tpl.onClick}
               >
-                <span className="wc-ico"><Ruler className="icon" /></span>
-                <span className="wc-title">{t('Import a 2D plan')}</span>
-                <span className="wc-sub">{t('PDF / image / DXF — walls traced automatically')}</span>
+                <span className="tpl-ico">{tpl.icon}</span>
+                <span className="tpl-title">{tpl.title}</span>
+                <span className="tpl-sub">{tpl.sub}</span>
               </button>
-              <button className="welcome-card" onClick={() => newProject()}>
-                <span className="wc-ico"><Plus className="icon" /></span>
-                <span className="wc-title">{t('Start from scratch')}</span>
-                <span className="wc-sub">{t('Draw walls and rooms yourself')}</span>
-              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Your projects */}
+        <section className="ps-section">
+          <div className="ps-section-head">
+            <h2>{t('Your projects')}</h2>
+            <button
+              className="ps-link"
+              onClick={async () => {
+                const snap = await openProjectFile();
+                if (snap) {
+                  projects.createProject(snap.projectName || 'Imported home');
+                  loadSnapshot(snap);
+                  onOpenEditor();
+                }
+              }}
+            >
+              <FolderOpen className="icon" /> {t('Open .json')}
+            </button>
+          </div>
+          {list.length === 0 ? (
+            <div className="ps-empty">
+              <Home className="icon" />
+              <span>{t('No projects yet — start one above.')}</span>
             </div>
-          </section>
-        ) : (
-          <>
-            <div className="ps-toolbar">
-              <h1>{t('Your projects')}</h1>
-              <div className="ps-actions">
-                <button
-                  className="btn"
-                  onClick={async () => {
-                    const snap = await openProjectFile();
-                    if (snap) {
-                      projects.createProject(snap.projectName || 'Imported home');
-                      loadSnapshot(snap);
-                      onOpenEditor();
-                    }
-                  }}
-                >
-                  <FolderOpen className="icon" /> {t('Open .json')}
-                </button>
-                <button className="btn primary" onClick={() => newProject()}>
-                  <Plus className="icon" /> {t('New project')}
-                </button>
-              </div>
-            </div>
-            <div className="ps-templates">
-              <span className="ps-templates-label">{t('Templates:')}</span>
-              {SAMPLES.map((smp) => (
-                <button key={smp.id} className="chip" title={t(smp.blurb)} onClick={() => openSample(smp.id, smp.name)}>
-                  {t(smp.name)}
-                </button>
-              ))}
-            </div>
+          ) : (
             <div className="ps-grid">
               {list.map((p) => (
                 <div key={p.id} className="ps-card">
@@ -196,7 +222,7 @@ export default function ProjectsScreen({
                   </div>
                   <div className="ps-card-actions">
                     <button title={t('Rename')} aria-label={`${t('Rename')} ${p.name}`} onClick={() => setRenaming(p.id)}>
-                      <Pencil className="icon" />
+                      <Pencil className="icon" /> <span>{t('Rename')}</span>
                     </button>
                     <button
                       title={t('Duplicate')}
@@ -210,7 +236,7 @@ export default function ProjectsScreen({
                         }
                       }}
                     >
-                      <Copy className="icon" />
+                      <Copy className="icon" /> <span>{t('Duplicate')}</span>
                     </button>
                     <button
                       title={t('Delete')}
@@ -229,15 +255,39 @@ export default function ProjectsScreen({
                         }
                       }}
                     >
-                      <Trash2 className="icon" />
+                      <Trash2 className="icon" /> <span>{t('Delete')}</span>
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-          </>
-        )}
+          )}
+        </section>
+
+        {/* Inspiration banner — maps the mockup's "Explore ideas" to the
+            built-in Tips & shortcuts panel (honest, real destination). */}
+        <button className="ps-inspire" onClick={onHelp}>
+          <span className="ps-inspire-ico"><Lightbulb className="icon" /></span>
+          <span className="ps-inspire-text">
+            <strong>{t('Need inspiration?')}</strong>
+            <span>{t('Explore tips to bring your dream home to life.')}</span>
+          </span>
+          <span className="ps-inspire-cta">{t('Explore ideas')} <ChevronRight className="icon" /></span>
+        </button>
       </main>
+
+      {/* Bottom nav (phones) — every tab is a real destination. */}
+      <nav className="ps-nav">
+        <button className="active" aria-current="page">
+          <Home className="icon" /> <span>{t('Home')}</span>
+        </button>
+        <button onClick={() => templatesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
+          <LayoutGrid className="icon" /> <span>{t('Templates')}</span>
+        </button>
+        <button onClick={onSettings}>
+          <Settings className="icon" /> <span>{t('Settings')}</span>
+        </button>
+      </nav>
     </div>
   );
 }
