@@ -16,8 +16,9 @@ import {
   polygonArea,
   boundsOf,
 } from '../../lib/geometry';
-import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
+import { FLOOR_BY_ID, CATALOG_BY_TYPE, type Shape3D } from '../../data/furnitureCatalog';
 import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
+import { FURNITURE_SPRITES, spriteUrl } from '../../data/furnitureSprites';
 import DimensionsLayer from './DimensionsLayer';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { useI18n } from '../../lib/i18n';
@@ -1575,22 +1576,17 @@ export default function Canvas2D() {
                     }
                   }}
                 >
-                  <Rect
-                    x={-width / 2}
-                    y={-depth / 2}
-                    width={width}
-                    height={depth}
-                    fill={f.color}
-                    opacity={0.55}
-                    cornerRadius={Math.min(width, depth) * 0.08}
-                    stroke={sel || selectedIds.includes(f.id) ? C.selection : C.furnitureOutline}
-                    strokeWidth={(sel || selectedIds.includes(f.id) ? 3 : 1) / zoom}
-                  />
-                  <FurnitureSymbol
+                  <FurnitureItemGraphic
+                    type={f.type}
                     shape={entry?.shape ?? 'box'}
                     width={width}
                     depth={depth}
-                    color={sel ? C.selection : C.symbolInk}
+                    color={f.color}
+                    symbolColor={sel ? C.selection : C.symbolInk}
+                    outlineColor={C.furnitureOutline}
+                    selected={sel || selectedIds.includes(f.id)}
+                    selectionColor={C.selection}
+                    zoom={zoom}
                     dashed={(entry?.mountY ?? 0) > 0}
                   />
                 </Group>
@@ -2066,6 +2062,82 @@ function RoomFloorFill({
       shadowForStrokeEnabled={false}
       onMouseDown={onSelect}
     />
+  );
+}
+
+// ---- Furniture graphic (photoreal top-down sprite, vector-symbol fallback) ----
+// Types with a rendered sprite (public/sprites/<type>.webp — top-down renders of
+// the 3D model) draw the photo; fixtures without a model (toilet, bathtub, TV,
+// lights…) and any still-loading sprite fall back to the clean line symbol.
+function FurnitureItemGraphic({
+  type, shape, width, depth, color, symbolColor, outlineColor, selected, selectionColor, zoom, dashed,
+}: {
+  type: string;
+  shape: Shape3D;
+  width: number;
+  depth: number;
+  color: string;
+  symbolColor: string;
+  outlineColor: string;
+  selected: boolean;
+  selectionColor: string;
+  zoom: number;
+  dashed: boolean;
+}) {
+  const hasSprite = FURNITURE_SPRITES.has(type);
+  const img = useHtmlImage(hasSprite ? spriteUrl(type) : undefined);
+  const outline = selected ? (
+    <Rect
+      x={-width / 2}
+      y={-depth / 2}
+      width={width}
+      height={depth}
+      cornerRadius={Math.min(width, depth) * 0.08}
+      stroke={selectionColor}
+      strokeWidth={3 / zoom}
+      strokeScaleEnabled
+      listening={false}
+    />
+  ) : null;
+
+  if (hasSprite && img && img.width > 0) {
+    // Contain-fit the sprite to the footprint, preserving its rendered aspect
+    // (matches how the 3D model was normalized), centred on the item origin.
+    const ar = img.width / img.height;
+    let dw = width;
+    let dh = width / ar;
+    if (dh > depth) { dh = depth; dw = depth * ar; }
+    return (
+      <>
+        <KImage
+          image={img}
+          x={-dw / 2}
+          y={-dh / 2}
+          width={dw}
+          height={dh}
+          perfectDrawEnabled={false}
+        />
+        {outline}
+      </>
+    );
+  }
+
+  // Fallback: the classic flat footprint + line symbol.
+  return (
+    <>
+      <Rect
+        x={-width / 2}
+        y={-depth / 2}
+        width={width}
+        height={depth}
+        fill={color}
+        opacity={0.55}
+        cornerRadius={Math.min(width, depth) * 0.08}
+        stroke={selected ? selectionColor : outlineColor}
+        strokeWidth={(selected ? 3 : 1) / zoom}
+      />
+      <FurnitureSymbol shape={shape} width={width} depth={depth} color={symbolColor} dashed={dashed} />
+    </>
   );
 }
 

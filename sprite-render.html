@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>sprite render</title></head>
+<body style="margin:0;background:#222">
+<canvas id="c"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { FURNITURE_CATALOG } from './src/data/furnitureCatalog.ts';
+
+// Footprints for the driver to build its job list (type -> width/depth in cm).
+window.__catalog = FURNITURE_CATALOG.map((e) => ({ type: e.type, w: e.width, d: e.depth }));
+
+const M = 0.01; // cm -> m
+const loader = new GLTFLoader();
+
+function loadGltf(url) {
+  return new Promise((res, rej) => loader.load(url, res, undefined, rej));
+}
+
+// Render one model straight down into a transparent sprite whose pixel aspect
+// matches the item footprint (width x depth). Returns a webp data URL.
+window.renderSprite = async function (url, wCm, dCm, yaw = 0, px = 640) {
+  const gltf = await loadGltf(url);
+  const model = gltf.scene;
+
+  // Normalize to the footprint (uniform scale, base on y=0) — same as 3D.
+  const box0 = new THREE.Box3().setFromObject(model);
+  const size = new THREE.Vector3(); const center = new THREE.Vector3();
+  box0.getSize(size); box0.getCenter(center);
+  const sx = (wCm * M) / (size.x || 1);
+  const sz = (dCm * M) / (size.z || 1);
+  const scale = Math.min(sx, sz);
+  model.scale.setScalar(scale);
+  model.position.set(-center.x * scale, -box0.min.y * scale, -center.z * scale);
+
+  const pivot = new THREE.Group();
+  pivot.rotation.y = yaw;
+  pivot.add(model);
+  model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+
+  const scene = new THREE.Scene();
+  scene.add(pivot);
+
+  // True footprint (in metres) after normalize + yaw.
+  const box = new THREE.Box3().setFromObject(pivot);
+  const fw = Math.max(box.max.x - box.min.x, 0.01);
+  const fd = Math.max(box.max.z - box.min.z, 0.01);
+  const top = box.max.y;
+  const pad = 1.06; // small margin for overhang / soft shadow
+  const halfW = (fw / 2) * pad;
+  const halfD = (fd / 2) * pad;
+
+  // Lighting — soft, bright, slightly directional so pieces get a gentle
+  // shadow to one side (reads like a top-down product render).
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d2c8, 2.1));
+  const key = new THREE.DirectionalLight(0xffffff, 2.4);
+  key.position.set(halfW * 1.2, top + Math.max(halfW, halfD) * 3 + 1, -halfD * 1.4);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.left = -halfW * 1.4; key.shadow.camera.right = halfW * 1.4;
+  key.shadow.camera.top = halfD * 1.4; key.shadow.camera.bottom = -halfD * 1.4;
+  key.shadow.camera.near = 0.01; key.shadow.camera.far = top + Math.max(halfW, halfD) * 8 + 4;
+  key.shadow.bias = -0.0012;
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.7);
+  fill.position.set(-halfW, top + 2, halfD);
+  scene.add(fill);
+
+  // Soft contact shadow catcher on the floor.
+  const shadowPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(halfW * 6, halfD * 6),
+    new THREE.ShadowMaterial({ opacity: 0.22 }),
+  );
+  shadowPlane.rotation.x = -Math.PI / 2;
+  shadowPlane.position.y = 0.001;
+  shadowPlane.receiveShadow = true;
+  scene.add(shadowPlane);
+
+  // Top-down orthographic camera. up = -Z so world +Z maps to screen-down,
+  // matching the 2D editor's y-down depth axis.
+  const cam = new THREE.OrthographicCamera(-halfW, halfW, halfD, -halfD, 0.01, (top + 10) * 2);
+  cam.position.set(0, top + 5, 0);
+  cam.up.set(0, 0, -1);
+  cam.lookAt(0, 0, 0);
+
+  const pw = Math.round(px * Math.min(1, halfW / Math.max(halfW, halfD)));
+  const ph = Math.round(px * Math.min(1, halfD / Math.max(halfW, halfD)));
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
+  renderer.setSize(pw, ph, false);
+  renderer.setPixelRatio(1);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  renderer.setClearColor(0x000000, 0);
+  renderer.render(scene, cam);
+
+  const dataUrl = canvas.toDataURL('image/webp', 0.92);
+  renderer.dispose();
+  return { dataUrl, pw, ph, fw, fd };
+};
+
+window.__spriteReady = true;
+</script>
+</body>
+</html>

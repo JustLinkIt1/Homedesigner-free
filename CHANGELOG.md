@@ -5,6 +5,36 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.65 - 2026-07-20 (versionCode 10065)
+
+Owner (2D mockup): "in the sample the furniture looks more realistic too."
+2D furniture is now photoreal top-down art instead of line symbols — the
+biggest visual jump toward the mockup.
+
+### Added — top-down furniture sprites
+- New offline pipeline renders every furniture GLB straight down into a
+  transparent webp sprite (`scripts/render-sprites.mjs` + `sprite-render.html`,
+  driven headlessly through the dev server with three.js: orthographic top-down
+  camera, soft key/fill lighting, a gentle contact shadow, footprint-tight
+  frame). Produced **53 sprites** in `public/sprites/` (~1.1 MB total) plus a
+  generated `src/data/furnitureSprites.ts` manifest. Reuses the exact models
+  shown in 3D, so 2D and 3D agree.
+- The 2D editor now draws the sprite for any type that has one (sofa, bed,
+  armchair, dining set, dresser, wardrobe, plants, fridge, stove, sink,
+  cabinets, desks, stools…) via a new `FurnitureItemGraphic` component (Konva
+  `Image`, contain-fit to the item footprint, still fully tappable because
+  Konva images hit-test on their bounding box). Fixtures without a model
+  (toilet, bathtub, shower, counter/island, TV, lights, rugs) and any
+  still-loading sprite keep the clean line symbol — no regressions, no flashes.
+- Regenerate anytime with `node scripts/render-sprites.mjs` (dev server on
+  :5209). Adding a model to `public/models` + a catalog entry auto-includes it.
+
+Verified headless at 390×844: the sample home shows a photoreal bed with
+pillows + nightstands + wardrobe in the bedroom, and a leather sofa with throw
+pillows, teal accent chair, round coffee table, dining set and potted plants in
+the great room — over the 1.0.64 wood floors. tsc + lint + build clean; signed
+AAB (SHA256 verified, versionCode 10065).
+
 ## 1.0.64 - 2026-07-20 (versionCode 10064)
 
 Owner (with a 2D-editor mockup): "improve the graphics of 2D mode to be more
