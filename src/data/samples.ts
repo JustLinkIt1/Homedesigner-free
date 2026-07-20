@@ -497,7 +497,12 @@ export interface SampleDef {
   name: string;
   blurb: string;
   build: () => MaybeFloored;
+  /** True when a photoreal preview render ships in public/previews/<id>.webp. */
+  hasPreview?: true;
 }
+
+/** URL of a template's preview render (dollhouse 3D). */
+export const samplePreviewUrl = (id: string) => `${import.meta.env.BASE_URL}previews/${id}.webp`;
 
 export const SAMPLES: SampleDef[] = [
   {
@@ -505,12 +510,14 @@ export const SAMPLES: SampleDef[] = [
     name: 'Sunlit open-plan home',
     blurb: 'Kitchen, dining and living in one bright great room',
     build: openPlan,
+    hasPreview: true,
   },
   {
     id: 'family-house',
     name: 'Maple family house',
     blurb: 'Two storeys — living below, three rooms above',
     build: familyHouse,
+    hasPreview: true,
   },
   {
     id: 'city-studio',

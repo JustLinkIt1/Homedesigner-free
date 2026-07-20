@@ -8,7 +8,7 @@ import { confirmDialog, toast } from '../lib/ui';
 import { openProjectFile } from '../lib/projectIO';
 import { requirePro } from '../lib/pro';
 import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
-import { SAMPLES } from '../data/samples';
+import { SAMPLES, samplePreviewUrl } from '../data/samples';
 import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
 import * as projects from '../lib/projects';
@@ -96,6 +96,7 @@ export default function ProjectsScreen({
       title: t(smp.name),
       sub: t(smp.blurb),
       icon: <Sofa className="icon" />,
+      preview: smp.hasPreview ? samplePreviewUrl(smp.id) : undefined,
       onClick: () => openSample(smp.id, smp.name),
     })),
     {
@@ -103,6 +104,7 @@ export default function ProjectsScreen({
       title: t('Import a 2D plan'),
       sub: t('PDF / image / DXF'),
       icon: <Ruler className="icon" />,
+      preview: undefined,
       onClick: () => {
         projects.createProject('Imported plan');
         newProjectAction();
@@ -115,6 +117,7 @@ export default function ProjectsScreen({
       title: t('Start from scratch'),
       sub: t('Draw walls and rooms yourself'),
       icon: <PenTool className="icon" />,
+      preview: undefined,
       onClick: () => newProject(),
     },
   ];
@@ -155,10 +158,16 @@ export default function ProjectsScreen({
             {templates.map((tpl, i) => (
               <button
                 key={tpl.key}
-                className={`tpl-card ${i === 0 ? 'accent' : ''}`}
+                className={`tpl-card ${i === 0 ? 'accent' : ''} ${tpl.preview ? 'has-preview' : ''}`}
                 onClick={tpl.onClick}
               >
-                <span className="tpl-ico">{tpl.icon}</span>
+                {tpl.preview ? (
+                  <span className="tpl-preview">
+                    <img src={tpl.preview} alt="" loading="lazy" />
+                  </span>
+                ) : (
+                  <span className="tpl-ico">{tpl.icon}</span>
+                )}
                 <span className="tpl-title">{tpl.title}</span>
                 <span className="tpl-sub">{tpl.sub}</span>
               </button>
