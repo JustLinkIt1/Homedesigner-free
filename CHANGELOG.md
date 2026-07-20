@@ -5,6 +5,26 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.74 - 2026-07-20 (versionCode 10074)
+
+Owner (phone screenshot): tapping "Explore ideas" opened the Tips panel as a
+wall of **keyboard shortcuts** (Ctrl+Z, Ctrl+C, arrow-key nudge, right-click) —
+useless on a touch phone.
+
+### Fixed — Tips panel is touch-aware
+- `HelpPanel` now detects a coarse pointer and, on touch:
+  - Titles itself **"Tips & gestures"** (was "Tips & shortcuts").
+  - Drops the keyboard chips and the keyboard-only rows (copy/paste hotkeys,
+    Select-all, arrow-key nudge).
+  - Rephrases every row as the gesture: *tap* to chain points, *tap Finish*,
+    *long-press* for the copy/duplicate menu, *undo/redo arrows in the top bar*,
+    *pinch to zoom / two-finger drag to pan*, etc.
+- Desktop still shows the full keyboard reference unchanged.
+
+Verified headless (touch context): the panel renders with zero `<kbd>` chips and
+gesture phrasing. tsc + lint + build clean; signed AAB (SHA256 verified,
+versionCode 10074).
+
 ## 1.0.73 - 2026-07-20 (versionCode 10073)
 
 Owner: add micro-animations "only the ones that make sense on mobile" (the
