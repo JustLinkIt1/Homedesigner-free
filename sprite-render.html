@@ -7,9 +7,12 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FURNITURE_CATALOG } from './src/data/furnitureCatalog.ts';
+import { MODEL_FILE } from './src/data/furnitureModels.ts';
 
 // Footprints for the driver to build its job list (type -> width/depth in cm).
 window.__catalog = FURNITURE_CATALOG.map((e) => ({ type: e.type, w: e.width, d: e.depth }));
+// Shared type -> glb basename map so sprites match the 3D viewer.
+window.__modelFile = MODEL_FILE;
 
 const M = 0.01; // cm -> m
 const loader = new GLTFLoader();

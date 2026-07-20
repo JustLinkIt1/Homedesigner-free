@@ -19,6 +19,7 @@ import {
 import { FLOOR_BY_ID, CATALOG_BY_TYPE, type Shape3D } from '../../data/furnitureCatalog';
 import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
 import { FURNITURE_SPRITES, spriteUrl } from '../../data/furnitureSprites';
+import { SPRITE_FILL } from '../../data/furnitureModels';
 import DimensionsLayer from './DimensionsLayer';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { useI18n } from '../../lib/i18n';
@@ -2101,12 +2102,16 @@ function FurnitureItemGraphic({
   ) : null;
 
   if (hasSprite && img && img.width > 0) {
-    // Contain-fit the sprite to the footprint, preserving its rendered aspect
-    // (matches how the 3D model was normalized), centred on the item origin.
+    // Flat tops fill the footprint; everything else contain-fits to preserve
+    // the rendered aspect (matches how the 3D model was normalized).
     const ar = img.width / img.height;
     let dw = width;
     let dh = width / ar;
-    if (dh > depth) { dh = depth; dw = depth * ar; }
+    if (SPRITE_FILL.has(type)) {
+      dw = width; dh = depth;
+    } else if (dh > depth) {
+      dh = depth; dw = depth * ar;
+    }
     return (
       <>
         <KImage

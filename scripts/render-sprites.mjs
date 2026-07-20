@@ -29,8 +29,12 @@ page.on('console', (m) => { if (m.type() === 'error') console.log('CONSOLE', m.t
 await page.goto('http://localhost:5209/sprite-render.html', { waitUntil: 'load' });
 await page.waitForFunction(() => window.__spriteReady === true, { timeout: 30000 });
 
+// A catalog type gets a sprite when its mapped model file exists on disk.
 const jobs = await page.evaluate(
-  (bn) => window.__catalog.filter((e) => bn.includes(e.type)).map((e) => ({ type: e.type, w: e.w, d: e.d })),
+  (bn) =>
+    window.__catalog
+      .map((e) => ({ type: e.type, w: e.w, d: e.d, file: window.__modelFile[e.type] }))
+      .filter((e) => e.file && bn.includes(e.file)),
   basenames,
 );
 console.log(`Rendering ${jobs.length} sprites...`);
@@ -39,7 +43,7 @@ const done = [];
 for (const job of jobs) {
   try {
     const r = await page.evaluate(
-      ({ type, w, d }) => window.renderSprite(`/models/${type}.glb`, w, d, 0),
+      ({ file, w, d }) => window.renderSprite(`/models/${file}.glb`, w, d, 0),
       job,
     );
     const base64 = r.dataUrl.replace(/^data:image\/webp;base64,/, '');

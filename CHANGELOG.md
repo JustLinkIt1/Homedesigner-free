@@ -5,6 +5,29 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.66 - 2026-07-20 (versionCode 10066)
+
+Owner: "I don't like the model for [the dining table] or the dining chairs, can
+we find better ones." Swapped both to nicer models — in 2D and 3D at once.
+
+### Changed — better dining models
+- New shared source of truth `src/data/furnitureModels.ts` (`MODEL_FILE`:
+  type → glb basename) consumed by BOTH the 3D viewer (`GltfFurniture` builds
+  `FURNITURE_MODELS` from it) and the 2D sprite renderer, so the two views can
+  never drift. `GltfFurniture`'s old hand-maintained model list is gone.
+- **Dining table** → now uses the clean framed-wood `tea_table` model instead
+  of the one with a picnic tablecloth baked on. **Dining chair** → the
+  `wooden_dining_chair` (an actual upholstered dining chair) instead of the
+  oversized brown-leather lounge chair. Both changes show in 2D and 3D.
+- Added `SPRITE_FILL` (dining_table, desk, metal_desk): flat rectangular tops
+  stretch their sprite to fill the footprint, so a squarish table model still
+  reads as a full rectangular dining table rather than a small centred square.
+- Re-rendered all 53 sprites from the updated map (`node scripts/render-sprites.mjs`).
+
+Verified headless: the great room's dining set is now a rectangular wood table
+ringed by six white upholstered chairs. tsc + lint + build clean; signed AAB
+(SHA256 verified, versionCode 10066).
+
 ## 1.0.65 - 2026-07-20 (versionCode 10065)
 
 Owner (2D mockup): "in the sample the furniture looks more realistic too."
