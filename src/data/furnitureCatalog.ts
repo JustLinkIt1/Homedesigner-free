@@ -264,17 +264,21 @@ export interface FloorMaterial {
   name: string;
   color: string;
   kind: FloorKind;
+  /** Photoreal texture id in public/textures (see data/materials.ts) — drives
+   *  both the 3D surface and the 2D plan fill. Omitted for carpets, which read
+   *  cleaner as a flat colour top-down than as a stretched fibre photo. */
+  texture?: string;
 }
 
 export const FLOOR_MATERIALS: FloorMaterial[] = [
-  { id: 'oak', name: 'Oak Wood', color: '#c9a36b', kind: 'wood' },
-  { id: 'walnut', name: 'Walnut', color: '#6f4b2e', kind: 'wood' },
-  { id: 'tile_white', name: 'White Tile', color: '#e8e8ea', kind: 'tile' },
-  { id: 'tile_grey', name: 'Grey Tile', color: '#b9bcc0', kind: 'tile' },
-  { id: 'concrete', name: 'Concrete', color: '#9a9ca0', kind: 'concrete' },
+  { id: 'oak', name: 'Oak Wood', color: '#c9a36b', kind: 'wood', texture: 'wood_floor' },
+  { id: 'walnut', name: 'Walnut', color: '#6f4b2e', kind: 'wood', texture: 'dark_wooden_planks' },
+  { id: 'tile_white', name: 'White Tile', color: '#e8e8ea', kind: 'tile', texture: 'floor_tiles_06' },
+  { id: 'tile_grey', name: 'Grey Tile', color: '#b9bcc0', kind: 'tile', texture: 'interior_tiles' },
+  { id: 'concrete', name: 'Concrete', color: '#9a9ca0', kind: 'concrete', texture: 'concrete_floor_worn_02' },
   { id: 'carpet_beige', name: 'Beige Carpet', color: '#d8cab0', kind: 'carpet' },
   { id: 'carpet_grey', name: 'Grey Carpet', color: '#9c9ea3', kind: 'carpet' },
-  { id: 'marble', name: 'Marble', color: '#eceef0', kind: 'marble' },
+  { id: 'marble', name: 'Marble', color: '#eceef0', kind: 'marble', texture: 'marble_01' },
 ];
 
 export const FLOOR_BY_ID: Record<string, FloorMaterial> =

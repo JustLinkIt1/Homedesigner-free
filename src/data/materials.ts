@@ -62,6 +62,9 @@ export const MATERIALS: Material[] = [
 
 export const MATERIAL_GROUPS: MaterialGroup[] = ['Wood', 'Tile', 'Marble & Stone', 'Concrete', 'Brick', 'Plaster'];
 
+export const MATERIAL_BY_ID: Record<string, Material> =
+  Object.fromEntries(MATERIALS.map((m) => [m.id, m]));
+
 export const floorMaterials = () => MATERIALS.filter((m) => m.target !== 'wall');
 export const wallMaterials = () => MATERIALS.filter((m) => m.target !== 'floor');
 

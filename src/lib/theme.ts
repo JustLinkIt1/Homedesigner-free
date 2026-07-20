@@ -100,6 +100,8 @@ export interface CanvasColors {
   handleStroke: string;
   selection: string;
   wallBody: string;
+  /** Crisp outline around the wall body — gives each wall a defined, beveled edge. */
+  wallEdge: string;
   labelInk: string;
   furnitureOutline: string;
   dimensionInk: string;
@@ -119,6 +121,7 @@ const LIGHT: CanvasColors = {
   handleStroke: '#3b63f6',
   selection: '#3b63f6',
   wallBody: '#39414e',
+  wallEdge: '#1d232d',
   labelInk: '#0e1014',
   furnitureOutline: '#00000033',
   dimensionInk: '#7c8493',
@@ -137,6 +140,7 @@ const DARK: CanvasColors = {
   handleStroke: '#6d8bff',
   selection: '#6d8bff',
   wallBody: '#aeb5c2',
+  wallEdge: '#5b6474',
   labelInk: '#e2e6ed',
   furnitureOutline: '#ffffff2e',
   dimensionInk: '#8b93a1',

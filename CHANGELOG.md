@@ -5,6 +5,44 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.64 - 2026-07-20 (versionCode 10064)
+
+Owner (with a 2D-editor mockup): "improve the graphics of 2D mode to be more
+like the screenshot" (photoreal wood floors, defined walls) + "check UI for
+mobile." The 30 photoreal textures already shipped for 3D are now used in the
+2D plan too.
+
+### Changed — 2D floors are photoreal
+- Room floors in the 2D editor now render the material's actual texture image
+  (Konva `fillPatternImage`) instead of a flat colour. Each `FloorMaterial`
+  gained a `texture` id mapping to `public/textures/*.webp`:
+  oak→`wood_floor`, walnut→`dark_wooden_planks`, tile_white→`floor_tiles_06`,
+  tile_grey→`interior_tiles`, concrete→`concrete_floor_worn_02`,
+  marble→`marble_01`. Carpets stay a flat colour (fibre photos read worse
+  than a clean tone top-down). A custom uploaded floor image still wins.
+- Texture tiles at real-world scale: one tile spans the material's `scaleCm`
+  (from `materials.ts`), so planks/tiles look believable at any zoom. Laid
+  floors render near-opaque (grid no longer bleeds through the floor); flat
+  carpet tones lifted slightly (0.55→0.68) so they read warmer.
+- New `RoomFloorFill` component (one per room) keeps `useHtmlImage`'s hook
+  order stable and falls back to the flat colour until the image loads.
+- Added `MATERIAL_BY_ID` lookup to `data/materials.ts`.
+
+### Changed — walls read as defined, beveled edges
+- Wall bodies now carry a thin crisp outline (`wallEdge` colour added to the
+  Konva palette in `theme.ts`; `#1d232d` light / `#5b6474` dark) with a rounded
+  line-join, so each wall reads as a solid beveled block against the new
+  photoreal floors instead of a flat slab.
+
+Verified headless at 390×844 (phone): sample home shows oak wood grain in the
+Great Room, marble in the Bathroom, warm neutral carpet in the Master Bedroom;
+walls have defined edges; toolbars/nav fit with no overlap. tsc + lint + build
+clean; signed AAB (SHA256 verified, versionCode 10064).
+
+Next (Phase 2, backlog for Codex): photoreal top-down furniture sprites need an
+offline render pipeline (render each catalog model from directly above → webp)
+— the current 2D furniture stays vector symbols until then.
+
 ## 1.0.63 - 2026-07-19 (versionCode 10063)
 
 Owner: "the buttons on the menu don't work properly" (phone screenshot of the

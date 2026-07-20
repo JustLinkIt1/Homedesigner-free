@@ -17,6 +17,7 @@ import {
   boundsOf,
 } from '../../lib/geometry';
 import { FLOOR_BY_ID, CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
+import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
 import DimensionsLayer from './DimensionsLayer';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { useI18n } from '../../lib/i18n';
@@ -1104,7 +1105,15 @@ export default function Canvas2D() {
             .sort((a, b) => (selection.kind === 'room' && a.id === selection.id ? 1 : 0)
               - (selection.kind === 'room' && b.id === selection.id ? 1 : 0))
             .map((r) => {
-            const fill = FLOOR_BY_ID[r.floorMaterial]?.color ?? r.color;
+            const floorMat = FLOOR_BY_ID[r.floorMaterial];
+            const fill = floorMat?.color ?? r.color;
+            // A custom uploaded floor image wins; otherwise the material's
+            // built-in photoreal texture drives the pattern fill.
+            const texId = floorMat?.texture;
+            const textureSrc = r.texture?.src ?? (texId ? materialUrl(texId) : undefined);
+            const textureScaleCm = r.texture
+              ? r.texture.scaleCm
+              : (texId ? MATERIAL_BY_ID[texId]?.scaleCm ?? 200 : 200);
             const sel = selection.kind === 'room' && selection.id === r.id;
             const c = roomLabelCenters.get(r.id) ?? polygonCentroid(r.points);
             // Label sizing is SCREEN-space: font + box scale by 1/zoom so names
@@ -1123,19 +1132,15 @@ export default function Canvas2D() {
             const showArea = showName && screenH > 40;
             return (
               <Group key={r.id}>
-                <Line
-                  points={r.points.flatMap((p) => [p.x, p.y])}
-                  closed
-                  fill={fill}
-                  opacity={sel ? 0.72 : 0.55}
-                  stroke={sel ? C.selection : 'transparent'}
-                  strokeWidth={(sel ? 5 : 3) / zoom}
-                  shadowColor={sel ? C.selection : undefined}
-                  shadowBlur={sel ? 20 / zoom : 0}
-                  shadowOpacity={sel ? 0.75 : 0}
-                  perfectDrawEnabled={false}
-                  shadowForStrokeEnabled={false}
-                  onMouseDown={() => tool === 'select' && s.select({ kind: 'room', id: r.id })}
+                <RoomFloorFill
+                  points={r.points}
+                  sel={sel}
+                  flatFill={fill}
+                  textureSrc={textureSrc}
+                  textureScaleCm={textureScaleCm}
+                  selectionColor={C.selection}
+                  zoom={zoom}
+                  onSelect={() => tool === 'select' && s.select({ kind: 'room', id: r.id })}
                 />
                 {showName && (() => {
                   // A soft rounded plate lifts the name+area off any floor fill
@@ -1226,7 +1231,11 @@ export default function Canvas2D() {
                   points={(wallPolys.get(w.id) ?? [start, end, end, start]).flatMap((p) => [p.x, p.y])}
                   closed
                   fill={sel ? C.selection : C.wallBody}
+                  stroke={sel ? C.selection : C.wallEdge}
+                  strokeWidth={1 / zoom}
+                  lineJoin="round"
                   perfectDrawEnabled={false}
+                  shadowForStrokeEnabled={false}
                   listening={false}
                 />
                 {/* Invisible hit/drag target — unchanged interaction, just no
@@ -2014,6 +2023,52 @@ function DraftView({
 
 // ---- Wall endpoint handle ----
 // A draggable round handle that reports its Layer-local (cm) position.
+// ---- Room floor fill ----
+// Renders the room polygon filled with the floor's photoreal texture (Konva
+// pattern fill) when the image is available, falling back to the material's
+// flat colour until it loads / for carpets that have no texture. Each room is
+// its own component so `useHtmlImage` keeps a stable hook order per floor.
+function RoomFloorFill({
+  points, sel, flatFill, textureSrc, textureScaleCm, selectionColor, zoom, onSelect,
+}: {
+  points: Point[];
+  sel: boolean;
+  flatFill: string;
+  textureSrc?: string;
+  textureScaleCm: number;
+  selectionColor: string;
+  zoom: number;
+  onSelect: () => void;
+}) {
+  const img = useHtmlImage(textureSrc);
+  const textured = !!(textureSrc && img && img.width > 0);
+  // One texture tile spans `textureScaleCm` world units, so the pattern reads
+  // at a believable real-world scale regardless of zoom (Konva applies the
+  // stage transform on top of this).
+  const patternScale = textured ? textureScaleCm / img!.width : 1;
+  return (
+    <Line
+      points={points.flatMap((p) => [p.x, p.y])}
+      closed
+      // Photoreal fills sit nearly opaque so the floor looks laid-down; flat
+      // carpet colours stay lighter so the grid still reads through.
+      fill={textured ? undefined : flatFill}
+      fillPatternImage={textured ? img! : undefined}
+      fillPatternRepeat={textured ? 'repeat' : undefined}
+      fillPatternScale={textured ? { x: patternScale, y: patternScale } : undefined}
+      opacity={textured ? (sel ? 1 : 0.97) : sel ? 0.85 : 0.68}
+      stroke={sel ? selectionColor : 'transparent'}
+      strokeWidth={(sel ? 5 : 3) / zoom}
+      shadowColor={sel ? selectionColor : undefined}
+      shadowBlur={sel ? 20 / zoom : 0}
+      shadowOpacity={sel ? 0.75 : 0}
+      perfectDrawEnabled={false}
+      shadowForStrokeEnabled={false}
+      onMouseDown={onSelect}
+    />
+  );
+}
+
 function WallEndpointHandle({
   x, y, r, zoom, onStart, onMove, onEnd,
 }: {
