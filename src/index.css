@@ -79,6 +79,7 @@
   --dur-fast: 0.12s;
   --dur: 0.18s;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Dark theme: same token contract, night values. Applied via data-theme on
@@ -4223,14 +4224,18 @@ button.brand:hover .brand-name {
   align-items: center;
   gap: 10px;
   padding: 11px 12px 11px 14px;
-  background: var(--text);
-  color: #fff;
+  /* A near-black chip in both themes so it reads over any content (it used
+     `var(--text)`, which is near-white in dark mode — a white chip). */
+  background: #1b2030;
+  color: #f4f6fa;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r);
   box-shadow: var(--shadow-lg);
   font-size: 13.5px;
   font-weight: 600;
   pointer-events: auto;
-  animation: toast-in 0.18s ease;
+  /* Spring slide-up so notifications feel alive as they arrive. */
+  animation: toast-in 0.32s var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
 }
 .toast .icon {
   width: 18px;
@@ -4277,7 +4282,11 @@ button.brand:hover .brand-name {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -4408,4 +4417,100 @@ button:focus:not(:focus-visible) {
 }
 .intro-skip:hover {
   background: rgba(0, 0, 0, 0.46);
+}
+
+/* ============================================================
+   Micro-interactions (mobile-friendly: press feedback, entrance
+   staggers, shimmer). All motion-heavy bits are gated behind
+   prefers-reduced-motion so they never fight accessibility.
+   ============================================================ */
+
+/* --- Tap/press feedback (the touch equivalent of a hover state) --- */
+.btn,
+.tpl-card,
+.ps-thumb,
+.ps-card-actions button,
+.tbtn,
+.seg button,
+.pill .toggle,
+.view-toggle button,
+.ps-inspire {
+  transition: transform 0.12s var(--ease), background 0.14s var(--ease),
+    color 0.14s var(--ease), box-shadow 0.14s var(--ease), border-color 0.14s var(--ease);
+}
+.btn:active,
+.tpl-card:active,
+.ps-thumb:active,
+.ps-card-actions button:active,
+.tbtn:active,
+.seg button:active,
+.view-toggle button:active,
+.ps-inspire:active,
+.ps-hero-new:active,
+.pro-buy:active {
+  transform: scale(0.96);
+}
+/* The primary CTA lifts a touch on press for a springy, tactile feel. */
+.btn.primary:active {
+  transform: scale(0.96);
+  filter: brightness(0.97);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* --- Home card entrance: gentle staggered fade-up --- */
+  .ps-templates-row .tpl-card {
+    animation: mi-card-in 0.42s var(--ease) both;
+  }
+  .ps-templates-row .tpl-card:nth-child(2) { animation-delay: 0.05s; }
+  .ps-templates-row .tpl-card:nth-child(3) { animation-delay: 0.1s; }
+  .ps-templates-row .tpl-card:nth-child(4) { animation-delay: 0.15s; }
+  .ps-templates-row .tpl-card:nth-child(n + 5) { animation-delay: 0.2s; }
+
+  .ps-grid .ps-card {
+    animation: mi-card-in 0.42s var(--ease) both;
+  }
+  .ps-grid .ps-card:nth-child(2) { animation-delay: 0.05s; }
+  .ps-grid .ps-card:nth-child(3) { animation-delay: 0.1s; }
+  .ps-grid .ps-card:nth-child(n + 4) { animation-delay: 0.15s; }
+
+  @keyframes mi-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* --- Shimmer stroke: a slow sheen sweeps the Pro badge + upgrade CTA to
+     draw the eye to the paid path (purposeful, not decorative everywhere). --- */
+  .pro-badge,
+  .pro-buy {
+    position: relative;
+    overflow: hidden;
+  }
+  .pro-badge::after,
+  .pro-buy::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.38) 50%,
+      transparent 62%
+    );
+    transform: translateX(-130%);
+    animation: mi-shimmer 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .pro-buy::after {
+    animation-delay: 0.6s;
+  }
+  @keyframes mi-shimmer {
+    0% { transform: translateX(-130%); }
+    60%, 100% { transform: translateX(130%); }
+  }
 }

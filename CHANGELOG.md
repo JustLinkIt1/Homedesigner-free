@@ -5,6 +5,31 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.73 - 2026-07-20 (versionCode 10073)
+
+Owner: add micro-animations "only the ones that make sense on mobile" (the
+hover-only ideas from the reference — hover effects, name tags, delayed
+tooltips, text pop-out, search expansion, upgrade-on-hover — are skipped since
+touch has no hover).
+
+### Added — micro-interactions (all reduced-motion aware)
+- **Tap/press feedback** — the touch equivalent of a hover state: buttons,
+  cards, thumbnails, segmented toggles and the inspiration banner scale down
+  slightly (0.96) on press for a tactile response.
+- **Toast notifications** now spring up (slide + subtle scale, overshoot ease).
+  Also fixed a readability bug: toasts used `background: var(--text)`, which is
+  near-white in dark mode (white chip); they're now a fixed near-black chip
+  legible in both themes.
+- **Card entrance** — the home template + project cards fade-up in a gentle
+  stagger on load.
+- **Shimmer stroke** — a slow sheen sweeps the Pro badge + the upgrade CTA to
+  draw the eye to the paid path (purposeful, not decorative everywhere).
+
+CSS-only, gated behind `prefers-reduced-motion: no-preference` where it isn't
+pure interaction feedback. Verified headless: toast is a readable dark chip, the
+Pro badge shimmer runs, cards render after their entrance. lint + build clean;
+signed AAB (SHA256 verified, versionCode 10073).
+
 ## 1.0.72 - 2026-07-20 (versionCode 10072)
 
 Owner: "improve 3D-mode jaggies and graphics" (phone screenshot with heavily
