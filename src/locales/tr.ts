@@ -562,4 +562,6 @@ export const TR: Record<string, string> = {
   'Templates': 'Şablonlar',
   'Measure': 'Ölç',
   'Measure a wall to scale the drawing': 'Çizimi ölçeklendirmek için bir duvar ölçün',
+  'Startup': 'Başlangıç',
+  'Play intro animation': 'Açılış animasyonunu oynat',
 };

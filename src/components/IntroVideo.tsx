@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { introEnabled } from '../lib/introPref';
 
 /**
  * Full-screen animated-logo intro shown once per app session (a cold launch on
@@ -20,7 +21,7 @@ export default function IntroVideo() {
   // Pure read: show unless the user prefers reduced motion or it has already
   // played this session (module flag, or persisted across a reload).
   const [show, setShow] = useState(() => {
-    if (prefersReduced || played) return false;
+    if (prefersReduced || played || !introEnabled()) return false;
     try {
       if (sessionStorage.getItem(SESSION_KEY)) return false;
     } catch {

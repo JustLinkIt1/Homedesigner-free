@@ -562,4 +562,6 @@ export const RU: Record<string, string> = {
   'Templates': 'Шаблоны',
   'Measure': 'Измерить',
   'Measure a wall to scale the drawing': 'Измерьте стену, чтобы масштабировать чертёж',
+  'Startup': 'Запуск',
+  'Play intro animation': 'Показывать заставку',
 };

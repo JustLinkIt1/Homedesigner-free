@@ -416,6 +416,17 @@ export default function App() {
             <ImportDialog onClose={() => setShowImport(false)} />
           </Suspense>
         )}
+        {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
+        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} onReplayTour={replayTour} />}
+        {showSettings && (
+          <SettingsDialog
+            onClose={() => setShowSettings(false)}
+            onReplayTour={() => {
+              setShowSettings(false);
+              replayTour();
+            }}
+          />
+        )}
         <ProUpsellModal />
         <Toaster />
         <ConfirmHost />

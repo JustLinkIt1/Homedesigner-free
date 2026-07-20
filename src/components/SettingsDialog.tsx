@@ -3,6 +3,7 @@ import { Settings, Monitor, Sun, Moon, ExternalLink } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { hapticsEnabled, setHapticsEnabled, tapLight } from '../lib/haptics';
+import { introEnabled, setIntroEnabled } from '../lib/introPref';
 import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
 import { APP_NAME, APP_VERSION, PRIVACY_URL } from '../lib/appInfo';
@@ -30,6 +31,7 @@ export default function SettingsDialog({
   const showDimensions = useDesign((s) => s.showDimensions);
   const setShowDimensions = useDesign((s) => s.setShowDimensions);
   const [haptics, setHaptics] = useState(hapticsEnabled);
+  const [intro, setIntro] = useState(introEnabled);
   const t = useI18n();
 
   return (
@@ -112,6 +114,21 @@ export default function SettingsDialog({
                   setHapticsEnabled(e.target.checked);
                   setHaptics(e.target.checked);
                   if (e.target.checked) tapLight();
+                }}
+              />
+            </label>
+          </section>
+
+          <section>
+            <h3>{t('Startup')}</h3>
+            <label className="settings-row">
+              <span>{t('Play intro animation')}</span>
+              <input
+                type="checkbox"
+                checked={intro}
+                onChange={(e) => {
+                  setIntroEnabled(e.target.checked);
+                  setIntro(e.target.checked);
                 }}
               />
             </label>

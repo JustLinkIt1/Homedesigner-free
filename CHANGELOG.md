@@ -5,6 +5,28 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.70 - 2026-07-20 (versionCode 10070)
+
+Owner: "put an option in the menu that users can disable the intro video — it
+might not be for everyone."
+
+### Added — Settings toggle for the launch intro
+- New **Settings → Startup → "Play intro animation"** toggle
+  (`src/lib/introPref.ts`, localStorage `hd-intro-enabled`, default on).
+  `IntroVideo` now checks it and never shows when off. Translated in all 12
+  locales (`scripts/add-translations8.py`).
+
+### Fixed — Settings/Help/About were unreachable from the home screen
+- The home bottom-nav **Settings** button (and the inspiration banner's Help
+  action) set state but the dialogs were only rendered in the editor branch of
+  `App.tsx`, so nothing opened on the home screen. Now `SettingsDialog`,
+  `HelpPanel`, and `AboutDialog` render in the projects branch too — so the new
+  intro toggle (and all settings) are reachable straight from the launch screen.
+
+Verified headless: Settings opens from home and shows the Startup toggle; with
+the pref off the intro is suppressed on launch. tsc + lint + build clean; signed
+AAB (SHA256 verified, versionCode 10070).
+
 ## 1.0.69 - 2026-07-20 (versionCode 10069)
 
 Owner supplied an animated-logo clip to use as a launch intro.

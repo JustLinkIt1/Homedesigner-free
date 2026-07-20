@@ -562,4 +562,6 @@ export const FR: Record<string, string> = {
   'Templates': 'Modèles',
   'Measure': 'Mesurer',
   'Measure a wall to scale the drawing': 'Mesurez un mur pour mettre le plan à l’échelle',
+  'Startup': 'Démarrage',
+  'Play intro animation': 'Lire l’animation d’intro',
 };

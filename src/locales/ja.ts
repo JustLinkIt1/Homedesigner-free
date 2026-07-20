@@ -562,4 +562,6 @@ export const JA: Record<string, string> = {
   'Templates': 'テンプレート',
   'Measure': '計測',
   'Measure a wall to scale the drawing': '図面を拡縮するには壁を計測します',
+  'Startup': '起動',
+  'Play intro animation': 'イントロ動画を再生',
 };

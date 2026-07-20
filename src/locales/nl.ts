@@ -562,4 +562,6 @@ export const NL: Record<string, string> = {
   'Templates': 'Sjablonen',
   'Measure': 'Meten',
   'Measure a wall to scale the drawing': 'Meet een muur om de tekening te schalen',
+  'Startup': 'Opstarten',
+  'Play intro animation': 'Intro-animatie afspelen',
 };

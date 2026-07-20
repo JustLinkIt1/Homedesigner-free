@@ -562,4 +562,6 @@ export const KO: Record<string, string> = {
   'Templates': '템플릿',
   'Measure': '측정',
   'Measure a wall to scale the drawing': '도면 축척을 위해 벽을 측정하세요',
+  'Startup': '시작',
+  'Play intro animation': '인트로 애니메이션 재생',
 };

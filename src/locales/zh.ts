@@ -562,4 +562,6 @@ export const ZH: Record<string, string> = {
   'Templates': '模板',
   'Measure': '测量',
   'Measure a wall to scale the drawing': '测量一面墙以缩放图纸',
+  'Startup': '启动',
+  'Play intro animation': '播放开场动画',
 };

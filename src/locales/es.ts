@@ -562,4 +562,6 @@ export const ES: Record<string, string> = {
   'Templates': 'Plantillas',
   'Measure': 'Medir',
   'Measure a wall to scale the drawing': 'Mide un muro para escalar el plano',
+  'Startup': 'Inicio',
+  'Play intro animation': 'Reproducir animación de inicio',
 };

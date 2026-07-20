@@ -562,4 +562,6 @@ export const PL: Record<string, string> = {
   'Templates': 'Szablony',
   'Measure': 'Zmierz',
   'Measure a wall to scale the drawing': 'Zmierz ścianę, aby wyskalować rysunek',
+  'Startup': 'Uruchamianie',
+  'Play intro animation': 'Odtwarzaj animację wstępną',
 };
