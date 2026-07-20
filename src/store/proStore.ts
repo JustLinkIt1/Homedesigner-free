@@ -43,6 +43,8 @@ interface ProState {
   refresh: () => Promise<void>;
   purchase: () => Promise<void>;
   restore: () => Promise<void>;
+  linkAccount: (account: { appUserID: string; email: string | null; displayName: string | null }) => Promise<void>;
+  unlinkAccount: () => Promise<void>;
   redeemCode: (code: string) => boolean;
   openUpsell: (f: ProFeature) => void;
   closeUpsell: () => void;
@@ -133,6 +135,22 @@ export const useProStore = create<ProState>((set, get) => ({
     } finally {
       set({ busy: false });
     }
+  },
+
+  linkAccount: async ({ appUserID, email, displayName }) => {
+    const provider = getProProvider();
+    await provider.init();
+    const entitled = (await provider.identify(appUserID, email, displayName)) || isReferralRedeemed();
+    set({ isPro: entitled });
+    writeCache(entitled);
+  },
+
+  unlinkAccount: async () => {
+    const provider = getProProvider();
+    await provider.init();
+    const entitled = (await provider.disconnect()) || isReferralRedeemed();
+    set({ isPro: entitled, upsellFeature: null });
+    writeCache(entitled);
   },
 
   redeemCode: (code: string) => {

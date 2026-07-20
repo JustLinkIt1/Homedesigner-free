@@ -5,6 +5,46 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.78 - 2026-07-20 (versionCode 10078)
+
+Owner: enable Google Sign-In before OAuth production verification so Pro access
+can follow the same person across Android devices.
+
+### Added — Google account sign-in and Pro sync
+- Added native Google Sign-In with `@capgo/capacitor-social-login`, using the
+  modern Android Credential Manager flow. Settings now has a branded Google
+  sign-in button, signed-in profile card, and safe sign-out action.
+- Google identity uses the immutable OpenID `sub` namespaced as
+  `google:<subject>` for RevenueCat. Tokens are never persisted; only the
+  display profile and stable subject are cached locally.
+- RevenueCat now switches from its anonymous customer to the Google identity
+  with `Purchases.logIn`, so an existing Pro entitlement can follow the user
+  across Android installs. Sign-out calls `Purchases.logOut` before ending the
+  Google session so a shared device is never left attached to the named
+  customer. Local designs remain device-only and the UI says so explicitly.
+- Startup restores an existing Google session after the initial entitlement
+  refresh. Offline startup keeps the cached account and entitlement instead of
+  destructively signing the user out.
+- Account controls, explanatory copy, and auth-result messages are translated
+  in all 12 non-English locales.
+- Settings now uses a scrollable body with a fixed, reachable footer; the new
+  account section cannot push the Done button below a phone viewport.
+
+### OAuth configuration
+- Uses the separate Google Cloud project `homedesigner-502819` (the existing
+  Ascribe project was not changed). Branding is `HomeDesigner`, audience is
+  External / Testing, and `nathanjoppich@gmail.com` is the first test user.
+- Created one Web OAuth client (its public ID is embedded through
+  `.env.production`) plus Android clients for package `com.homedesigner.app`
+  bound to both the Play App Signing SHA-1 and upload-key SHA-1.
+- OAuth requests only `openid`, `email`, and `profile`; no sensitive scopes or
+  client secrets are present in the app or repository.
+
+Verified: tsc + lint + production build clean; Capacitor sync includes the
+Google-only SocialLogin native dependency; the 23-check mobile smoke suite is
+all green. Signed AAB verified (`versionCode 10078`, SHA-256
+`652E852953D5C69B3C05880B036FEF640D013B49532D66A0F7820E049FB1D2C4`).
+
 ## 1.0.77 - 2026-07-20 (versionCode 10077)
 
 Owner reports: 2D always opens over-zoomed; new custom lock icon.

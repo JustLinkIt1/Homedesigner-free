@@ -161,6 +161,8 @@ await page.click('.modal-foot .btn.primary');
 // ---- 4. Settings round-trip -------------------------------------------------
 await page.click('[aria-label="More"]');
 await page.click('.more-menu [role="menuitem"]:has-text("Settings")');
+check('settings shows Google account controls', await page.locator('.google-signin').isVisible());
+check('unconfigured Google sign-in is safely disabled', await page.locator('.google-signin').isDisabled());
 await page.click('.seg button:has-text("Dark")');
 const dark = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
 check('dark theme applies', dark === 'dark');

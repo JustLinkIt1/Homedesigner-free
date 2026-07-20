@@ -2365,6 +2365,18 @@ button.brand:hover .brand-name {
 /* Settings */
 .modal.settings {
   max-width: 440px;
+  max-height: calc(100dvh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+.modal.settings .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.modal.settings .modal-head,
+.modal.settings .modal-foot {
+  flex: 0 0 auto;
 }
 .settings-body section + section {
   margin-top: 18px;
@@ -2424,6 +2436,68 @@ button.brand:hover .brand-name {
   width: 18px;
   height: 18px;
   accent-color: var(--brand);
+}
+.account-signin {
+  display: grid;
+  gap: 7px;
+}
+.account-signin small,
+.account-copy small {
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.google-signin {
+  width: 100%;
+  min-height: 42px;
+  background: #fff;
+  color: #1f1f1f;
+  border-color: #747775;
+  font-weight: 700;
+}
+.google-signin:hover:not(:disabled) {
+  background: #f8faff;
+  border-color: #5f6368;
+}
+.google-mark {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+.account-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+.account-card > img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.account-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.account-copy strong,
+.account-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-copy span {
+  color: var(--text-2);
+  font-size: 12px;
+}
+.account-card .icon-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
 }
 .settings-meta {
   margin-top: 18px;

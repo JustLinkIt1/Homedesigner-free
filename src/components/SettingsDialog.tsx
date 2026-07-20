@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Monitor, Sun, Moon, ExternalLink } from 'lucide-react';
+import { Settings, Monitor, Sun, Moon, ExternalLink, LogOut } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { hapticsEnabled, setHapticsEnabled, tapLight } from '../lib/haptics';
@@ -7,12 +7,24 @@ import { introEnabled, setIntroEnabled } from '../lib/introPref';
 import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
 import { APP_NAME, APP_VERSION, PRIVACY_URL } from '../lib/appInfo';
+import { useAuthStore } from '../store/authStore';
 
 const THEME_OPTIONS: { id: ThemePref; label: string; icon: typeof Sun }[] = [
   { id: 'system', label: 'System', icon: Monitor },
   { id: 'light', label: 'Light', icon: Sun },
   { id: 'dark', label: 'Dark', icon: Moon },
 ];
+
+function GoogleMark() {
+  return (
+    <svg className="google-mark" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#4285f4" d="M21.8 12.2c0-.7-.1-1.4-.2-2.1H12v4h5.5a4.7 4.7 0 0 1-2 3.1v2.6h3.3c1.9-1.8 3-4.4 3-7.6Z" />
+      <path fill="#34a853" d="M12 22c2.7 0 5-.9 6.7-2.3l-3.3-2.6c-.9.6-2.1 1-3.4 1-2.6 0-4.8-1.8-5.6-4.2H3v2.7A10 10 0 0 0 12 22Z" />
+      <path fill="#fbbc05" d="M6.4 14a6 6 0 0 1 0-3.9V7.4H3a10 10 0 0 0 0 9.1L6.4 14Z" />
+      <path fill="#ea4335" d="M12 5.9c1.5 0 2.8.5 3.9 1.5l2.9-2.8A9.7 9.7 0 0 0 12 2a10 10 0 0 0-9 5.5l3.4 2.7C7.2 7.7 9.4 5.9 12 5.9Z" />
+    </svg>
+  );
+}
 
 /** Central app preferences (theme, units, haptics, editor defaults, tour). */
 export default function SettingsDialog({
@@ -32,6 +44,11 @@ export default function SettingsDialog({
   const setShowDimensions = useDesign((s) => s.setShowDimensions);
   const [haptics, setHaptics] = useState(hapticsEnabled);
   const [intro, setIntro] = useState(introEnabled);
+  const account = useAuthStore((s) => s.account);
+  const authConfigured = useAuthStore((s) => s.configured);
+  const authBusy = useAuthStore((s) => s.busy);
+  const signIn = useAuthStore((s) => s.signIn);
+  const signOut = useAuthStore((s) => s.signOut);
   const t = useI18n();
 
   return (
@@ -41,6 +58,35 @@ export default function SettingsDialog({
           <Settings className="icon" /> {t('Settings')}
         </div>
         <div className="modal-body settings-body">
+          <section>
+            <h3>{t('Account')}</h3>
+            {account ? (
+              <div className="account-card">
+                {account.imageUrl ? <img src={account.imageUrl} alt="" referrerPolicy="no-referrer" /> : null}
+                <div className="account-copy">
+                  <strong>{account.name || t('Google account')}</strong>
+                  {account.email ? <span>{account.email}</span> : null}
+                  <small>{t('Pro access syncs across Android devices. Designs stay on this device.')}</small>
+                </div>
+                <button className="btn icon-btn" onClick={() => void signOut()} disabled={authBusy} aria-label={t('Sign out')}>
+                  <LogOut className="icon" />
+                </button>
+              </div>
+            ) : (
+              <div className="account-signin">
+                <button className="btn google-signin" onClick={() => void signIn()} disabled={authBusy || !authConfigured}>
+                  <GoogleMark />
+                  {authBusy ? t('Signing in…') : t('Sign in with Google')}
+                </button>
+                <small>
+                  {authConfigured
+                    ? t('Sync Pro access across Android devices. Designs stay on this device.')
+                    : t('Google Sign-In needs an OAuth client ID in this build.')}
+                </small>
+              </div>
+            )}
+          </section>
+
           <section>
             <h3>{t('Appearance')}</h3>
             <div className="seg" role="radiogroup" aria-label={t('Appearance')}>
