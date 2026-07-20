@@ -5,6 +5,36 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.77 - 2026-07-20 (versionCode 10077)
+
+Owner reports: 2D always opens over-zoomed; new custom lock icon.
+
+### Fixed — 2D opens framed to the whole floor plan
+- Entering 2D was over-zoomed because the "frame the design" effect ran against
+  the stage's *guessed* initial size (800×600) and never re-ran once the
+  ResizeObserver reported the real (often much narrower phone) size — the
+  `fitRequest === lastFit` guard blocked it. The fit is now keyed on **both the
+  request and the measured size**, so it re-frames for the real stage size. On
+  entry (and after 3D→2D, which remounts the canvas) the whole plan is shown,
+  then you zoom in. Verified headless (390×844): all four plan corners land
+  inside the viewport.
+
+### Changed — custom "Lock objects" icon
+- The lock toggle now uses the owner's armchair-with-padlock glyph
+  (`public/icons/furniture-lock.png`) via a new `FurnitureLockIcon` component.
+  Rendered as a CSS mask filled with `currentColor` (the source had no alpha —
+  a luminance threshold derives the mask), so it tints with the theme and the
+  brand active state like the lucide icons. Replaces the bare `Lock` in all four
+  lock toggles (2D HUD + 3D pills).
+
+### Chore — Play Store assets refreshed
+- Regenerated `store/` (home gallery / 2D / 3D / catalog across phone + 7"/10"
+  tablet) from the current UI, plus the icon + feature graphic from the real
+  logo on the royal-blue brand. `tools/screenshots.mjs` modernized + hardened.
+
+Verified headless; tsc + lint + build clean; signed AAB (SHA256 verified,
+versionCode 10077).
+
 ## 1.0.76 - 2026-07-20 (versionCode 10076)
 
 Owner supplied photoreal preview renders for every "Start a project" card.

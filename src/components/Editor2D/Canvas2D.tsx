@@ -200,10 +200,16 @@ export default function Canvas2D() {
   }, [tool]);
 
   // Frame the whole design when asked (after load / import) once size is known.
-  const lastFit = useRef(0);
+  // Keyed on BOTH the request and the measured size: the stage mounts at a
+  // guessed 800×600, then the ResizeObserver reports the real (often much
+  // narrower phone) size a tick later — we must re-frame for that real size, or
+  // the plan stays fit to the guess and reads as over-zoomed on entry.
+  const lastFit = useRef({ req: 0, w: 0, h: 0 });
   useEffect(() => {
-    if (s.fitRequest === 0 || s.fitRequest === lastFit.current || size.w === 0) return;
-    lastFit.current = s.fitRequest;
+    if (s.fitRequest === 0 || size.w === 0) return;
+    const f = lastFit.current;
+    if (s.fitRequest === f.req && size.w === f.w && size.h === f.h) return;
+    lastFit.current = { req: s.fitRequest, w: size.w, h: size.h };
     const pts = [
       ...walls.flatMap((w) => [w.start, w.end]),
       ...rooms.flatMap((r) => r.points),

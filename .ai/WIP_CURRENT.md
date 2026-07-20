@@ -3,6 +3,16 @@
 _Last updated: 2026-07-20 by Claude Code (Opus 4.8). Branch:
 `claude/home-design-app-2d-plans-12y5u5`._
 
+## DONE since this file was created
+- **QC sweep + store screenshots** — `store/` fully regenerated (phone + 7"/10"
+  tablet: home/2D/3D/catalog) from the current UI + real-logo icon/feature
+  graphic; no page errors during capture (good regression signal).
+- **1.0.77 shipped**: 2D-opens-framed fix (fit keyed on request+measured size)
+  and the owner's armchair-lock toggle icon.
+
+## Latest release: 1.0.77 (versionCode 10077).
+Everything below is historical context / backlog.
+
 ## Current task (owner-chosen): "QC sweep + store shots"
 
 Two parallel goals after a big day of visual/branding releases (1.0.62 → 1.0.76):

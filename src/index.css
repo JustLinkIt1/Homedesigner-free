@@ -4538,3 +4538,17 @@ button:focus:not(:focus-visible) {
     60%, 100% { transform: translateX(130%); }
   }
 }
+
+/* Mask-tinted custom icon (owner's armchair+lock for the Lock-objects toggle),
+   so it inherits currentColor like the lucide icons. */
+.fl-icon {
+  display: inline-block;
+  flex: none;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}

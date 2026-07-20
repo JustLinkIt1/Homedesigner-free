@@ -18,7 +18,6 @@ import {
   Moon,
   PenTool,
   X,
-  Lock,
   Crown,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
@@ -38,6 +37,7 @@ import ShoppingList from './components/ShoppingList';
 import ProUpsellModal from './components/ProUpsellModal';
 import ProjectsScreen from './components/ProjectsScreen';
 import IntroVideo from './components/IntroVideo';
+import FurnitureLockIcon from './components/FurnitureLockIcon';
 import { useProStore } from './store/proStore';
 import { requirePro } from './lib/pro';
 import { Toaster, ConfirmHost } from './components/Overlays';
@@ -573,7 +573,7 @@ export default function App() {
                 </button>
                 <label className="toggle" title={t('Lock objects so they cannot be moved')}>
                   <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
-                  <Lock className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Lock')}</span>
+                  <FurnitureLockIcon style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Lock')}</span>
                 </label>
               </div>
               <div className="pill units-pill" role="group" aria-label={t('Display units')}>
@@ -630,7 +630,7 @@ export default function App() {
                   </button>
                   <label className="toggle" title={t('Lock objects so they cannot be moved')}>
                     <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
-                    <Lock className="icon" style={{ width: 15, height: 15 }} /> {t('Lock')}
+                    <FurnitureLockIcon style={{ width: 15, height: 15 }} /> {t('Lock')}
                   </label>
                 </div>
                 {/* Lighting folds the lamps toggle + time-of-day slider into a
@@ -703,7 +703,7 @@ export default function App() {
                       </label>
                       <label className="toggle">
                         <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
-                        <Lock className="icon" style={{ width: 15, height: 15 }} /> {t('Lock objects')}
+                        <FurnitureLockIcon style={{ width: 15, height: 15 }} /> {t('Lock objects')}
                       </label>
                       <button
                         className="toggle"
@@ -743,7 +743,7 @@ export default function App() {
                 <div className="pill lock-pill-3d">
                   <label className="toggle" title={t('Lock objects so they cannot be moved')}>
                     <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
-                    <Lock className="icon" style={{ width: 15, height: 15 }} /> {t('Lock')}
+                    <FurnitureLockIcon style={{ width: 15, height: 15 }} /> {t('Lock')}
                   </label>
                 </div>
               </div>
