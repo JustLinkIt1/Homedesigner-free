@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import {
-  Home,
   Undo2,
   Redo2,
   Import,
@@ -171,7 +170,7 @@ export default function Toolbar({
     <div className="toolbar">
       <button className="brand" onClick={onHome} title={t('Back to my projects')} aria-label={t('Back to my projects')}>
         <div className="brand-mark">
-          <Home className="icon" />
+          <img src={`${import.meta.env.BASE_URL}brand-icon.png`} alt="" width={34} height={34} />
         </div>
         <div className="brand-name">
           {APP_NAME}

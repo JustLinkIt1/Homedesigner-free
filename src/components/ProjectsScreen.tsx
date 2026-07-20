@@ -119,7 +119,7 @@ export default function ProjectsScreen({
       <header className="ps-head">
         <div className="brand">
           <div className="brand-mark">
-            <Home className="icon" />
+            <img src={`${import.meta.env.BASE_URL}brand-icon.png`} alt="" width={34} height={34} />
           </div>
           <div className="brand-name">
             {APP_NAME}

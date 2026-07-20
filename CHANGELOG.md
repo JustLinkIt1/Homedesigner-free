@@ -5,6 +5,33 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.68 - 2026-07-20 (versionCode 10068)
+
+Owner supplied the official logo. Wired the real HomeDesigner mark (white
+house + blueprint scroll + F on royal blue) into every icon slot.
+
+### Added — real app icon everywhere
+- `brand/homedesigner-icon-src.png` is the committed brand source. New
+  `scripts/gen-icons.mjs` (sharp) derives every asset from it:
+  - Tight-crops the blue rounded square out of the source's white margin.
+  - Extracts the white glyph with clean transparency by **flood-filling the
+    exterior margin inward** (white glyph and white margin are the same colour,
+    so a colour threshold alone can't separate them) and using
+    `alpha = min(R,G,B)` for smooth edges.
+  - Emits Android legacy `ic_launcher`/`ic_launcher_round` (48→192dp) and the
+    adaptive `ic_launcher_foreground` glyph (108dp, in the safe zone) over the
+    existing `@color/ic_launcher_background` (#0D63F8), plus web
+    `favicon.png` / `apple-touch-icon.png` / `icon-192` / `icon-512` /
+    `brand-icon.png`.
+- `index.html` favicon/apple-touch now point at the PNGs (was a generic house
+  SVG). The in-app brand chip (home header + editor toolbar) shows the real
+  icon image instead of a lucide house.
+- Regenerate anytime with `node scripts/gen-icons.mjs`.
+
+Verified headless: the home-header chip renders the logo crisply; the adaptive
+launcher composites the glyph correctly on royal blue. tsc + lint + build clean;
+signed AAB (SHA256 verified, versionCode 10068).
+
 ## 1.0.67 - 2026-07-20 (versionCode 10067)
 
 Owner shared the official HomeDesigner app icon (royal-blue house-with-blueprint
