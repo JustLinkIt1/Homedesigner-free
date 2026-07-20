@@ -524,6 +524,7 @@ export const SAMPLES: SampleDef[] = [
     name: 'City studio',
     blurb: 'A clever compact studio with every zone in place',
     build: cityStudio,
+    hasPreview: true,
   },
   {
     id: 'terrace-house',
