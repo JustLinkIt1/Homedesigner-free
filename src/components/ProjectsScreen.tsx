@@ -46,6 +46,7 @@ export default function ProjectsScreen({
   const [list, setList] = useState<projects.ProjectMeta[]>(() => projects.listProjects());
   const [renaming, setRenaming] = useState<string | null>(null);
   const templatesRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
   const refresh = () => setList(projects.listProjects());
   useEffect(() => {
     refresh();
@@ -128,7 +129,7 @@ export default function ProjectsScreen({
         <LanguagePicker align="right" />
       </header>
 
-      <main className="ps-main">
+      <main className="ps-main" ref={mainRef}>
         {/* Hero */}
         <section className="ps-hero">
           <div className="ps-hero-text">
@@ -278,7 +279,11 @@ export default function ProjectsScreen({
 
       {/* Bottom nav (phones) — every tab is a real destination. */}
       <nav className="ps-nav">
-        <button className="active" aria-current="page">
+        <button
+          className="active"
+          aria-current="page"
+          onClick={() => mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
           <Home className="icon" /> <span>{t('Home')}</span>
         </button>
         <button onClick={() => templatesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>

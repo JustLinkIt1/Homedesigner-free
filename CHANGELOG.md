@@ -5,6 +5,25 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.63 - 2026-07-19 (versionCode 10063)
+
+Owner: "the buttons on the menu don't work properly" (phone screenshot of the
+1.0.62 home bottom nav overlapping the inspiration banner). Three fixes in
+`ProjectsScreen.tsx` + `index.css`:
+
+- **Home nav button now works** — it had no `onClick` (dead button). It now
+  scrolls the projects `<main>` to the top (`mainRef.scrollTo`). Templates
+  (scroll to template row) and Settings (open dialog) were already wired.
+- **Inspiration banner has a phone layout** — `.ps-inspire` was a flex row
+  with no `@media (max-width:720px)` rule, so the middle text column was
+  squeezed into ~8 cramped lines and the banner ran tall. On phones it now
+  stacks (icon+title, sub-line, full-width "Explore ideas" button) — compact.
+- **Banner no longer collides with the fixed bottom nav** — the compact banner
+  plus a larger `.ps-main` phone `padding-bottom` (84 → 104px) keeps it clear
+  of the nav in every list state. Verified headless (390×844): banner/nav
+  bounding boxes don't intersect on the empty home; Home button returns
+  scrollTop to 0.
+
 ## 1.0.62 - 2026-07-19 (versionCode 10062)
 
 Premium dark UI redesign toward two owner-supplied mockups (dark-first home

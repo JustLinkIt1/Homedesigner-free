@@ -3094,7 +3094,19 @@ button.brand:hover .brand-name {
     justify-content: center;
   }
   .ps-main {
-    padding-bottom: 84px; /* clear the fixed bottom nav */
+    padding-bottom: 104px; /* clear the fixed bottom nav in all list states */
+  }
+  /* Stack the inspiration banner on phones — the desktop row squeezes the
+     middle text column into ~8 cramped lines and collided with the nav. */
+  .ps-inspire {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .ps-inspire-cta {
+    width: 100%;
+    justify-content: center;
   }
   .ps-nav {
     position: fixed;
