@@ -37,6 +37,7 @@ import RotateControls from './components/Viewer3D/RotateControls';
 import ShoppingList from './components/ShoppingList';
 import ProUpsellModal from './components/ProUpsellModal';
 import ProjectsScreen from './components/ProjectsScreen';
+import IntroVideo from './components/IntroVideo';
 import { useProStore } from './store/proStore';
 import { requirePro } from './lib/pro';
 import { Toaster, ConfirmHost } from './components/Overlays';
@@ -403,6 +404,7 @@ export default function App() {
   if (screen === 'projects') {
     return (
       <div className="app">
+        <IntroVideo />
         <ProjectsScreen
           onOpenEditor={() => setScreen('editor')}
           onImport={() => setShowImport(true)}
@@ -423,6 +425,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <IntroVideo />
       <Toolbar
         onImport={() => setShowImport(true)}
         onAbout={() => setShowAbout(true)}

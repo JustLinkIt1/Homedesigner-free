@@ -5,6 +5,32 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.69 - 2026-07-20 (versionCode 10069)
+
+Owner supplied an animated-logo clip to use as a launch intro.
+
+### Added — animated-logo launch intro
+- `public/intro.mp4` (owner's 768×768, ~5s H.264 clip) plays full-screen when
+  the app cold-launches, then fades into the home screen. New `IntroVideo`
+  component:
+  - **Once per session** — a module flag + `sessionStorage` guard, so it plays
+    on a real cold launch (Android clears sessionStorage when the process dies)
+    but not on warm resumes or in-app navigation.
+  - **Skippable** — tap anywhere or the Skip button; auto-dismisses on the
+    clip's `ended`, and a 7s safety timer guarantees it never traps the user.
+  - **Reduced-motion aware** — skipped entirely when the OS prefers reduced
+    motion.
+  - **Seamless backdrop** — samples the video's own corner pixel and paints the
+    letterbox with it (resolved to the brand blue here), so a square clip on a
+    tall screen has no jarring bars.
+  - StrictMode-safe: the `useState` initializer is pure (the earlier draft wrote
+    to sessionStorage inside it, which React's dev double-invoke self-suppressed).
+
+Assumptions used (easy to change): app-open placement, once per session,
+skippable. Verified headless (390×844): intro plays and advances, Skip reveals
+the home screen, and it does not replay on reload within a session. tsc + lint +
+build clean; signed AAB (SHA256 verified, versionCode 10069).
+
 ## 1.0.68 - 2026-07-20 (versionCode 10068)
 
 Owner supplied the official logo. Wired the real HomeDesigner mark (white
