@@ -104,7 +104,7 @@ export default function ProjectsScreen({
       title: t('Import a 2D plan'),
       sub: t('PDF / image / DXF'),
       icon: <Ruler className="icon" />,
-      preview: undefined,
+      preview: `${import.meta.env.BASE_URL}previews/import.webp`,
       onClick: () => {
         projects.createProject('Imported plan');
         newProjectAction();
