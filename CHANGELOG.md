@@ -5,6 +5,26 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.75 - 2026-07-20 (versionCode 10075)
+
+Owner (phone screenshot): saved projects showing blank previews.
+
+### Fixed — project thumbnails go blank after viewing in 3D
+- Thumbnails are captured from the 2D Konva stage (`planCapture`), but Canvas2D
+  only mounts in 2D — so a design the user drew and then **viewed in 3D before
+  leaving** captured nothing (the bridge was null on exit) and fell back to the
+  house placeholder.
+- New shared `capturePlanThumbnail()` (`src/lib/thumb.ts`) is now called:
+  - in `goHome()` (as before, refactored out of App), and
+  - **when switching 2D → 3D**, while the 2D canvas is still mounted — so a
+    fresh preview is stashed even for projects only ever viewed in 3D.
+- Genuinely empty projects (no walls/rooms/furniture) still show the placeholder
+  by design — there's nothing to preview until you draw something.
+
+Verified headless: open a sample → switch to 3D → go home; the project card now
+shows a real plan thumbnail (was the blank placeholder). tsc + lint + build
+clean; signed AAB (SHA256 verified, versionCode 10075).
+
 ## 1.0.74 - 2026-07-20 (versionCode 10074)
 
 Owner (phone screenshot): tapping "Explore ideas" opened the Tips panel as a

@@ -44,13 +44,13 @@ import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
 import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
 import { TOOLS } from './data/tools';
-import { sceneCapture, planCapture } from './lib/renderBridge';
+import { sceneCapture } from './lib/renderBridge';
+import { capturePlanThumbnail } from './lib/thumb';
 import { useDraw, drawBridge, useConfirm, toast } from './lib/ui';
 import { initNative } from './lib/native';
 import { isWebGLAvailable } from './lib/webgl';
 import { orbitZoom } from './lib/renderBridge';
 import { useI18n } from './lib/i18n';
-import * as projects from './lib/projects';
 
 // Heavy modules loaded on demand to keep the 2D-first experience light:
 //  - Scene3D pulls in three + drei + postprocessing
@@ -227,31 +227,9 @@ export default function App() {
   // the thumbnail downscale in the background — the projects screen refreshes
   // itself when the write lands.
   const goHome = () => {
-    const id = projects.getActiveId();
-    const full = planCapture.current?.()?.url;
+    // Capture the plan while the 2D canvas is still mounted, THEN switch screens.
+    capturePlanThumbnail();
     setScreen('projects');
-    if (!id || !full) return;
-    (async () => {
-      try {
-        const img = new Image();
-        img.src = full;
-        await img.decode();
-        const w = 240;
-        const h = Math.max(1, Math.round((img.height / img.width) * w));
-        const c = document.createElement('canvas');
-        c.width = w;
-        c.height = h;
-        const ctx = c.getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = '#f6f5f2';
-          ctx.fillRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
-          projects.setThumbnail(id, c.toDataURL('image/jpeg', 0.6));
-        }
-      } catch {
-        /* thumbnails are best-effort */
-      }
-    })();
   };
 
   // Leaving the 3D view always exits walk mode (e.g. switching to 2D).

@@ -26,6 +26,7 @@ import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { requirePro } from '../lib/pro';
 import { useProStore } from '../store/proStore';
 import { useI18n } from '../lib/i18n';
+import { capturePlanThumbnail } from '../lib/thumb';
 
 function SavedBadge({ tick }: { tick: number }) {
   const [saving, setSaving] = useState(false);
@@ -279,7 +280,15 @@ export default function Toolbar({
           <Grid3x3 className="icon" />
           <span>{t('2D Plan')}</span>
         </button>
-        <button className={s.view === '3d' ? 'active' : ''} onClick={() => s.setView('3d')}>
+        <button
+          className={s.view === '3d' ? 'active' : ''}
+          onClick={() => {
+            // Stash a plan thumbnail while the 2D canvas is still mounted, so a
+            // project the user only ever viewed in 3D still gets a preview.
+            if (s.view === '2d') capturePlanThumbnail();
+            s.setView('3d');
+          }}
+        >
           <Box className="icon" />
           <span>{t('3D View')}</span>
         </button>
