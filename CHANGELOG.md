@@ -5,6 +5,26 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.76 - 2026-07-20 (versionCode 10076)
+
+Owner supplied photoreal preview renders for every "Start a project" card.
+
+### Added — template preview renders
+- Each template card now shows a photoreal dollhouse/blueprint render as a
+  full-bleed banner (title + blurb padded below, icon kept as fallback):
+  - Samples: Sunlit open-plan home, Maple family house, City studio, Terraced
+    townhouse (isometric 3D dollhouses).
+  - Actions: Import a 2D plan and Start from scratch (dark blueprint renders that
+    match the app's dark UI).
+- Six owner renders live in `public/previews/*.webp` (~190 KB total; originals
+  kept in `brand/previews/`). `samples.ts` gained a `hasPreview` flag +
+  `samplePreviewUrl()`; the two action cards point at their own preview URLs.
+  New `.tpl-card.has-preview` styling (image cover-fit banner, flex-stretch so
+  the row stays even height).
+
+Verified headless: all six template cards load their preview image. tsc + lint +
+build clean; signed AAB (SHA256 verified, versionCode 10076).
+
 ## 1.0.75 - 2026-07-20 (versionCode 10075)
 
 Owner (phone screenshot): saved projects showing blank previews.

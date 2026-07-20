@@ -117,7 +117,7 @@ export default function ProjectsScreen({
       title: t('Start from scratch'),
       sub: t('Draw walls and rooms yourself'),
       icon: <PenTool className="icon" />,
-      preview: undefined,
+      preview: `${import.meta.env.BASE_URL}previews/blank.webp`,
       onClick: () => newProject(),
     },
   ];
