@@ -45,6 +45,11 @@ export default function ProjectsScreen({
   const t = useI18n();
   const [list, setList] = useState<projects.ProjectMeta[]>(() => projects.listProjects());
   const [renaming, setRenaming] = useState<string | null>(null);
+  // Which bottom-nav destination is selected. It's an explicit tapped state
+  // (not scroll-spy) — the home content barely overflows, so a scroll-position
+  // heuristic can't reliably tell "Home" from "Templates". Tapping a tab
+  // highlights it and scrolls; opening Settings (a modal) leaves it unchanged.
+  const [activeTab, setActiveTab] = useState<'home' | 'templates'>('home');
   const templatesRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const refresh = () => setList(projects.listProjects());
@@ -280,13 +285,23 @@ export default function ProjectsScreen({
       {/* Bottom nav (phones) — every tab is a real destination. */}
       <nav className="ps-nav">
         <button
-          className="active"
-          aria-current="page"
-          onClick={() => mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+          className={activeTab === 'home' ? 'active' : ''}
+          aria-current={activeTab === 'home' ? 'page' : undefined}
+          onClick={() => {
+            setActiveTab('home');
+            mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         >
           <Home className="icon" /> <span>{t('Home')}</span>
         </button>
-        <button onClick={() => templatesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
+        <button
+          className={activeTab === 'templates' ? 'active' : ''}
+          aria-current={activeTab === 'templates' ? 'page' : undefined}
+          onClick={() => {
+            setActiveTab('templates');
+            templatesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+        >
           <LayoutGrid className="icon" /> <span>{t('Templates')}</span>
         </button>
         <button onClick={onSettings}>

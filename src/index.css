@@ -1770,10 +1770,14 @@ button.brand:hover .brand-name {
   top: 16px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--text);
-  color: #fff;
+  /* Theme-aware surface + ink so it's readable in BOTH themes. (It used
+     `background: var(--text)`, which is dark in light mode but near-white in
+     dark mode — a white pill with white text.) */
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
   padding: 9px 8px 9px 16px;
-  border-radius: 999px;
+  border-radius: 14px;
   font-size: 13px;
   font-weight: 500;
   z-index: 6;
@@ -1790,12 +1794,20 @@ button.brand:hover .brand-name {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--text-3);
   font-size: 12px;
 }
 .tip-x:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--surface-3);
+  color: var(--text);
+}
+/* Phones: the centred hint overlapped the top-left floor switcher. Drop it
+   below that row and let it use the full width. */
+@media (max-width: 720px) {
+  .tip {
+    top: 64px;
+    max-width: calc(100vw - 24px);
+  }
 }
 
 /* ---------- Active-drawing affordance ---------- */

@@ -5,6 +5,32 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.71 - 2026-07-20 (versionCode 10071)
+
+Owner-reported bugs (phone screenshots).
+
+### Fixed — home bottom-nav highlight
+- Tapping **Templates** scrolled to the row but never turned blue — the nav
+  hard-coded `active` on Home. Now the tapped tab highlights (explicit
+  selection; the home content barely overflows, so a scroll-position heuristic
+  can't reliably distinguish Home from Templates). Settings opens a modal and
+  leaves the selection unchanged.
+
+### Fixed — 2D editor hint tip unreadable + overlapping
+- The floating hint ("Pick a tool on the left…") used `background: var(--text)`,
+  which is dark in light mode but **near-white in dark mode** — a white pill
+  with white text. It now uses theme-aware `--surface-2` / `--text` / `--border`
+  so it's legible in both themes.
+- On phones the centred tip collided with the top-left **Ground floor**
+  switcher; it now drops below that row (`top: 64px`) and can use the full
+  width. Rounded-rect corners (14px) read cleaner when the hint wraps to two
+  lines.
+
+(The home-screen Settings button was already fixed in 1.0.70.) Verified headless
+(390×844): Templates/Home toggle their blue state; the editor hint is a dark,
+readable pill below the floor switcher with no overlap. tsc + lint + build
+clean; signed AAB (SHA256 verified, versionCode 10071).
+
 ## 1.0.70 - 2026-07-20 (versionCode 10070)
 
 Owner: "put an option in the menu that users can disable the intro video — it
