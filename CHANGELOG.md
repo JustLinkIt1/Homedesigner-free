@@ -5,6 +5,32 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.67 - 2026-07-20 (versionCode 10067)
+
+Owner shared the official HomeDesigner app icon (royal-blue house-with-blueprint
+mark) and asked to align the app's branding + keep improving the menus.
+
+### Changed — brand colour aligned to the app icon
+- Retuned the brand token to the icon's true royal blue **#0d63f8** (was a
+  slightly purple indigo #3b63f6/#4c6ef5). Updated light + dark `--brand`,
+  `--brand-600`, `--brand-soft(-2)`, `--grad-brand`, `--grad-hero`, the leftover
+  hard-coded gradient hexes, and the Konva canvas selection/handle colours in
+  `theme.ts`. Because everything reads from the tokens, the whole app — home
+  hero, New-project button, template accents, bottom nav, 2D selection, pills —
+  now matches the icon in one pass.
+
+### Changed — menu polish
+- Dropdown menus (Export / More): brand-tinted hover (item + icon go royal
+  blue), rounder corners, deeper shadow, and a small pop-in animation.
+- 2D/3D view switch: the active segment now carries a brand-tint ring and a
+  brand-coloured icon so the current view is unmistakable.
+
+tsc + lint + build clean; signed AAB (SHA256 verified, versionCode 10067).
+
+NB: the brand chip + favicon + Android launcher icon still use a generic house
+glyph — waiting on the owner to supply the logo as a transparent SVG/PNG so it
+can be wired in precisely (backlog for Codex/next build).
+
 ## 1.0.66 - 2026-07-20 (versionCode 10066)
 
 Owner: "I don't like the model for [the dining table] or the dining chairs, can

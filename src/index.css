@@ -36,11 +36,11 @@
   --text-2: #59616d;
   --text-3: #8b909b;
 
-  /* Brand — confident, friendly indigo-blue */
-  --brand: #3b63f6;
-  --brand-600: #2f54e0;
-  --brand-soft: rgba(59, 99, 246, 0.1);
-  --brand-soft-2: rgba(59, 99, 246, 0.16);
+  /* Brand — HomeDesigner royal blue (from the app icon, #0d63f8). */
+  --brand: #0d63f8;
+  --brand-600: #0a4fd0;
+  --brand-soft: rgba(13, 99, 248, 0.1);
+  --brand-soft-2: rgba(13, 99, 248, 0.16);
 
   /* Accents */
   --accent: #ff6b4a; /* warm coral for special highlights */
@@ -49,9 +49,9 @@
   --danger: #ef4444;
   --warn: #f59e0b;
 
-  /* Blue→indigo gradient for hero buttons / banners (redesign). */
-  --grad-brand: linear-gradient(135deg, #4c6ef5, #6d5cf6);
-  --grad-hero: linear-gradient(160deg, rgba(76, 110, 245, 0.14), rgba(139, 92, 246, 0.08));
+  /* Royal-blue gradient for hero buttons / banners (brand-aligned). */
+  --grad-brand: linear-gradient(135deg, #0d63f8, #3d8bff);
+  --grad-hero: linear-gradient(160deg, rgba(13, 99, 248, 0.14), rgba(13, 99, 248, 0.06));
 
   /* 2D canvas */
   --canvas-bg: #f1f1ec;
@@ -96,16 +96,16 @@
   --text-2: #a3adbe;
   --text-3: #6b7488;
 
-  --brand: #4c6ef5;
-  --brand-600: #6c88ff;
-  --brand-soft: rgba(76, 110, 245, 0.18);
-  --brand-soft-2: rgba(76, 110, 245, 0.28);
+  --brand: #2f7bff;
+  --brand-600: #6ea6ff;
+  --brand-soft: rgba(47, 123, 255, 0.18);
+  --brand-soft-2: rgba(47, 123, 255, 0.28);
 
   --canvas-bg: #0c1018;
   --grid: #182031;
   --grid-major: #212b40;
 
-  --grad-hero: linear-gradient(160deg, rgba(76, 110, 245, 0.22), rgba(139, 92, 246, 0.12));
+  --grad-hero: linear-gradient(160deg, rgba(47, 123, 255, 0.22), rgba(13, 99, 248, 0.1));
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -236,7 +236,7 @@ button.brand:hover .brand-name {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: linear-gradient(150deg, var(--brand), #6d7cff);
+  background: linear-gradient(150deg, var(--brand), #3d8bff);
   display: grid;
   place-items: center;
   color: #fff;
@@ -384,35 +384,47 @@ button.brand:hover .brand-name {
   top: calc(100% + 6px);
   left: 0;
   z-index: 40;
-  min-width: 172px;
+  min-width: 176px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.16));
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg, 0 16px 40px rgba(0, 0, 0, 0.22));
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  transform-origin: top right;
+  animation: menu-pop 0.13s ease-out;
+}
+@keyframes menu-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .export-menu button {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 11px;
-  border-radius: 8px;
+  border-radius: 9px;
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text);
   text-align: left;
   width: 100%;
+  transition: background 0.12s, color 0.12s;
 }
 .export-menu button:hover {
-  background: var(--surface-2);
+  background: var(--brand-soft);
+  color: var(--brand-600);
+}
+.export-menu button:hover .icon {
+  color: var(--brand-600);
 }
 .export-menu .icon {
   width: 16px;
   height: 16px;
   color: var(--text-2);
+  transition: color 0.12s;
 }
 .export-menu .menu-divider {
   height: 1px;
@@ -453,7 +465,10 @@ button.brand:hover .brand-name {
 .view-toggle button.active {
   background: var(--surface);
   color: var(--brand-600);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--brand-soft-2);
+}
+.view-toggle button.active .icon {
+  color: var(--brand);
 }
 
 /* ---------- Layout ---------- */
@@ -824,7 +839,7 @@ button.brand:hover .brand-name {
   width: 18px;
   height: 18px;
   border-radius: 6px;
-  background: linear-gradient(160deg, #2b3040, #3b63f6);
+  background: linear-gradient(160deg, #202636, #0d63f8);
   color: #fff;
 }
 .cat-item .ci-lock .icon {
@@ -842,7 +857,7 @@ button.brand:hover .brand-name {
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #fff;
-  background: linear-gradient(160deg, #2b3040, #3b63f6);
+  background: linear-gradient(160deg, #202636, #0d63f8);
   padding: 2px 6px;
   border-radius: 999px;
 }
@@ -2162,7 +2177,7 @@ button.brand:hover .brand-name {
 .pro-hero {
   text-align: center;
   padding: 26px 24px 18px;
-  background: linear-gradient(160deg, #2b3040 0%, #3b63f6 130%);
+  background: linear-gradient(160deg, #202636 0%, #0d63f8 130%);
   color: #fff;
 }
 .pro-badge {
