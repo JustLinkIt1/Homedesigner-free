@@ -777,6 +777,7 @@ export default function DesignScene({
   const floors = useDesign((s) => s.floors);
   const floorGeom = useDesign((s) => s.floorGeom);
   const activeFloorId = useDesign((s) => s.activeFloorId);
+  const walkMode = useDesign((s) => s.walkMode);
   const { center } = useDesignBounds();
 
   // One place computes the dollhouse fade for every wall (all storeys), per frame.
@@ -815,7 +816,9 @@ export default function DesignScene({
   // zooming into (say) the ground floor is never blocked by the slab of the
   // storey above — switching floors in the FloorSwitcher reveals them again.
   const activeElevation = floors.find((f) => f.id === activeFloorId)?.elevation ?? 0;
-  const visible = floors.filter((f) => f.elevation <= activeElevation);
+  // Walk mode keeps the complete building present while the camera moves
+  // between storeys. Orbit/dollhouse mode retains the active-floor cutaway.
+  const visible = walkMode ? floors : floors.filter((f) => f.elevation <= activeElevation);
   const topElevation = Math.max(...visible.map((x) => x.elevation));
   return (
     <>

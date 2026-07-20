@@ -123,6 +123,37 @@ check('wall paint resolves first room face', faceRanges.a.start === 0 && faceRan
 check('wall paint resolves adjacent room face', faceRanges.b.start === 0.4 && faceRanges.b.end === 1 && faceRanges.b.side === 1);
 check('adjacent wall finishes stay separate', faceRanges.finishes.length === 2);
 
+// Walk navigation must use the same structural openings as the rendered wall,
+// and stair endpoints must remain correct after furniture rotation.
+const walkNavigation = await page.evaluate(async () => {
+  const { buildWalkWallSegments, isAtStairEnd, stairLanding } = await import('/src/lib/walkNavigation.ts');
+  const wall = {
+    id: 'wall', start: { x: 0, y: 0 }, end: { x: 1000, y: 0 },
+    thickness: 12, height: 270, color: '#ffffff',
+  };
+  const opening = {
+    id: 'door', wallId: 'wall', type: 'door', style: 'passage',
+    offset: 0.5, width: 100, height: 210, sill: 0,
+  };
+  const segments = buildWalkWallSegments([wall], [opening]);
+  const stair = {
+    id: 'stairs', type: 'stairs', name: 'Stairs', position: { x: 500, y: 500 },
+    rotation: 90, width: 100, depth: 250, height: 280, color: '#999999',
+  };
+  const high = stairLanding(stair, 'high');
+  return {
+    segmentCount: segments.length,
+    doorwayStart: segments[0]?.bx,
+    doorwayEnd: segments[1]?.ax,
+    rotatedHighDetected: isAtStairEnd(stair, 3.8, 5, 'high'),
+    high,
+  };
+});
+check('walk collision leaves door opening clear',
+  walkNavigation.segmentCount === 2 && walkNavigation.doorwayStart < 4.5 && walkNavigation.doorwayEnd > 5.5,
+  JSON.stringify(walkNavigation));
+check('rotated stair landing is detected', walkNavigation.rotatedHighDetected && walkNavigation.high.x < 3);
+
 // ---- 2. Place, select, nudge, undo toast ----------------------------------
 const before = await store(() => window.useDesign.getState().furniture.length);
 await store(() => window.useDesign.getState().addFurniture('side_table', { x: 200, y: 200 }));

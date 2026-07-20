@@ -4,6 +4,12 @@ import { PointerLockControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import { polygonArea, polygonCentroid, pointInPolygon } from '../../lib/geometry';
+import {
+  buildWalkWallSegments,
+  isAtStairEnd,
+  stairLanding,
+  type WalkWallSegment,
+} from '../../lib/walkNavigation';
 import { useDesignBounds, M } from './DesignScene';
 
 /**
@@ -24,17 +30,8 @@ const RUN_MULT = 2.0;
 const PLAYER_RADIUS = 0.28; // m — keep this far off any wall
 const LOOK_SPEED = 2.4; // rad per full-screen drag
 
-/** A wall as a 2D segment in world (XZ) metres, with half-thickness padding. */
-interface WallSeg {
-  ax: number;
-  az: number;
-  bx: number;
-  bz: number;
-  pad: number; // half thickness in metres
-}
-
 /** Closest point on segment AB to point P (all in XZ), returned as {x,z,d2}. */
-function closestOnSeg(px: number, pz: number, s: WallSeg) {
+function closestOnSeg(px: number, pz: number, s: WalkWallSegment) {
   const dx = s.bx - s.ax;
   const dz = s.bz - s.az;
   const len2 = dx * dx + dz * dz || 1e-9;
@@ -48,7 +45,7 @@ function closestOnSeg(px: number, pz: number, s: WallSeg) {
 }
 
 /** Slide a desired XZ position out of any wall it penetrates. */
-function resolveCollisions(px: number, pz: number, segs: WallSeg[]): [number, number] {
+function resolveCollisions(px: number, pz: number, segs: WalkWallSegment[]): [number, number] {
   let x = px;
   let z = pz;
   // A couple of passes so corners (two walls at once) settle.
@@ -177,25 +174,31 @@ export default function WalkControls({
   const { camera, gl } = useThree();
   const { center, radius } = useDesignBounds();
   const walls = useDesign((s) => s.walls);
+  const openings = useDesign((s) => s.openings);
+  const floors = useDesign((s) => s.floors);
+  const floorGeom = useDesign((s) => s.floorGeom);
+  const activeFloorId = useDesign((s) => s.activeFloorId);
+  const setActiveFloor = useDesign((s) => s.setActiveFloor);
   const setWalkMode = useDesign((s) => s.setWalkMode);
 
   // Build padded collision segments from the current walls.
-  const segs = useMemo<WallSeg[]>(
-    () =>
-      walls.map((w) => ({
-        ax: w.start.x * M,
-        az: w.start.y * M,
-        bx: w.end.x * M,
-        bz: w.end.y * M,
-        pad: (w.thickness * M) / 2,
-      })),
-    [walls],
-  );
+  const segs = useMemo(() => buildWalkWallSegments(walls, openings), [walls, openings]);
+  const orderedFloors = useMemo(() => [...floors].sort((a, b) => a.elevation - b.elevation), [floors]);
+  const activeIndex = orderedFloors.findIndex((floor) => floor.id === activeFloorId);
+  const activeElevation = (orderedFloors[activeIndex]?.elevation ?? 0) * M;
 
   // Keyboard state for desktop movement.
   const keys = useRef<Record<string, boolean>>({});
   // Touch look orientation (yaw/pitch) so it survives across frames.
   const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
+  const transition = useRef<null | {
+    elapsed: number;
+    fromY: number;
+    toY: number;
+    targetX: number;
+    targetZ: number;
+  }>(null);
+  const stairCooldown = useRef(0);
 
   // Spawn inside the LARGEST room at eye height, facing that room's
   // furniture (falls back to the design centre) — entering walk mode used to
@@ -228,7 +231,8 @@ export default function WalkControls({
         lookZ = center[2];
       }
     }
-    camera.position.set(px, EYE_HEIGHT, pz);
+    const floor = st.floors.find((candidate) => candidate.id === st.activeFloorId);
+    camera.position.set(px, (floor?.elevation ?? 0) * M + EYE_HEIGHT, pz);
     const dx = lookX - px;
     const dz = lookZ - pz;
     // Camera forward is -Z at yaw 0 (YXZ): yaw that points it at the target.
@@ -260,6 +264,23 @@ export default function WalkControls({
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05); // clamp to avoid tunnelling on stalls
+    stairCooldown.current = Math.max(0, stairCooldown.current - dt);
+
+    if (transition.current) {
+      const current = transition.current;
+      current.elapsed += dt;
+      const t = Math.min(1, current.elapsed / 0.75);
+      const eased = t * t * (3 - 2 * t);
+      camera.position.y = THREE.MathUtils.lerp(current.fromY, current.toY, eased);
+      camera.position.x = THREE.MathUtils.lerp(camera.position.x, current.targetX, Math.min(1, dt * 5));
+      camera.position.z = THREE.MathUtils.lerp(camera.position.z, current.targetZ, Math.min(1, dt * 5));
+      if (t >= 1) {
+        camera.position.set(current.targetX, current.toY, current.targetZ);
+        transition.current = null;
+        stairCooldown.current = 1.25;
+      }
+      return;
+    }
 
     // --- Look (touch only; desktop look is handled by PointerLockControls) ---
     if (isTouch && (lookRef.current.x !== 0 || lookRef.current.y !== 0)) {
@@ -318,7 +339,34 @@ export default function WalkControls({
       camera.position.z = nz;
     }
 
-    camera.position.y = EYE_HEIGHT; // stay on the floor
+    camera.position.y = activeElevation + EYE_HEIGHT;
+
+    if (stairCooldown.current <= 0 && activeIndex >= 0) {
+      const above = orderedFloors[activeIndex + 1];
+      const below = orderedFloors[activeIndex - 1];
+      const upwardStair = floorGeom[activeFloorId]?.furniture.find(
+        (item) => item.type === 'stairs' && isAtStairEnd(item, camera.position.x, camera.position.z, 'low'),
+      );
+      const downwardStair = below
+        ? floorGeom[below.id]?.furniture.find(
+            (item) => item.type === 'stairs' && isAtStairEnd(item, camera.position.x, camera.position.z, 'high'),
+          )
+        : undefined;
+      const stair = above && upwardStair ? upwardStair : downwardStair;
+      const targetFloor = above && upwardStair ? above : downwardStair ? below : undefined;
+      if (stair && targetFloor) {
+        const goingUp = targetFloor.elevation > (orderedFloors[activeIndex]?.elevation ?? 0);
+        const landing = stairLanding(stair, goingUp ? 'high' : 'low');
+        transition.current = {
+          elapsed: 0,
+          fromY: camera.position.y,
+          toY: targetFloor.elevation * M + EYE_HEIGHT,
+          targetX: landing.x,
+          targetZ: landing.z,
+        };
+        setActiveFloor(targetFloor.id);
+      }
+    }
   });
 
   // Desktop: pointer-lock look. Exiting the lock (Esc) leaves walk mode.

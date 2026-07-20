@@ -5,6 +5,34 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.79 - 2026-07-20 (versionCode 10079)
+
+Owner report: walk-through mode could not pass through a door or continue up
+stairs to another floor.
+
+### Fixed — walk-through doors and storey navigation
+- Walk collision is now generated from solid wall spans around door, passage,
+  archway, sliding, pocket, bifold, and double-door openings. Previously the
+  rendered wall had the correct hole but its invisible collision segment still
+  ran uninterrupted from one endpoint to the other.
+- Overlapping doorway ranges are merged and given a small jamb tolerance, so
+  wide/double openings do not retain invisible collision slivers.
+- Stairs now connect adjacent storeys in walk-through mode. Approaching the low
+  landing transitions smoothly to the floor above; approaching that stair's
+  upper landing transitions back down. The active floor and collision geometry
+  switch automatically, with a landing offset/cooldown preventing bounce-back.
+- Stair landing detection works in the furniture's rotated local coordinates,
+  so stairs placed at any plan angle navigate to the correct end.
+- Walk-through renders the complete stack of storeys while moving between
+  floors; the normal 3D editor keeps its active-floor cutaway behaviour.
+
+### Regression coverage
+- Added browser checks proving that wall collision is split around a door and
+  that a 90-degree rotated stair resolves its upper landing correctly.
+
+Verified: TypeScript + ESLint clean; production build clean; 25-check browser
+smoke suite all green, including 3D WebGL/catalog coverage and zero page errors.
+
 ## 1.0.78 - 2026-07-20 (versionCode 10078)
 
 Owner: enable Google Sign-In before OAuth production verification so Pro access
