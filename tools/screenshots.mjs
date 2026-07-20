@@ -24,7 +24,7 @@ const BASE = `http://localhost:${PORT}/`;
 const DEVICES = [
   { tag: 'phone', viewport: { width: 360, height: 780 }, scale: 3, mobile: true }, // 1080x2340
   { tag: 'tablet7', viewport: { width: 600, height: 960 }, scale: 2, mobile: true }, // 1200x1920
-  { tag: 'tablet10', viewport: { width: 800, height: 1280 }, scale: 2, mobile: false }, // 1600x2560
+  { tag: 'tablet10', viewport: { width: 800, height: 1280 }, scale: 1.5, mobile: false }, // 1200x1920 (software GL 3D can't finish 1600x2560)
 ];
 
 const preview = spawn(
@@ -60,14 +60,23 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--no-proxy-server', '--use-gl=angle', '--use-angle=swiftshader'],
 });
 
+const errors = [];
 const shoot = async (page, name) => {
   const path = join(outDir, `${name}.png`);
-  // Generous timeout: the 3D view under software GL renders frames slowly.
-  await page.screenshot({ path, timeout: 120000 });
-  console.log('wrote', path);
+  try {
+    // Generous timeout: the 3D view under software GL renders frames slowly.
+    await page.screenshot({ path, timeout: 120000 });
+    console.log('wrote', path);
+  } catch (e) {
+    // One slow/oversized frame (e.g. a big tablet 3D shot) must not abort the
+    // whole run — record it and keep going.
+    errors.push(`[shoot ${name}] ${String(e).split('\n')[0]}`);
+    console.log('SKIPPED', name, '-', String(e).split('\n')[0]);
+  }
 };
+const clearSelection = (page) =>
+  page.evaluate(() => window.useDesign?.getState?.().clearSelection?.()).catch(() => {});
 
-const errors = [];
 for (const dev of DEVICES) {
   const ctx = await browser.newContext({
     viewport: dev.viewport,
@@ -98,11 +107,15 @@ for (const dev of DEVICES) {
   await page.click('.tpl-card'); // first card = Sunlit open-plan sample
   await page.waitForSelector('.toolbar');
   await page.waitForTimeout(1600); // plan fit + textures/sprites decode
+  await clearSelection(page); // no edit handles/gizmo in the marketing shot
+  await page.waitForTimeout(150);
   await shoot(page, `${dev.tag}-2-plan2d`);
 
   // 3. The same home in 3D.
   await page.click('.view-toggle button:nth-child(2)');
   await page.waitForTimeout(6500); // three.js chunk + first frame
+  await clearSelection(page);
+  await page.waitForTimeout(200);
   await shoot(page, `${dev.tag}-3-view3d`);
 
   // 4. Furniture catalog (drawer on touch devices, sidebar on desktop-class).
