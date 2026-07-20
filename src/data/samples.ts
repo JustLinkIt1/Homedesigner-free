@@ -531,6 +531,7 @@ export const SAMPLES: SampleDef[] = [
     name: 'Terraced townhouse',
     blurb: 'Narrow terrace — living, WC & stairs, dining, rear bedroom',
     build: terraceHouse,
+    hasPreview: true,
   },
 ];
 
