@@ -16,6 +16,16 @@ const config: CapacitorConfig = {
       backgroundColor: '#f6f5f2',
       showSpinner: false,
     },
+    SocialLogin: {
+      // Keep the native dependency surface small: this release only uses
+      // Google's Android Credential Manager integration.
+      providers: {
+        google: true,
+        apple: false,
+        facebook: false,
+        twitter: false,
+      },
+    },
   },
 };
 

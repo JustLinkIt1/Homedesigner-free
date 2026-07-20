@@ -39,6 +39,7 @@ import ProjectsScreen from './components/ProjectsScreen';
 import IntroVideo from './components/IntroVideo';
 import FurnitureLockIcon from './components/FurnitureLockIcon';
 import { useProStore } from './store/proStore';
+import { useAuthStore } from './store/authStore';
 import { requirePro } from './lib/pro';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import { useDesign } from './store/designStore';
@@ -292,7 +293,9 @@ export default function App() {
       return false;
     });
     // Resolve the Pro entitlement (billing on Android, mock on web).
-    useProStore.getState().refresh();
+    void useProStore.getState().refresh().finally(() => {
+      void useAuthStore.getState().restoreSession();
+    });
     // Mount-once by design: the handler reads live state via refs/getState.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

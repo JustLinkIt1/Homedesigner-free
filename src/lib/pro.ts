@@ -27,6 +27,10 @@ export interface ProProvider {
   purchase(): Promise<boolean>;
   /** Returns true if a previous purchase was restored. */
   restore(): Promise<boolean>;
+  /** Switch RevenueCat from an anonymous customer to a stable account. */
+  identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean>;
+  /** Return to a fresh anonymous RevenueCat customer on account sign-out. */
+  disconnect(): Promise<boolean>;
 }
 
 /** RevenueCat public SDK key (Android). Safe to embed — this is the client-
@@ -60,6 +64,7 @@ function firstAvailablePackage(offerings: any): any | null {
 
 class RevenueCatProvider implements ProProvider {
   private configured = false;
+  private configuring: Promise<void> | null = null;
 
   private async sdk() {
     // A build without the key must never reach the native SDK: RevenueCat
@@ -72,12 +77,12 @@ class RevenueCatProvider implements ProProvider {
     }
     const { Purchases } = await import('@revenuecat/purchases-capacitor');
     if (!this.configured) {
-      await withTimeout(
+      this.configuring ??= withTimeout(
         Purchases.configure({ apiKey: REVENUECAT_ANDROID_KEY }),
         8000,
         'Could not connect to the store. Check your connection and try again.',
-      );
-      this.configured = true;
+      ).then(() => { this.configured = true; }).finally(() => { this.configuring = null; });
+      await this.configuring;
     }
     return Purchases;
   }
@@ -120,6 +125,22 @@ class RevenueCatProvider implements ProProvider {
     const { customerInfo } = await Purchases.restorePurchases();
     return hasProEntitlement(customerInfo);
   }
+
+  async identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean> {
+    const Purchases = await this.sdk();
+    const { customerInfo } = await Purchases.logIn({ appUserID });
+    await Promise.all([
+      Purchases.setEmail({ email }),
+      Purchases.setDisplayName({ displayName }),
+    ]);
+    return hasProEntitlement(customerInfo) || (customerInfo.allPurchasedProductIdentifiers?.length ?? 0) > 0;
+  }
+
+  async disconnect(): Promise<boolean> {
+    const Purchases = await this.sdk();
+    const { customerInfo } = await Purchases.logOut();
+    return hasProEntitlement(customerInfo);
+  }
 }
 
 /** Web/demo + test provider. Entitlement via ?pro=1 or a localStorage flag. */
@@ -153,6 +174,14 @@ class MockProvider implements ProProvider {
   }
 
   async restore(): Promise<boolean> {
+    return this.isEntitled();
+  }
+
+  async identify(): Promise<boolean> {
+    return this.isEntitled();
+  }
+
+  async disconnect(): Promise<boolean> {
     return this.isEntitled();
   }
 }
