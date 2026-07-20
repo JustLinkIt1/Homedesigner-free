@@ -842,9 +842,15 @@ export default function Scene3D() {
       flat={!noPost} // when post is dropped, let three apply its own tone mapping
       shadows={!lowPower}
       frameloop={walkMode || interacting ? 'always' : 'demand'}
-      dpr={lowPower ? [0.85, 1.25] : [1, 2]}
-      performance={{ min: lowPower ? 0.65 : 0.5, debounce: 250 }}
-      gl={{ antialias: !lowPower, preserveDrawingBuffer: false, powerPreference: 'high-performance' }}
+      // MSAA + a higher DPR ceiling are the real fix for the mobile "jaggies":
+      // the light tier used to ship with antialias off and DPR capped at 1.25,
+      // so every wall/furniture edge stair-stepped. MSAA is cheap on modern
+      // mobile GPUs; AdaptiveDpr still pulls the resolution down (smoothly, not
+      // pixelated) if a frame budget slips, and the heavy costs (post-processing,
+      // real-time shadows) stay gated by lowPower.
+      dpr={[1, 2]}
+      performance={{ min: lowPower ? 0.6 : 0.5, debounce: 250 }}
+      gl={{ antialias: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' }}
       camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => {
@@ -854,7 +860,7 @@ export default function Scene3D() {
     >
       {/* Demand rendering keeps 120 Hz phones from redrawing an idle scene;
           AdaptiveDpr lowers interaction cost further if a frame budget slips. */}
-      <AdaptiveDpr pixelated={lowPower} />
+      <AdaptiveDpr pixelated={false} />
       {/* Soft daytime sky + gentle distance fog: gives renders a horizon and
           natural light falloff instead of a flat grey void. */}
       {/* Dome radius must sit inside the camera far plane (default 1000). */}

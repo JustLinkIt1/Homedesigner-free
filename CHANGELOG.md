@@ -5,6 +5,29 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.72 - 2026-07-20 (versionCode 10072)
+
+Owner: "improve 3D-mode jaggies and graphics" (phone screenshot with heavily
+aliased wall/furniture edges).
+
+### Changed — smoother 3D on mobile
+- The light render tier (all touch devices) shipped with **MSAA off** and the
+  device pixel ratio capped at **1.25**, so every edge stair-stepped. Now:
+  - `antialias: true` on the WebGL context unconditionally — MSAA is cheap on
+    modern mobile GPUs and is the real fix for the jaggies. (On mobile,
+    post-processing is off, so the default framebuffer's MSAA actually applies.)
+  - Mobile DPR ceiling raised **1.25 → 2** (`dpr={[1, 2]}`) for crisp edges and
+    textures.
+  - `AdaptiveDpr` now downscales **smoothly** (`pixelated={false}`, was
+    `pixelated` on mobile), so if a frame budget slips the image softens instead
+    of turning blocky.
+- The heavy costs (post-processing, real-time + contact shadows) stay gated to
+  desktop, and `AdaptiveDpr` + the frame-budget floor keep navigation smooth, so
+  this sharpens the picture without a perf cliff.
+
+Verified headless: the 3D scene renders with no errors after the change. tsc +
+lint + build clean; signed AAB (SHA256 verified, versionCode 10072).
+
 ## 1.0.71 - 2026-07-20 (versionCode 10071)
 
 Owner-reported bugs (phone screenshots).
