@@ -55,6 +55,14 @@ page.on('pageerror', (e) => pageErrors.push(e.message));
 
 // Keep the smoke suite deterministic and exercise the versioned cloud catalog
 // without depending on the public R2 endpoint or downloading a GLB.
+const smokeModel = await readFile(join(root, 'public', 'models', 'side_table.glb'));
+await page.route('https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/models/tests/cloud-smoke-tv.glb', (route) =>
+  route.fulfill({
+    contentType: 'model/gltf-binary',
+    headers: { 'access-control-allow-origin': '*' },
+    body: smokeModel,
+  }),
+);
 await page.route('https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/catalog/v1/catalog.json', (route) =>
   route.fulfill({
     contentType: 'application/json',
@@ -73,6 +81,18 @@ await page.route('https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/catalog/v1
         icon: 'C',
         model: {
           url: 'https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/models/tests/cloud-smoke-chair.glb',
+          source: {
+            name: 'Smoke test fixture',
+            url: 'https://example.com/smoke-fixture',
+            license: 'CC0',
+          },
+        },
+      }],
+      overrides: [{
+        type: 'tv_stand',
+        model: {
+          url: 'https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/models/tests/cloud-smoke-tv.glb',
+          fit: 'width',
           source: {
             name: 'Smoke test fixture',
             url: 'https://example.com/smoke-fixture',
@@ -298,6 +318,15 @@ if (process.env.SMOKE_SKIP_3D) {
     'cloud catalog manifest loads',
     await page.locator('.catalog.docked .cat-item', { hasText: 'Cloud Smoke Chair' })
       .waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false),
+  );
+  const cloudTv = await page.evaluate(async () => {
+    const { modelDefinition } = await import('/src/components/Viewer3D/GltfFurniture.tsx');
+    return modelDefinition('tv_stand');
+  });
+  check(
+    'cloud catalog can upgrade a bundled furniture model',
+    cloudTv?.url.endsWith('/models/tests/cloud-smoke-tv.glb') && cloudTv.fit === 'width',
+    JSON.stringify(cloudTv),
   );
   await page.locator('.catalog.docked .cat-item[title="Side Table"]').click();
   check(

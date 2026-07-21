@@ -2,7 +2,7 @@ import { Component, Suspense, useMemo, type ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { FurnitureItem } from '../../types';
-import { CATALOG_BY_TYPE } from '../../data/furnitureCatalog';
+import { CATALOG_BY_TYPE, type CatalogEntry } from '../../data/furnitureCatalog';
 import { MODEL_FILE, MODEL_YAW } from '../../data/furnitureModels';
 
 const M = 0.01; // cm -> m
@@ -28,7 +28,7 @@ export const FURNITURE_MODELS: Record<string, { url: string; yaw?: number }> =
     ]),
   );
 
-export function modelDefinition(type: string): { url: string; yaw?: number } | undefined {
+export function modelDefinition(type: string): NonNullable<CatalogEntry['model']> | undefined {
   return CATALOG_BY_TYPE[type]?.model ?? FURNITURE_MODELS[type];
 }
 
@@ -56,10 +56,14 @@ export default function GltfFurniture({ item }: { item: FurnitureItem }) {
     // Uniform scale fitting both footprint dimensions (keeps proportions).
     const sx = (item.width * M) / (size.x || 1);
     const sz = (item.depth * M) / (size.z || 1);
-    const scale = Math.min(sx, sz);
+    const scale = def.fit === 'width' ? sx : def.fit === 'depth' ? sz : Math.min(sx, sz);
     clone.scale.setScalar(scale);
     // Recentre horizontally and rest the base on y = 0.
-    clone.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
+    clone.position.set(
+      -center.x * scale,
+      -box.min.y * scale + (def.offsetY ?? 0) * M,
+      -center.z * scale,
+    );
 
     clone.traverse((o) => {
       const m = o as THREE.Mesh;
@@ -69,7 +73,7 @@ export default function GltfFurniture({ item }: { item: FurnitureItem }) {
       }
     });
     return clone;
-  }, [scene, item.width, item.depth]);
+  }, [scene, item.width, item.depth, def.fit, def.offsetY]);
 
   return (
     <group rotation={[0, def.yaw ?? 0, 0]}>

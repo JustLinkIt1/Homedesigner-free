@@ -5,6 +5,39 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.83 - 2026-07-21 (versionCode 10083)
+
+Owner direction: grow the furniture library through commercially safe CC0
+sources while IKEA licensing permission is pending.
+
+### Added — real cloud models for existing catalogue objects
+- The remote catalogue can now apply tightly scoped **model-only upgrades** to
+  furniture already bundled with the app. Remote data may supply a GLB and its
+  verified provenance, but cannot alter the item's dimensions, category, Pro
+  status, placement behaviour, or any other catalogue metadata.
+- The live R2 manifest's nine reviewed CC0 upgrades now work in the app: TV,
+  floor lamp, pendant light, table lamp, rectangular/round rugs, toilet, sink,
+  and shower. The prepared Kenney and Quaternius files were confirmed live with
+  their declared byte counts; the 32 existing cloud-only objects remain intact.
+- Added width/depth fitting and a bounded vertical offset for unusually thin or
+  hanging GLBs. The TV keeps its correct proportions instead of being distorted
+  to fill its shallow placement footprint.
+
+### Hardened — catalogue refresh and licensing boundaries
+- Cloud model overrides remain same-origin HTTPS, GLB-only, CC0-only, and require
+  a valid source URL. Structural doors/windows can never be overridden remotely.
+- Fixed forced catalogue refreshes rejecting the previously loaded 32 cloud
+  object types merely because they were still present in the runtime lookup.
+- Added deterministic browser coverage for a cloud model upgrade and documented
+  the manifest schema for future CC0 batches.
+
+Verified: TypeScript, ESLint, production build, Android sync, and all 35 browser
+checks clean. The public R2 manifest is byte-identical to the reviewed local
+manifest (32 new objects, 9 model upgrades), and all six Kenney upgrade GLBs
+return HTTP 200 with their exact declared sizes. Signed AAB verified
+(25,620,999 bytes; SHA-256
+`36D0C31F7FA537DB613EFB990ABA85E03BD9A5AFAB8A1860ABFCC4CC2B188BE8`).
+
 ## 1.0.82 - 2026-07-21 (versionCode 10082)
 
 Owner report: walking up the Maple family house stairs changed to the upper

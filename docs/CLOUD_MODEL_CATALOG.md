@@ -13,7 +13,10 @@ from Cloudflare R2 only when needed.
   `VITE_MODEL_CATALOG_URL` at build time.
 - A validated manifest is cached in local storage and retained when a later
   request is offline.
-- Cloud entries cannot replace bundled types or openings.
+- New cloud entries cannot replace bundled types or openings.
+- A separately validated `overrides` list may attach a better GLB to existing
+  bundled furniture. It cannot alter dimensions, category, Pro status, opening
+  behaviour, or any other catalogue metadata.
 - Model URLs must be HTTPS, use the same origin as the manifest, end in `.glb`,
   and include CC0 provenance.
 - The manifest is limited to 2 MB and 5,000 entries. Individual declared model
@@ -56,6 +59,37 @@ from Cloudflare R2 only when needed.
 
 Cloud entries are Pro by default. Set `"pro": false` explicitly for an item
 that should be placeable on the free tier.
+
+Existing furniture can receive a model-only upgrade without waiting for an app
+release:
+
+```json
+{
+  "version": 1,
+  "entries": [],
+  "overrides": [
+    {
+      "type": "tv_stand",
+      "model": {
+        "url": "https://pub-...r2.dev/models/kenney/furniture-kit/television-modern.glb",
+        "fit": "width",
+        "bytes": 4044,
+        "sha256": "64 lowercase hex characters",
+        "source": {
+          "name": "Furniture Kit",
+          "url": "https://kenney.nl/assets/furniture-kit",
+          "author": "Kenney",
+          "license": "CC0"
+        }
+      }
+    }
+  ]
+}
+```
+
+Overrides remain model-only and CC0-only. Their GLB URL must use the manifest's
+HTTPS origin. `fit` may be `contain` (default), `width`, or `depth`; `offsetY`
+is an optional centimetre correction for hanging or unusually authored assets.
 
 ## First Quaternius batch
 
