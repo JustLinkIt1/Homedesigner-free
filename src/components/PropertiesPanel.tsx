@@ -3,6 +3,7 @@ import {
   AlignStartVertical, AlignCenterVertical, AlignEndVertical,
   AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
   AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Crown,
+  ArrowLeftRight, ArrowUpDown, RotateCcw, RotateCw,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -336,6 +337,32 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                   phones — Blender-style numeric input for precise rotations. */}
               <NumberRow label={t('Angle (°)')} value={item.rotation} min={0} max={360}
                 onChange={(v) => s.updateFurniture(item.id, { rotation: v })} />
+              <div className="quick-transform" role="group" aria-label={t('Quick direction controls')}>
+                <button
+                  onClick={() => s.updateFurniture(item.id, { rotation: (item.rotation + 270) % 360 })}
+                  aria-label={t('Rotate left 90 degrees')}
+                  title={t('Rotate left 90 degrees')}
+                >
+                  <RotateCcw className="icon" /> <span>90°</span>
+                </button>
+                {item.type === 'stairs' && (
+                  <button
+                    className="wide"
+                    onClick={() => s.updateFurniture(item.id, { rotation: (item.rotation + 180) % 360 })}
+                    aria-label={t('Reverse stairs')}
+                    title={t('Reverse stairs')}
+                  >
+                    <ArrowUpDown className="icon" /> <span>{t('Reverse')}</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => s.updateFurniture(item.id, { rotation: (item.rotation + 90) % 360 })}
+                  aria-label={t('Rotate right 90 degrees')}
+                  title={t('Rotate right 90 degrees')}
+                >
+                  <RotateCw className="icon" /> <span>90°</span>
+                </button>
+              </div>
               <div className="prop-row">
                 <label>{t('Colour')}</label>
                 <input type="color" value={item.color} onChange={(e) => s.updateFurniture(item.id, { color: e.target.value })} />
@@ -430,6 +457,24 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                   </select>
                 )}
               </div>
+              {opening.type === 'door' && opening.style !== 'passage' && opening.style !== 'arch' && (
+                <div className="quick-transform opening-flips" role="group" aria-label={t('Door direction controls')}>
+                  <button
+                    onClick={() => s.updateOpening(opening.id, { flipHinge: !opening.flipHinge })}
+                    aria-label={t('Flip hinge side')}
+                    title={t('Flip hinge side')}
+                  >
+                    <ArrowLeftRight className="icon" /> <span>{t('Hinge')}</span>
+                  </button>
+                  <button
+                    onClick={() => s.updateOpening(opening.id, { flipSwing: !opening.flipSwing })}
+                    aria-label={t('Flip swing direction')}
+                    title={t('Flip swing direction')}
+                  >
+                    <ArrowUpDown className="icon" /> <span>{t('In / out')}</span>
+                  </button>
+                </div>
+              )}
               <NumberRow label={t('Width (cm)')} value={opening.width} min={40} max={400} onChange={(v) => s.updateOpening(opening.id, { width: v })} />
               <NumberRow label={t('Height (cm)')} value={opening.height} min={40} max={300} onChange={(v) => s.updateOpening(opening.id, { height: v })} />
               {opening.type === 'window' && (

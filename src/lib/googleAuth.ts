@@ -35,7 +35,9 @@ export async function signInWithGoogle(): Promise<GoogleAccount> {
   await initializeGoogle();
   const { result } = await SocialLogin.login({
     provider: 'google',
-    options: { scopes: ['openid', 'email', 'profile'] },
+    // Android adds openid/email/profile itself. Supplying `scopes` here makes
+    // the plugin require a custom MainActivity even for those defaults.
+    options: {},
   });
   if (result.responseType !== 'online') {
     throw new Error('Google Sign-In did not return an identity profile.');

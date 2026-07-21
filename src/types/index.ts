@@ -96,6 +96,10 @@ export interface Opening {
   height: number;
   /** Height of the sill above the floor (cm) — 0 for doors. */
   sill: number;
+  /** Mirror a hinged/pocket/sliding opening to the opposite jamb/side. */
+  flipHinge?: boolean;
+  /** Swing the leaf toward the opposite side of the wall. */
+  flipSwing?: boolean;
 }
 
 export interface FurnitureItem {

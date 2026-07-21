@@ -531,7 +531,7 @@ export default function App() {
                 </label>
               )}
               <button className="finish-btn" onClick={() => drawBridge.finish?.()}>
-                ✓ {t('Finish')}
+                ✓ {tool === 'room' ? t('Finish room') : t('Finish')}
               </button>
               <button className="cancel-btn" onClick={() => drawBridge.cancel?.()} aria-label={coarsePointer ? t('Cancel') : 'Cancel drawing'}>
                 {coarsePointer ? '✕' : 'Esc'}

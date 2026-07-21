@@ -5,6 +5,51 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.81 - 2026-07-21 (versionCode 10081)
+
+Tester feedback: flipping doors and stairs was unclear on mobile, and finishing
+a room needed a more obvious action.
+
+### Added — quick direction controls
+- Selected objects now have large 44px one-tap rotate-left/right buttons in
+  Edit, avoiding the precision slider for common 90-degree turns.
+- Selected stairs add a central **Reverse** arrow that changes their rise
+  direction by exactly 180 degrees in both 2D and 3D.
+- Selected doors add **Hinge** (left/right) and **In / out** swing arrows.
+  These flags persist with the opening and update both the plan symbol and 3D
+  door leaf. Pocket-door side and double-door swing direction are also honoured.
+
+### Changed — clearer room completion
+- After the third room corner, the first point becomes a large blue target with
+  a check mark, making “tap the first point to close” discoverable on phones.
+- The drawing action now says **Finish room** instead of the generic “Finish”.
+  Users can either tap that button or tap the checked first point.
+
+Verified: TypeScript + ESLint clean; 30-check browser smoke suite all green,
+including real Edit-panel clicks for stair reversal and door hinge flipping.
+
+## 1.0.80 - 2026-07-21 (versionCode 10080)
+
+Owner screenshot: Google Sign-In rejected immediately with “You CANNOT use
+scopes without modifying the main activity.”
+
+### Fixed — native Google Sign-In startup
+- Removed the redundant `options.scopes` array from the Google login request.
+  The installed Android Credential Manager provider already requests `openid`,
+  `email`, and `profile` by default; explicitly passing the same values makes
+  the plugin treat them as custom scopes and require a modified MainActivity.
+- The OAuth project, web client ID, Android signing clients, immutable Google
+  `sub` identity, and RevenueCat linking behaviour are unchanged.
+- Added a regression check that fails if the login request starts passing a
+  scopes array again without the required native integration.
+
+Verified against the installed `@capgo/capacitor-social-login` Android source,
+which adds the three identity scopes automatically before applying its custom-
+scope MainActivity guard. TypeScript + ESLint + production build clean; Android
+sync clean; 26-check browser smoke suite all green. Signed AAB verified
+(`versionCode 10080`, SHA-256
+`B0D56CF695AAE0DA68A59F3D69D940011ABD05197D95BD45E4C5363E5D2B4645`).
+
 ## 1.0.79 - 2026-07-20 (versionCode 10079)
 
 Owner report: walk-through mode could not pass through a door or continue up

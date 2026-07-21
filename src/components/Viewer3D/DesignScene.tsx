@@ -377,7 +377,7 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
             <boxGeometry args={[w, 0.04, thickness * 0.5]} />
             <meshStandardMaterial color="#c9cdd2" roughness={0.6} metalness={0.2} />
           </mesh>
-          <mesh position={[leftX + lw / 2, h / 2, 0]} castShadow>
+          <mesh position={[o.flipHinge ? rightX - lw / 2 : leftX + lw / 2, h / 2, 0]} castShadow>
             <boxGeometry args={[lw, h * 0.97, 0.035]} />
             <meshStandardMaterial color="#b9a58c" roughness={0.6} />
           </mesh>
@@ -433,10 +433,11 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
     if (o.style === 'double') {
       // Two half-width leaves, hinged at each jamb, both swung open.
       const leafLen = (w / 2) * 0.94;
+      const swing = o.flipSwing ? -1 : 1;
       return (
         <group>
           {jambs}
-          <group position={[leftX, 0, 0]} rotation={[0, -Math.PI / 2.6, 0]}>
+          <group position={[leftX, 0, 0]} rotation={[0, (-Math.PI / 2.6) * swing, 0]}>
             <mesh position={[leafLen / 2, h / 2, 0]} castShadow>
               <boxGeometry args={[leafLen, h * 0.99, 0.04]} />
               <meshStandardMaterial color="#a9744f" roughness={0.6} />
@@ -444,7 +445,7 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
           </group>
           {/* right leaf: local +x points at the centre when closed (yaw PI),
               then swings open by the same angle in the opposite sense */}
-          <group position={[rightX, 0, 0]} rotation={[0, Math.PI + Math.PI / 2.6, 0]}>
+          <group position={[rightX, 0, 0]} rotation={[0, Math.PI + (Math.PI / 2.6) * swing, 0]}>
             <mesh position={[leafLen / 2, h / 2, 0]} castShadow>
               <boxGeometry args={[leafLen, h * 0.99, 0.04]} />
               <meshStandardMaterial color="#a9744f" roughness={0.6} />
@@ -455,11 +456,15 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
     }
 
     const leafLen = w * 0.94;
+    const hingeLeft = !o.flipHinge;
+    const hingeX = hingeLeft ? leftX : rightX;
+    const swing = o.flipSwing ? -1 : 1;
+    const openYaw = (hingeLeft ? -1 : 1) * swing * (Math.PI / 2.6);
     return (
       <group>
         {jambs}
         {/* swung-open leaf, hinged at one jamb */}
-        <group position={[leftX, 0, 0]} rotation={[0, -Math.PI / 2.6, 0]}>
+        <group position={[hingeX, 0, 0]} rotation={[0, (hingeLeft ? 0 : Math.PI) + openYaw, 0]}>
           <mesh position={[leafLen / 2, h / 2, 0]} castShadow>
             <boxGeometry args={[leafLen, h * 0.99, 0.04]} />
             <meshStandardMaterial color="#a9744f" roughness={0.6} />

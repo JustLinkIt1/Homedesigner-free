@@ -8,6 +8,7 @@
 // then soft-passes. Everything else always hard-fails.
 
 import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -88,7 +89,16 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : ` — ${detail}`}`);
   if (!ok) failures++;
 };
-const store = (fn) => page.evaluate(fn);
+const store = (fn, arg) => page.evaluate(fn, arg);
+
+// Android's Credential Manager provider automatically adds openid/email/profile.
+// Passing even those defaults through `options.scopes` activates the plugin's
+// custom-scope MainActivity guard and rejects before Google Sign-In opens.
+const googleAuthSource = await readFile(join(root, 'src', 'lib', 'googleAuth.ts'), 'utf8');
+check(
+  'Google login does not trigger the Android custom-scope guard',
+  !/SocialLogin\.login\(\{[\s\S]{0,300}?scopes\s*:/.test(googleAuthSource),
+);
 
 // ---- 1. Projects screen renders, sample home opens -------------------------
 await page.goto(BASE);
@@ -182,6 +192,40 @@ check('delete shows Undo toast', await page.locator('.toast-action', { hasText: 
 await page.click('.toast-action');
 await page.waitForTimeout(200);
 check('undo restores item', (await store(() => window.useDesign.getState().furniture.length)) === placed);
+
+const stairId = await store(() => {
+  const s = window.useDesign.getState();
+  const id = s.addFurniture('stairs', { x: 250, y: 250 });
+  s.select({ kind: 'furniture', id });
+  return id;
+});
+await page.setViewportSize({ width: 390, height: 844 });
+await page.getByRole('button', { name: 'Edit' }).click();
+const reverseStairs = page.getByRole('button', { name: 'Reverse stairs' });
+check('selected stairs show quick reverse control', await reverseStairs.isVisible().catch(() => false));
+await reverseStairs.click();
+check(
+  'quick reverse turns stairs 180°',
+  (await store((id) => window.useDesign.getState().furniture.find((f) => f.id === id)?.rotation, stairId)) === 180,
+);
+await store((id) => window.useDesign.getState().deleteById('furniture', id), stairId);
+
+const doorId = await store(() => {
+  const s = window.useDesign.getState();
+  const id = s.addOpening(s.walls[0].id, 0.5, 'door');
+  s.select({ kind: 'opening', id });
+  return id;
+});
+const flipHinge = page.getByRole('button', { name: 'Flip hinge side' });
+check('selected door shows quick hinge control', await flipHinge.isVisible().catch(() => false));
+await flipHinge.click();
+check(
+  'quick hinge control mirrors door',
+  (await store((id) => window.useDesign.getState().openings.find((o) => o.id === id)?.flipHinge, doorId)) === true,
+);
+await store((id) => window.useDesign.getState().deleteById('opening', id), doorId);
+await page.getByRole('button', { name: 'Edit' }).click();
+await page.setViewportSize({ width: 1280, height: 800 });
 
 // ---- 3. Shopping list -------------------------------------------------------
 await page.click('.export-wrap .tbtn');
