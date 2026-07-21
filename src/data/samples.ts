@@ -228,7 +228,8 @@ function familyHouse(): MaybeFloored {
       fur('wooden_dining_chair', 855, 395, 180),
       fur('pendant', 800, 330),
       // Hall — stairs rise along the south wall.
-      fur('stairs', 130, 660, 90),
+      // Low end at the west, high end opening safely onto the upper landing.
+      fur('stairs', 130, 660, 270),
       fur('sideboard', 420, 530, 0),
       fur('wall_art', 550, 512, 0),
       fur('ceiling_light', 450, 650),

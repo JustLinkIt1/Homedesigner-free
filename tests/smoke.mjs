@@ -136,7 +136,7 @@ check('adjacent wall finishes stay separate', faceRanges.finishes.length === 2);
 // Walk navigation must use the same structural openings as the rendered wall,
 // and stair endpoints must remain correct after furniture rotation.
 const walkNavigation = await page.evaluate(async () => {
-  const { buildWalkWallSegments, isAtStairEnd, stairLanding } = await import('/src/lib/walkNavigation.ts');
+  const { buildWalkWallSegments, isAtStairEnd, stairLanding, stairOpeningPoints } = await import('/src/lib/walkNavigation.ts');
   const wall = {
     id: 'wall', start: { x: 0, y: 0 }, end: { x: 1000, y: 0 },
     thickness: 12, height: 270, color: '#ffffff',
@@ -151,18 +151,56 @@ const walkNavigation = await page.evaluate(async () => {
     rotation: 90, width: 100, depth: 250, height: 280, color: '#999999',
   };
   const high = stairLanding(stair, 'high');
+  const safe = stairLanding(
+    { ...stair, position: { x: 130, y: 660 }, rotation: 90 },
+    'high',
+    [{ id: 'landing', name: 'Landing', points: [{ x: 0, y: 500 }, { x: 550, y: 500 }, { x: 550, y: 800 }, { x: 0, y: 800 }], floorMaterial: 'oak', color: '#fff' }],
+  );
+  const stairwell = stairOpeningPoints(stair);
   return {
     segmentCount: segments.length,
     doorwayStart: segments[0]?.bx,
     doorwayEnd: segments[1]?.ax,
     rotatedHighDetected: isAtStairEnd(stair, 3.8, 5, 'high'),
     high,
+    safe,
+    stairwell,
   };
 });
 check('walk collision leaves door opening clear',
   walkNavigation.segmentCount === 2 && walkNavigation.doorwayStart < 4.5 && walkNavigation.doorwayEnd > 5.5,
   JSON.stringify(walkNavigation));
 check('rotated stair landing is detected', walkNavigation.rotatedHighDetected && walkNavigation.high.x < 3);
+check('invalid stair landing falls back inside destination room',
+  walkNavigation.safe.x > 0 && walkNavigation.safe.x < 5.5 && walkNavigation.safe.z > 5 && walkNavigation.safe.z < 8,
+  JSON.stringify(walkNavigation.safe));
+check('rotated stairwell follows furniture footprint',
+  Math.min(...walkNavigation.stairwell.map((p) => p.x)) === 375 && Math.max(...walkNavigation.stairwell.map((p) => p.x)) === 625,
+  JSON.stringify(walkNavigation.stairwell));
+
+const mapleStairs = await page.evaluate(async () => {
+  const { SAMPLE_BY_ID } = await import('/src/data/samples.ts');
+  const { stairLanding, stairOpeningPoints } = await import('/src/lib/walkNavigation.ts');
+  const { pointInPolygon } = await import('/src/lib/geometry.ts');
+  const sample = SAMPLE_BY_ID['family-house'].build();
+  const floors = [...sample.floors].sort((a, b) => a.elevation - b.elevation);
+  const stair = sample.floorGeom[floors[0].id].furniture.find((item) => item.type === 'stairs');
+  const upperRooms = sample.floorGeom[floors[1].id].rooms;
+  const landing = stairLanding(stair, 'high', upperRooms);
+  const opening = stairOpeningPoints(stair);
+  return {
+    rotation: stair.rotation,
+    landing,
+    landingInside: upperRooms.some((room) => pointInPolygon({ x: landing.x * 100, y: landing.z * 100 }, room.points)),
+    openingInside: upperRooms.some((room) => opening.every((point) => pointInPolygon(point, room.points))),
+  };
+});
+check('Maple stairs rise toward the indoor upper landing',
+  mapleStairs.rotation === 270 && mapleStairs.landingInside,
+  JSON.stringify(mapleStairs));
+check('Maple stair footprint can cut the upper floor slab',
+  mapleStairs.openingInside,
+  JSON.stringify(mapleStairs));
 
 // ---- 2. Place, select, nudge, undo toast ----------------------------------
 const before = await store(() => window.useDesign.getState().furniture.length);

@@ -5,6 +5,35 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.82 - 2026-07-21 (versionCode 10082)
+
+Owner report: walking up the Maple family house stairs changed to the upper
+floor but placed the camera outside, and the upper floor had no stairwell cut.
+
+### Fixed — safe, connected stair navigation
+- Corrected the Maple stair direction so its low end starts in the ground-floor
+  hall and its high end arrives on the indoor upper landing.
+- Walk-through stair transitions now validate their destination against the
+  target floor's rooms. A badly placed or outward-facing stair falls back to
+  the nearest safe room interior instead of putting the camera outside.
+- Destination fallback uses a room's interior visual centre, which remains safe
+  for concave rooms where a simple polygon centroid may lie outside.
+
+### Added — real upper-floor stairwells
+- Upper-storey floor finishes and structural slabs now cut an opening from the
+  rotated footprint of each stair on the storey below.
+- The same rotation transform drives the visible stair, landing detection, and
+  slab opening, preventing the geometry and navigation from drifting apart.
+- Openings are only cut when the full stair footprint belongs to a destination
+  room; boundary-crossing stairs keep a solid floor rather than generating a
+  broken mesh.
+
+Verified: TypeScript + ESLint clean; production build and Android sync clean;
+all 34 browser checks green, including safe fallback, rotated stairwell
+geometry, Maple's indoor upper landing, and a valid Maple slab opening. Signed
+AAB verified (25,620,390 bytes; SHA-256
+`8314911A3DC46384BD19E80FF1D27920101E19871A300721068979B4B053A752`).
+
 ## 1.0.81 - 2026-07-21 (versionCode 10081)
 
 Tester feedback: flipping doors and stairs was unclear on mobile, and finishing

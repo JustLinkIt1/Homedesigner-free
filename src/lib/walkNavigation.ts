@@ -1,4 +1,5 @@
-import type { FurnitureItem, Opening, Wall } from '../types';
+import { pointInPolygon, polygonVisualCenter } from './geometry';
+import type { FurnitureItem, Opening, Point, Room, Wall } from '../types';
 
 const M = 0.01;
 
@@ -75,6 +76,24 @@ export function stairLocalPosition(item: FurnitureItem, x: number, z: number) {
   };
 }
 
+/** Rotated plan footprint used to cut the matching stairwell into the floor above. */
+export function stairOpeningPoints(item: FurnitureItem): Point[] {
+  const angle = (item.rotation * Math.PI) / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const halfWidth = item.width / 2;
+  const halfDepth = item.depth / 2;
+  return [
+    { x: -halfWidth, y: -halfDepth },
+    { x: halfWidth, y: -halfDepth },
+    { x: halfWidth, y: halfDepth },
+    { x: -halfWidth, y: halfDepth },
+  ].map((local) => ({
+    x: item.position.x + local.x * cos - local.y * sin,
+    y: item.position.y + local.x * sin + local.y * cos,
+  }));
+}
+
 export function isAtStairEnd(item: FurnitureItem, x: number, z: number, end: 'low' | 'high') {
   const local = stairLocalPosition(item, x, z);
   const halfWidth = item.width * M / 2 + 0.22;
@@ -86,13 +105,28 @@ export function isAtStairEnd(item: FurnitureItem, x: number, z: number, end: 'lo
     : local.z <= halfDepth + 0.3 && local.z >= halfDepth - landingDepth;
 }
 
-/** Landing just beyond the stair's selected end, clear of its trigger zone. */
-export function stairLanding(item: FurnitureItem, end: 'low' | 'high') {
+/** Landing just beyond the stair's selected end, clear of its trigger zone.
+ * When destination rooms are supplied the result is guaranteed to be indoors;
+ * badly oriented stairs fall back to the nearest room centre instead of
+ * placing the walker outside the building. */
+export function stairLanding(item: FurnitureItem, end: 'low' | 'high', rooms: Room[] = []) {
   const angle = (item.rotation * Math.PI) / 180;
   const distance = item.depth * M / 2 + 1.05;
   const direction = end === 'high' ? 1 : -1;
-  return {
+  const ideal = {
     x: item.position.x * M - Math.sin(angle) * distance * direction,
     z: item.position.y * M + Math.cos(angle) * distance * direction,
   };
+  if (rooms.length === 0 || rooms.some((room) => pointInPolygon({ x: ideal.x / M, y: ideal.z / M }, room.points))) {
+    return ideal;
+  }
+
+  const centres = rooms
+    .filter((room) => room.points.length >= 3)
+    .map((room) => polygonVisualCenter(room.points))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  const nearest = centres.sort((a, b) =>
+    Math.hypot(a.x * M - ideal.x, a.y * M - ideal.z) - Math.hypot(b.x * M - ideal.x, b.y * M - ideal.z),
+  )[0];
+  return nearest ? { x: nearest.x * M, z: nearest.y * M } : ideal;
 }

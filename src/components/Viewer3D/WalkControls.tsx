@@ -356,7 +356,8 @@ export default function WalkControls({
       const targetFloor = above && upwardStair ? above : downwardStair ? below : undefined;
       if (stair && targetFloor) {
         const goingUp = targetFloor.elevation > (orderedFloors[activeIndex]?.elevation ?? 0);
-        const landing = stairLanding(stair, goingUp ? 'high' : 'low');
+        const targetRooms = floorGeom[targetFloor.id]?.rooms ?? [];
+        const landing = stairLanding(stair, goingUp ? 'high' : 'low', targetRooms);
         transition.current = {
           elapsed: 0,
           fromY: camera.position.y,
