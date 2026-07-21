@@ -1,0 +1,23 @@
+{
+  "publicBaseUrl": "https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev",
+  "modelPrefix": "models/quaternius/ultimate-home-interior",
+  "source": {
+    "name": "Ultimate Home Interior Pack",
+    "url": "https://quaternius.com/packs/ultimatehomeinterior.html",
+    "author": "Quaternius",
+    "license": "CC0"
+  },
+  "entries": [
+    { "sourceFile": "Couch_Large2.blend", "objectKey": "cushioned-wide-sofa", "type": "cushioned_wide_sofa", "name": "Cushioned Wide Sofa", "category": "Living", "width": 235, "depth": 98, "height": 84, "color": "#8c8178", "shape": "sofa", "icon": "S" },
+    { "sourceFile": "Couch_Large3.blend", "objectKey": "modern-wide-sofa", "type": "modern_wide_sofa", "name": "Modern Wide Sofa", "category": "Living", "width": 235, "depth": 95, "height": 82, "color": "#7f8589", "shape": "sofa", "icon": "S" },
+    { "sourceFile": "Couch_Medium2.blend", "objectKey": "cushioned-two-seat-sofa", "type": "cushioned_two_seat_sofa", "name": "Cushioned Two-seat Sofa", "category": "Living", "width": 175, "depth": 95, "height": 84, "color": "#897d73", "shape": "sofa", "icon": "S" },
+    { "sourceFile": "Couch_Small2.blend", "objectKey": "cushioned-armchair", "type": "cushioned_armchair", "name": "Cushioned Armchair", "category": "Living", "width": 95, "depth": 90, "height": 82, "color": "#877b72", "shape": "chair", "icon": "C" },
+    { "sourceFile": "Drawer_2.blend", "objectKey": "low-media-console", "type": "low_media_console", "name": "Low Media Console", "category": "Living", "width": 180, "depth": 45, "height": 55, "color": "#8e6845", "shape": "box", "icon": "M" },
+    { "sourceFile": "Drawer_5.blend", "objectKey": "six-drawer-dresser", "type": "six_drawer_dresser", "name": "Six-drawer Dresser", "category": "Bedroom", "width": 135, "depth": 50, "height": 80, "color": "#846044", "shape": "box", "icon": "D" },
+    { "sourceFile": "Houseplant_2.blend", "objectKey": "arching-houseplant", "type": "arching_houseplant", "name": "Arching Houseplant", "category": "Decor", "width": 60, "depth": 60, "height": 135, "color": "#3e7749", "shape": "plant", "icon": "P" },
+    { "sourceFile": "Houseplant_4.blend", "objectKey": "slender-houseplant", "type": "slender_houseplant", "name": "Slender Houseplant", "category": "Decor", "width": 45, "depth": 45, "height": 150, "color": "#397046", "shape": "plant", "icon": "P" },
+    { "sourceFile": "Houseplant_6.blend", "objectKey": "bushy-houseplant", "type": "bushy_houseplant", "name": "Bushy Houseplant", "category": "Decor", "width": 65, "depth": 65, "height": 115, "color": "#42784b", "shape": "plant", "icon": "P" },
+    { "sourceFile": "Houseplant_8.blend", "objectKey": "sculptural-branch-plant", "type": "sculptural_branch_plant", "name": "Sculptural Branch Plant", "category": "Decor", "width": 45, "depth": 45, "height": 120, "color": "#776a5d", "shape": "plant", "icon": "P" },
+    { "sourceFile": "Kitchen_1Drawers.blend", "objectKey": "kitchen-drawer-base", "type": "kitchen_drawer_base", "name": "Kitchen Drawer Base", "category": "Kitchen", "width": 60, "depth": 60, "height": 90, "color": "#ded8cf", "shape": "counter", "icon": "K" }
+  ]
+}

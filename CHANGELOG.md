@@ -19,6 +19,10 @@ sources while IKEA licensing permission is pending.
   floor lamp, pendant light, table lamp, rectangular/round rugs, toilet, sink,
   and shower. The prepared Kenney and Quaternius files were confirmed live with
   their declared byte counts; the 32 existing cloud-only objects remain intact.
+- Published a second visually reviewed Quaternius batch with 11 lightweight
+  CC0 objects: four seating variants, two storage/media units, four plants, and
+  a kitchen drawer base. The live cloud catalogue now contains 43 objects while
+  keeping all nine bundled-furniture model upgrades.
 - Added width/depth fitting and a bounded vertical offset for unusually thin or
   hanging GLBs. The TV keeps its correct proportions instead of being distorted
   to fill its shallow placement footprint.
@@ -30,11 +34,16 @@ sources while IKEA licensing permission is pending.
   object types merely because they were still present in the runtime lookup.
 - Added deterministic browser coverage for a cloud model upgrade and documented
   the manifest schema for future CC0 batches.
+- Added reusable Blender preview rendering and safe manifest-merging tools for
+  incremental catalogue releases. Blender batch export now correctly accepts
+  arguments after its standard `--` separator. An empty source object
+  (`Drawer_4`) was rejected rather than publishing a broken catalogue item.
 
 Verified: TypeScript, ESLint, production build, Android sync, and all 35 browser
 checks clean. The public R2 manifest is byte-identical to the reviewed local
-manifest (32 new objects, 9 model upgrades), and all six Kenney upgrade GLBs
-return HTTP 200 with their exact declared sizes. Signed AAB verified
+manifest (43 new objects, 9 model upgrades). All 11 second-batch GLBs were
+fetched from the public endpoint and matched the reviewed local files by
+SHA-256. Signed AAB verified
 (25,620,999 bytes; SHA-256
 `36D0C31F7FA537DB613EFB990ABA85E03BD9A5AFAB8A1860ABFCC4CC2B188BE8`).
 

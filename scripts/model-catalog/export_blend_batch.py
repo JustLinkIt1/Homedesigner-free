@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 
 import bpy
 
@@ -23,7 +24,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--spec", required=True, type=Path)
     parser.add_argument("--source-dir", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
-    return parser.parse_args()
+    # Blender keeps its own command-line options in sys.argv. Arguments after
+    # `--` belong to this exporter; ordinary Python invocation still works.
+    argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else None
+    return parser.parse_args(argv)
 
 
 def export_one(source: Path, destination: Path) -> None:
