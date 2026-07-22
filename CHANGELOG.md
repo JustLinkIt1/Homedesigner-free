@@ -5,6 +5,41 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## Landing page - 2026-07-22 (web only, no app version bump)
+
+Owner: "build a professional landing page for homedesignerapp.com — this video
+plays as you scroll down and read the page; make sure everything is readable;
+link to the desktop app and the Play Store."
+
+### Added — marketing landing page at homedesignerapp.com
+- New static `site/` (single self-contained `index.html` + `site/assets/`):
+  dark brand design (royal blue #0d63f8, Plus Jakarta Sans, app tokens), hero
+  with dual CTAs, a **scroll-driven film section** (owner's 8s promo render at
+  `site/assets/promo.mp4`; scroll progress scrubs `video.currentTime`, three
+  step captions on blurred dark cards + progress bar — text always sits on a
+  scrim, never raw video), feature grid from the real `store/` phone
+  screenshots, checklist band, "Get the app" section, footer with privacy.
+  CTAs: **Google Play** (`play.google.com/.../com.homedesigner.app`) and
+  **"Use the desktop app"** → `/app/`.
+- Robustness: `prefers-reduced-motion` (and any browser whose video seeks
+  silently no-op) falls back to a plain looping player with the step cards in
+  normal flow; captions/progress are scroll-driven so they work regardless.
+- **Deploy layout changed** (`deploy-pages.yml`): the published Pages site is
+  now assembled as landing at `/`, the full app under **`/app/`** (its
+  `base: './'` build is path-agnostic), with `privacy.html` + `CNAME` kept at
+  the root so the Play-listing privacy URL and custom domain keep working.
+  The Android build is untouched — Capacitor still bundles `dist/` directly.
+  Local `site-dist/` assembly is gitignored (CI builds it fresh).
+- Verified headless (desktop 1440px + phone 390px): captions/progress track
+  scroll, both CTAs correct, `/app/` serves the working designer, mobile
+  header/cards readable. (Headless Chromium can't seek H.264 so the scrub
+  itself was verified by mechanism + fallback; real browsers seek normally.)
+
+> **NOTE for the Google Sign-In fix (Codex, tomorrow):** the web app now lives
+> at `https://homedesignerapp.com/app/` — register redirect URI
+> `https://homedesignerapp.com/app/` (origin `https://homedesignerapp.com`)
+> on the Web OAuth client, not the bare domain root.
+
 ## 1.0.86 - 2026-07-22 (versionCode 10086)
 
 Owner report: the v1.0.85 Play upload failed, and the phone-only bottom

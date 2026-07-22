@@ -31,12 +31,25 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+      # Assemble the published site: marketing landing page at the root,
+      # the full designer app under /app/ (its relative base './' makes it
+      # path-agnostic), and privacy.html + CNAME kept at the root so the
+      # Play-listing privacy URL and the custom domain keep working.
+      # The Android build is untouched — Capacitor still bundles dist/ directly.
+      - name: Assemble site (landing + app)
+        run: |
+          rm -rf site-dist
+          mkdir -p site-dist/app
+          cp -r site/. site-dist/
+          cp -r dist/. site-dist/app/
+          cp dist/privacy.html site-dist/privacy.html
+          cp dist/CNAME site-dist/CNAME
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: site-dist
 
   deploy:
     needs: build
