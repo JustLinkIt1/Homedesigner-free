@@ -634,8 +634,8 @@ export default function Canvas2D() {
     });
   };
 
-  // ---- touch: tap to act, one-finger drag from empty canvas to pan,
-  // two-finger pinch to zoom & pan ----
+  // ---- touch: tap to act, one-finger drag from empty canvas to pan (or
+  // anywhere while objects are locked), two-finger pinch to zoom & pan ----
   const pinch = useRef<{ dist: number; center: Point } | null>(null);
   // The furniture node currently being dragged (if any), so a second finger
   // starting a pinch can cancel the drag instead of flinging the object.
@@ -670,10 +670,13 @@ export default function Canvas2D() {
       touchMoved.current = false;
       touchStartPt.current = { x: t[0].clientX, y: t[0].clientY };
       // A drag that starts on empty canvas (or the traced background plan)
-      // pans the viewport with ANY tool — taps still act as before.
+      // pans the viewport with ANY tool. Lock mode extends that pan surface
+      // across rooms, walls and furniture, so a plan that fills the screen is
+      // still navigable with one finger. Taps remain selection/actions because
+      // panning only starts after the movement threshold in onTouchMove.
       const target = e.target as Konva.Node;
       touchPanEligible.current =
-        target === target.getStage() || target.name() === 'bg-plan';
+        moveLock || target === target.getStage() || target.name() === 'bg-plan';
       if (tool === 'pan') {
         setIsPanning(true);
         lastPan.current = { x: t[0].clientX, y: t[0].clientY };
