@@ -18,9 +18,23 @@ export interface ProjectMeta {
   thumbnail?: string;
 }
 
+export interface CloudProjectRecord {
+  id: string;
+  name: string;
+  updatedAt: number;
+  thumbnail?: string;
+  snapshot: unknown;
+}
+
+export interface ProjectTombstone {
+  id: string;
+  updatedAt: number;
+}
+
 const INDEX_KEY = 'homedesigner.projects.index.v1';
 const ACTIVE_KEY = 'homedesigner.activeProject.v1';
 const LEGACY_KEY = 'homedesigner.project.v1';
+const TOMBSTONES_KEY = 'homedesigner.projects.deleted.v1';
 const projectKey = (id: string) => `homedesigner.project.${id}`;
 
 const readJSON = <T,>(key: string): T | null => {
@@ -47,6 +61,15 @@ export function listProjects(): ProjectMeta[] {
 
 function writeIndex(index: ProjectMeta[]): void {
   writeJSON(INDEX_KEY, index);
+}
+
+function notifyLocalChange(): void {
+  try {
+    window.dispatchEvent(new CustomEvent('project-local-change'));
+    window.dispatchEvent(new CustomEvent('projects-updated'));
+  } catch {
+    /* non-browser context */
+  }
 }
 
 export function getActiveId(): string | null {
@@ -111,6 +134,7 @@ export function saveActive(snap: { projectName: string }, forceId?: string): boo
     lastIndexWrite = now;
     touchMeta(id, { name: snap.projectName, updatedAt: now });
   }
+  if (ok) notifyLocalChange();
   return ok;
 }
 
@@ -130,6 +154,7 @@ export function createProject(name = 'Untitled home'): string {
   const id = uid();
   writeIndex([{ id, name, updatedAt: Date.now() }, ...listProjects()]);
   setActiveId(id);
+  notifyLocalChange();
   return id;
 }
 
@@ -139,10 +164,17 @@ export function renameProject(id: string, name: string): void {
   // would write the old name straight back into the index.
   const snap = readJSON<{ projectName?: string }>(projectKey(id));
   if (snap) writeJSON(projectKey(id), { ...snap, projectName: name });
+  notifyLocalChange();
 }
 
 export function deleteProject(id: string): void {
+  const updatedAt = Date.now();
   writeIndex(listProjects().filter((p) => p.id !== id));
+  const tombstones = readJSON<ProjectTombstone[]>(TOMBSTONES_KEY) ?? [];
+  writeJSON(TOMBSTONES_KEY, [
+    { id, updatedAt },
+    ...tombstones.filter((item) => item.id !== id),
+  ].slice(0, 250));
   try {
     localStorage.removeItem(projectKey(id));
   } catch {
@@ -155,6 +187,7 @@ export function deleteProject(id: string): void {
       /* ignore */
     }
   }
+  notifyLocalChange();
 }
 
 /** Copy a project (snapshot + meta). The active project is unchanged. */
@@ -166,6 +199,7 @@ export function duplicateProject(id: string): string | null {
   const name = `${meta?.name ?? snap.projectName ?? 'Project'} copy`;
   if (!writeJSON(projectKey(newId), { ...snap, projectName: name })) return null;
   writeIndex([{ id: newId, name, updatedAt: Date.now(), thumbnail: meta?.thumbnail }, ...listProjects()]);
+  notifyLocalChange();
   return newId;
 }
 
@@ -182,4 +216,59 @@ export function setThumbnail(id: string, dataUrl: string): void {
   } catch {
     /* non-browser context */
   }
+}
+
+/** Snapshot the local state for an authenticated last-write-wins cloud merge. */
+export function getCloudState(): { projects: CloudProjectRecord[]; tombstones: ProjectTombstone[] } {
+  const projects = listProjects().flatMap((meta) => {
+    const snapshot = readProject(meta.id);
+    return snapshot ? [{ ...meta, snapshot }] : [];
+  });
+  return { projects, tombstones: readJSON<ProjectTombstone[]>(TOMBSTONES_KEY) ?? [] };
+}
+
+/** Apply the server's merged state without generating another upload loop. */
+export function applyCloudState(state: {
+  projects: CloudProjectRecord[];
+  tombstones: ProjectTombstone[];
+}): number {
+  const localById = new Map(listProjects().map((meta) => [meta.id, meta]));
+  const tombstoneById = new Map(state.tombstones.map((item) => [item.id, item]));
+  let changed = 0;
+
+  for (const remote of state.projects) {
+    const deleted = tombstoneById.get(remote.id);
+    if (deleted && deleted.updatedAt >= remote.updatedAt) continue;
+    const local = localById.get(remote.id);
+    if (!local || remote.updatedAt > local.updatedAt) {
+      if (writeJSON(projectKey(remote.id), remote.snapshot)) {
+        localById.set(remote.id, {
+          id: remote.id,
+          name: remote.name,
+          updatedAt: remote.updatedAt,
+          thumbnail: remote.thumbnail,
+        });
+        changed++;
+      }
+    }
+  }
+
+  for (const deleted of state.tombstones) {
+    const local = localById.get(deleted.id);
+    if (local && deleted.updatedAt >= local.updatedAt) {
+      localById.delete(deleted.id);
+      try { localStorage.removeItem(projectKey(deleted.id)); } catch { /* ignore */ }
+      if (getActiveId() === deleted.id) {
+        try { localStorage.removeItem(ACTIVE_KEY); } catch { /* ignore */ }
+      }
+      changed++;
+    }
+  }
+
+  writeIndex([...localById.values()].sort((a, b) => b.updatedAt - a.updatedAt));
+  writeJSON(TOMBSTONES_KEY, state.tombstones.slice(0, 250));
+  if (changed) {
+    try { window.dispatchEvent(new CustomEvent('projects-updated')); } catch { /* non-browser context */ }
+  }
+  return changed;
 }

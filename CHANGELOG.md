@@ -5,6 +5,49 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.84 - 2026-07-22 (versionCode 10084)
+
+Owner reports: Google Sign-In ended with “Invalid JWT”; signed-in users need
+their plans and Pro purchase on a newly installed Android device; the new
+`homedesignerapp.com` domain needs to serve the GitHub Pages site.
+
+### Fixed — Google Sign-In JWT failure
+- Removed the `@capgo/capacitor-social-login` 8.3.38 generic JWT-decoder call.
+  That implementation splits the token incorrectly and rejects a valid Google
+  credential. Android's native Google provider already exposes the signed
+  credential's immutable `sub` as `profile.id`, which is now used directly.
+- Short-lived Google ID tokens remain memory-only and are refreshed before
+  cloud requests. The cloud service independently verifies their Google
+  signature, issuer, expiry and exact HomeDesigner OAuth audience.
+
+### Added — private cross-device plans and Pro access
+- Added a deployed Cloudflare Worker at
+  `homedesigner-sync.nathanjoppich.workers.dev` backed by the new, private
+  `homedesigner-user-data` R2 bucket. It is separate from the public furniture
+  bucket and namespaces every object by the verified Google subject.
+- Signed-in project snapshots, names and thumbnails now merge across Android
+  devices with last-write-wins timestamps. Deletion tombstones prevent a plan
+  deleted on one device reappearing from an older offline device.
+- Autosave remains local and fast. Cloud writes are coalesced after five idle
+  seconds, and offline/network failures leave local projects untouched for a
+  later retry.
+- Added **Delete cloud backups** in Settings plus a matching authenticated
+  deletion endpoint. Updated the privacy policy for Google account data,
+  Cloudflare storage and RevenueCat identity linking.
+- RevenueCat continues to use `google:<immutable-sub>` as its App User ID.
+  Signing into the same Google account on another Android device therefore
+  restores the same Pro entitlement without using the mutable email address.
+
+### Added — custom web domain
+- Added the GitHub Pages `CNAME` for `homedesignerapp.com` and changed the
+  in-app privacy URL to `https://homedesignerapp.com/privacy.html`.
+
+Verified: TypeScript and ESLint clean; production web build and Android sync
+clean; all 36 browser smoke checks green; Worker TypeScript clean; deployed
+Worker rejects unsigned sync/deletion requests with HTTP 401 and accepts the
+Android WebView CORS origin. Signed AAB verified (25,622,592 bytes; SHA-256
+`78ECC2F689438265F529809AEEC725C69DAB0D9F8F3F406A8882538DAC817275`).
+
 ## 1.0.83 - 2026-07-21 (versionCode 10083)
 
 Owner direction: grow the furniture library through commercially safe CC0

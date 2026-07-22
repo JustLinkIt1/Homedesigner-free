@@ -119,6 +119,10 @@ check(
   'Google login does not trigger the Android custom-scope guard',
   !/SocialLogin\.login\(\{[\s\S]{0,300}?scopes\s*:/.test(googleAuthSource),
 );
+check(
+  'Google login avoids the plugin 8.3.38 invalid-JWT decoder',
+  !googleAuthSource.includes('SocialLogin.decodeIdToken') && googleAuthSource.includes('result.profile.id'),
+);
 
 // ---- 1. Projects screen renders, sample home opens -------------------------
 await page.goto(BASE);

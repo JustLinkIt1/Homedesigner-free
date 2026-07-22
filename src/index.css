@@ -2501,7 +2501,7 @@ button.brand:hover .brand-name {
 }
 .account-card {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 36px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 10px;
@@ -2533,6 +2533,10 @@ button.brand:hover .brand-name {
   width: 36px;
   height: 36px;
   padding: 0;
+}
+.account-actions {
+  display: flex;
+  gap: 4px;
 }
 .settings-meta {
   margin-top: 18px;

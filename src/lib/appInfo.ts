@@ -12,7 +12,7 @@ export const APP_VERSION: string =
 export const PLAY_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.homedesigner.app';
 
-export const PRIVACY_URL = 'https://justlinkit1.github.io/Homedesigner-free/privacy.html';
+export const PRIVACY_URL = 'https://homedesignerapp.com/privacy.html';
 
 export const SUPPORT_EMAIL = 'nathanjoppich@gmail.com';
 
