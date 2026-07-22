@@ -104,9 +104,16 @@
     /* A tall scroll runway; the stage stays stuck while scroll progress drives
        the film and the caption cards. */
     .film { position: relative; height: 340vh; }
-    .film .stage { position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; place-items: center; }
+    .film .stage {
+      position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; place-items: center;
+      /* The film letterboxes (object-fit: contain shows the WHOLE frame), so the
+         stage behind it carries a subtle brand glow instead of raw black bars. */
+      background:
+        radial-gradient(60% 46% at 50% 42%, rgba(13, 99, 248, 0.12), transparent 72%),
+        #06080d;
+    }
     .film video {
-      width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: contain; position: absolute; inset: 0;
     }
     /* Legibility scrims — text always sits on a darkened gradient, never raw video. */
     .film .scrim {
@@ -420,8 +427,14 @@
         if (!duration) return;
         // Ease toward the target so fast scrolls stay smooth instead of jumpy.
         current += (target - current) * 0.18;
-        if (Math.abs(video.currentTime - current) > 0.033) {
-          try { video.currentTime = current; } catch { failedSeeks++; if (failedSeeks > 20) { cancelAnimationFrame(raf); fallback(); } }
+        // Only seek at frame granularity (24 fps ≈ 42 ms) and never while the
+        // previous seek is still in flight — piled-up seeks are what caused
+        // jank. The clip is encoded all-intra, so each seek lands instantly.
+        if (!video.seeking && Math.abs(video.currentTime - current) > 0.04) {
+          try {
+            if (typeof video.fastSeek === 'function') video.fastSeek(current);
+            else video.currentTime = current;
+          } catch { failedSeeks++; if (failedSeeks > 20) { cancelAnimationFrame(raf); fallback(); } }
         }
         // Some environments accept the seek but never move the playhead. If the
         // visitor is deep into the section and the video is still stuck at the
