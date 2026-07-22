@@ -132,6 +132,49 @@ check('editor opens', await page.waitForSelector('.toolbar', { timeout: 15000 })
 await page.locator('.coach-skip').click().catch(() => {});
 check('2D canvas mounts', (await page.locator('.konvajs-content canvas').count()) > 0);
 
+// With object movement locked, a phone user must be able to start a one-finger
+// pan on the plan itself (room/wall/furniture), not only in the margin around it.
+const lockedInteriorPan = await page.evaluate(async () => {
+  const state = window.useDesign.getState();
+  const room = state.rooms[0];
+  if (!room || typeof Touch !== 'function') return { supported: false, dx: 0, dy: 0 };
+  state.setTool('select');
+  state.setMoveLock(true);
+  // Let React refresh Canvas2D's gesture-handler closure with moveLock=true.
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const before = { ...window.useDesign.getState().pan };
+  const zoom = window.useDesign.getState().zoom;
+  const center = room.points.reduce(
+    (sum, point) => ({ x: sum.x + point.x / room.points.length, y: sum.y + point.y / room.points.length }),
+    { x: 0, y: 0 },
+  );
+  const content = document.querySelector('.konvajs-content');
+  const rect = content.getBoundingClientRect();
+  const x = rect.left + before.x + center.x * zoom;
+  const y = rect.top + before.y + center.y * zoom;
+  const touch = (clientX, clientY) => new Touch({
+    identifier: 7, target: content, clientX, clientY,
+    screenX: clientX, screenY: clientY, pageX: clientX, pageY: clientY,
+  });
+  const fire = (type, touches, changedTouches) => content.dispatchEvent(new TouchEvent(type, {
+    bubbles: true, cancelable: true, touches, targetTouches: touches, changedTouches,
+  }));
+  const start = touch(x, y);
+  fire('touchstart', [start], [start]);
+  const moved = touch(x + 42, y + 28);
+  fire('touchmove', [moved], [moved]);
+  fire('touchend', [], [moved]);
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const after = window.useDesign.getState().pan;
+  window.useDesign.getState().setMoveLock(false);
+  return { supported: true, dx: after.x - before.x, dy: after.y - before.y };
+});
+check(
+  'locked 2D plan pans from inside a room with one finger',
+  lockedInteriorPan.supported && lockedInteriorPan.dx > 30 && lockedInteriorPan.dy > 18,
+  JSON.stringify(lockedInteriorPan),
+);
+
 // A single structural wall can border several rooms. Painting from 3D must
 // resolve to the room-bounded face under the tap instead of the whole length.
 const faceRanges = await page.evaluate(async () => {

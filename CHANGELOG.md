@@ -5,6 +5,24 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.85 - 2026-07-22 (versionCode 10085)
+
+### Fixed — one-finger 2D navigation while objects are locked
+- Lock mode now turns the entire 2D plan into a one-finger pan surface on
+  touch devices. A drag may begin over a room, wall, or furniture item instead
+  of requiring the empty margin outside the house.
+- The existing movement threshold still distinguishes a tap from a drag, so
+  locked objects and surfaces remain selectable without moving them.
+- Added an end-to-end touch regression that begins inside a room and verifies
+  the viewport moves while object locking is enabled.
+
+Verified: TypeScript and ESLint clean; production web build and Android sync
+clean; all 37 browser smoke checks green. Signed AAB verified (25,622,517
+bytes; SHA-256
+`CD9BE7F9FE941D25D9C145B0A926E0281E938189E2242815A5987521693B02D1`;
+signer SHA-256
+`EE:D4:E3:A9:11:BC:92:9A:D3:CD:33:36:FF:BF:32:C0:22:4A:1F:C5:21:BE:B1:13:02:F5:A0:7E:5F:00:6A:00`).
+
 ## 1.0.84 - 2026-07-22 (versionCode 10084)
 
 Owner reports: Google Sign-In ended with “Invalid JWT”; signed-in users need
