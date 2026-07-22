@@ -5,6 +5,30 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.86 - 2026-07-22 (versionCode 10086)
+
+Owner report: the v1.0.85 Play upload failed, and the phone-only bottom
+navigation left desktop users without a visible Settings destination on Home.
+
+### Added — desktop Home settings access
+- Added a dedicated **Settings** button beside the Language selector in the
+  desktop projects header. It opens the existing Settings dialog directly.
+- Kept the control hidden at the phone breakpoint because mobile already has a
+  permanent Settings destination in the Home/Templates/Settings bottom bar.
+- Added browser coverage that verifies the desktop header button is visible and
+  opens Settings before entering a sample project.
+
+### Release — replacement Play bundle
+- Advanced the app to `1.0.86` / versionCode `10086`, giving Google Play a new
+  bundle identity after the failed v1.0.85 upload attempt.
+
+Verified: TypeScript and ESLint clean; production web build and Android sync
+clean; all 39 browser smoke checks green. Signed AAB verified (25,622,587
+bytes; SHA-256
+`6AD3A05EBD572669A8ED76710F3E3094B4D2B75CCDC1E40A79E6DC37CC767D7B`;
+signer SHA-256
+`EE:D4:E3:A9:11:BC:92:9A:D3:CD:33:36:FF:BF:32:C0:22:4A:1F:C5:21:BE:B1:13:02:F5:A0:7E:5F:00:6A:00`).
+
 ## 1.0.85 - 2026-07-22 (versionCode 10085)
 
 ### Fixed — one-finger 2D navigation while objects are locked

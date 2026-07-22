@@ -134,7 +134,13 @@ export default function ProjectsScreen({
             <span className="sub">{APP_TAGLINE}</span>
           </div>
         </div>
-        <LanguagePicker align="right" />
+        <div className="ps-head-actions">
+          <button className="lang-btn ps-settings-btn" onClick={onSettings}>
+            <Settings className="icon" />
+            <span>{t('Settings')}</span>
+          </button>
+          <LanguagePicker align="right" />
+        </div>
       </header>
 
       <main className="ps-main" ref={mainRef}>

@@ -2816,6 +2816,15 @@ button.brand:hover .brand-name {
   border-bottom: 1px solid var(--border);
   flex: none;
 }
+.ps-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ps-settings-btn .icon {
+  width: 16px;
+  height: 16px;
+}
 
 /* ---------- Language picker (projects header + Settings) ---------- */
 .lang-btn {
@@ -3258,6 +3267,10 @@ button.brand:hover .brand-name {
   display: none;
 }
 @media (max-width: 720px) {
+  /* Settings already has a permanent destination in the phone bottom nav. */
+  .ps-settings-btn {
+    display: none;
+  }
   .ps-hero {
     flex-direction: column;
     align-items: stretch;
