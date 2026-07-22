@@ -103,7 +103,7 @@
     /* ---------- Scroll video section ---------- */
     /* A tall scroll runway; the stage stays stuck while scroll progress drives
        the film and the caption cards. */
-    .film { position: relative; height: 340vh; }
+    .film { position: relative; height: 260vh; }
     .film .stage {
       position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; place-items: center;
       /* The film letterboxes (object-fit: contain shows the WHOLE frame), so the
@@ -426,11 +426,12 @@
         raf = requestAnimationFrame(tick);
         if (!duration) return;
         // Ease toward the target so fast scrolls stay smooth instead of jumpy.
-        current += (target - current) * 0.18;
-        // Only seek at frame granularity (24 fps ≈ 42 ms) and never while the
+        current += (target - current) * 0.16;
+        // Only seek at frame granularity (48 fps ≈ 21 ms) and never while the
         // previous seek is still in flight — piled-up seeks are what caused
-        // jank. The clip is encoded all-intra, so each seek lands instantly.
-        if (!video.seeking && Math.abs(video.currentTime - current) > 0.04) {
+        // jank. The clip is motion-interpolated to 48 fps and encoded
+        // all-intra, so seeks are fine-grained and land instantly.
+        if (!video.seeking && Math.abs(video.currentTime - current) > 0.02) {
           try {
             if (typeof video.fastSeek === 'function') video.fastSeek(current);
             else video.currentTime = current;
