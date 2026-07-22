@@ -14,3 +14,4 @@ tsconfig.tsbuildinfo
 
 # Claude Code agent worktrees / local tool state
 .claude/
+.wrangler/

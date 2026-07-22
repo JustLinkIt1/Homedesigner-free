@@ -1369,6 +1369,10 @@ export default function Canvas2D() {
               >
                 {/* cut the wall */}
                 <Rect x={-wd / 2} y={-t / 2 - 1} width={wd} height={t + 2} fill="#f1f1ec" />
+                <Group
+                  scaleX={o.type === 'door' && o.flipHinge ? -1 : 1}
+                  scaleY={o.type === 'door' && o.flipSwing ? -1 : 1}
+                >
                 {o.type === 'door' && (o.style === 'passage' || o.style === 'arch') ? (
                   <>
                     {/* doorless opening: jambs + dashed clear-width line;
@@ -1465,6 +1469,7 @@ export default function Canvas2D() {
                     )}
                   </>
                 )}
+                </Group>
                 {/* drag-along-wall handle (slides the opening's offset) */}
                 {editing && (
                   <Circle
@@ -2004,7 +2009,29 @@ function DraftView({
         fill={tool === 'room' ? 'rgba(76,141,255,0.12)' : undefined}
       />
       {draft.map((p, i) => (
-        <Circle key={i} x={p.x} y={p.y} radius={5 / zoom} fill="#fff" stroke={C.selection} strokeWidth={2 / zoom} />
+        <Group key={i}>
+          {tool === 'room' && i === 0 && draft.length >= 3 && (
+            <Circle
+              x={p.x}
+              y={p.y}
+              radius={14 / zoom}
+              fill="rgba(76,141,255,0.22)"
+              stroke={C.selection}
+              strokeWidth={2 / zoom}
+            />
+          )}
+          <Circle x={p.x} y={p.y} radius={5 / zoom} fill="#fff" stroke={C.selection} strokeWidth={2 / zoom} />
+          {tool === 'room' && i === 0 && draft.length >= 3 && (
+            <Text
+              x={p.x - 5 / zoom}
+              y={p.y - 8 / zoom}
+              text="✓"
+              fontSize={11 / zoom}
+              fontStyle="bold"
+              fill={C.selection}
+            />
+          )}
+        </Group>
       ))}
       {cursor && last && (
         <Text

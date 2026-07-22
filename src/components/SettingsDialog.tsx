@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Monitor, Sun, Moon, ExternalLink, LogOut } from 'lucide-react';
+import { Settings, Monitor, Sun, Moon, ExternalLink, LogOut, Trash2 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { hapticsEnabled, setHapticsEnabled, tapLight } from '../lib/haptics';
@@ -8,6 +8,8 @@ import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
 import { APP_NAME, APP_VERSION, PRIVACY_URL } from '../lib/appInfo';
 import { useAuthStore } from '../store/authStore';
+import { deleteCloudProjects } from '../lib/cloudSync';
+import { toast } from '../lib/ui';
 
 const THEME_OPTIONS: { id: ThemePref; label: string; icon: typeof Sun }[] = [
   { id: 'system', label: 'System', icon: Monitor },
@@ -66,11 +68,27 @@ export default function SettingsDialog({
                 <div className="account-copy">
                   <strong>{account.name || t('Google account')}</strong>
                   {account.email ? <span>{account.email}</span> : null}
-                  <small>{t('Pro access syncs across Android devices. Designs stay on this device.')}</small>
+                  <small>{t('Plans and Pro access sync across your signed-in Android devices.')}</small>
                 </div>
-                <button className="btn icon-btn" onClick={() => void signOut()} disabled={authBusy} aria-label={t('Sign out')}>
-                  <LogOut className="icon" />
-                </button>
+                <div className="account-actions">
+                  <button className="btn icon-btn" onClick={() => void signOut()} disabled={authBusy} aria-label={t('Sign out')}>
+                    <LogOut className="icon" />
+                  </button>
+                  <button
+                    className="btn icon-btn"
+                    onClick={() => {
+                      if (!window.confirm(t('Delete every cloud backup for this account? Plans on this device will remain.'))) return;
+                      void deleteCloudProjects()
+                        .then(() => toast.success(t('Cloud backups deleted. Future changes will continue syncing.')))
+                        .catch(() => toast.error(t("Couldn't delete cloud backups — try again when you're online.")));
+                    }}
+                    disabled={authBusy}
+                    aria-label={t('Delete cloud backups')}
+                    title={t('Delete cloud backups')}
+                  >
+                    <Trash2 className="icon" />
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="account-signin">
@@ -80,7 +98,7 @@ export default function SettingsDialog({
                 </button>
                 <small>
                   {authConfigured
-                    ? t('Sync Pro access across Android devices. Designs stay on this device.')
+                    ? t('Sync plans and Pro access across your Android devices.')
                     : t('Google Sign-In needs an OAuth client ID in this build.')}
                 </small>
               </div>

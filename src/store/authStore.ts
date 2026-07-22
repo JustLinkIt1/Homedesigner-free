@@ -10,8 +10,16 @@ import {
 import { toast } from '../lib/ui';
 import { t } from '../lib/i18n';
 import { useProStore } from './proStore';
+import { startProjectSync, syncProjects } from '../lib/cloudSync';
 
 const ACCOUNT_CACHE_KEY = 'homedesigner.google-account.v1';
+let stopProjectSync: (() => void) | null = null;
+
+async function syncAccountData(): Promise<number> {
+  stopProjectSync?.();
+  stopProjectSync = startProjectSync();
+  return syncProjects();
+}
 
 function readAccount(): GoogleAccount | null {
   try {
@@ -75,7 +83,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
       set({ account: cached });
-      await linkPurchases(cached);
+      await Promise.allSettled([linkPurchases(cached), syncAccountData()]);
     } catch {
       // Offline startup must not discard a valid cached account or entitlement.
       set({ account: cached });
@@ -91,11 +99,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const account = await signInWithGoogle();
       writeAccount(account);
       set({ account, ready: true });
-      try {
-        await linkPurchases(account);
-        toast.success(t('Signed in — Pro access is synced to this account.'));
-      } catch {
-        toast.info(t("Signed in, but purchases couldn't sync. We'll retry when you're online."));
+      const [purchases, plans] = await Promise.allSettled([linkPurchases(account), syncAccountData()]);
+      if (purchases.status === 'fulfilled' && plans.status === 'fulfilled') {
+        const imported = plans.value;
+        toast.success(imported
+          ? t('Signed in — your plans and Pro access are synced.')
+          : t('Signed in — plans and Pro access will sync across devices.'));
+      } else {
+        toast.info(t("Signed in, but cloud sync couldn't finish. We'll retry when you're online."));
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
@@ -113,6 +124,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // signed in rather than leaving a shared device on the named customer.
       await useProStore.getState().unlinkAccount();
       await signOutFromGoogle();
+      stopProjectSync?.();
+      stopProjectSync = null;
       writeAccount(null);
       set({ account: null });
       toast.success(t('Signed out. Designs remain saved on this device.'));

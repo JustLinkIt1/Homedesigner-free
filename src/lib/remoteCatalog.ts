@@ -18,7 +18,13 @@ type CatalogStatus = 'idle' | 'loading' | 'ready' | 'offline';
 interface RemoteManifest {
   version: 1;
   entries: unknown[];
+  overrides?: unknown[];
 }
+
+type ModelOverride = {
+  type: string;
+  model: NonNullable<CatalogEntry['model']>;
+};
 
 interface CatalogSnapshot {
   entries: CatalogEntry[];
@@ -29,6 +35,10 @@ interface CatalogSnapshot {
 
 const listeners = new Set<() => void>();
 const remoteTypes = new Set<string>();
+const overriddenTypes = new Set<string>();
+const bundledByType: Record<string, CatalogEntry> = Object.fromEntries(
+  FURNITURE_CATALOG.map((entry) => [entry.type, entry]),
+);
 const allowedShapes = new Set<Shape3D>(FURNITURE_CATALOG.map((entry) => entry.shape));
 let snapshot: CatalogSnapshot = {
   entries: FURNITURE_CATALOG,
@@ -75,6 +85,42 @@ function sameOriginUrl(value: unknown, manifestUrl: URL): string | null {
   }
 }
 
+function validateModel(value: unknown, manifestUrl: URL): NonNullable<CatalogEntry['model']> | null {
+  if (!isRecord(value)) return null;
+  const modelUrl = sameOriginUrl(value.url, manifestUrl);
+  if (!modelUrl || !modelUrl.toLowerCase().endsWith('.glb')) return null;
+
+  let source: NonNullable<CatalogEntry['model']>['source'];
+  if (isRecord(value.source)) {
+    const sourceName = cleanText(value.source.name, 100);
+    const sourceUrl = cleanText(value.source.url, 500);
+    const author = cleanText(value.source.author, 100) ?? undefined;
+    if (sourceName && sourceUrl && value.source.license === 'CC0') {
+      try {
+        const parsed = new URL(sourceUrl);
+        if (parsed.protocol === 'https:') {
+          source = { name: sourceName, url: parsed.href, author, license: 'CC0' };
+        }
+      } catch {
+        // Provenance is mandatory; malformed source URLs reject the model.
+      }
+    }
+  }
+  if (!source) return null;
+
+  const bytes = cleanBytes(value.bytes);
+  const shaText = cleanText(value.sha256, 64);
+  const sha256 = shaText && /^[a-f0-9]{64}$/i.test(shaText) ? shaText.toLowerCase() : undefined;
+  const yaw = typeof value.yaw === 'number' && Number.isFinite(value.yaw) ? value.yaw : undefined;
+  const fit = value.fit === 'width' || value.fit === 'depth' || value.fit === 'contain'
+    ? value.fit
+    : undefined;
+  const offsetY = typeof value.offsetY === 'number' && Number.isFinite(value.offsetY) && Math.abs(value.offsetY) <= 2_000
+    ? value.offsetY
+    : undefined;
+  return { url: modelUrl, yaw, fit, offsetY, bytes, sha256, source };
+}
+
 function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
   if (!isRecord(value)) return null;
   const type = cleanText(value.type, 80);
@@ -88,8 +134,10 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
   const shape = value.shape as Shape3D;
   if (!type || !/^[a-z0-9][a-z0-9_-]*$/.test(type) || !name || !category || !color) return null;
   if (!width || !depth || !height || !allowedShapes.has(shape)) return null;
-  // Cloud data may add types but may never replace bundled items or openings.
-  if (CATALOG_BY_TYPE[type]) return null;
+  // New cloud entries may never shadow an object bundled with the app. Check
+  // the immutable baseline rather than CATALOG_BY_TYPE, which also contains
+  // entries from the previous manifest refresh.
+  if (bundledByType[type]) return null;
   if (!isRecord(value.model)) return null;
   const modelUrl = sameOriginUrl(value.model.url, manifestUrl);
   if (!modelUrl || !modelUrl.toLowerCase().endsWith('.glb')) return null;
@@ -118,6 +166,12 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
   const yaw = typeof value.model.yaw === 'number' && Number.isFinite(value.model.yaw)
     ? value.model.yaw
     : undefined;
+  const fit = value.model.fit === 'width' || value.model.fit === 'depth' || value.model.fit === 'contain'
+    ? value.model.fit
+    : undefined;
+  const offsetY = typeof value.model.offsetY === 'number' && Number.isFinite(value.model.offsetY) && Math.abs(value.model.offsetY) <= 2_000
+    ? value.model.offsetY
+    : undefined;
   return {
     type,
     name,
@@ -130,8 +184,23 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
     icon,
     pro: value.pro === false ? undefined : true,
     cloud: true,
-    model: { url: modelUrl, yaw, bytes, sha256, source },
+    model: { url: modelUrl, yaw, fit, offsetY, bytes, sha256, source },
   };
+}
+
+function validateOverride(
+  value: unknown,
+  manifestUrl: URL,
+): ModelOverride | null {
+  if (!isRecord(value)) return null;
+  const type = cleanText(value.type, 80);
+  if (!type || !/^[a-z0-9][a-z0-9_-]*$/.test(type)) return null;
+  const bundled = bundledByType[type];
+  // Only model rendering may be upgraded remotely. Openings remain tied to an
+  // app release because their dimensions and styles affect wall geometry.
+  if (!bundled || bundled.opening) return null;
+  const model = validateModel(value.model, manifestUrl);
+  return model ? { type, model } : null;
 }
 
 function applyManifest(raw: unknown, urlString: string): CatalogEntry[] {
@@ -144,12 +213,28 @@ function applyManifest(raw: unknown, urlString: string): CatalogEntry[] {
   const entries = manifest.entries
     .map((entry) => validateEntry(entry, manifestUrl))
     .filter((entry): entry is CatalogEntry => !!entry);
+  const seenOverrides = new Set<string>();
+  const overrides = (manifest.overrides ?? [])
+    .map((override) => validateOverride(override, manifestUrl))
+    .filter((override): override is ModelOverride => {
+      if (!override || seenOverrides.has(override.type)) return false;
+      seenOverrides.add(override.type);
+      return true;
+    });
 
   remoteTypes.forEach((type) => delete CATALOG_BY_TYPE[type]);
   remoteTypes.clear();
+  overriddenTypes.forEach((type) => {
+    CATALOG_BY_TYPE[type] = bundledByType[type];
+  });
+  overriddenTypes.clear();
   entries.forEach((entry) => {
     CATALOG_BY_TYPE[entry.type] = entry;
     remoteTypes.add(entry.type);
+  });
+  overrides.forEach(({ type, model }) => {
+    CATALOG_BY_TYPE[type] = { ...bundledByType[type], model, cloud: true };
+    overriddenTypes.add(type);
   });
   return entries;
 }

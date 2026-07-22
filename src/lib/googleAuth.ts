@@ -13,6 +13,17 @@ export interface GoogleAccount {
 const GOOGLE_WEB_CLIENT_ID = (import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID ?? '').trim();
 
 let initializePromise: Promise<void> | null = null;
+let currentIdToken: string | null = null;
+
+function tokenIsFresh(token: string): boolean {
+  try {
+    const encoded = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '='))) as { exp?: number };
+    return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now() + 60_000;
+  } catch {
+    return false;
+  }
+}
 
 export function isGoogleSignInConfigured(): boolean {
   return GOOGLE_WEB_CLIENT_ID.endsWith('.apps.googleusercontent.com');
@@ -35,21 +46,20 @@ export async function signInWithGoogle(): Promise<GoogleAccount> {
   await initializeGoogle();
   const { result } = await SocialLogin.login({
     provider: 'google',
-    options: { scopes: ['openid', 'email', 'profile'] },
+    // Android adds openid/email/profile itself. Supplying `scopes` here makes
+    // the plugin require a custom MainActivity even for those defaults.
+    options: {},
   });
   if (result.responseType !== 'online') {
     throw new Error('Google Sign-In did not return an identity profile.');
   }
 
-  // The native Credential Manager response is authoritative for this local
-  // account link. Decode the ID token only to obtain its stable `sub`; never
-  // persist access/ID tokens or use the mutable email as a RevenueCat ID.
-  let subject = result.profile.id;
-  if (result.idToken) {
-    const { claims } = await SocialLogin.decodeIdToken({ idToken: result.idToken });
-    if (typeof claims.sub === 'string' && claims.sub) subject = claims.sub;
-  }
+  // The native provider has already parsed the signed credential and exposes
+  // Google's immutable `sub` as profile.id. The plugin's generic decoder in
+  // 8.3.38 rejects valid JWTs, so do not route the credential back through it.
+  const subject = result.profile.id;
   if (!subject) throw new Error('Google Sign-In returned no account identifier.');
+  currentIdToken = result.idToken;
 
   return {
     subject,
@@ -68,6 +78,20 @@ export async function hasGoogleSession(): Promise<boolean> {
 export async function signOutFromGoogle(): Promise<void> {
   await initializeGoogle();
   await SocialLogin.logout({ provider: 'google' });
+  currentIdToken = null;
+}
+
+/** Returns a short-lived Google ID token for server authentication.
+ * Tokens remain in memory only and are verified again by the sync Worker. */
+export async function getGoogleIdToken(): Promise<string> {
+  await initializeGoogle();
+  if (currentIdToken && tokenIsFresh(currentIdToken)) return currentIdToken;
+
+  await SocialLogin.refresh({ provider: 'google', options: {} });
+  const auth = await SocialLogin.getAuthorizationCode({ provider: 'google' });
+  if (!auth.jwt) throw new Error('Google session needs to be refreshed.');
+  currentIdToken = auth.jwt;
+  return auth.jwt;
 }
 
 /** Namespaces Google subjects so future identity providers cannot collide. */

@@ -4,14 +4,16 @@ import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
 import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry } from '../../lib/textures';
-import { dist, boundsOf } from '../../lib/geometry';
+import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
+import { stairOpeningPoints } from '../../lib/walkNavigation';
 import { wallFaceAt } from '../../lib/wallFaces';
 import { useRemoteCatalog } from '../../lib/remoteCatalog';
 import Furniture3D from './Furniture3D';
-import type { CustomTexture, FloorGeom, Opening, Point, Room, Wall, WallFaceFinish, WallFaceRange } from '../../types';
+import type { CustomTexture, FloorGeom, FurnitureItem, Opening, Point, Room, Wall, WallFaceFinish, WallFaceRange } from '../../types';
 
 export const M = 0.01; // cm -> m
 const NO_FACE_FINISHES: WallFaceFinish[] = [];
+const NO_STAIRS: FurnitureItem[] = [];
 
 interface Span {
   a: number; // start along wall (cm from start)
@@ -377,7 +379,7 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
             <boxGeometry args={[w, 0.04, thickness * 0.5]} />
             <meshStandardMaterial color="#c9cdd2" roughness={0.6} metalness={0.2} />
           </mesh>
-          <mesh position={[leftX + lw / 2, h / 2, 0]} castShadow>
+          <mesh position={[o.flipHinge ? rightX - lw / 2 : leftX + lw / 2, h / 2, 0]} castShadow>
             <boxGeometry args={[lw, h * 0.97, 0.035]} />
             <meshStandardMaterial color="#b9a58c" roughness={0.6} />
           </mesh>
@@ -433,10 +435,11 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
     if (o.style === 'double') {
       // Two half-width leaves, hinged at each jamb, both swung open.
       const leafLen = (w / 2) * 0.94;
+      const swing = o.flipSwing ? -1 : 1;
       return (
         <group>
           {jambs}
-          <group position={[leftX, 0, 0]} rotation={[0, -Math.PI / 2.6, 0]}>
+          <group position={[leftX, 0, 0]} rotation={[0, (-Math.PI / 2.6) * swing, 0]}>
             <mesh position={[leafLen / 2, h / 2, 0]} castShadow>
               <boxGeometry args={[leafLen, h * 0.99, 0.04]} />
               <meshStandardMaterial color="#a9744f" roughness={0.6} />
@@ -444,7 +447,7 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
           </group>
           {/* right leaf: local +x points at the centre when closed (yaw PI),
               then swings open by the same angle in the opposite sense */}
-          <group position={[rightX, 0, 0]} rotation={[0, Math.PI + Math.PI / 2.6, 0]}>
+          <group position={[rightX, 0, 0]} rotation={[0, Math.PI + (Math.PI / 2.6) * swing, 0]}>
             <mesh position={[leafLen / 2, h / 2, 0]} castShadow>
               <boxGeometry args={[leafLen, h * 0.99, 0.04]} />
               <meshStandardMaterial color="#a9744f" roughness={0.6} />
@@ -455,11 +458,15 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
     }
 
     const leafLen = w * 0.94;
+    const hingeLeft = !o.flipHinge;
+    const hingeX = hingeLeft ? leftX : rightX;
+    const swing = o.flipSwing ? -1 : 1;
+    const openYaw = (hingeLeft ? -1 : 1) * swing * (Math.PI / 2.6);
     return (
       <group>
         {jambs}
         {/* swung-open leaf, hinged at one jamb */}
-        <group position={[leftX, 0, 0]} rotation={[0, -Math.PI / 2.6, 0]}>
+        <group position={[hingeX, 0, 0]} rotation={[0, (hingeLeft ? 0 : Math.PI) + openYaw, 0]}>
           <mesh position={[leafLen / 2, h / 2, 0]} castShadow>
             <boxGeometry args={[leafLen, h * 0.99, 0.04]} />
             <meshStandardMaterial color="#a9744f" roughness={0.6} />
@@ -534,13 +541,26 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
 const SLAB_T = 0.22; // structural slab thickness between storeys (m)
 
 /** Shared shape builder: a room polygon as a THREE.Shape in plan meters. */
-function roomShape(room: Room): THREE.Shape {
+function roomShape(room: Room, stairsBelow: FurnitureItem[] = []): THREE.Shape {
   const shape = new THREE.Shape();
   room.points.forEach((p, i) => {
     if (i === 0) shape.moveTo(p.x * M, p.y * M);
     else shape.lineTo(p.x * M, p.y * M);
   });
   shape.closePath();
+  for (const stair of stairsBelow) {
+    const opening = stairOpeningPoints(stair);
+    // A THREE.Shape hole must sit wholly inside this room polygon. Stairs that
+    // cross room boundaries remain solid until a clipped-opening model exists.
+    if (!opening.every((point) => pointInPolygon(point, room.points))) continue;
+    const hole = new THREE.Path();
+    opening.forEach((point, index) => {
+      if (index === 0) hole.moveTo(point.x * M, point.y * M);
+      else hole.lineTo(point.x * M, point.y * M);
+    });
+    hole.closePath();
+    shape.holes.push(hole);
+  }
   return shape;
 }
 
@@ -549,11 +569,11 @@ function roomShape(room: Room): THREE.Shape {
  * of the storey below) — without it, stacked floors float and you see clean
  * through between storeys.
  */
-function SlabMesh({ room }: { room: Room }) {
+function SlabMesh({ room, stairsBelow }: { room: Room; stairsBelow: FurnitureItem[] }) {
   const geometry = useMemo(() => {
-    const geo = new THREE.ExtrudeGeometry(roomShape(room), { depth: SLAB_T, bevelEnabled: false });
+    const geo = new THREE.ExtrudeGeometry(roomShape(room, stairsBelow), { depth: SLAB_T, bevelEnabled: false });
     return geo;
-  }, [room.points]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [room.points, stairsBelow]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]} castShadow receiveShadow>
       <meshStandardMaterial color="#ded9cf" roughness={0.9} metalness={0} />
@@ -571,18 +591,10 @@ function CeilingMesh({ room, height }: { room: Room; height: number }) {
   );
 }
 
-function FloorMesh({ room, onTap }: { room: Room; onTap?: (tap: SurfaceTap) => void }) {
+function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: FurnitureItem[]; onTap?: (tap: SurfaceTap) => void }) {
   const geometry = useMemo(() => {
-    const shape = new THREE.Shape();
-    room.points.forEach((p, i) => {
-      const x = p.x * M;
-      const y = p.y * M;
-      if (i === 0) shape.moveTo(x, y);
-      else shape.lineTo(x, y);
-    });
-    shape.closePath();
-    return new THREE.ShapeGeometry(shape);
-  }, [room.points]);
+    return new THREE.ShapeGeometry(roomShape(room, stairsBelow));
+  }, [room.points, stairsBelow]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mat = FLOOR_BY_ID[room.floorMaterial];
   const kind = mat?.kind ?? 'wood';
@@ -671,6 +683,7 @@ export function useDesignBounds() {
 /** Walls + floors + furniture for one storey, positioned at its elevation. */
 function FloorContent({
   geom,
+  stairsBelow,
   elevation,
   interactive,
   isTop,
@@ -681,6 +694,7 @@ function FloorContent({
   onSurfaceTap,
 }: {
   geom: FloorGeom;
+  stairsBelow: FurnitureItem[];
   elevation: number;
   interactive: boolean;
   isTop: boolean;
@@ -718,12 +732,12 @@ function FloorContent({
 
   return (
     <group position={[0, elevation * M, 0]}>
-      {elevation > 0 && geom.rooms.map((r) => <SlabMesh key={`slab-${r.id}`} room={r} />)}
+      {elevation > 0 && geom.rooms.map((r) => <SlabMesh key={`slab-${r.id}`} room={r} stairsBelow={stairsBelow} />)}
       {isTop && !dollhouse && geom.rooms.map((r) => (
         <CeilingMesh key={`ceil-${r.id}`} room={r} height={ceilingHeight} />
       ))}
       {geom.rooms.map((r) => (
-        <FloorMesh key={r.id} room={r} onTap={onTap} />
+        <FloorMesh key={r.id} room={r} stairsBelow={stairsBelow} onTap={onTap} />
       ))}
       {geom.walls.map((w) => (
         <WallMesh
@@ -777,6 +791,7 @@ export default function DesignScene({
   const floors = useDesign((s) => s.floors);
   const floorGeom = useDesign((s) => s.floorGeom);
   const activeFloorId = useDesign((s) => s.activeFloorId);
+  const walkMode = useDesign((s) => s.walkMode);
   const { center } = useDesignBounds();
 
   // One place computes the dollhouse fade for every wall (all storeys), per frame.
@@ -815,17 +830,31 @@ export default function DesignScene({
   // zooming into (say) the ground floor is never blocked by the slab of the
   // storey above — switching floors in the FloorSwitcher reveals them again.
   const activeElevation = floors.find((f) => f.id === activeFloorId)?.elevation ?? 0;
-  const visible = floors.filter((f) => f.elevation <= activeElevation);
+  // Walk mode keeps the complete building present while the camera moves
+  // between storeys. Orbit/dollhouse mode retains the active-floor cutaway.
+  const visible = walkMode ? floors : floors.filter((f) => f.elevation <= activeElevation);
+  const orderedFloors = useMemo(() => [...floors].sort((a, b) => a.elevation - b.elevation), [floors]);
+  const stairsBelowByFloor = useMemo(() => {
+    const result = new Map<string, FurnitureItem[]>();
+    orderedFloors.forEach((floor, index) => {
+      if (index === 0) return;
+      const below = floorGeom[orderedFloors[index - 1].id];
+      result.set(floor.id, below?.furniture.filter((item) => item.type === 'stairs') ?? NO_STAIRS);
+    });
+    return result;
+  }, [orderedFloors, floorGeom]);
   const topElevation = Math.max(...visible.map((x) => x.elevation));
   return (
     <>
       {visible.map((f) => {
         const geom = floorGeom[f.id];
         if (!geom) return null;
+        const stairsBelow = stairsBelowByFloor.get(f.id) ?? NO_STAIRS;
         return (
           <FloorContent
             key={f.id}
             geom={geom}
+            stairsBelow={stairsBelow}
             elevation={f.elevation}
             interactive={interactive && f.id === activeFloorId}
             isTop={f.elevation >= topElevation}

@@ -5,6 +5,193 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.84 - 2026-07-22 (versionCode 10084)
+
+Owner reports: Google Sign-In ended with “Invalid JWT”; signed-in users need
+their plans and Pro purchase on a newly installed Android device; the new
+`homedesignerapp.com` domain needs to serve the GitHub Pages site.
+
+### Fixed — Google Sign-In JWT failure
+- Removed the `@capgo/capacitor-social-login` 8.3.38 generic JWT-decoder call.
+  That implementation splits the token incorrectly and rejects a valid Google
+  credential. Android's native Google provider already exposes the signed
+  credential's immutable `sub` as `profile.id`, which is now used directly.
+- Short-lived Google ID tokens remain memory-only and are refreshed before
+  cloud requests. The cloud service independently verifies their Google
+  signature, issuer, expiry and exact HomeDesigner OAuth audience.
+
+### Added — private cross-device plans and Pro access
+- Added a deployed Cloudflare Worker at
+  `homedesigner-sync.nathanjoppich.workers.dev` backed by the new, private
+  `homedesigner-user-data` R2 bucket. It is separate from the public furniture
+  bucket and namespaces every object by the verified Google subject.
+- Signed-in project snapshots, names and thumbnails now merge across Android
+  devices with last-write-wins timestamps. Deletion tombstones prevent a plan
+  deleted on one device reappearing from an older offline device.
+- Autosave remains local and fast. Cloud writes are coalesced after five idle
+  seconds, and offline/network failures leave local projects untouched for a
+  later retry.
+- Added **Delete cloud backups** in Settings plus a matching authenticated
+  deletion endpoint. Updated the privacy policy for Google account data,
+  Cloudflare storage and RevenueCat identity linking.
+- RevenueCat continues to use `google:<immutable-sub>` as its App User ID.
+  Signing into the same Google account on another Android device therefore
+  restores the same Pro entitlement without using the mutable email address.
+
+### Added — custom web domain
+- Added the GitHub Pages `CNAME` for `homedesignerapp.com` and changed the
+  in-app privacy URL to `https://homedesignerapp.com/privacy.html`.
+
+Verified: TypeScript and ESLint clean; production web build and Android sync
+clean; all 36 browser smoke checks green; Worker TypeScript clean; deployed
+Worker rejects unsigned sync/deletion requests with HTTP 401 and accepts the
+Android WebView CORS origin. Signed AAB verified (25,622,592 bytes; SHA-256
+`78ECC2F689438265F529809AEEC725C69DAB0D9F8F3F406A8882538DAC817275`).
+
+## 1.0.83 - 2026-07-21 (versionCode 10083)
+
+Owner direction: grow the furniture library through commercially safe CC0
+sources while IKEA licensing permission is pending.
+
+### Added — real cloud models for existing catalogue objects
+- The remote catalogue can now apply tightly scoped **model-only upgrades** to
+  furniture already bundled with the app. Remote data may supply a GLB and its
+  verified provenance, but cannot alter the item's dimensions, category, Pro
+  status, placement behaviour, or any other catalogue metadata.
+- The live R2 manifest's nine reviewed CC0 upgrades now work in the app: TV,
+  floor lamp, pendant light, table lamp, rectangular/round rugs, toilet, sink,
+  and shower. The prepared Kenney and Quaternius files were confirmed live with
+  their declared byte counts; the 32 existing cloud-only objects remain intact.
+- Published a second visually reviewed Quaternius batch with 11 lightweight
+  CC0 objects: four seating variants, two storage/media units, four plants, and
+  a kitchen drawer base. The live cloud catalogue now contains 43 objects while
+  keeping all nine bundled-furniture model upgrades.
+- Added width/depth fitting and a bounded vertical offset for unusually thin or
+  hanging GLBs. The TV keeps its correct proportions instead of being distorted
+  to fill its shallow placement footprint.
+
+### Hardened — catalogue refresh and licensing boundaries
+- Cloud model overrides remain same-origin HTTPS, GLB-only, CC0-only, and require
+  a valid source URL. Structural doors/windows can never be overridden remotely.
+- Fixed forced catalogue refreshes rejecting the previously loaded 32 cloud
+  object types merely because they were still present in the runtime lookup.
+- Added deterministic browser coverage for a cloud model upgrade and documented
+  the manifest schema for future CC0 batches.
+- Added reusable Blender preview rendering and safe manifest-merging tools for
+  incremental catalogue releases. Blender batch export now correctly accepts
+  arguments after its standard `--` separator. An empty source object
+  (`Drawer_4`) was rejected rather than publishing a broken catalogue item.
+
+Verified: TypeScript, ESLint, production build, Android sync, and all 35 browser
+checks clean. The public R2 manifest is byte-identical to the reviewed local
+manifest (43 new objects, 9 model upgrades). All 11 second-batch GLBs were
+fetched from the public endpoint and matched the reviewed local files by
+SHA-256. Signed AAB verified
+(25,620,999 bytes; SHA-256
+`36D0C31F7FA537DB613EFB990ABA85E03BD9A5AFAB8A1860ABFCC4CC2B188BE8`).
+
+## 1.0.82 - 2026-07-21 (versionCode 10082)
+
+Owner report: walking up the Maple family house stairs changed to the upper
+floor but placed the camera outside, and the upper floor had no stairwell cut.
+
+### Fixed — safe, connected stair navigation
+- Corrected the Maple stair direction so its low end starts in the ground-floor
+  hall and its high end arrives on the indoor upper landing.
+- Walk-through stair transitions now validate their destination against the
+  target floor's rooms. A badly placed or outward-facing stair falls back to
+  the nearest safe room interior instead of putting the camera outside.
+- Destination fallback uses a room's interior visual centre, which remains safe
+  for concave rooms where a simple polygon centroid may lie outside.
+
+### Added — real upper-floor stairwells
+- Upper-storey floor finishes and structural slabs now cut an opening from the
+  rotated footprint of each stair on the storey below.
+- The same rotation transform drives the visible stair, landing detection, and
+  slab opening, preventing the geometry and navigation from drifting apart.
+- Openings are only cut when the full stair footprint belongs to a destination
+  room; boundary-crossing stairs keep a solid floor rather than generating a
+  broken mesh.
+
+Verified: TypeScript + ESLint clean; production build and Android sync clean;
+all 34 browser checks green, including safe fallback, rotated stairwell
+geometry, Maple's indoor upper landing, and a valid Maple slab opening. Signed
+AAB verified (25,620,390 bytes; SHA-256
+`8314911A3DC46384BD19E80FF1D27920101E19871A300721068979B4B053A752`).
+
+## 1.0.81 - 2026-07-21 (versionCode 10081)
+
+Tester feedback: flipping doors and stairs was unclear on mobile, and finishing
+a room needed a more obvious action.
+
+### Added — quick direction controls
+- Selected objects now have large 44px one-tap rotate-left/right buttons in
+  Edit, avoiding the precision slider for common 90-degree turns.
+- Selected stairs add a central **Reverse** arrow that changes their rise
+  direction by exactly 180 degrees in both 2D and 3D.
+- Selected doors add **Hinge** (left/right) and **In / out** swing arrows.
+  These flags persist with the opening and update both the plan symbol and 3D
+  door leaf. Pocket-door side and double-door swing direction are also honoured.
+
+### Changed — clearer room completion
+- After the third room corner, the first point becomes a large blue target with
+  a check mark, making “tap the first point to close” discoverable on phones.
+- The drawing action now says **Finish room** instead of the generic “Finish”.
+  Users can either tap that button or tap the checked first point.
+
+Verified: TypeScript + ESLint clean; 30-check browser smoke suite all green,
+including real Edit-panel clicks for stair reversal and door hinge flipping.
+
+## 1.0.80 - 2026-07-21 (versionCode 10080)
+
+Owner screenshot: Google Sign-In rejected immediately with “You CANNOT use
+scopes without modifying the main activity.”
+
+### Fixed — native Google Sign-In startup
+- Removed the redundant `options.scopes` array from the Google login request.
+  The installed Android Credential Manager provider already requests `openid`,
+  `email`, and `profile` by default; explicitly passing the same values makes
+  the plugin treat them as custom scopes and require a modified MainActivity.
+- The OAuth project, web client ID, Android signing clients, immutable Google
+  `sub` identity, and RevenueCat linking behaviour are unchanged.
+- Added a regression check that fails if the login request starts passing a
+  scopes array again without the required native integration.
+
+Verified against the installed `@capgo/capacitor-social-login` Android source,
+which adds the three identity scopes automatically before applying its custom-
+scope MainActivity guard. TypeScript + ESLint + production build clean; Android
+sync clean; 26-check browser smoke suite all green. Signed AAB verified
+(`versionCode 10080`, SHA-256
+`B0D56CF695AAE0DA68A59F3D69D940011ABD05197D95BD45E4C5363E5D2B4645`).
+
+## 1.0.79 - 2026-07-20 (versionCode 10079)
+
+Owner report: walk-through mode could not pass through a door or continue up
+stairs to another floor.
+
+### Fixed — walk-through doors and storey navigation
+- Walk collision is now generated from solid wall spans around door, passage,
+  archway, sliding, pocket, bifold, and double-door openings. Previously the
+  rendered wall had the correct hole but its invisible collision segment still
+  ran uninterrupted from one endpoint to the other.
+- Overlapping doorway ranges are merged and given a small jamb tolerance, so
+  wide/double openings do not retain invisible collision slivers.
+- Stairs now connect adjacent storeys in walk-through mode. Approaching the low
+  landing transitions smoothly to the floor above; approaching that stair's
+  upper landing transitions back down. The active floor and collision geometry
+  switch automatically, with a landing offset/cooldown preventing bounce-back.
+- Stair landing detection works in the furniture's rotated local coordinates,
+  so stairs placed at any plan angle navigate to the correct end.
+- Walk-through renders the complete stack of storeys while moving between
+  floors; the normal 3D editor keeps its active-floor cutaway behaviour.
+
+### Regression coverage
+- Added browser checks proving that wall collision is split around a door and
+  that a 90-degree rotated stair resolves its upper landing correctly.
+
+Verified: TypeScript + ESLint clean; production build clean; 25-check browser
+smoke suite all green, including 3D WebGL/catalog coverage and zero page errors.
+
 ## 1.0.78 - 2026-07-20 (versionCode 10078)
 
 Owner: enable Google Sign-In before OAuth production verification so Pro access

@@ -31,9 +31,9 @@
 
     <h2>The short version</h2>
     <p>
-      HomeDesigner works entirely on your device. Your floor plans, furniture layouts, imported
-      plan images and settings are stored locally and never uploaded to us. We do not run
-      accounts, ads, or analytics, and we do not collect personal information.
+      HomeDesigner stores your work locally by default. If you choose Google Sign-In, your plans
+      are also encrypted in transit and stored in our private cloud storage so you can open them
+      on your other signed-in Android devices. We do not run ads or behavioural analytics.
     </p>
 
     <h2>Data stored on your device</h2>
@@ -41,27 +41,40 @@
       Projects you create are saved in the app's local storage on your device (or in your
       browser, for the web version). Files you export — project files, plan images, PDFs and
       renders — are written to the location you choose. Deleting the app (or clearing browser
-      site data) deletes this data; we hold no copy.
+      site data) deletes the local copy. Signed-in cloud copies remain available until you use
+      <strong>Delete cloud backups</strong> in Settings or ask us to delete them.
+    </p>
+
+    <h2>Google Sign-In and plan sync</h2>
+    <p>
+      When you sign in, Google provides your stable account identifier and may provide your name,
+      email address and profile image. The app uses the identifier to separate your private plan
+      files from every other user's files. Plan snapshots, project names, thumbnails and deletion
+      timestamps are stored in a private Cloudflare R2 bucket. Google identity tokens are verified
+      by our Cloudflare Worker and are not stored. See the
+      <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare privacy policy</a>
+      and <a href="https://policies.google.com/privacy" rel="noopener">Google privacy policy</a>.
     </p>
 
     <h2>Purchases</h2>
     <p>
       The optional Pro upgrade is a one-time purchase processed by Google Play. We never see
       your payment details. To recognise your purchase and restore it across devices, an
-      anonymous purchase token is processed by our billing provider, RevenueCat
+      purchase record is processed by our billing provider, RevenueCat
       (<a href="https://www.revenuecat.com/privacy" rel="noopener">RevenueCat privacy policy</a>).
-      This token is not linked to your identity and is not used for advertising.
+      If you sign in, the purchase is linked to a namespaced version of your stable Google account
+      identifier so Pro access follows you to another Android device. It is not used for advertising.
     </p>
 
     <h2>Permissions</h2>
     <p>
       The Android app requests no permissions beyond basic internet access, which is used only
-      for purchase verification and (on first use of some 3D furniture) downloading bundled
-      model files shipped with the app.
+      for account authentication, plan synchronisation, purchase verification and downloading
+      optional 3D furniture models.
     </p>
 
     <h2>Children</h2>
-    <p>HomeDesigner is a general-audience app and does not knowingly collect data from anyone, children included.</p>
+    <p>HomeDesigner is a general-audience app and is not directed to children.</p>
 
     <h2>Changes &amp; contact</h2>
     <p>

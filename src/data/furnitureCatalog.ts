@@ -78,6 +78,10 @@ export interface CatalogEntry {
   model?: {
     url: string;
     yaw?: number;
+    /** Scaling policy for unusually thin models such as televisions. */
+    fit?: 'contain' | 'width' | 'depth';
+    /** Vertical correction in centimetres after grounding the model. */
+    offsetY?: number;
     bytes?: number;
     sha256?: string;
     source?: {

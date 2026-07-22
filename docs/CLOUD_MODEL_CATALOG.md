@@ -1,6 +1,6 @@
 # Cloud model catalog
 
-Last reviewed: 2026-07-15
+Last reviewed: 2026-07-21
 
 The catalog can grow independently of the Android app. Bundled objects remain
 available offline, while additional GLBs and a small JSON manifest are fetched
@@ -13,7 +13,10 @@ from Cloudflare R2 only when needed.
   `VITE_MODEL_CATALOG_URL` at build time.
 - A validated manifest is cached in local storage and retained when a later
   request is offline.
-- Cloud entries cannot replace bundled types or openings.
+- New cloud entries cannot replace bundled types or openings.
+- A separately validated `overrides` list may attach a better GLB to existing
+  bundled furniture. It cannot alter dimensions, category, Pro status, opening
+  behaviour, or any other catalogue metadata.
 - Model URLs must be HTTPS, use the same origin as the manifest, end in `.glb`,
   and include CC0 provenance.
 - The manifest is limited to 2 MB and 5,000 entries. Individual declared model
@@ -57,13 +60,51 @@ from Cloudflare R2 only when needed.
 Cloud entries are Pro by default. Set `"pro": false` explicitly for an item
 that should be placeable on the free tier.
 
-## First Quaternius batch
+Existing furniture can receive a model-only upgrade without waiting for an app
+release:
+
+```json
+{
+  "version": 1,
+  "entries": [],
+  "overrides": [
+    {
+      "type": "tv_stand",
+      "model": {
+        "url": "https://pub-...r2.dev/models/kenney/furniture-kit/television-modern.glb",
+        "fit": "width",
+        "bytes": 4044,
+        "sha256": "64 lowercase hex characters",
+        "source": {
+          "name": "Furniture Kit",
+          "url": "https://kenney.nl/assets/furniture-kit",
+          "author": "Kenney",
+          "license": "CC0"
+        }
+      }
+    }
+  ]
+}
+```
+
+Overrides remain model-only and CC0-only. Their GLB URL must use the manifest's
+HTTPS origin. `fit` may be `contain` (default), `width`, or `depth`; `offsetY`
+is an optional centimetre correction for hanging or unusually authored assets.
+
+## Quaternius batches
 
 The reviewed batch spec is
 `scripts/model-catalog/quaternius-ultimate-home-batch.json`. It currently names
 32 objects from the CC0 Ultimate Home Interior Pack. It includes beds,
 bathroom fixtures, chairs, sofas, rugs, curtains, storage, a fireplace, and
 plants. Six representative objects are free-tier.
+
+The second reviewed spec is
+`scripts/model-catalog/quaternius-ultimate-home-batch-2.json`. It adds 11 more
+objects: four seating options, two storage/media units, four plants, and a
+kitchen drawer base. `Drawer_4` was deliberately omitted because its source
+file did not contain a renderable mesh. Every exported object was rendered to a
+transparent preview for visual identification before publication.
 
 Export the source `.blend` files with a Python environment containing `bpy`:
 
@@ -92,21 +133,33 @@ node scripts/model-catalog/build_manifest.mjs `
   <publish-dir>\catalog\v1\catalog.json
 ```
 
+For an incremental batch, merge it into the reviewed current manifest while
+rejecting duplicate object types:
+
+```powershell
+node scripts/model-catalog/merge_manifests.mjs `
+  <current-catalog.json> `
+  <new-batch-catalog.json> `
+  <merged-catalog.json>
+```
+
 Upload the GLBs below
 `models/quaternius/ultimate-home-interior/`, then upload the manifest last to
 `catalog/v1/catalog.json`. Publishing the manifest last prevents clients from
 seeing entries whose model objects are not available yet.
 
-### Current development publication
+### Current publication
 
-The first Quaternius batch was published to the R2 development endpoint on
-2026-07-15. It contains 32 optimized GLBs and the versioned manifest at:
+The first Quaternius batch was published on 2026-07-15. The second curated
+batch was published on 2026-07-21. R2 now serves 43 optimized Quaternius GLBs
+and the versioned manifest at:
 
 `https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/catalog/v1/catalog.json`
 
-Publication verification fetched every model and confirmed its byte count
-against the manifest. The public manifest is `application/json`, has 32 entries,
-and is byte-for-byte identical to the generated local release file.
+Publication verification fetched every second-batch model and matched its
+SHA-256 hash to the optimized local file. The public manifest has 43 entries,
+retains nine model-only upgrades, and is byte-for-byte identical to the merged
+reviewed release file.
 
 ## Publishing checks
 
