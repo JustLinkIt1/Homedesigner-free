@@ -127,6 +127,11 @@ check(
 // ---- 1. Projects screen renders, sample home opens -------------------------
 await page.goto(BASE);
 check('projects screen renders', await page.waitForSelector('.projects-screen', { timeout: 20000 }).then(() => true).catch(() => false));
+const desktopSettings = page.locator('.ps-head .ps-settings-btn');
+check('desktop header shows Settings beside Language', await desktopSettings.isVisible().catch(() => false));
+await desktopSettings.click();
+check('desktop header Settings opens', await page.locator('.modal.settings').isVisible().catch(() => false));
+await page.locator('.modal.settings .modal-foot .btn.primary').click();
 await page.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
 check('editor opens', await page.waitForSelector('.toolbar', { timeout: 15000 }).then(() => true).catch(() => false));
 await page.locator('.coach-skip').click().catch(() => {});

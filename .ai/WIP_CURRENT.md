@@ -1,17 +1,25 @@
 # WIP — current handoff
 
-_Last updated: 2026-07-22. Release branch: `agent/locked-2d-pan-1.0.85`._
+_Last updated: 2026-07-22. Release branch: `agent/desktop-settings-1.0.86`._
 
 ## Current state
 
-- **Latest release: 1.0.85 (versionCode 10085).** The signed Android App Bundle
+- **Latest release: 1.0.86 (versionCode 10086).** The signed Android App Bundle
   is built from this branch and delivered to the owner's Google Drive.
 - There is no partially implemented code task. The owner is handing active work
   back to Claude; begin by reading this file and `CHANGELOG.md`.
-- Release source is based directly on the repository default branch after PR #3
-  merged v1.0.84. No Claude changes were overwritten.
+- Release source is based directly on the repository default branch after PR #4
+  merged v1.0.85. No Claude changes were overwritten.
 
-## What 1.0.85 changes
+## What 1.0.86 changes
+
+- Adds a desktop-only **Settings** button immediately beside the projects
+  header's Language selector. The mobile Home/Templates/Settings bar is
+  unchanged, avoiding duplicate Settings controls on phones.
+- Advances the Play release to versionCode `10086` after the owner's v1.0.85
+  upload attempt failed.
+
+## What 1.0.85 changed
 
 - On touch devices, enabling **Lock objects** now lets a one-finger pan begin
   anywhere in the 2D plan: room floors, walls, and furniture are all valid pan
@@ -36,8 +44,9 @@ _Last updated: 2026-07-22. Release branch: `agent/locked-2d-pan-1.0.85`._
 
 ## Validation and release procedure
 
-- v1.0.85: TypeScript clean, ESLint clean, and all 37 browser smoke checks pass,
-  including the locked-interior one-finger pan regression.
+- v1.0.86: TypeScript and ESLint clean, production/Android builds clean, and all
+  39 browser checks pass, including the desktop Settings entry point and
+  locked-interior one-finger pan. Exact AAB hashes are in `CHANGELOG.md`.
 - Versions are synchronized in `package.json`, `package-lock.json`, and
   `android/app/build.gradle` (`1.0.NN` maps to versionCode `100NN`).
 - Release signing configuration and keystore are local/gitignored. Never stage,
@@ -49,7 +58,7 @@ _Last updated: 2026-07-22. Release branch: `agent/locked-2d-pan-1.0.85`._
 
 ## Remaining owner/device checks
 
-- Install v1.0.85 on a physical phone and confirm one-finger panning feels
+- Install v1.0.86 on a physical phone and confirm one-finger panning feels
   natural when starting over rooms, walls, and furniture with Lock enabled.
 - Google Sign-In, cross-device plan restore, and RevenueCat Pro restore still
   need final end-to-end confirmation on two Play-installed Android devices.
