@@ -3,6 +3,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 interface Env {
   USER_DATA: R2Bucket;
   GOOGLE_WEB_CLIENT_ID: string;
+  REVENUECAT_API_KEY: string;
 }
 
 interface ProjectRecord {
@@ -32,7 +33,7 @@ function cors(request: Request): HeadersInit {
   return {
     'Access-Control-Allow-Origin': allowedOrigins.has(origin) ? origin : 'https://homedesignerapp.com',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-    'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
@@ -138,12 +139,53 @@ async function sync(request: Request, env: Env, subject: string): Promise<Respon
   return json(request, { projects: mergedProjects, tombstones: mergedTombstones });
 }
 
+interface RevenueCatEntitlement {
+  expires_date?: string | null;
+}
+
+interface RevenueCatSubscriberResponse {
+  subscriber?: {
+    entitlements?: Record<string, RevenueCatEntitlement>;
+  };
+}
+
+function entitlementIsActive(entitlement: RevenueCatEntitlement, now = Date.now()): boolean {
+  if (entitlement.expires_date === null) return true;
+  if (!entitlement.expires_date) return false;
+  const expiry = Date.parse(entitlement.expires_date);
+  return Number.isFinite(expiry) && expiry > now;
+}
+
+async function entitlement(request: Request, env: Env, subject: string): Promise<Response> {
+  const appUserId = `google:${subject}`;
+  const response = await fetch(
+    `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${env.REVENUECAT_API_KEY}`,
+        Accept: 'application/json',
+      },
+    },
+  );
+  if (!response.ok) return json(request, { error: 'Entitlement lookup failed' }, 502);
+  const result = await response.json() as RevenueCatSubscriberResponse;
+  const entitlements = result.subscriber?.entitlements ?? {};
+  const preferred = entitlements.Pro;
+  const isPro = preferred
+    ? entitlementIsActive(preferred)
+    : Object.values(entitlements).some((item) => entitlementIsActive(item));
+  return json(request, { isPro });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
     const url = new URL(request.url);
     try {
       const subject = await authenticate(request, env);
+      if (request.method === 'GET' && url.pathname === '/v1/entitlement') {
+        return await entitlement(request, env, subject);
+      }
       if (request.method === 'POST' && url.pathname === '/v1/sync') return await sync(request, env, subject);
       if (request.method === 'DELETE' && url.pathname === '/v1/account') {
         const objects = await listAll(env.USER_DATA, `users/${subject}/`);

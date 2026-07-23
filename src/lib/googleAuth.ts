@@ -1,4 +1,5 @@
 import { SocialLogin } from '@capgo/capacitor-social-login';
+import { Capacitor } from '@capacitor/core';
 
 export interface GoogleAccount {
   /** Stable Google OpenID subject. Never use the mutable email as identity. */
@@ -33,10 +34,19 @@ async function initializeGoogle(): Promise<void> {
   if (!isGoogleSignInConfigured()) {
     throw new Error('Google Sign-In is not configured in this build.');
   }
+  const google = {
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    mode: 'online' as const,
+    // The web provider otherwise derives this from the current pathname. Keep
+    // production pinned to the URI registered in Google Cloud so navigation
+    // to /app/index.html (or another route) cannot cause a redirect mismatch.
+    ...(!Capacitor.isNativePlatform() && window.location.hostname === 'homedesignerapp.com'
+      ? { redirectUrl: 'https://homedesignerapp.com/app/' }
+      : {}),
+  };
   initializePromise ??= SocialLogin.initialize({
     google: {
-      webClientId: GOOGLE_WEB_CLIENT_ID,
-      mode: 'online',
+      ...google,
     },
   });
   await initializePromise;
@@ -87,11 +97,24 @@ export async function getGoogleIdToken(): Promise<string> {
   await initializeGoogle();
   if (currentIdToken && tokenIsFresh(currentIdToken)) return currentIdToken;
 
+  // The web provider persists its ID token and exposes it here. Its refresh()
+  // method is deliberately unimplemented, so calling refresh first breaks
+  // cloud sync every time the desktop app is reloaded.
+  const cached = await SocialLogin.getAuthorizationCode({ provider: 'google' });
+  if (cached.jwt && tokenIsFresh(cached.jwt)) {
+    currentIdToken = cached.jwt;
+    return cached.jwt;
+  }
+
+  if (!Capacitor.isNativePlatform()) {
+    throw new Error('Google session expired. Sign in again to sync your plans.');
+  }
+
   await SocialLogin.refresh({ provider: 'google', options: {} });
-  const auth = await SocialLogin.getAuthorizationCode({ provider: 'google' });
-  if (!auth.jwt) throw new Error('Google session needs to be refreshed.');
-  currentIdToken = auth.jwt;
-  return auth.jwt;
+  const refreshed = await SocialLogin.getAuthorizationCode({ provider: 'google' });
+  if (!refreshed.jwt) throw new Error('Google session needs to be refreshed.');
+  currentIdToken = refreshed.jwt;
+  return refreshed.jwt;
 }
 
 /** Namespaces Google subjects so future identity providers cannot collide. */

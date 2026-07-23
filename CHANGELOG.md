@@ -5,6 +5,44 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.88 - 2026-07-23 (versionCode 10088)
+
+Owner report: Google Sign-In worked on Android but desktop returned Google
+`Error 400: redirect_uri_mismatch`; mobile plans and a mobile Pro purchase also
+needed to follow the same Google account onto desktop.
+
+### Fixed — desktop Google login and cross-device account state
+- Registered the production web origin `https://homedesignerapp.com` and exact
+  redirect URI `https://homedesignerapp.com/app/` on the HomeDesigner Google
+  OAuth client. This matches the app's new post-landing-page location and fixes
+  the reported redirect mismatch.
+- Pinned the production web provider to that canonical redirect URI so loading
+  an alternate app pathname cannot silently change the OAuth request.
+- Fixed desktop session restore: the web plugin's persisted, still-valid ID
+  token is now read before attempting refresh. The plugin does not implement
+  Google refresh on web, which previously prevented cloud plan sync after a
+  desktop reload even when the account still appeared signed in.
+- Existing private R2 plan sync remains keyed by Google's immutable account
+  subject. Signing into the same Google account on desktop now performs the
+  initial merge and loads plans uploaded from Android.
+
+### Added — Google-linked Pro on desktop
+- Added authenticated `GET /v1/entitlement` to the Cloudflare sync Worker. It
+  verifies the Google ID token, derives the RevenueCat customer ID
+  (`google:<subject>`) server-side, and returns only whether the Pro entitlement
+  is active.
+- The desktop provider now checks that endpoint when the Google account is
+  linked, so a Google Play Pro purchase made while signed in on Android unlocks
+  Pro on desktop and other signed-in devices. Signing out removes that
+  account-linked desktop entitlement.
+- Android purchasing remains RevenueCat over Google Play Billing using the
+  non-consumable `pro_unlock`; Play presents the payment methods available on
+  the buyer's Google account and country.
+- Deployed Worker version `a5dbc7f0-dd23-42f9-a73f-5913dcea1e50`.
+
+Validation: root TypeScript clean; Worker TypeScript clean and deployed; all 39
+browser smoke checks pass with zero page errors.
+
 ## 1.0.87 - 2026-07-22 (versionCode 10087)
 
 Owner: "Google Sign-In works on mobile, but it's buried in Settings — let people

@@ -9,6 +9,20 @@ export function isCloudSyncConfigured(): boolean {
   return /^https:\/\//.test(SYNC_URL);
 }
 
+/** Returns the RevenueCat entitlement for the currently signed-in Google
+ * account. The Worker derives the customer ID from the verified JWT, so the
+ * browser cannot ask for another customer's purchase state. */
+export async function getCloudProEntitlement(): Promise<boolean> {
+  if (!isCloudSyncConfigured()) return false;
+  const token = await getGoogleIdToken();
+  const response = await fetch(`${SYNC_URL}/v1/entitlement`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error(`Pro status check failed (${response.status}).`);
+  const result = await response.json() as { isPro?: boolean };
+  return result.isPro === true;
+}
+
 export async function syncProjects(): Promise<number> {
   if (!isCloudSyncConfigured()) return 0;
   if (syncPromise) return syncPromise;

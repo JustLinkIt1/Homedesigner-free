@@ -7,6 +7,7 @@
 import { Capacitor } from '@capacitor/core';
 import { useProStore } from '../store/proStore';
 import { PLAY_STORE_URL } from './appInfo';
+import { getCloudProEntitlement } from './cloudSync';
 
 export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects';
 
@@ -143,7 +144,8 @@ class RevenueCatProvider implements ProProvider {
   }
 }
 
-/** Web/demo + test provider. Entitlement via ?pro=1 or a localStorage flag. */
+/** Web/demo + test provider. Real customers resolve Pro through the sync
+ * Worker after Google sign-in; ?pro=1 remains the Playwright test seam. */
 class MockProvider implements ProProvider {
   async init(): Promise<void> {
     try {
@@ -174,14 +176,18 @@ class MockProvider implements ProProvider {
   }
 
   async restore(): Promise<boolean> {
-    return this.isEntitled();
+    if (await this.isEntitled()) return true;
+    return getCloudProEntitlement();
   }
 
   async identify(): Promise<boolean> {
-    return this.isEntitled();
+    if (await this.isEntitled()) return true;
+    return getCloudProEntitlement();
   }
 
   async disconnect(): Promise<boolean> {
+    // A real Google-linked entitlement belongs to the account that is being
+    // disconnected. Only retain the explicit local test entitlement.
     return this.isEntitled();
   }
 }
