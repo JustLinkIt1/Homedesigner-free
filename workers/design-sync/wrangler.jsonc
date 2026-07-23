@@ -5,7 +5,8 @@
   "compatibility_date": "2026-07-22",
   "workers_dev": true,
   "vars": {
-    "GOOGLE_WEB_CLIENT_ID": "753361416167-cpdo4k5g15etg79kadcj52h853hf3bqi.apps.googleusercontent.com"
+    "GOOGLE_WEB_CLIENT_ID": "753361416167-cpdo4k5g15etg79kadcj52h853hf3bqi.apps.googleusercontent.com",
+    "REVENUECAT_API_KEY": "goog_JtJREnLfSrMrpUMYtcLYwfNmnPC"
   },
   "r2_buckets": [
     {
