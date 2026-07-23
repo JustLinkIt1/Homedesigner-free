@@ -2,7 +2,7 @@
 // snapshots feed undo/persist, and entitlement must never ride along.
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
-import { getProProvider, type ProFeature } from '../lib/pro';
+import { getProProvider, type ProFeature, type ProPlan, type ProPlanID } from '../lib/pro';
 import {
   isValidReferralCode,
   markReferralRedeemed,
@@ -38,10 +38,11 @@ const writeCache = (isPro: boolean) => {
 interface ProState {
   isPro: boolean;
   priceLabel: string | null;
+  plans: ProPlan[];
   busy: boolean;
   upsellFeature: ProFeature | null;
   refresh: () => Promise<void>;
-  purchase: () => Promise<void>;
+  purchase: (planID?: ProPlanID) => Promise<void>;
   restore: () => Promise<void>;
   linkAccount: (account: { appUserID: string; email: string | null; displayName: string | null }) => Promise<void>;
   unlinkAccount: () => Promise<void>;
@@ -55,6 +56,7 @@ export const useProStore = create<ProState>((set, get) => ({
   // referral code counts even if the entitlement cache was clobbered.
   isPro: readCache() || isReferralRedeemed(),
   priceLabel: null,
+  plans: [],
   busy: false,
   upsellFeature: null,
 
@@ -91,13 +93,18 @@ export const useProStore = create<ProState>((set, get) => ({
     } catch {
       /* price is cosmetic */
     }
+    try {
+      set({ plans: await provider.getPlans() });
+    } catch {
+      /* plan choices are cosmetic until checkout */
+    }
   },
 
-  purchase: async () => {
+  purchase: async (planID) => {
     if (get().busy) return;
     set({ busy: true });
     try {
-      const ok = await getProProvider().purchase();
+      const ok = await getProProvider().purchase(planID);
       if (ok) {
         set({ isPro: true, upsellFeature: null });
         writeCache(true);
@@ -141,16 +148,28 @@ export const useProStore = create<ProState>((set, get) => ({
     const provider = getProProvider();
     await provider.init();
     const entitled = (await provider.identify(appUserID, email, displayName)) || isReferralRedeemed();
-    set({ isPro: entitled });
+    const priceLabel = await provider.getPrice().catch(() => null);
+    const plans = await provider.getPlans().catch(() => []);
+    set({ isPro: entitled, plans, ...(priceLabel ? { priceLabel } : {}) });
     writeCache(entitled);
   },
 
   unlinkAccount: async () => {
     const provider = getProProvider();
-    await provider.init();
-    const entitled = (await provider.disconnect()) || isReferralRedeemed();
-    set({ isPro: entitled, upsellFeature: null });
+    let entitled = isReferralRedeemed();
+    // Clear account-derived state before touching the network so sign-out is
+    // immediate and cannot leave another person's Pro badge or prices visible.
+    set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null });
     writeCache(entitled);
+    try {
+      await provider.init();
+      entitled = (await provider.disconnect()) || entitled;
+    } finally {
+      // RevenueCat may reveal a device-owned anonymous entitlement after
+      // logout; retain that, while network failures keep the local fallback.
+      set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null });
+      writeCache(entitled);
+    }
   },
 
   redeemCode: (code: string) => {

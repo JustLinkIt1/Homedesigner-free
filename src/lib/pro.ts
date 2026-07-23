@@ -1,15 +1,22 @@
 // Pro entitlement plumbing. This is the ONLY file that knows how purchases
 // happen; everything else consumes useProStore / requirePro(). On Android the
 // provider is RevenueCat (Google Play Billing, one non-consumable
-// `pro_unlock`); on the web — which ships as a free demo — the provider is a
-// mock whose "buy" action links to the Play listing, and which Playwright
-// flips via ?pro=1 to exercise both sides of every gate.
+// `pro_unlock`); on the web it is RevenueCat Web Billing backed by Stripe.
+// Builds without a Web Billing key retain the old Play Store link, and
+// Playwright can still flip ?pro=1 to exercise both sides of every gate.
 import { Capacitor } from '@capacitor/core';
 import { useProStore } from '../store/proStore';
 import { PLAY_STORE_URL } from './appInfo';
 import { getCloudProEntitlement } from './cloudSync';
 
 export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects';
+export type ProPlanID = 'monthly' | 'yearly' | 'lifetime';
+
+export interface ProPlan {
+  id: ProPlanID;
+  label: string;
+  priceLabel: string;
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
   return Promise.race([
@@ -24,8 +31,9 @@ export interface ProProvider {
    *  never resolve false just because the network is down. */
   isEntitled(): Promise<boolean>;
   getPrice(): Promise<string | null>;
+  getPlans(): Promise<ProPlan[]>;
   /** Returns true if the user completed the purchase. */
-  purchase(): Promise<boolean>;
+  purchase(planID?: ProPlanID): Promise<boolean>;
   /** Returns true if a previous purchase was restored. */
   restore(): Promise<boolean>;
   /** Switch RevenueCat from an anonymous customer to a stable account. */
@@ -37,6 +45,9 @@ export interface ProProvider {
 /** RevenueCat public SDK key (Android). Safe to embed — this is the client-
  *  facing key, not the secret API key. */
 const REVENUECAT_ANDROID_KEY = 'goog_JtJREnLfSrMrpUMYtcLYwfNmnPC';
+/** RevenueCat public Web Billing SDK key. Like the Android SDK key, this is a
+ * public application identifier rather than a secret. */
+const REVENUECAT_WEB_KEY = (import.meta.env.VITE_REVENUECAT_WEB_KEY ?? '').trim();
 /** Preferred entitlement identifier. Kept resilient below: any active
  *  entitlement counts as Pro, so a dashboard rename can't lock buyers out. */
 const ENTITLEMENT_ID = 'Pro';
@@ -61,6 +72,47 @@ function firstAvailablePackage(offerings: any): any | null {
     if (pkg) return pkg;
   }
   return null;
+}
+
+const WEB_PLAN_DEFINITIONS: Array<{
+  id: ProPlanID;
+  label: string;
+  packageKey: 'monthly' | 'annual' | 'lifetime';
+}> = [
+  { id: 'monthly', label: 'Monthly', packageKey: 'monthly' },
+  { id: 'yearly', label: 'Yearly', packageKey: 'annual' },
+  { id: 'lifetime', label: 'Lifetime', packageKey: 'lifetime' },
+];
+
+function offeringPools(offerings: any): any[] {
+  const pools: any[] = [];
+  if (offerings?.current) pools.push(offerings.current);
+  for (const offering of Object.values(offerings?.all ?? {})) {
+    if (offering !== offerings?.current) pools.push(offering);
+  }
+  return pools;
+}
+
+function webPackageForPlan(offerings: any, planID: ProPlanID): any | null {
+  const definition = WEB_PLAN_DEFINITIONS.find((plan) => plan.id === planID);
+  if (!definition) return null;
+  for (const offering of offeringPools(offerings)) {
+    const pkg = offering?.[definition.packageKey];
+    if (pkg) return pkg;
+  }
+  return null;
+}
+
+function webPlansFromOfferings(offerings: any): ProPlan[] {
+  return WEB_PLAN_DEFINITIONS.flatMap((definition) => {
+    const pkg = webPackageForPlan(offerings, definition.id);
+    const priceLabel = pkg?.webBillingProduct?.price?.formattedPrice;
+    return priceLabel ? [{ id: definition.id, label: definition.label, priceLabel }] : [];
+  });
+}
+
+export function isWebBillingConfigured(): boolean {
+  return REVENUECAT_WEB_KEY.startsWith('rcb_') || REVENUECAT_WEB_KEY.startsWith('strp_');
 }
 
 class RevenueCatProvider implements ProProvider {
@@ -105,7 +157,12 @@ class RevenueCatProvider implements ProProvider {
     return pkg?.product.priceString ?? null;
   }
 
-  async purchase(): Promise<boolean> {
+  async getPlans(): Promise<ProPlan[]> {
+    const priceLabel = await this.getPrice();
+    return priceLabel ? [{ id: 'lifetime', label: 'Lifetime', priceLabel }] : [];
+  }
+
+  async purchase(_planID?: ProPlanID): Promise<boolean> {
     const Purchases = await this.sdk();
     const offerings = await withTimeout(Purchases.getOfferings(), 10000, 'Timed out loading store products');
     const pkg = firstAvailablePackage(offerings);
@@ -134,7 +191,18 @@ class RevenueCatProvider implements ProProvider {
       Purchases.setEmail({ email }),
       Purchases.setDisplayName({ displayName }),
     ]);
-    return hasProEntitlement(customerInfo) || (customerInfo.allPurchasedProductIdentifiers?.length ?? 0) > 0;
+    const ownsPro = (info: typeof customerInfo) =>
+      hasProEntitlement(info) || (info.allPurchasedProductIdentifiers?.length ?? 0) > 0;
+    if (ownsPro(customerInfo)) return true;
+
+    // Account linking was added after the first Pro sales. Those customers
+    // purchased under a RevenueCat anonymous ID, so logIn() alone may leave
+    // the new Google ID empty. Re-sync the current Play account once while
+    // linking; RevenueCat aliases an anonymous owner to this identified ID
+    // under the project's "Transfer to new App User ID" policy.
+    await Purchases.syncPurchases();
+    const { customerInfo: migrated } = await Purchases.getCustomerInfo();
+    return ownsPro(migrated);
   }
 
   async disconnect(): Promise<boolean> {
@@ -144,9 +212,41 @@ class RevenueCatProvider implements ProProvider {
   }
 }
 
-/** Web/demo + test provider. Real customers resolve Pro through the sync
- * Worker after Google sign-in; ?pro=1 remains the Playwright test seam. */
-class MockProvider implements ProProvider {
+/** Desktop RevenueCat Web Billing provider. It uses the same stable
+ * `google:<subject>` customer ID as Android and the sync Worker, so a single
+ * entitlement follows the signed-in customer across platforms. */
+class WebRevenueCatProvider implements ProProvider {
+  private purchases: import('@revenuecat/purchases-js').Purchases | null = null;
+  private appUserID: string | null = null;
+  private email: string | null = null;
+
+  private async sdk(appUserID = this.appUserID) {
+    if (!isWebBillingConfigured()) {
+      throw new Error('Desktop billing is not configured yet.');
+    }
+    if (!appUserID) {
+      throw new Error('Sign in with Google before buying Pro.');
+    }
+    if (!this.purchases) {
+      const { Purchases } = await import('@revenuecat/purchases-js');
+      this.purchases = Purchases.configure({
+        apiKey: REVENUECAT_WEB_KEY,
+        appUserId: appUserID,
+      });
+    } else if (this.purchases.getAppUserId() !== appUserID) {
+      await this.purchases.changeUser(appUserID);
+    }
+    return this.purchases;
+  }
+
+  private mockEntitled(): boolean {
+    try {
+      return localStorage.getItem('homedesigner.pro.mock') === '1';
+    } catch {
+      return false;
+    }
+  }
+
   async init(): Promise<void> {
     try {
       if (new URLSearchParams(window.location.search).get('pro') === '1') {
@@ -158,21 +258,49 @@ class MockProvider implements ProProvider {
   }
 
   async isEntitled(): Promise<boolean> {
-    try {
-      return localStorage.getItem('homedesigner.pro.mock') === '1';
-    } catch {
-      return false;
-    }
+    if (this.mockEntitled()) return true;
+    if (!this.appUserID || !isWebBillingConfigured()) return false;
+    const customerInfo = await (await this.sdk()).getCustomerInfo();
+    return hasProEntitlement(customerInfo);
   }
 
   async getPrice(): Promise<string | null> {
-    return '$6.99';
+    if (!this.appUserID || !isWebBillingConfigured()) return null;
+    const offerings = await (await this.sdk()).getOfferings();
+    const plans = webPlansFromOfferings(offerings);
+    return plans.find((plan) => plan.id === 'lifetime')?.priceLabel ?? plans[0]?.priceLabel ?? null;
   }
 
-  async purchase(): Promise<boolean> {
-    // The web demo can't sell — send the visitor to the Android listing.
-    window.open(PLAY_STORE_URL, '_blank', 'noopener');
-    return false;
+  async getPlans(): Promise<ProPlan[]> {
+    if (!this.appUserID || !isWebBillingConfigured()) return [];
+    const offerings = await (await this.sdk()).getOfferings();
+    return webPlansFromOfferings(offerings);
+  }
+
+  async purchase(planID?: ProPlanID): Promise<boolean> {
+    // Keep older/unconfigured deployments useful until the Web Billing
+    // provider and public key are enabled in RevenueCat.
+    if (!isWebBillingConfigured()) {
+      window.open(PLAY_STORE_URL, '_blank', 'noopener');
+      return false;
+    }
+    const purchases = await this.sdk();
+    const offerings = await withTimeout(
+      purchases.getOfferings(),
+      10000,
+      'Timed out loading the Pro offer. Check your connection and try again.',
+    );
+    const pkg = planID
+      ? webPackageForPlan(offerings, planID)
+      : webPackageForPlan(offerings, 'lifetime') ?? firstAvailablePackage(offerings);
+    if (!pkg) throw new Error('Pro upgrade is not available right now. Please try again later.');
+    const result = await purchases.purchase({
+      rcPackage: pkg,
+      customerEmail: this.email ?? undefined,
+      selectedLocale: document.documentElement.lang || undefined,
+      defaultLocale: 'en',
+    });
+    return hasProEntitlement(result.customerInfo);
   }
 
   async restore(): Promise<boolean> {
@@ -180,15 +308,29 @@ class MockProvider implements ProProvider {
     return getCloudProEntitlement();
   }
 
-  async identify(): Promise<boolean> {
-    if (await this.isEntitled()) return true;
-    return getCloudProEntitlement();
+  async identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean> {
+    this.appUserID = appUserID;
+    this.email = email;
+    if (this.mockEntitled()) return true;
+    if (!isWebBillingConfigured()) return getCloudProEntitlement();
+
+    const purchases = await this.sdk(appUserID);
+    const attributes: Record<string, string> = {};
+    if (email) attributes.$email = email;
+    if (displayName) attributes.$displayName = displayName;
+    if (Object.keys(attributes).length) await purchases.setAttributes(attributes);
+    const customerInfo = await purchases.getCustomerInfo();
+    return hasProEntitlement(customerInfo);
   }
 
   async disconnect(): Promise<boolean> {
     // A real Google-linked entitlement belongs to the account that is being
     // disconnected. Only retain the explicit local test entitlement.
-    return this.isEntitled();
+    this.appUserID = null;
+    this.email = null;
+    // Retain the SDK instance so a later account can switch with changeUser(),
+    // but signed-out code can no longer query or buy as the previous customer.
+    return this.mockEntitled();
   }
 }
 
@@ -196,7 +338,7 @@ let provider: ProProvider | null = null;
 
 export function getProProvider(): ProProvider {
   if (!provider) {
-    provider = Capacitor.isNativePlatform() ? new RevenueCatProvider() : new MockProvider();
+    provider = Capacitor.isNativePlatform() ? new RevenueCatProvider() : new WebRevenueCatProvider();
   }
   return provider;
 }

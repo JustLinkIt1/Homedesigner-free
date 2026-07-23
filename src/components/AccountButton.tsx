@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { User, LogOut, Check } from 'lucide-react';
+import { User, LogOut, Check, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useI18n } from '../lib/i18n';
 
@@ -27,6 +27,7 @@ export default function AccountButton() {
   const busy = useAuthStore((s) => s.busy);
   const signIn = useAuthStore((s) => s.signIn);
   const signOut = useAuthStore((s) => s.signOut);
+  const syncNow = useAuthStore((s) => s.syncNow);
   const t = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -79,8 +80,16 @@ export default function AccountButton() {
                 </div>
               </div>
               <div className="account-menu-synced">
-                <Check className="icon" /> {t('Plans and Pro access sync across your signed-in Android devices.')}
+                <Check className="icon" /> {t('Plans and Pro access sync across your signed-in devices.')}
               </div>
+              <button
+                className="account-menu-item"
+                role="menuitem"
+                onClick={() => { setOpen(false); void syncNow(); }}
+                disabled={busy}
+              >
+                <RefreshCw className={`icon ${busy ? 'spin' : ''}`} /> {t('Sync now')}
+              </button>
               <button
                 className="account-menu-item"
                 role="menuitem"
@@ -101,7 +110,7 @@ export default function AccountButton() {
                 {busy ? t('Signing in…') : t('Sign in with Google')}
               </button>
               <small className="account-menu-note">
-                {t('Sync plans and Pro access across your Android devices.')}
+                {t('Sync plans and Pro access across your devices.')}
               </small>
             </>
           )}

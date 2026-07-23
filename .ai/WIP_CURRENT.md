@@ -1,15 +1,91 @@
 # WIP — current handoff
 
-_Last updated: 2026-07-23. Release branch: `agent/desktop-auth-sync`._
+_Last updated: 2026-07-23. Working branch: `agent/stripe-web-checkout`._
 
 ## Current state
 
-- **Current release source: 1.0.88 (versionCode 10088).**
+- **Current release source: 1.0.89 (versionCode 10089).**
 - Desktop Google OAuth is configured for `https://homedesignerapp.com/app/`,
   browser session restore is fixed, and Google-linked RevenueCat Pro lookup is
   deployed in the Cloudflare sync Worker.
+- **Unreleased:** desktop Stripe checkout is implemented locally and the live
+  RevenueCat/Stripe dashboard configuration is complete. The production web
+  key is enabled locally; the branch has not yet been released.
+- **Live hotfix:** Worker `4afa87b9-0fa3-4596-845d-62b1ff43f367` now uses a
+  private RevenueCat v2 secret for desktop entitlement reads. The owner's
+  linked Google customer has an unlimited Homedesigner Pro grant.
 - Begin any continuation by reading this file and `CHANGELOG.md`. Preserve the
   untracked local `outputs/` directory and all signing files.
+
+## Stripe desktop checkout WIP
+
+- Added `@revenuecat/purchases-js` and a lazy-loaded desktop provider in
+  `src/lib/pro.ts`.
+- Configured web builds require Google sign-in, reuse the existing stable
+  `google:<subject>` RevenueCat customer ID, load every real localized offering
+  price, and purchase the exact package selected through RevenueCat Web
+  Billing/Stripe.
+- `ProUpsellModal` now shows **Sign in with Google** before checkout, then a
+  three-choice pricing grid once the customer is linked. Builds without
+  `VITE_REVENUECAT_WEB_KEY` retain the Play Store fallback.
+- Browser smoke coverage runs with a public-format fake `rcb_` key and verifies
+  the signed-out desktop flow without contacting RevenueCat.
+- Validation: `npm run typecheck`, `npm run lint`, `npm run build`, and
+  `SMOKE_SKIP_3D=1 npm test` pass.
+
+### Dashboard state / exact next steps
+
+1. The live Stripe account `HomeDesignerApp` is connected to RevenueCat Billing
+   and the web configuration uses EUR with the HomeDesigner support/Play Store
+   details.
+2. Live products are configured at **€4.99 monthly**, **€39.99 yearly**, and
+   **€79.99 lifetime**. Each grants `Homedesigner Pro (Pro)` and is assigned to
+   the matching package in the default offering.
+3. `homedesignerapp.com` is enabled in Stripe Payment Method Domains, allowing
+   supported Apple Pay/Google Pay wallets in the RevenueCat Web SDK checkout.
+   Stripe Tax remains disabled.
+4. `.env.production` contains the public `rcb_` application key. This is an
+   embeddable SDK identifier; the private RevenueCat v2 key remains only in the
+   Worker secret.
+5. No real live charge was made. After deployment, perform one owner purchase
+   and confirm RevenueCat grants the same Google-linked `Pro` entitlement on
+   desktop and Android.
+6. Validation and the 1.0.89 version bump are complete. Next: commit/push,
+   merge, deploy Pages, then run the owner purchase check above.
+
+## Google account reliability in 1.0.89
+
+- Desktop restore now rejects an expired persisted Google ID token instead of
+  showing a signed-in account that cannot sync.
+- Google plugin initialization can be retried after a temporary failure, and a
+  stale provider session is cleared before a new desktop/Android login.
+- Sign-out is local-first: project syncing stops and the cached account,
+  account-linked Pro state, prices, and in-memory token are cleared immediately.
+  Google and RevenueCat cleanup runs best-effort, so being offline no longer
+  leaves the UI stuck signed in.
+- When restore finds no usable Google session, it also stops project syncing
+  and disconnects account-linked RevenueCat state.
+
+## Retroactive account migration WIP
+
+- `RevenueCatProvider.identify()` now calls `syncPurchases()` when the newly
+  linked Google customer has no entitlement/product. This is the migration path
+  for eligible Play purchases made before Google account linking existed.
+- `projects.ts` repairs orphaned `homedesigner.project.<id>` records and the
+  legacy single-slot save before producing the cloud snapshot. Old projects
+  should not be deleted.
+- The signed-in account menu and Settings now include **Sync now**, which
+  retries both purchase linking and project merge.
+- RevenueCat evidence on 2026-07-23: customer
+  `google:115399174729229571139` existed but showed USD 0, no aliases, no
+  purchases, and no current entitlements. It was granted the existing
+  `Homedesigner Pro (Pro)` entitlement for unlimited duration.
+- The live Worker previously used the public `goog_` SDK key against a private
+  v1 subscriber endpoint. It now calls RevenueCat v2
+  `/active_entitlements` using secret binding `REVENUECAT_SECRET_KEY`; the key
+  itself is never in the repository or handoff.
+- Validation: root typecheck/lint pass, Worker `npm run check` passes, and all
+  35 non-3D smoke checks pass with zero page errors.
 
 ## What 1.0.88 changes
 

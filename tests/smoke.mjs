@@ -23,6 +23,12 @@ const viteEntry = join(root, 'node_modules', 'vite', 'bin', 'vite.js');
 const dev = spawn(process.execPath, [viteEntry, '--port', String(PORT), '--strictPort'], {
   cwd: root,
   stdio: 'ignore',
+  env: {
+    ...process.env,
+    // A public-format placeholder exercises the signed-out desktop checkout
+    // UI without contacting RevenueCat or opening a real payment sheet.
+    VITE_REVENUECAT_WEB_KEY: 'rcb_smoke_test',
+  },
 });
 process.on('exit', () => {
   try {
@@ -115,6 +121,11 @@ const store = (fn, arg) => page.evaluate(fn, arg);
 // Passing even those defaults through `options.scopes` activates the plugin's
 // custom-scope MainActivity guard and rejects before Google Sign-In opens.
 const googleAuthSource = await readFile(join(root, 'src', 'lib', 'googleAuth.ts'), 'utf8');
+const authStoreSource = await readFile(join(root, 'src', 'store', 'authStore.ts'), 'utf8');
+const proStoreSource = await readFile(join(root, 'src', 'store', 'proStore.ts'), 'utf8');
+const proSource = await readFile(join(root, 'src', 'lib', 'pro.ts'), 'utf8');
+const workerSource = await readFile(join(root, 'workers', 'design-sync', 'src', 'index.ts'), 'utf8');
+const workerConfig = await readFile(join(root, 'workers', 'design-sync', 'wrangler.jsonc'), 'utf8');
 check(
   'Google login does not trigger the Android custom-scope guard',
   !/SocialLogin\.login\(\{[\s\S]{0,300}?scopes\s*:/.test(googleAuthSource),
@@ -122,6 +133,41 @@ check(
 check(
   'Google login avoids the plugin 8.3.38 invalid-JWT decoder',
   !googleAuthSource.includes('SocialLogin.decodeIdToken') && googleAuthSource.includes('result.profile.id'),
+);
+check(
+  'Google login retries after temporary initialization and stale provider sessions',
+  googleAuthSource.includes('initializePromise = null') &&
+    googleAuthSource.includes('const existing = await SocialLogin.isLoggedIn') &&
+    googleAuthSource.includes("await SocialLogin.logout({ provider: 'google' }).catch"),
+);
+check(
+  'desktop session restore rejects an expired persisted Google token',
+  googleAuthSource.includes('cached.jwt && tokenIsFresh(cached.jwt)') &&
+    googleAuthSource.includes('if (Capacitor.isNativePlatform()) return true'),
+);
+check(
+  'sign-out clears local account state even when online cleanup fails',
+    authStoreSource.includes('set({ account: null, ready: true })') &&
+    authStoreSource.includes('const cleanup = await Promise.race') &&
+    authStoreSource.includes('new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000))') &&
+    proStoreSource.includes('Clear account-derived state before touching the network'),
+);
+check(
+  'linking Google retroactively syncs legacy Play purchases',
+  proSource.includes('Purchases.syncPurchases()') && proSource.includes('Purchases.logIn({ appUserID })'),
+);
+check(
+  'desktop entitlement lookup uses a private RevenueCat v2 credential',
+  workerSource.includes('/active_entitlements') &&
+    workerSource.includes('env.REVENUECAT_SECRET_KEY') &&
+    !workerConfig.includes('REVENUECAT_API_KEY'),
+);
+check(
+  'desktop checkout exposes monthly, yearly, and lifetime RevenueCat packages',
+  proSource.includes("packageKey: 'monthly'") &&
+    proSource.includes("packageKey: 'annual'") &&
+    proSource.includes("packageKey: 'lifetime'") &&
+    proSource.includes('webPackageForPlan(offerings, planID)'),
 );
 
 // ---- 1. Projects screen renders, sample home opens -------------------------
@@ -136,6 +182,20 @@ await page.getByRole('button', { name: /Sunlit open-plan home/ }).first().click(
 check('editor opens', await page.waitForSelector('.toolbar', { timeout: 15000 }).then(() => true).catch(() => false));
 await page.locator('.coach-skip').click().catch(() => {});
 check('2D canvas mounts', (await page.locator('.konvajs-content canvas').count()) > 0);
+
+// A configured desktop build must offer web checkout. Because purchases are
+// attached to the stable Google customer ID, signed-out visitors first get a
+// clear sign-in action instead of the old Android-only link.
+await page.locator('.floor-add').first().click();
+check(
+  'desktop Pro checkout asks signed-out visitors to link Google',
+  await page.locator('.pro-upsell .pro-buy', { hasText: 'Sign in with Google' }).isVisible().catch(() => false),
+);
+check(
+  'desktop Pro checkout no longer redirects to Android when configured',
+  !(await page.locator('.pro-upsell .pro-buy', { hasText: 'Get the Android app' }).isVisible().catch(() => false)),
+);
+await page.locator('.pro-upsell .pro-later').click();
 
 // With object movement locked, a phone user must be able to start a one-finger
 // pan on the plan itself (room/wall/furniture), not only in the margin around it.
@@ -409,6 +469,23 @@ if (process.env.SMOKE_SKIP_3D) {
 }
 
 // ---- 6. No page errors ------------------------------------------------------
+// Old releases could leave a project JSON without a corresponding index row.
+// A reload must recover it so the next authenticated sync uploads it.
+const recoveryPage = await browser.newPage({ viewport: { width: 900, height: 700 } });
+await recoveryPage.goto(BASE);
+await recoveryPage.evaluate(() => {
+  localStorage.setItem('homedesigner.project.recovered_legacy', JSON.stringify({
+    projectName: 'Recovered legacy plan',
+  }));
+});
+await recoveryPage.reload();
+check(
+  'orphaned legacy project is re-indexed for cloud sync',
+  await recoveryPage.getByRole('button', { name: 'Open Recovered legacy plan' })
+    .isVisible().catch(() => false),
+);
+await recoveryPage.close();
+
 check('zero page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));
 
 await browser.close();
