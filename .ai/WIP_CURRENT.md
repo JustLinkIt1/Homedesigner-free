@@ -4,13 +4,15 @@ _Last updated: 2026-07-23. Working branch: `agent/stripe-web-checkout`._
 
 ## Current state
 
-- **Current release source: 1.0.89 (versionCode 10089).**
+- **Current release source: 1.0.90 (versionCode 10090).**
 - Desktop Google OAuth is configured for `https://homedesignerapp.com/app/`,
   browser session restore is fixed, and Google-linked RevenueCat Pro lookup is
   deployed in the Cloudflare sync Worker.
-- **Unreleased:** desktop Stripe checkout is implemented locally and the live
-  RevenueCat/Stripe dashboard configuration is complete. The production web
-  key is enabled locally; the branch has not yet been released.
+- **Released in 1.0.89:** desktop Stripe checkout and the live
+  RevenueCat/Stripe dashboard configuration are deployed on GitHub Pages.
+- **Unreleased 1.0.90:** live desktop testing exposed an OAuth callback edge
+  case when a browser turns Google's popup into an opener-less tab. The local
+  fix validates and forwards that successful callback to the waiting app.
 - **Live hotfix:** Worker `4afa87b9-0fa3-4596-845d-62b1ff43f367` now uses a
   private RevenueCat v2 secret for desktop entitlement reads. The owner's
   linked Google customer has an unlimited Homedesigner Pro grant.
@@ -50,11 +52,19 @@ _Last updated: 2026-07-23. Working branch: `agent/stripe-web-checkout`._
 5. No real live charge was made. After deployment, perform one owner purchase
    and confirm RevenueCat grants the same Google-linked `Pro` entitlement on
    desktop and Android.
-6. Validation and the 1.0.89 version bump are complete. Next: commit/push,
-   merge, deploy Pages, then run the owner purchase check above.
+6. The 1.0.89 Stripe release is merged and deployed. Next: validate, commit,
+   merge, and deploy the 1.0.90 OAuth callback fix, then run the owner purchase
+   check above.
 
-## Google account reliability in 1.0.89
+## Google account reliability in 1.0.90
 
+- Opener-less desktop OAuth callback tabs now verify the Google issuer,
+  audience, nonce, and token expiry before forwarding the successful response
+  through the provider's nonce-scoped BroadcastChannel. The callback removes
+  credentials from browser history immediately and closes itself when allowed.
+- Final validation is green: typecheck, lint, production build, all non-3D
+  browser smoke checks, Android Capacitor sync, signed release bundle build,
+  and AAB signature verification.
 - Desktop restore now rejects an expired persisted Google ID token instead of
   showing a signed-in account that cannot sync.
 - Google plugin initialization can be retried after a temporary failure, and a

@@ -121,6 +121,7 @@ const store = (fn, arg) => page.evaluate(fn, arg);
 // Passing even those defaults through `options.scopes` activates the plugin's
 // custom-scope MainActivity guard and rejects before Google Sign-In opens.
 const googleAuthSource = await readFile(join(root, 'src', 'lib', 'googleAuth.ts'), 'utf8');
+const mainSource = await readFile(join(root, 'src', 'main.tsx'), 'utf8');
 const authStoreSource = await readFile(join(root, 'src', 'store', 'authStore.ts'), 'utf8');
 const proStoreSource = await readFile(join(root, 'src', 'store', 'proStore.ts'), 'utf8');
 const proSource = await readFile(join(root, 'src', 'lib', 'pro.ts'), 'utf8');
@@ -139,6 +140,14 @@ check(
   googleAuthSource.includes('initializePromise = null') &&
     googleAuthSource.includes('const existing = await SocialLogin.isLoggedIn') &&
     googleAuthSource.includes("await SocialLogin.logout({ provider: 'google' }).catch"),
+);
+check(
+  'desktop OAuth callback recovers from an opener-less popup tab',
+  googleAuthSource.includes('finishStrandedGooglePopup') &&
+    googleAuthSource.includes('claims?.nonce !== pending.nonce') &&
+    googleAuthSource.includes("claims?.aud !== GOOGLE_WEB_CLIENT_ID") &&
+    googleAuthSource.includes('new BroadcastChannel(`google_oauth_${pending.nonce}`)') &&
+    mainSource.includes('const completedGooglePopup = finishStrandedGooglePopup()'),
 );
 check(
   'desktop session restore rejects an expired persisted Google token',
