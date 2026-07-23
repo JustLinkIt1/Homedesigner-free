@@ -16,18 +16,83 @@ const GOOGLE_WEB_CLIENT_ID = (import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID ?? '').t
 let initializePromise: Promise<void> | null = null;
 let currentIdToken: string | null = null;
 
-function tokenIsFresh(token: string): boolean {
+interface GoogleTokenClaims {
+  aud?: string;
+  exp?: number;
+  iss?: string;
+  nonce?: string;
+}
+
+function readTokenClaims(token: string): GoogleTokenClaims | null {
   try {
     const encoded = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '='))) as { exp?: number };
-    return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now() + 60_000;
+    return JSON.parse(atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '='))) as GoogleTokenClaims;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function tokenIsFresh(token: string): boolean {
+  const payload = readTokenClaims(token);
+  return typeof payload?.exp === 'number' && payload.exp * 1000 > Date.now() + 60_000;
 }
 
 export function isGoogleSignInConfigured(): boolean {
   return GOOGLE_WEB_CLIENT_ID.endsWith('.apps.googleusercontent.com');
+}
+
+/**
+ * Finishes a Google popup callback that the web plugin cannot recognise.
+ *
+ * Some desktop browsers open OAuth "popups" as ordinary tabs and deliberately
+ * remove window.opener/window.name. Capgo then leaves the successful callback
+ * stranded in that tab while the original app waits forever. Forward the
+ * verified response over the same nonce-scoped channel the plugin already
+ * listens to. Native login is unaffected.
+ */
+export function finishStrandedGooglePopup(): boolean {
+  if (Capacitor.isNativePlatform() || !window.location.hash.includes('id_token=')) return false;
+
+  try {
+    const pendingRaw = localStorage.getItem('social_login_oauth_pending');
+    if (!pendingRaw) return false;
+    const pending = JSON.parse(pendingRaw) as { provider?: string; nonce?: string };
+    if (pending.provider !== 'google' || !pending.nonce) return false;
+
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = params.get('access_token');
+    const idToken = params.get('id_token');
+    const claims = idToken ? readTokenClaims(idToken) : null;
+    const trustedIssuer = claims?.iss === 'https://accounts.google.com' || claims?.iss === 'accounts.google.com';
+    if (
+      !accessToken ||
+      !idToken ||
+      claims?.aud !== GOOGLE_WEB_CLIENT_ID ||
+      claims?.nonce !== pending.nonce ||
+      !trustedIssuer ||
+      !tokenIsFresh(idToken)
+    ) {
+      return false;
+    }
+
+    const message = {
+      type: 'oauth-response',
+      provider: 'google',
+      accessToken: { token: accessToken },
+      idToken,
+    };
+    window.opener?.postMessage(message, window.location.origin);
+    const channel = new BroadcastChannel(`google_oauth_${pending.nonce}`);
+    channel.postMessage(message);
+    channel.close();
+
+    // Remove bearer credentials from the address bar/history immediately.
+    history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    window.setTimeout(() => window.close(), 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function initializeGoogle(): Promise<void> {

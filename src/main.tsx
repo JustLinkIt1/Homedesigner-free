@@ -4,7 +4,13 @@ import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useDesign } from './store/designStore';
 import { initTheme } from './lib/theme';
+import { finishStrandedGooglePopup } from './lib/googleAuth';
 import './index.css';
+
+// Complete OAuth before mounting the full editor. This is normally handled by
+// the provider popup itself; the fallback covers browsers that turn the popup
+// into an opener-less tab.
+const completedGooglePopup = finishStrandedGooglePopup();
 
 // Apply the persisted (or OS) theme before first paint to avoid a flash.
 initTheme();
@@ -17,10 +23,12 @@ if (import.meta.env.DEV) {
   (window as unknown as { useDesign: typeof useDesign }).useDesign = useDesign;
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>,
-);
+if (!completedGooglePopup) {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>,
+  );
+}

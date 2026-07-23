@@ -5,7 +5,7 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
-## 1.0.89 - 2026-07-23 (versionCode 10089)
+## 1.0.90 - 2026-07-23 (versionCode 10090)
 
 Owner report: the desktop Pro sheet could only redirect customers to the
 Android app. Desktop customers need to buy the same permanent Pro entitlement
@@ -45,8 +45,17 @@ both desktop and Android before opening checkout to testers.
 Validation so far: TypeScript clean, lint clean, production build succeeds, and
 all non-3D browser smoke checks pass with zero page errors.
 
+The signed Android 1.0.90 AAB was built successfully and its JAR signature was
+verified before delivery.
+
 ### Fixed — reliable Google sign-in and sign-out
 
+- Fixed a production-only desktop OAuth edge case found during live testing.
+  When a browser turned Google's popup into an opener-less tab, the successful
+  callback was previously stranded and the original app stayed signed out.
+  The app now validates the callback issuer, audience, nonce, and expiry, then
+  forwards it through the provider's nonce-scoped channel and immediately
+  removes bearer credentials from browser history.
 - Desktop session restore now requires a still-fresh persisted Google ID token.
   The UI no longer appears signed in after the web token has expired even though
   every plan-sync request would fail.
