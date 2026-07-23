@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Monitor, Sun, Moon, ExternalLink, LogOut, Trash2 } from 'lucide-react';
+import { Settings, Monitor, Sun, Moon, ExternalLink, LogOut, Trash2, RefreshCw } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { hapticsEnabled, setHapticsEnabled, tapLight } from '../lib/haptics';
@@ -51,6 +51,7 @@ export default function SettingsDialog({
   const authBusy = useAuthStore((s) => s.busy);
   const signIn = useAuthStore((s) => s.signIn);
   const signOut = useAuthStore((s) => s.signOut);
+  const syncNow = useAuthStore((s) => s.syncNow);
   const t = useI18n();
 
   return (
@@ -68,9 +69,18 @@ export default function SettingsDialog({
                 <div className="account-copy">
                   <strong>{account.name || t('Google account')}</strong>
                   {account.email ? <span>{account.email}</span> : null}
-                  <small>{t('Plans and Pro access sync across your signed-in Android devices.')}</small>
+                  <small>{t('Plans and Pro access sync across your signed-in devices.')}</small>
                 </div>
                 <div className="account-actions">
+                  <button
+                    className="btn icon-btn"
+                    onClick={() => void syncNow()}
+                    disabled={authBusy}
+                    aria-label={t('Sync now')}
+                    title={t('Sync now')}
+                  >
+                    <RefreshCw className={`icon ${authBusy ? 'spin' : ''}`} />
+                  </button>
                   <button className="btn icon-btn" onClick={() => void signOut()} disabled={authBusy} aria-label={t('Sign out')}>
                     <LogOut className="icon" />
                   </button>
@@ -98,7 +108,7 @@ export default function SettingsDialog({
                 </button>
                 <small>
                   {authConfigured
-                    ? t('Sync plans and Pro access across your Android devices.')
+                    ? t('Sync plans and Pro access across your devices.')
                     : t('Google Sign-In needs an OAuth client ID in this build.')}
                 </small>
               </div>

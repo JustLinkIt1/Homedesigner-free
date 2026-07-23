@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Crown, Layers, FileText, Sofa, FolderOpen, Sparkles, Check } from 'lucide-react';
 import { useProStore } from '../store/proStore';
-import type { ProFeature } from '../lib/pro';
+import { isWebBillingConfigured, type ProFeature } from '../lib/pro';
+import { useAuthStore } from '../store/authStore';
 import { APP_NAME } from '../lib/appInfo';
 import { useI18n } from '../lib/i18n';
 
@@ -29,17 +30,20 @@ const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blur
   },
 };
 
-const BENEFITS = [
+const CORE_BENEFITS = [
   'Unlimited floors & projects',
   'Full furniture catalog',
   'Watermark-free renders & photos',
   'PDF plan export',
-  'One-time purchase — no subscription',
 ];
 
-/** Feature-triggered Pro purchase sheet (Play billing on Android, Play link on web). */
+/** Feature-triggered Pro purchase sheet (Play Billing on Android, Stripe-backed
+ * RevenueCat Web Billing on configured desktop builds). */
 export default function ProUpsellModal() {
-  const { upsellFeature, closeUpsell, purchase, restore, busy, priceLabel, isPro } = useProStore();
+  const { upsellFeature, closeUpsell, purchase, restore, busy, priceLabel, plans, isPro } = useProStore();
+  const account = useAuthStore((s) => s.account);
+  const authBusy = useAuthStore((s) => s.busy);
+  const signIn = useAuthStore((s) => s.signIn);
   const t = useI18n();
 
   const open = !!upsellFeature && !isPro;
@@ -55,8 +59,21 @@ export default function ProUpsellModal() {
   if (!open) return null;
 
   const native = Capacitor.isNativePlatform();
+  const webBilling = !native && isWebBillingConfigured();
+  const actionBusy = busy || authBusy;
+  const showPlanChoices = webBilling && !!account && plans.length > 0;
   const copy = FEATURE_COPY[upsellFeature];
   const Icon = copy.icon;
+  const buyLabel = native || (webBilling && account)
+    ? `${t('Unlock Pro')}${priceLabel ? ` — ${priceLabel}` : ''}`
+    : webBilling
+      ? t('Sign in with Google')
+      : t('Get the Android app');
+  const onPrimaryAction = native || !webBilling || account ? purchase : signIn;
+  const benefits = [
+    ...CORE_BENEFITS,
+    webBilling ? 'Monthly, yearly or lifetime — your choice' : 'One-time purchase — no subscription',
+  ];
 
   return (
     <div className="modal-backdrop" onMouseDown={closeUpsell}>
@@ -72,25 +89,46 @@ export default function ProUpsellModal() {
           <p>{t(copy.blurb)}</p>
         </div>
         <ul className="pro-benefits">
-          {BENEFITS.map((b) => (
+          {benefits.map((b) => (
             <li key={b}>
               <Check className="icon" /> {t(b)}
             </li>
           ))}
         </ul>
         <div className="pro-actions">
-          <button className="btn primary pro-buy" onClick={purchase} disabled={busy}>
-            {busy ? (
-              <span className="spin" />
-            ) : (
-              <>
-                <Sparkles className="icon" />
-                {native ? `${t('Unlock Pro')}${priceLabel ? ` — ${priceLabel}` : ''}` : t('Get the Android app')}
-              </>
-            )}
-          </button>
-          {native && (
-            <button className="pro-restore" onClick={restore} disabled={busy}>
+          {showPlanChoices ? (
+            <div className="pro-plan-grid" aria-label="Choose a Pro plan">
+              {plans.map((plan) => (
+                <button
+                  key={plan.id}
+                  className={`pro-plan${plan.id === 'yearly' ? ' recommended' : ''}`}
+                  onClick={() => purchase(plan.id)}
+                  disabled={actionBusy}
+                  aria-label={`${plan.label} Pro plan, ${plan.priceLabel}`}
+                >
+                  {plan.id === 'yearly' && <span className="pro-plan-badge">Best value</span>}
+                  <span className="pro-plan-name">{plan.label}</span>
+                  <strong>{plan.priceLabel}</strong>
+                  <small>
+                    {plan.id === 'monthly' ? 'per month' : plan.id === 'yearly' ? 'per year' : 'one payment'}
+                  </small>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button className="btn primary pro-buy" onClick={() => onPrimaryAction()} disabled={actionBusy}>
+              {actionBusy ? (
+                <span className="spin" />
+              ) : (
+                <>
+                  <Sparkles className="icon" />
+                  {buyLabel}
+                </>
+              )}
+            </button>
+          )}
+          {(native || (webBilling && account)) && (
+            <button className="pro-restore" onClick={restore} disabled={actionBusy}>
               {t('Restore purchase')}
             </button>
           )}

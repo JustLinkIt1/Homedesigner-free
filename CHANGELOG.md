@@ -5,6 +5,90 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.89 - 2026-07-23 (versionCode 10089)
+
+Owner report: the desktop Pro sheet could only redirect customers to the
+Android app. Desktop customers need to buy the same permanent Pro entitlement
+and keep it when moving between desktop and Android.
+
+### In progress — RevenueCat Web Billing with Stripe
+
+- Added the lazy-loaded RevenueCat Web SDK and a desktop purchase provider.
+  Configured builds load the real web offering and localized price, open
+  Stripe-backed checkout, and immediately unlock the returned Pro entitlement.
+- Web checkout is attached to the same stable `google:<subject>` customer ID
+  already used by Android and the sync Worker. Signed-out customers are asked
+  to sign in before checkout so purchases cannot become stranded on an
+  anonymous browser ID.
+- Existing production behavior remains safe until setup is complete: without a
+  public Web Billing key, desktop keeps linking to the Play Store. The
+  `?pro=1` browser-test seam remains available.
+- Added browser coverage proving a configured desktop build shows **Sign in
+  with Google** instead of **Get the Android app** before purchase.
+- Connected the live **HomeDesignerApp** Stripe account to a RevenueCat Billing
+  configuration using EUR, then added three customer choices: **€4.99/month**,
+  **€39.99/year**, and **€79.99 lifetime**. All three products grant the same
+  canonical `Pro` entitlement and are attached to the default offering.
+- Added the public RevenueCat Billing key to the production web build and
+  registered `homedesignerapp.com` as an enabled Stripe payment-method domain
+  for supported card wallets. Stripe Tax remains off pending a separate tax
+  configuration decision.
+- Desktop now loads every configured Pro package and displays a compact pricing
+  selector with yearly highlighted as best value. Checkout purchases the exact
+  package selected by the customer rather than whichever package happens to be
+  first in the offering.
+
+No real live charge was made during setup. Complete one low-value owner purchase
+after deployment, then verify the resulting RevenueCat entitlement appears on
+both desktop and Android before opening checkout to testers.
+
+Validation so far: TypeScript clean, lint clean, production build succeeds, and
+all non-3D browser smoke checks pass with zero page errors.
+
+### Fixed — reliable Google sign-in and sign-out
+
+- Desktop session restore now requires a still-fresh persisted Google ID token.
+  The UI no longer appears signed in after the web token has expired even though
+  every plan-sync request would fail.
+- A temporary Google plugin initialization error no longer permanently breaks
+  all later attempts. Signed-out users also clear any stale provider session
+  before starting a new login, preventing “already signed in” failures and
+  accidental reuse of the previous Google account on desktop or Android.
+- Sign-out now immediately stops cloud writes and clears the visible account,
+  account-linked Pro state, prices, and cached credential before attempting
+  network cleanup. RevenueCat or Google being offline can no longer trap a user
+  in the signed-in UI; the in-memory Google token is cleared in every outcome.
+- Session restore cleans up RevenueCat and project-sync state when Google no
+  longer has a usable session.
+
+### Fixed — retroactive Pro and legacy project migration
+
+- Corrected the deployed sync Worker entitlement lookup. It had been calling a
+  private RevenueCat customer endpoint with the public Android SDK key; it now
+  uses the existing private v2 key from a Cloudflare secret and RevenueCat's
+  `active_entitlements` API. No secret is stored in source or Git.
+- Linked the owner's existing Google customer to **Homedesigner Pro** with an
+  unlimited-duration grant after confirming that RevenueCat showed no purchase
+  or entitlement history for the new Google ID. Desktop can now resolve Pro
+  immediately through the corrected Worker.
+- Android now runs RevenueCat `syncPurchases()` when a newly linked Google ID
+  has no entitlement. This retroactively attaches eligible purchases made
+  under the older anonymous RevenueCat ID to `google:<subject>` using the
+  project's **Transfer to new App User ID** behavior.
+- Added project-index repair before cloud upload. Valid project JSON left by an
+  older/intermediate build is re-indexed and included in the first sync rather
+  than remaining invisible. The legacy single-slot save is also recovered when
+  needed; users must not delete old projects.
+- Added **Sync now** beside the signed-in account on home and in Settings. It
+  retries both project merge and Pro linking, with clear success/failure
+  feedback. Account copy now correctly says sync works across signed-in
+  devices, not Android devices only.
+- Deployed sync Worker version `4afa87b9-0fa3-4596-845d-62b1ff43f367`.
+
+Validation: root TypeScript and lint clean; Worker TypeScript clean; 35 browser
+checks pass (3D intentionally skipped), including retroactive purchase wiring,
+private v2 API configuration, orphaned-plan recovery, and zero page errors.
+
 ## 1.0.88 - 2026-07-23 (versionCode 10088)
 
 Owner report: Google Sign-In worked on Android but desktop returned Google

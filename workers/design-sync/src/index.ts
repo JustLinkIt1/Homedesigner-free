@@ -3,7 +3,8 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 interface Env {
   USER_DATA: R2Bucket;
   GOOGLE_WEB_CLIENT_ID: string;
-  REVENUECAT_API_KEY: string;
+  REVENUECAT_PROJECT_ID: string;
+  REVENUECAT_SECRET_KEY: string;
 }
 
 interface ProjectRecord {
@@ -139,41 +140,32 @@ async function sync(request: Request, env: Env, subject: string): Promise<Respon
   return json(request, { projects: mergedProjects, tombstones: mergedTombstones });
 }
 
-interface RevenueCatEntitlement {
-  expires_date?: string | null;
-}
-
-interface RevenueCatSubscriberResponse {
-  subscriber?: {
-    entitlements?: Record<string, RevenueCatEntitlement>;
-  };
-}
-
-function entitlementIsActive(entitlement: RevenueCatEntitlement, now = Date.now()): boolean {
-  if (entitlement.expires_date === null) return true;
-  if (!entitlement.expires_date) return false;
-  const expiry = Date.parse(entitlement.expires_date);
-  return Number.isFinite(expiry) && expiry > now;
+interface RevenueCatActiveEntitlements {
+  items?: Array<{
+    entitlement_id?: string;
+    expires_at?: number | null;
+  }>;
 }
 
 async function entitlement(request: Request, env: Env, subject: string): Promise<Response> {
   const appUserId = `google:${subject}`;
   const response = await fetch(
-    `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`,
+    `https://api.revenuecat.com/v2/projects/${encodeURIComponent(env.REVENUECAT_PROJECT_ID)}` +
+      `/customers/${encodeURIComponent(appUserId)}/active_entitlements`,
     {
       headers: {
-        Authorization: `Bearer ${env.REVENUECAT_API_KEY}`,
+        Authorization: `Bearer ${env.REVENUECAT_SECRET_KEY}`,
         Accept: 'application/json',
       },
     },
   );
+  // A Google account that has never been linked is a normal free customer.
+  if (response.status === 404) return json(request, { isPro: false });
   if (!response.ok) return json(request, { error: 'Entitlement lookup failed' }, 502);
-  const result = await response.json() as RevenueCatSubscriberResponse;
-  const entitlements = result.subscriber?.entitlements ?? {};
-  const preferred = entitlements.Pro;
-  const isPro = preferred
-    ? entitlementIsActive(preferred)
-    : Object.values(entitlements).some((item) => entitlementIsActive(item));
+  const result = await response.json() as RevenueCatActiveEntitlements;
+  const now = Date.now();
+  const isPro = (result.items ?? []).some((item) =>
+    item.expires_at === null || (typeof item.expires_at === 'number' && item.expires_at > now));
   return json(request, { isPro });
 }
 

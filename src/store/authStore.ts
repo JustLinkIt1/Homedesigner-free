@@ -61,6 +61,7 @@ interface AuthState {
   restoreSession: () => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  syncNow: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -78,8 +79,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const active = await hasGoogleSession();
       if (!active) {
+        stopProjectSync?.();
+        stopProjectSync = null;
         writeAccount(null);
         set({ account: null, ready: true });
+        void useProStore.getState().unlinkAccount().catch(() => {});
         return;
       }
       set({ account: cached });
@@ -119,18 +123,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     if (get().busy || !get().account) return;
     set({ busy: true });
+    // Stop cloud writes and clear the visible account immediately. Provider
+    // cleanup is best-effort: offline RevenueCat/Google calls must never trap a
+    // user in a signed-in UI on a shared desktop or phone.
+    stopProjectSync?.();
+    stopProjectSync = null;
+    writeAccount(null);
+    set({ account: null, ready: true });
+    const cleanup = await Promise.race([
+      Promise.allSettled([
+        useProStore.getState().unlinkAccount(),
+        signOutFromGoogle(),
+      ]),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+    ]);
     try {
-      // Disconnect RevenueCat first. If that cannot complete, keep the account
-      // signed in rather than leaving a shared device on the named customer.
-      await useProStore.getState().unlinkAccount();
-      await signOutFromGoogle();
-      stopProjectSync?.();
-      stopProjectSync = null;
-      writeAccount(null);
-      set({ account: null });
-      toast.success(t('Signed out. Designs remain saved on this device.'));
-    } catch {
-      toast.error(t("Couldn't sign out safely — check your connection and try again."));
+      if (cleanup?.every((result) => result.status === 'fulfilled')) {
+        toast.success(t('Signed out. Designs remain saved on this device.'));
+      } else {
+        toast.info(t('Signed out on this device. Online account cleanup will retry next time.'));
+      }
+    } finally {
+      set({ busy: false });
+    }
+  },
+
+  syncNow: async () => {
+    const account = get().account;
+    if (get().busy || !account) return;
+    set({ busy: true });
+    try {
+      const [purchases, plans] = await Promise.allSettled([linkPurchases(account), syncAccountData()]);
+      if (purchases.status === 'fulfilled' && plans.status === 'fulfilled') {
+        toast.success(t('Sync complete — plans and Pro access are up to date.'));
+      } else {
+        toast.error(t("Sync couldn't finish. Check your connection and try again."));
+      }
     } finally {
       set({ busy: false });
     }

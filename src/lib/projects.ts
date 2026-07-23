@@ -88,18 +88,58 @@ export function setActiveId(id: string): void {
   }
 }
 
-/** One-time migration of the legacy single-slot save into the index. */
-function migrate(): void {
-  if (listProjects().length > 0 || getActiveId()) return;
+/** Recover projects created by older releases before sending the first cloud
+ * snapshot. Some intermediate builds could leave a valid project JSON (or the
+ * legacy single-slot save) without a matching index row; an empty index made
+ * those plans invisible to both the home screen and cloud sync. */
+function repairProjectIndex(): void {
+  const existing = listProjects();
+  const byId = new Map(existing.map((meta) => [meta.id, meta]));
+  let changed = false;
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith('homedesigner.project.')) continue;
+      const id = key.slice('homedesigner.project.'.length);
+      if (!validStoredProjectId(id) || byId.has(id)) continue;
+      const snapshot = readJSON<{ projectName?: string }>(key);
+      if (!snapshot) continue;
+      byId.set(id, {
+        id,
+        name: snapshot.projectName || 'My home',
+        updatedAt: Date.now(),
+      });
+      changed = true;
+    }
+  } catch {
+    /* storage enumeration unavailable */
+  }
+
   const legacy = readJSON<{ projectName?: string }>(LEGACY_KEY);
-  if (!legacy) return;
-  const id = uid();
-  writeJSON(projectKey(id), legacy);
-  writeIndex([{ id, name: legacy.projectName || 'My home', updatedAt: Date.now() }]);
-  setActiveId(id);
-  // LEGACY_KEY intentionally left in place for one release as a rollback copy.
+  if (legacy && byId.size === 0) {
+    const activeId = getActiveId();
+    const id = activeId && validStoredProjectId(activeId) ? activeId : uid();
+    if (writeJSON(projectKey(id), legacy)) {
+      byId.set(id, {
+        id,
+        name: legacy.projectName || 'My home',
+        updatedAt: Date.now(),
+      });
+      setActiveId(id);
+      changed = true;
+    }
+  }
+
+  if (changed) writeIndex([...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt));
+  // LEGACY_KEY intentionally remains as rollback insurance.
 }
-migrate();
+
+function validStoredProjectId(id: string): boolean {
+  return /^[a-zA-Z0-9_-]{6,100}$/.test(id);
+}
+
+repairProjectIndex();
 
 /** Raw snapshot of the active project (the store parses/validates it). */
 export function loadActive(): unknown | null {
@@ -220,6 +260,9 @@ export function setThumbnail(id: string, dataUrl: string): void {
 
 /** Snapshot the local state for an authenticated last-write-wins cloud merge. */
 export function getCloudState(): { projects: CloudProjectRecord[]; tombstones: ProjectTombstone[] } {
+  // Run again immediately before sync in case an older active tab wrote an
+  // orphaned project after this module first loaded.
+  repairProjectIndex();
   const projects = listProjects().flatMap((meta) => {
     const snapshot = readProject(meta.id);
     return snapshot ? [{ ...meta, snapshot }] : [];

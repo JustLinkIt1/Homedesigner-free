@@ -48,12 +48,26 @@ async function initializeGoogle(): Promise<void> {
     google: {
       ...google,
     },
+  }).catch((error) => {
+    // A temporary plugin/browser initialization failure must not poison every
+    // later sign-in attempt for the lifetime of the app process.
+    initializePromise = null;
+    throw error;
   });
   await initializePromise;
 }
 
 export async function signInWithGoogle(): Promise<GoogleAccount> {
   await initializeGoogle();
+  // The plugin can retain a provider session after the app's local account was
+  // cleared (for example, an offline sign-out). Reset that stale session before
+  // starting a new login so desktop and Android do not fail with "already
+  // signed in" or silently reuse the wrong Google account.
+  const existing = await SocialLogin.isLoggedIn({ provider: 'google' }).catch(() => ({ isLoggedIn: false }));
+  if (existing.isLoggedIn) {
+    await SocialLogin.logout({ provider: 'google' }).catch(() => {});
+    currentIdToken = null;
+  }
   const { result } = await SocialLogin.login({
     provider: 'google',
     // Android adds openid/email/profile itself. Supplying `scopes` here makes
@@ -82,13 +96,36 @@ export async function signInWithGoogle(): Promise<GoogleAccount> {
 export async function hasGoogleSession(): Promise<boolean> {
   await initializeGoogle();
   const { isLoggedIn } = await SocialLogin.isLoggedIn({ provider: 'google' });
-  return isLoggedIn;
+  if (!isLoggedIn) {
+    currentIdToken = null;
+    return false;
+  }
+  if (Capacitor.isNativePlatform()) return true;
+
+  // The web plugin can report isLoggedIn after its persisted ID token has
+  // expired, but it cannot refresh that token. Treat that state as signed out
+  // so the desktop UI does not show an account whose sync requests all fail.
+  const cached = await SocialLogin.getAuthorizationCode({ provider: 'google' });
+  if (cached.jwt && tokenIsFresh(cached.jwt)) {
+    currentIdToken = cached.jwt;
+    return true;
+  }
+  currentIdToken = null;
+  return false;
 }
 
 export async function signOutFromGoogle(): Promise<void> {
-  await initializeGoogle();
-  await SocialLogin.logout({ provider: 'google' });
+  // Clear first so no in-flight cloud request can reuse the credential while
+  // the provider is taking time to finish its own logout.
   currentIdToken = null;
+  try {
+    await initializeGoogle();
+    await SocialLogin.logout({ provider: 'google' });
+  } finally {
+    // Never let an in-memory credential survive a local sign-out, even when
+    // the provider's remote logout call is temporarily unavailable.
+    currentIdToken = null;
+  }
 }
 
 /** Returns a short-lived Google ID token for server authentication.
