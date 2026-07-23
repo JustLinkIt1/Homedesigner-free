@@ -577,4 +577,6 @@ export const KO: Record<string, string> = {
   'Google Sign-In did not complete.': 'Google 로그인이 완료되지 않았습니다.',
   'Signed out. Designs remain saved on this device.': '로그아웃했습니다. 디자인은 이 기기에 계속 저장됩니다.',
   "Couldn't sign out safely — check your connection and try again.": '안전하게 로그아웃하지 못했습니다 — 연결을 확인하고 다시 시도하세요.',
+  'Sign in': '로그인',
+  'Plans and Pro access sync across your signed-in Android devices.': '로그인한 Android 기기 간에 도면과 Pro 이용 권한이 동기화됩니다.',
 };

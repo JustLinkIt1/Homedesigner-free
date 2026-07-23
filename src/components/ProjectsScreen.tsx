@@ -11,6 +11,7 @@ import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { SAMPLES, samplePreviewUrl } from '../data/samples';
 import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
+import AccountButton from './AccountButton';
 import * as projects from '../lib/projects';
 
 function timeAgo(ts: number, t: (en: string) => string): string {
@@ -135,6 +136,7 @@ export default function ProjectsScreen({
           </div>
         </div>
         <div className="ps-head-actions">
+          <AccountButton />
           <button className="lang-btn ps-settings-btn" onClick={onSettings}>
             <Settings className="icon" />
             <span>{t('Settings')}</span>

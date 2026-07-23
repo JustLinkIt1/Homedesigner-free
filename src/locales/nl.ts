@@ -577,4 +577,6 @@ export const NL: Record<string, string> = {
   'Google Sign-In did not complete.': 'Google-login is niet voltooid.',
   'Signed out. Designs remain saved on this device.': 'Uitgelogd. Ontwerpen blijven op dit apparaat opgeslagen.',
   "Couldn't sign out safely — check your connection and try again.": 'Veilig uitloggen is mislukt — controleer je verbinding en probeer het opnieuw.',
+  'Sign in': 'Inloggen',
+  'Plans and Pro access sync across your signed-in Android devices.': 'Je plannen en Pro-toegang synchroniseren op je aangemelde Android-apparaten.',
 };

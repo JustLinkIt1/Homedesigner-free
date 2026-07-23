@@ -577,4 +577,6 @@ export const ES: Record<string, string> = {
   'Google Sign-In did not complete.': 'No se completó el inicio de sesión con Google.',
   'Signed out. Designs remain saved on this device.': 'Sesión cerrada. Los diseños siguen guardados en este dispositivo.',
   "Couldn't sign out safely — check your connection and try again.": 'No se pudo cerrar la sesión de forma segura — comprueba tu conexión e inténtalo de nuevo.',
+  'Sign in': 'Iniciar sesión',
+  'Plans and Pro access sync across your signed-in Android devices.': 'Tus planos y el acceso Pro se sincronizan en tus dispositivos Android con sesión iniciada.',
 };

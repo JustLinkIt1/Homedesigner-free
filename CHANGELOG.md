@@ -5,6 +5,30 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.87 - 2026-07-22 (versionCode 10087)
+
+Owner: "Google Sign-In works on mobile, but it's buried in Settings — let people
+sign in by clicking a user icon on the main app page."
+
+### Added — account button on the home screen
+- New `AccountButton` in the projects/home header: a round **user-icon**
+  (brand-outlined) that opens a small popover. Signed out it shows the branded
+  **Sign in with Google** button; signed in it shows the avatar/initial, name +
+  email, a "synced across devices" note, and **Sign out**. Reuses the existing
+  `useAuthStore` (`signIn`/`signOut`) — identical behaviour to the Settings
+  account section, just one tap from the launch screen. Renders nothing when
+  Google Sign-In isn't configured in the build. Settings keeps its full account
+  section (incl. Delete cloud backups); this is a shortcut, not a replacement.
+- On phones the header Settings button already lives in the bottom nav, so the
+  header shows logo + account + language; on desktop it sits beside Settings.
+- New strings translated in all 12 locales (`scripts/add-translations9.py`):
+  "Sign in" and the signed-in sync note.
+
+Verified headless (prod build, desktop 1200px + phone 390px): the account icon
+renders, the popover opens with the Google button, the mobile header stays
+uncrowded. tsc + lint + build clean; signed AAB (SHA256 verified, versionCode
+10087). (Built on top of the landing-page branch tip — no Codex work rolled back.)
+
 ## Landing page - 2026-07-22 (web only, no app version bump)
 
 Owner: "build a professional landing page for homedesignerapp.com — this video

@@ -577,4 +577,6 @@ export const ZH: Record<string, string> = {
   'Google Sign-In did not complete.': 'Google 登录未完成。',
   'Signed out. Designs remain saved on this device.': '已退出登录。设计仍保存在此设备上。',
   "Couldn't sign out safely — check your connection and try again.": '无法安全退出登录 — 请检查网络连接后重试。',
+  'Sign in': '登录',
+  'Plans and Pro access sync across your signed-in Android devices.': '您的方案和 Pro 权限会在已登录的 Android 设备间同步。',
 };

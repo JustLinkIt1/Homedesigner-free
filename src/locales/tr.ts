@@ -577,4 +577,6 @@ export const TR: Record<string, string> = {
   'Google Sign-In did not complete.': 'Google ile giriş tamamlanmadı.',
   'Signed out. Designs remain saved on this device.': 'Çıkış yapıldı. Tasarımlar bu cihazda kayıtlı kalır.',
   "Couldn't sign out safely — check your connection and try again.": 'Güvenli şekilde çıkış yapılamadı — bağlantınızı kontrol edip tekrar deneyin.',
+  'Sign in': 'Giriş yap',
+  'Plans and Pro access sync across your signed-in Android devices.': 'Planlarınız ve Pro erişimi, oturum açtığınız Android cihazlar arasında senkronize olur.',
 };

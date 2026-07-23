@@ -577,4 +577,6 @@ export const IT: Record<string, string> = {
   'Google Sign-In did not complete.': 'L’accesso con Google non è stato completato.',
   'Signed out. Designs remain saved on this device.': 'Disconnessione completata. I progetti restano salvati su questo dispositivo.',
   "Couldn't sign out safely — check your connection and try again.": 'Impossibile disconnettersi in sicurezza — controlla la connessione e riprova.',
+  'Sign in': 'Accedi',
+  'Plans and Pro access sync across your signed-in Android devices.': 'I tuoi progetti e l’accesso Pro si sincronizzano sui tuoi dispositivi Android con l’accesso effettuato.',
 };

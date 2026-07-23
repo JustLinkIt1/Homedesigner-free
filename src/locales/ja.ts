@@ -577,4 +577,6 @@ export const JA: Record<string, string> = {
   'Google Sign-In did not complete.': 'Google ログインを完了できませんでした。',
   'Signed out. Designs remain saved on this device.': 'ログアウトしました。デザインはこの端末に保存されたままです。',
   "Couldn't sign out safely — check your connection and try again.": '安全にログアウトできませんでした — 接続を確認して再試行してください。',
+  'Sign in': 'ログイン',
+  'Plans and Pro access sync across your signed-in Android devices.': 'ログイン中の Android 端末間でプランと Pro アクセスが同期されます。',
 };
