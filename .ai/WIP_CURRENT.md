@@ -4,13 +4,15 @@ _Last updated: 2026-07-23. Working branch: `agent/stripe-web-checkout`._
 
 ## Current state
 
-- **Current release source: 1.0.90 (versionCode 10090).**
+- **Current release source: 1.0.91 (versionCode 10091).**
+- 1.0.91 is a rebuild of the unchanged 1.0.90 authentication release because
+  the previous Play Console AAB upload failed.
 - Desktop Google OAuth is configured for `https://homedesignerapp.com/app/`,
   browser session restore is fixed, and Google-linked RevenueCat Pro lookup is
   deployed in the Cloudflare sync Worker.
 - **Released in 1.0.89:** desktop Stripe checkout and the live
   RevenueCat/Stripe dashboard configuration are deployed on GitHub Pages.
-- **Unreleased 1.0.90:** live desktop testing exposed an OAuth callback edge
+- **Released in 1.0.90/1.0.91:** live desktop testing exposed an OAuth callback edge
   case when a browser turns Google's popup into an opener-less tab. The local
   fix validates and forwards that successful callback to the waiting app.
 - **Live hotfix:** Worker `4afa87b9-0fa3-4596-845d-62b1ff43f367` now uses a

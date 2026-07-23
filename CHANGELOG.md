@@ -5,6 +5,13 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.91 - 2026-07-23 (versionCode 10091)
+
+- Rebuilt the unchanged 1.0.90 Google authentication release with a new Play
+  Console versionCode because the previous AAB delivery/upload failed.
+- Re-ran production build, Android sync, signed bundle build, and signature
+  verification before uploading the replacement AAB.
+
 ## 1.0.90 - 2026-07-23 (versionCode 10090)
 
 Owner report: the desktop Pro sheet could only redirect customers to the
