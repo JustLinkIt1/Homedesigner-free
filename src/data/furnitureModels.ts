@@ -70,6 +70,22 @@ export const MODEL_FILE: Record<string, string> = {
 /** Optional yaw correction (radians) for models whose "front" isn't +Z. */
 export const MODEL_YAW: Record<string, number> = {};
 
+/** Per-type 3D scaling policy for the bundled models. The Kenney kitchen
+ *  cabinets are authored as ~45 cm cubes, so uniform fitting leaves them
+ *  stubby and half-height; 'stretch' fills each cabinet's real footprint and
+ *  counter/upper height instead (boxy cabinetry survives non-uniform scale). */
+export const MODEL_FIT: Record<string, 'contain' | 'width' | 'depth' | 'stretch'> = {
+  kitchen_base_cabinet: 'stretch',
+  kitchen_drawer_cabinet: 'stretch',
+  kitchen_corner_cabinet: 'stretch',
+  wall_cabinet: 'stretch',
+  cabinets: 'stretch',
+  // Same ~45 cm-cube Kenney models — stretch so the stove and sink line up with
+  // the 90 cm cabinets instead of sitting half-height beside them.
+  stove: 'stretch',
+  kitchen_sink: 'stretch',
+};
+
 /** Flat rectangular tops whose 2D sprite should STRETCH to fill the whole
  *  footprint rather than aspect-contain. Their top surface is essentially a
  *  featureless plane, so filling reads as a proper table/desk instead of a

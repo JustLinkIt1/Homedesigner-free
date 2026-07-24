@@ -5,6 +5,29 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.92 - 2026-07-23 (versionCode 10092)
+
+Owner (3D screenshot): kitchen cabinets look too small.
+
+### Fixed — kitchen cabinets/stove/sink now fill to real counter height
+- The bundled Kenney kitchen models are authored as ~45 cm cubes, so the
+  uniform-fit path left base cabinets ~58 cm tall (half a real counter) and the
+  stove/sink shorter still — the "too small" look.
+- Added a `'stretch'` fit mode to `GltfFurniture`: for boxy cabinetry it scales
+  width/depth/height independently to the item's footprint and height (the
+  low-poly art holds up fine). Tagged the cabinet run, base/drawer/corner/wall
+  cabinets, stove and sink with it (`MODEL_FIT` in `furnitureModels.ts`), and
+  raised base/drawer/corner cabinet catalog height 62 → 90 cm.
+- Result (headless, deterministic): base cabinet 55×58×58 → **55×60×90 cm**; the
+  stove and sink line up on the same 90 cm counter instead of sitting
+  half-height. 2D top-down sprites are unchanged (height isn't shown there).
+
+> Note on sourcing "better" models: the cgtrader links are a paid marketplace —
+> those models aren't CC0 and can't be bundled in the app without a purchased
+> redistribution licence (the catalogue is deliberately CC0 for commercial
+> safety). This change fixes the scale of the current models; for photoreal
+> cabinets, buy a licence-clear .glb and I'll wire it in.
+
 ## 1.0.91 - 2026-07-23 (versionCode 10091)
 
 - Rebuilt the unchanged 1.0.90 Google authentication release with a new Play

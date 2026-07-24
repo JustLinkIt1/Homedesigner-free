@@ -3,7 +3,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { FurnitureItem } from '../../types';
 import { CATALOG_BY_TYPE, type CatalogEntry } from '../../data/furnitureCatalog';
-import { MODEL_FILE, MODEL_YAW } from '../../data/furnitureModels';
+import { MODEL_FILE, MODEL_YAW, MODEL_FIT } from '../../data/furnitureModels';
 
 const M = 0.01; // cm -> m
 
@@ -20,13 +20,15 @@ const U = (f: string) => `${import.meta.env.BASE_URL}models/${f}.glb`;
 // viewer and the 2D top-down sprites always load the same glTF per type.
 // NB: no pendant/tv model — the fitter rests bases on the floor, which is wrong
 // for hanging lights, and the procedural TV reads better than a flat panel.
-export const FURNITURE_MODELS: Record<string, { url: string; yaw?: number }> =
-  Object.fromEntries(
-    Object.entries(MODEL_FILE).map(([type, file]) => [
-      type,
-      { url: U(file), yaw: MODEL_YAW[type] },
-    ]),
-  );
+export const FURNITURE_MODELS: Record<
+  string,
+  { url: string; yaw?: number; fit?: 'contain' | 'width' | 'depth' | 'stretch' }
+> = Object.fromEntries(
+  Object.entries(MODEL_FILE).map(([type, file]) => [
+    type,
+    { url: U(file), yaw: MODEL_YAW[type], fit: MODEL_FIT[type] },
+  ]),
+);
 
 export function modelDefinition(type: string): NonNullable<CatalogEntry['model']> | undefined {
   return CATALOG_BY_TYPE[type]?.model ?? FURNITURE_MODELS[type];
@@ -53,17 +55,29 @@ export default function GltfFurniture({ item }: { item: FurnitureItem }) {
     box.getSize(size);
     box.getCenter(center);
 
-    // Uniform scale fitting both footprint dimensions (keeps proportions).
     const sx = (item.width * M) / (size.x || 1);
     const sz = (item.depth * M) / (size.z || 1);
-    const scale = def.fit === 'width' ? sx : def.fit === 'depth' ? sz : Math.min(sx, sz);
-    clone.scale.setScalar(scale);
-    // Recentre horizontally and rest the base on y = 0.
-    clone.position.set(
-      -center.x * scale,
-      -box.min.y * scale + (def.offsetY ?? 0) * M,
-      -center.z * scale,
-    );
+    if (def.fit === 'stretch') {
+      // Fill width×depth×height independently — for boxy cabinetry whose model
+      // is authored at the wrong size, so it reaches true counter/upper height.
+      const sy = (item.height * M) / (size.y || 1);
+      clone.scale.set(sx, sy, sz);
+      clone.position.set(
+        -center.x * sx,
+        -box.min.y * sy + (def.offsetY ?? 0) * M,
+        -center.z * sz,
+      );
+    } else {
+      // Uniform scale fitting both footprint dimensions (keeps proportions).
+      const scale = def.fit === 'width' ? sx : def.fit === 'depth' ? sz : Math.min(sx, sz);
+      clone.scale.setScalar(scale);
+      // Recentre horizontally and rest the base on y = 0.
+      clone.position.set(
+        -center.x * scale,
+        -box.min.y * scale + (def.offsetY ?? 0) * M,
+        -center.z * scale,
+      );
+    }
 
     clone.traverse((o) => {
       const m = o as THREE.Mesh;
@@ -73,7 +87,7 @@ export default function GltfFurniture({ item }: { item: FurnitureItem }) {
       }
     });
     return clone;
-  }, [scene, item.width, item.depth, def.fit, def.offsetY]);
+  }, [scene, item.width, item.depth, item.height, def.fit, def.offsetY]);
 
   return (
     <group rotation={[0, def.yaw ?? 0, 0]}>
