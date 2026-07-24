@@ -1,0 +1,101 @@
+name: Android release (signed AAB)
+
+# Builds and signs the release App Bundle on GitHub's runners, so cutting a
+# release never depends on a keystore/SDK living in a sandbox. Trigger it
+# manually (Actions → this workflow → Run workflow) or by pushing a `v*` tag
+# (e.g. `git tag v1.0.92 && git push origin v1.0.92`).
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64   base64 of android/keystore/homedesigner-upload.jks
+#   ANDROID_KEYSTORE_PASSWORD store password
+#   ANDROID_KEY_ALIAS         key alias (this project: `upload`)
+#   ANDROID_KEY_PASSWORD      key password
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # upload the AAB to a GitHub Release when triggered by a tag
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      # Same gates the Pages deploy runs — a red check must not ship.
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+      - run: npx cap sync android
+
+      - name: Restore signing keystore from secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret is not set."
+            exit 1
+          fi
+          mkdir -p android/keystore
+          echo "$KEYSTORE_B64" | base64 -d > android/keystore/homedesigner-upload.jks
+          cat > android/keystore.properties <<EOF
+          storeFile=${GITHUB_WORKSPACE}/android/keystore/homedesigner-upload.jks
+          storePassword=${STORE_PW}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PW}
+          EOF
+
+      - name: Build signed bundle
+        run: cd android && ./gradlew bundleRelease --no-daemon
+
+      - name: Verify signer certificate
+        run: |
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          EXPECT="EED4E3A911BC929AD3CD3336FFBF32C0224A1FC521BEB11302F5A07E5F006A00"
+          GOT=$(unzip -p "$AAB" META-INF/*.RSA | keytool -printcert \
+                | grep -i "SHA256:" | head -1 | sed -E 's/.*SHA256: *//; s/://g')
+          echo "signer SHA-256: $GOT"
+          if [ "$GOT" != "$EXPECT" ]; then
+            echo "::error::Signer fingerprint does not match the HomeDesigner upload key."
+            exit 1
+          fi
+          echo "Signer matches the upload key ✅"
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f android/keystore/homedesigner-upload.jks android/keystore.properties
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: homedesigner-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
+      - name: Attach AAB to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/bundle/release/app-release.aab
