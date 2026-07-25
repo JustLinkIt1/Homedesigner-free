@@ -891,13 +891,21 @@ export default function Scene3D() {
         color={sun.sunColor}
         castShadow={!lowPower}
         shadow-intensity={0.8}
-        shadow-mapSize={[1024, 1024]}
-        shadow-bias={-0.0004}
-        shadow-camera-left={-radius * 2}
-        shadow-camera-right={radius * 2}
-        shadow-camera-top={radius * 2}
-        shadow-camera-bottom={-radius * 2}
-        shadow-camera-far={80}
+        // 2048 over a frustum tightened to the design (was 1024 over ±radius*2,
+        // i.e. ~4x fewer texels per metre) — shadow edges now read as edges.
+        shadow-mapSize={[2048, 2048]}
+        // normalBias is what actually fixes acne on large flat surfaces (floors,
+        // and later the roof); with it the depth bias can be much gentler, which
+        // stops contact points detaching ("peter-panning").
+        shadow-bias={-0.0001}
+        shadow-normalBias={0.02}
+        shadow-camera-left={-radius * 1.25}
+        shadow-camera-right={radius * 1.25}
+        shadow-camera-top={radius * 1.25}
+        shadow-camera-bottom={-radius * 1.25}
+        // The sun sits at ~radius*1.6 up and ~radius*1.5 out, so a fixed 80 m far
+        // plane silently clipped shadows on large plans. Scale it with the design.
+        shadow-camera-far={radius * 4 + 20}
       />
       {/* Cool sky fill from the opposite side (fades at night). */}
       <directionalLight

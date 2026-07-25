@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
+import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
 import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry } from '../../lib/textures';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
@@ -612,11 +613,27 @@ function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: Furn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.texture?.src, room.texture?.scaleCm]);
 
+  // Built-in floor materials carry a photoreal image id (FloorMaterial.texture)
+  // that the 2D plan already renders. Use it here too instead of falling back to
+  // the low-res procedural canvas — same UV maths as the custom branch above.
+  // Carpets deliberately have no image and keep the procedural weave.
+  const builtInId = mat?.texture;
+  const builtIn = useMemo(() => {
+    if (!builtInId) return null;
+    const entry = MATERIAL_BY_ID[builtInId];
+    const t = customTexture(materialUrl(builtInId));
+    const patternM = Math.max(0.02, (entry?.scaleCm ?? 200) * M);
+    t.repeat.set(1 / patternM, 1 / patternM);
+    return { texture: t, roughness: entry?.roughness, metalness: entry?.metalness };
+  }, [builtInId]);
+
   const useCustom = !!custom;
-  const roughness = useCustom ? room.texture?.roughness ?? 0.6 : FLOOR_ROUGHNESS[kind];
+  const roughness = useCustom
+    ? room.texture?.roughness ?? 0.6
+    : builtIn?.roughness ?? FLOOR_ROUGHNESS[kind];
   const metalness = useCustom
     ? room.texture?.metalness ?? 0
-    : (kind === 'marble' || kind === 'tile' ? 0.08 : 0);
+    : builtIn?.metalness ?? (kind === 'marble' || kind === 'tile' ? 0.08 : 0);
 
   return (
     <mesh
@@ -641,7 +658,7 @@ function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: Furn
       }
     >
       <meshStandardMaterial
-        map={custom ?? proc}
+        map={custom ?? builtIn?.texture ?? proc}
         roughness={roughness}
         metalness={metalness}
         side={THREE.DoubleSide}
