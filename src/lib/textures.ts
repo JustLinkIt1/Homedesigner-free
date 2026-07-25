@@ -213,6 +213,98 @@ export function getGroundTexture(kind: GroundKind, color: string, patchM = 4): T
   return tex;
 }
 
+/**
+ * Roof coverings. Procedural for the same reason the lawn is: nothing bundled
+ * reads as a roof (a floor tile stretched over a slope looks wrong at roof
+ * scale), and photographic roof sets would add real APK weight for one feature.
+ * Each generator draws a 1 m square patch; the mesh's UVs are in metres.
+ */
+export type RoofKind = 'tile' | 'shingle' | 'slate' | 'metal' | 'plain';
+
+/** Staggered courses of overlapping units — the shared skeleton of tile/slate/shingle. */
+function courses(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  opts: { rows: number; cols: number; radius: number; jitter: number; seed: number },
+) {
+  const rand = rng(opts.seed);
+  ctx.fillStyle = shade(color, -34);
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  const h = SIZE / opts.rows;
+  const w = SIZE / opts.cols;
+  // Draw bottom-up so each course overlaps the one below, as real roofing does.
+  for (let r = opts.rows - 1; r >= 0; r--) {
+    const offset = r % 2 ? w / 2 : 0;
+    for (let c = -1; c <= opts.cols; c++) {
+      const x = c * w + offset;
+      const y = r * h;
+      ctx.fillStyle = shade(color, (rand() - 0.5) * opts.jitter);
+      ctx.beginPath();
+      // roundRect is available everywhere this app runs (Chromium/WebView 99+).
+      ctx.roundRect(x + 0.7, y + 0.7, w - 1.4, h * 1.45, opts.radius);
+      ctx.fill();
+      // Shadow line under the leading edge gives the course visible depth.
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(x + 0.7, y + h * 1.45 - 2.2, w - 1.4, 2.2);
+    }
+  }
+}
+
+/** Standing-seam metal: flat bays separated by raised ribs. */
+function metalRoofTexture(ctx: CanvasRenderingContext2D, color: string) {
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  const bays = 6;
+  const w = SIZE / bays;
+  for (let i = 0; i <= bays; i++) {
+    const x = i * w;
+    const g = ctx.createLinearGradient(x - 5, 0, x + 5, 0);
+    g.addColorStop(0, `rgba(0,0,0,0.28)`);
+    g.addColorStop(0.5, shade(color, 42));
+    g.addColorStop(1, `rgba(0,0,0,0.28)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(x - 5, 0, 10, SIZE);
+  }
+}
+
+const ROOF_GENERATORS: Record<RoofKind, (c: CanvasRenderingContext2D, col: string) => void> = {
+  tile: (c, col) => courses(c, col, { rows: 4, cols: 6, radius: 7, jitter: 26, seed: 21 }),
+  shingle: (c, col) => courses(c, col, { rows: 6, cols: 4, radius: 1, jitter: 34, seed: 44 }),
+  slate: (c, col) => courses(c, col, { rows: 5, cols: 5, radius: 2, jitter: 18, seed: 12 }),
+  metal: metalRoofTexture,
+  plain: (c, col) => {
+    c.fillStyle = col;
+    c.fillRect(0, 0, SIZE, SIZE);
+  },
+};
+
+export const ROOF_COVERINGS: { kind: RoofKind; name: string; color: string; scaleCm: number }[] = [
+  { kind: 'tile', name: 'Clay Tile', color: '#b45f3c', scaleCm: 100 },
+  { kind: 'tile', name: 'Grey Tile', color: '#6f7275', scaleCm: 100 },
+  { kind: 'slate', name: 'Slate', color: '#4a4f55', scaleCm: 90 },
+  { kind: 'shingle', name: 'Shingle', color: '#5d5348', scaleCm: 80 },
+  { kind: 'shingle', name: 'Cedar Shake', color: '#8a6a48', scaleCm: 80 },
+  { kind: 'metal', name: 'Standing Seam', color: '#8d9298', scaleCm: 150 },
+];
+
+/** One tile of a roof covering, sized to a 1 m patch by the caller's `repeat`. */
+export function getRoofTexture(kind: RoofKind, color: string): THREE.CanvasTexture {
+  const key = `roof:${kind}:${color}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d')!;
+  ROOF_GENERATORS[kind](ctx, color);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  cache.set(key, tex);
+  return tex;
+}
+
 const GENERATORS: Record<FloorKind, (ctx: CanvasRenderingContext2D, color: string) => void> = {
   wood: woodTexture,
   tile: tileTexture,

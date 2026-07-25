@@ -61,10 +61,17 @@ function splitWalls(walls: Wall[], tol: number): Seg[] {
 }
 
 /**
- * Detect enclosed rooms from a set of walls by finding the minimal cycles
- * (faces) of the wall graph via a planar half-edge traversal.
+ * Planar faces of the wall graph, largest first. Shared by room detection (which
+ * discards the outer face) and building-outline detection (which wants it).
+ * `pruneLeaves` drops dead-end walls first — a spur is walked out-and-back by the
+ * half-edge traversal and injects a zero-width spike into the outer face, which
+ * then explodes when offset for a roof eave.
  */
-export function detectRooms(walls: Wall[], mergeTol = 12): Point[][] {
+function wallFaces(
+  walls: Wall[],
+  mergeTol: number,
+  pruneLeaves: boolean,
+): { poly: Point[]; area: number }[] {
   if (walls.length < 3) return [];
   const segs = splitWalls(walls, mergeTol);
 
@@ -93,6 +100,25 @@ export function detectRooms(walls: Wall[], mergeTol = 12): Point[][] {
     if (!adj.has(b)) adj.set(b, []);
     adj.get(a)!.push(b);
     adj.get(b)!.push(a);
+  }
+
+  if (pruneLeaves) {
+    // Iteratively remove degree-1 nodes so dangling walls can't spike the hull.
+    for (;;) {
+      const leaf = [...adj.entries()].find(([, n]) => n.length === 1);
+      if (!leaf) break;
+      const [v, [only]] = leaf;
+      adj.delete(v);
+      const rest = (adj.get(only) ?? []).filter((x) => x !== v);
+      if (rest.length) adj.set(only, rest);
+      else adj.delete(only);
+    }
+    // Drop edges whose endpoints no longer both exist.
+    for (let i = edges.length - 1; i >= 0; i--) {
+      const [a, b] = edges[i];
+      if (!adj.has(a) || !adj.has(b)) edges.splice(i, 1);
+    }
+    if (edges.length < 3) return [];
   }
 
   // Sort neighbours by angle (CCW).
@@ -125,17 +151,41 @@ export function detectRooms(walls: Wall[], mergeTol = 12): Point[][] {
     }
   }
 
-  // Convert to polygons; drop the single largest (the outer boundary).
   const minArea = 8000; // cm² (~0.8 m²)
-  const polys = faces
+  return faces
     .map((f) => f.map((i) => nodes[i]))
     .map((poly) => ({ poly, area: Math.abs(polygonArea(poly)) }))
     .filter((x) => x.area > minArea)
     .sort((a, b) => b.area - a.area);
+}
+
+/**
+ * Detect enclosed rooms from a set of walls by finding the minimal cycles
+ * (faces) of the wall graph via a planar half-edge traversal.
+ */
+export function detectRooms(walls: Wall[], mergeTol = 12): Point[][] {
+  const polys = wallFaces(walls, mergeTol, false);
   if (polys.length === 0) return [];
   // The biggest face is the outer hull only when there is more than one face.
   const rooms = polys.length > 1 ? polys.slice(1) : polys;
   return rooms.map((r) => r.poly);
+}
+
+/**
+ * The building's outer perimeter (wall centrelines), or null if the walls don't
+ * enclose anything. This is the face `detectRooms` throws away. Returned wound
+ * counter-clockwise so "outward" is unambiguous for the roof's eave offset.
+ *
+ * NB a single closed loop yields TWO faces of equal magnitude (inner CCW + outer
+ * CW), so `length > 1` still holds for the simplest possible building; one face
+ * means an unclosed sketch and there is no meaningful outline.
+ */
+export function detectBuildingOutline(walls: Wall[], mergeTol = 12): Point[] | null {
+  const polys = wallFaces(walls, mergeTol, true);
+  if (polys.length < 2) return null;
+  const poly = polys[0].poly.slice();
+  if (polygonArea(poly) < 0) poly.reverse();
+  return poly;
 }
 
 /** A representative interior point for matching a detected polygon to an existing room. */

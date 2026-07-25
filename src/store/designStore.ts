@@ -7,6 +7,7 @@ import type {
   FurnitureItem,
   Opening,
   Point,
+  Roof,
   Room,
   Selection,
   ToolMode,
@@ -22,6 +23,7 @@ import { kitchenRunUnits, kitchenUpperUnits } from '../lib/kitchenRun';
 import { splitPolygonBySegment } from '../lib/roomSplit';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
+import { DEFAULT_ROOF, normalizeRoofs, roofFloorId, roofOf } from '../lib/roof';
 import { SAMPLE_BY_ID, SAMPLES } from '../data/samples';
 import { toast } from '../lib/ui';
 import { t } from '../lib/i18n';
@@ -176,6 +178,9 @@ interface DesignState extends DesignSnapshot {
   cloneFloor: (direction: 'above' | 'below') => void;
   removeFloor: (id: string) => void;
   renameFloor: (id: string, name: string) => void;
+  /** Add/adjust the roof (patch merges onto the current or default roof), or
+   *  pass null to remove it. Always applies to the top storey. */
+  setRoof: (patch: Partial<Roof> | null) => void;
 
   importWalls: (walls: Wall[], replace?: boolean) => void;
   detectRoomsFromWalls: () => number;
@@ -292,7 +297,12 @@ const withFloors = (snap: MaybeFloored): DesignSnapshot => {
   const floorGeom: Record<string, FloorGeom> = {};
   for (const fid in result.floorGeom) floorGeom[fid] = fixOpenings(result.floorGeom[fid]);
   const active = floorGeom[result.activeFloorId];
-  return { ...result, floorGeom, openings: active ? active.openings : result.openings };
+  return {
+    ...result,
+    floors: normalizeRoofs(result.floors),
+    floorGeom,
+    openings: active ? active.openings : result.openings,
+  };
 };
 
 const loadInitial = (): DesignSnapshot => {
@@ -377,6 +387,9 @@ export const useDesign = create<DesignState>((set, get) => {
     // Keep the active floor's stored geometry in sync with the top-level mirror
     // so every storey stays current for saving, undo and 3D stacking.
     next.floorGeom = { ...next.floorGeom, [next.activeFloorId]: geomOf(next) };
+    // The roof belongs to the building, so it re-homes itself onto whatever
+    // storey is now the top one (adding/removing floors must not bury it).
+    next.floors = normalizeRoofs(next.floors);
     persist(next);
     set((s) => ({
       ...next,
@@ -819,6 +832,11 @@ export const useDesign = create<DesignState>((set, get) => {
         const next: Record<string, FloorGeom> = {};
         for (const id in d.floorGeom) next[id] = scaleGeom(d.floorGeom[id]);
         d.floorGeom = next;
+        // Overhang is a plan-space distance like wall thickness; the deck
+        // thickness is a real-world vertical size and stays put.
+        d.floors = d.floors.map((fl) =>
+          fl.roof ? { ...fl, roof: { ...fl.roof, overhang: fl.roof.overhang * f } } : fl,
+        );
         const a = next[d.activeFloorId];
         d.walls = a.walls;
         d.rooms = a.rooms;
@@ -1030,6 +1048,21 @@ export const useDesign = create<DesignState>((set, get) => {
     renameFloor: (id, name) =>
       commit((d) => {
         d.floors = d.floors.map((f) => (f.id === id ? { ...f, name: name || f.name } : f));
+      }),
+
+    setRoof: (patch) =>
+      commit((d) => {
+        const topId = roofFloorId(d.floors);
+        if (!topId) return;
+        const next = patch === null ? undefined : { ...DEFAULT_ROOF, ...roofOf(d.floors), ...patch };
+        d.floors = d.floors.map((f) => {
+          if (f.id !== topId) return f;
+          if (!next) {
+            const { roof: _drop, ...rest } = f;
+            return rest;
+          }
+          return { ...f, roof: next };
+        });
       }),
 
     importWalls: (walls, replace = false) =>

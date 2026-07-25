@@ -146,11 +146,17 @@ export type ToolMode =
   | 'measure';
 
 /** A storey: its own walls/rooms/furniture, stacked at `elevation` (cm). */
+/** NB: the roof lives on FloorInfo, NOT FloorGeom. FloorGeom is rebuilt from
+ *  explicit field lists in several places (geomOf, commit, scaleGeom, cloneFloor);
+ *  a new field there would be silently dropped by any call site that missed it.
+ *  FloorInfo is always spread whole, so an optional field survives for free. */
 export interface FloorInfo {
   id: string;
   name: string;
   /** Base height of this storey above ground, in cm. */
   elevation: number;
+  /** Roof sitting on this storey. Absent = no roof (all existing saves). */
+  roof?: Roof;
 }
 
 /** The editable geometry that belongs to a single storey. */
@@ -169,4 +175,27 @@ export interface Selection {
   id: string | null;
   /** Present when a wall was selected from a specific face in 3D. */
   wallFace?: WallFaceRange;
+}
+
+/** Roof shape. `flat` is exact for any footprint and is the safe fallback. */
+export type RoofType = 'flat' | 'shed' | 'gable' | 'hip';
+
+/** Roof covering. Procedural (see `getRoofTexture`) — nothing bundled reads as
+ *  roofing, and photographic roof sets would add real weight to the APK. */
+export type RoofCovering = 'tile' | 'shingle' | 'slate' | 'metal' | 'plain';
+
+export interface Roof {
+  type: RoofType;
+  /** Pitch in degrees (ignored by `flat`). */
+  pitch: number;
+  /** Eave overhang beyond the outer wall face, cm. */
+  overhang: number;
+  /** Deck/fascia thickness, cm. */
+  thickness: number;
+  covering: RoofCovering;
+  /** Real-world size of one covering tile, cm. */
+  coveringScaleCm: number;
+  color: string;
+  /** A user-supplied image, which wins over `covering` when present. */
+  texture?: CustomTexture;
 }

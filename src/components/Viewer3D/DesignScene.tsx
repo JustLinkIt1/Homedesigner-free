@@ -4,14 +4,16 @@ import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
 import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
-import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry, derivedNormalTexture } from '../../lib/textures';
+import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry, derivedNormalTexture, getRoofTexture } from '../../lib/textures';
 import { activeTier, tierCaps } from '../../lib/perfTier';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
 import { wallFaceAt } from '../../lib/wallFaces';
+import { buildRoofGeometry, roofOutlines } from '../../lib/roofGeometry';
+import { roofOf } from '../../lib/roof';
 import { useRemoteCatalog } from '../../lib/remoteCatalog';
 import Furniture3D from './Furniture3D';
-import type { CustomTexture, FloorGeom, FurnitureItem, Opening, Point, Room, Wall, WallFaceFinish, WallFaceRange } from '../../types';
+import type { CustomTexture, FloorGeom, FurnitureItem, Opening, Point, Roof, Room, Wall, WallFaceFinish, WallFaceRange } from '../../types';
 
 export const M = 0.01; // cm -> m
 /** Whether to synthesise normal maps — resolved once, not per material. */
@@ -605,6 +607,81 @@ function CeilingMesh({ room, height }: { room: Room; height: number }) {
   );
 }
 
+/**
+ * The building's roof, generated from the wall outline rather than drawn.
+ *
+ * Lives on the top storey and is hidden in dollhouse mode for the same reason
+ * the ceiling is: you have to be able to look in from above.
+ */
+function RoofMesh({ walls, roof, eaveY }: { walls: Wall[]; roof: Roof; eaveY: number }) {
+  const built = useMemo(() => {
+    const o = roofOutlines(walls, roof.overhang);
+    if (!o) return null;
+    return buildRoofGeometry(o.eave, o.wall, roof, eaveY);
+  }, [walls, roof, eaveY]);
+
+  // The gable end reads as part of the wall, so it takes the storey's dominant
+  // wall colour rather than a constant.
+  const infillColor = useMemo(() => {
+    const tally = new Map<string, number>();
+    for (const w of walls) tally.set(w.color, (tally.get(w.color) ?? 0) + 1);
+    let best = '#f2efe9';
+    let n = 0;
+    tally.forEach((count, color) => {
+      if (count > n) {
+        n = count;
+        best = color;
+      }
+    });
+    return best;
+  }, [walls]);
+
+  // Roof UVs are in metres, so repeat maps directly to tiles-per-metre.
+  const customSrc = roof.texture?.src;
+  const patternM = Math.max(0.05, (roof.texture?.scaleCm ?? roof.coveringScaleCm) * M);
+  const map = useMemo(() => {
+    const t = customSrc ? customTexture(customSrc) : getRoofTexture(roof.covering, roof.color);
+    t.repeat.set(1 / patternM, 1 / patternM);
+    return t;
+  }, [customSrc, roof.covering, roof.color, patternM]);
+  const normal = useMemo(() => {
+    if (!RELIEF || !customSrc) return null; // procedural coverings paint their own shading
+    const n = derivedNormalTexture(customSrc, 1);
+    n.repeat.set(1 / patternM, 1 / patternM);
+    return n;
+  }, [customSrc, patternM]);
+
+  useEffect(() => () => {
+    built?.geometry.dispose();
+    built?.infill?.dispose();
+  }, [built]);
+  if (!built) return null;
+  return (
+    <>
+      <mesh geometry={built.geometry} castShadow receiveShadow>
+        <meshStandardMaterial
+          map={map}
+          normalMap={normal}
+          normalScale={NORMAL_SCALE}
+          // The procedural covering already carries its colour; tinting it again
+          // would double up. Only a custom image needs the roof colour as a tint.
+          color={customSrc ? roof.color : '#ffffff'}
+          roughness={roof.texture?.roughness ?? (roof.covering === 'metal' ? 0.45 : 0.85)}
+          metalness={roof.texture?.metalness ?? (roof.covering === 'metal' ? 0.5 : 0)}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {built.infill && (
+        // Gable ends and the strip under the eaves are masonry, so they take the
+        // wall finish rather than the roof covering.
+        <mesh geometry={built.infill} castShadow receiveShadow>
+          <meshStandardMaterial color={infillColor} roughness={0.9} metalness={0} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+    </>
+  );
+}
+
 function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: FurnitureItem[]; onTap?: (tap: SurfaceTap) => void }) {
   const geometry = useMemo(() => {
     return new THREE.ShapeGeometry(roomShape(room, stairsBelow));
@@ -702,10 +779,12 @@ export function useDesignBounds() {
   return useMemo(() => {
     const pts = [];
     let topElevation = 0;
+    let wallTop = 0;
     for (const f of floors) {
       const g = floorGeom[f.id];
       if (!g) continue;
       topElevation = Math.max(topElevation, f.elevation);
+      wallTop = Math.max(wallTop, f.elevation + g.walls.reduce((m, w) => Math.max(m, w.height), 0));
       pts.push(
         ...g.walls.flatMap((w) => [w.start, w.end]),
         ...g.rooms.flatMap((r) => r.points),
@@ -718,10 +797,19 @@ export function useDesignBounds() {
     const { min, max } = boundsOf(pts);
     const cx = ((min.x + max.x) / 2) * M;
     const cz = ((min.y + max.y) / 2) * M;
+    // A roof extends the model both ways, and these bounds also drive the fog
+    // range and the sun's shadow frustum — miss it and the roof silently clips.
+    const roof = roofOf(floors);
+    const halfPlan = Math.max(max.x - min.x, max.y - min.y) / 2;
+    const grow = roof ? roof.overhang : 0;
+    // Pitched roofs rise across the SHORT axis, which is what halfB works out to.
+    const halfShort = Math.min(max.x - min.x, max.y - min.y) / 2 + (roof?.overhang ?? 0);
+    const rise = roof && roof.type !== 'flat' ? halfShort * Math.tan((roof.pitch * Math.PI) / 180) : 0;
     // Frame the whole stack: half-extent plus padding, with extra for storeys.
-    const plan = (Math.max(max.x - min.x, max.y - min.y) * M) / 2 + 4;
-    const r = plan + topElevation * M * 0.6;
-    return { center: [cx, topElevation * M * 0.5, cz] as [number, number, number], radius: r };
+    const plan = (halfPlan + grow) * M + 4;
+    const modelTop = roof ? wallTop * M + rise * M + roof.thickness * M : topElevation * M;
+    const r = plan + modelTop * 0.6;
+    return { center: [cx, modelTop * 0.5, cz] as [number, number, number], radius: r };
   }, [floors, floorGeom]);
 }
 
@@ -732,6 +820,7 @@ function FloorContent({
   elevation,
   interactive,
   isTop,
+  roof,
   dollhouse,
   center,
   register,
@@ -743,6 +832,10 @@ function FloorContent({
   elevation: number;
   interactive: boolean;
   isTop: boolean;
+  /** Set only on the storey that carries the roof (the highest one overall —
+   *  `isTop` is relative to the currently VISIBLE storeys, which in the
+   *  active-floor cutaway would put the roof on the wrong level). */
+  roof?: Roof;
   dollhouse: boolean;
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
@@ -781,6 +874,7 @@ function FloorContent({
       {isTop && !dollhouse && geom.rooms.map((r) => (
         <CeilingMesh key={`ceil-${r.id}`} room={r} height={ceilingHeight} />
       ))}
+      {roof && !dollhouse && <RoofMesh walls={geom.walls} roof={roof} eaveY={ceilingHeight} />}
       {geom.rooms.map((r) => (
         <FloorMesh key={r.id} room={r} stairsBelow={stairsBelow} onTap={onTap} />
       ))}
@@ -903,6 +997,7 @@ export default function DesignScene({
             elevation={f.elevation}
             interactive={interactive && f.id === activeFloorId}
             isTop={f.elevation >= topElevation}
+            roof={f.roof}
             // Dollhouse fade cuts open only the storey being edited; the
             // storeys below stay solid (context, not subject).
             dollhouse={dollhouse && f.id === activeFloorId}

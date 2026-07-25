@@ -3,22 +3,24 @@ import {
   AlignStartVertical, AlignCenterVertical, AlignEndVertical,
   AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
   AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Crown,
-  ArrowLeftRight, ArrowUpDown, RotateCcw, RotateCw,
+  ArrowLeftRight, ArrowUpDown, RotateCcw, RotateCw, Home,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useDesign } from '../store/designStore';
 import { FLOOR_MATERIALS, CATALOG_BY_TYPE, FURNITURE_CATALOG } from '../data/furnitureCatalog';
 import { requirePro } from '../lib/pro';
 import { useProStore } from '../store/proStore';
 import { ROOM_STYLES } from '../data/roomStyles';
-import { floorThumbnail, prepareTextureImage } from '../lib/textures';
+import { floorThumbnail, prepareTextureImage, ROOF_COVERINGS } from '../lib/textures';
 import { toast } from '../lib/ui';
 import { dist, polygonArea } from '../lib/geometry';
 import { formatLength, formatArea } from '../lib/units';
 import { finishForFace, withFaceFinish } from '../lib/wallFaces';
 import { useI18n } from '../lib/i18n';
-import type { CustomTexture, OpeningStyle } from '../types';
+import { roofOf } from '../lib/roof';
+import { roofFootprint, roofNeedsFallback } from '../lib/roofGeometry';
+import type { CustomTexture, OpeningStyle, RoofType } from '../types';
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 
@@ -96,6 +98,116 @@ function ExteriorCard() {
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const ROOF_TYPES: { id: RoofType; label: string }[] = [
+  { id: 'gable', label: 'Gable' },
+  { id: 'hip', label: 'Hip' },
+  { id: 'shed', label: 'Shed' },
+  { id: 'flat', label: 'Flat' },
+];
+
+/**
+ * Roof controls. The roof is generated from the wall outline rather than drawn,
+ * so there is nothing to select — it belongs in the no-selection state alongside
+ * "Detect rooms" and "Exterior".
+ */
+function RoofCard() {
+  const t = useI18n();
+  const floors = useDesign((st) => st.floors);
+  const walls = useDesign((st) => st.walls);
+  const setRoof = useDesign((st) => st.setRoof);
+  const units = useDesign((st) => st.units);
+  const roof = roofOf(floors);
+
+  // Warn before the render silently disagrees with the picker: a markedly
+  // non-rectangular plan can only take a flat roof in this version.
+  const nonRect = useMemo(() => {
+    const outline = roofFootprint(walls, roof?.overhang ?? 0);
+    return !!outline && roofNeedsFallback(outline);
+  }, [walls, roof?.overhang]);
+
+  if (!walls.length) return null;
+
+  if (!roof) {
+    return (
+      <div className="props" style={{ paddingTop: 0 }}>
+        <div className="prop-card">
+          <div className="prop-title">{t('Roof')}</div>
+          <p className="prop-hint">{t('Cover the building with a roof, built from your outer walls.')}</p>
+          <button className="btn block" onClick={() => setRoof({})}>
+            <Home className="icon" /> {t('Add roof')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const pitched = roof.type !== 'flat';
+  return (
+    <div className="props" style={{ paddingTop: 0 }}>
+      <div className="prop-card">
+        <div className="prop-title">{t('Roof')}</div>
+        <div className="swap-chips" style={{ marginBottom: 12 }}>
+          {ROOF_TYPES.map((r) => (
+            <button
+              key={r.id}
+              className={`swap-chip${roof.type === r.id ? ' on' : ''}`}
+              onClick={() => setRoof({ type: r.id })}
+            >
+              {t(r.label)}
+            </button>
+          ))}
+        </div>
+        {nonRect && (roof.type === 'gable' || roof.type === 'hip') && (
+          <p className="prop-hint">
+            {t('This footprint is not rectangular enough for a pitched roof, so a flat roof is drawn instead.')}
+          </p>
+        )}
+        {pitched && (
+          <div className="prop-row">
+            <label>{t('Pitch')}</label>
+            <input
+              type="range"
+              min={5}
+              max={60}
+              step={1}
+              value={roof.pitch}
+              onChange={(e) => setRoof({ pitch: Number(e.target.value) })}
+            />
+            <span className="field-val">{roof.pitch}°</span>
+          </div>
+        )}
+        <div className="prop-row">
+          <label>{t('Overhang')}</label>
+          <input
+            type="range"
+            min={0}
+            max={120}
+            step={5}
+            value={roof.overhang}
+            onChange={(e) => setRoof({ overhang: Number(e.target.value) })}
+          />
+          <span className="field-val">{formatLength(roof.overhang, units)}</span>
+        </div>
+        <div className="prop-label">{t('Covering')}</div>
+        <div className="pp-swatches">
+          {ROOF_COVERINGS.map((c) => (
+            <button
+              key={`${c.kind}-${c.color}`}
+              className={`pp-swatch${roof.covering === c.kind && roof.color === c.color ? ' on' : ''}`}
+              style={{ background: c.color }}
+              title={t(c.name)}
+              onClick={() => setRoof({ covering: c.kind, color: c.color, coveringScaleCm: c.scaleCm })}
+            />
+          ))}
+        </div>
+        <button className="btn-danger block" style={{ marginTop: 12 }} onClick={() => setRoof(null)}>
+          <Trash2 className="icon" /> {t('Remove roof')}
+        </button>
       </div>
     </div>
   );
@@ -220,6 +332,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               </button>
             </div>
             <ExteriorCard />
+            <RoofCard />
             {s.background ? (
               <BackgroundProps />
             ) : (

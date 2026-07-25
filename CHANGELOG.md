@@ -5,6 +5,64 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.96 - 2026-07-25 (versionCode 10096)
+
+Phase B: roofs. HomeDesigner could not draw one at all, so with dollhouse off the
+exterior was an open-topped box. Now the building generates its own roof from the
+walls you already drew — gable, hip, shed or flat — which is the last thing that
+was stopping 3D from producing a usable external view.
+
+### Added — generated roofs
+Roofs are derived, not drawn. `detectBuildingOutline` (src/lib/roomDetection.ts)
+recovers the building perimeter that the room walk was already computing and then
+throwing away, and `offsetPolygon` (src/lib/polygonOffset.ts) pushes it out to the
+outer wall face and again to the eave line. No offset/union library was added —
+clipper or polygon-clipping would have cost 40-90 KB gzipped in the APK for this
+one feature — so the offset is purpose-built, miter-limited, and validated: any
+degenerate result falls back to the un-offset outline, because a roof flush with
+the walls looks far better than a roof with a spike through it.
+
+Four shapes (src/lib/roofGeometry.ts):
+- **flat** extrudes the footprint and is exact for any polygon, concave included.
+- **shed** tilts the real outline, so it is also exact for any polygon.
+- **gable / hip** are built over the footprint's oriented bounding box. A true
+  hip over an arbitrary concave plan needs a straight skeleton — 800+ lines,
+  fragile at degenerate events, and prone to emitting broken meshes on user-drawn
+  geometry. An OBB roof is correct for the rectangular-ish footprints that cover
+  most houses, and anything markedly non-rectangular falls back to flat with the
+  Roof card saying so rather than silently disagreeing with the picker.
+
+Gable ends and the strip under the eaves are filled on the **wall** outline, not
+the eave outline, and rendered in the wall colour rather than roofing — without
+that you look straight in under the raised end of a shed roof and through the
+open triangle of a gable. The fill follows the roof's underside exactly: creases
+(the ridge, and a hip's end slopes) are solved analytically and inserted as extra
+split points, so the gable triangle peaks at the ridge instead of being capped flat.
+
+Six coverings — clay tile, grey tile, slate, shingle, cedar shake, standing-seam
+metal — are procedural (`getRoofTexture`, src/lib/textures.ts). Nothing bundled
+reads as roofing (a floor tile stretched over a slope looks wrong at roof scale)
+and photographic roof sets would add real APK weight, so this follows the same
+zero-bytes route the lawn already took. Roof UVs are projected per face onto each
+triangle's own plane, so tiles aren't foreshortened by 1/cos(pitch) on the slopes.
+
+### Changed
+- `useDesignBounds` now accounts for the roof's rise and overhang. It feeds the
+  camera, the fog range **and** the sun's shadow frustum, so a roof that didn't
+  update it would have been silently clipped.
+- The roof lives on the top storey, and `normalizeRoofs` re-homes it whenever the
+  storey stack changes — add a floor above a roofed house and the roof moves up
+  with it instead of being buried inside the new storey. Existing saves have no
+  roof and are returned untouched.
+- `scaleDesign` scales the eave overhang (a plan-space distance, like wall
+  thickness) and leaves the deck thickness alone (a real-world vertical size).
+
+### Tests
+`tests/geometry.mjs` grows to 45 pure-Node assertions covering the offset, the
+oriented box, outline recovery, all four roof shapes, the end infill and the
+cross-storey re-homing. This is geometry that decides real building shapes; it is
+exactly the kind of thing that must not be validated by eyeball.
+
 ## 1.0.95 - 2026-07-25 (versionCode 10095)
 
 Completes the 3D visual pass (Phase A). Roof next.
