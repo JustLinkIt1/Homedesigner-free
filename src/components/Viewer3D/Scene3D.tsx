@@ -6,6 +6,7 @@ import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
 import { snapToGrid } from '../../lib/geometry';
+import { getGroundTexture, GROUND_DEFAULTS, type GroundKind } from '../../lib/textures';
 import { buildSnapElements, nearestSnap, lockToAngle } from '../../lib/snapping';
 import { formatLength } from '../../lib/units';
 import { drawBridge, useDraw } from '../../lib/ui';
@@ -698,11 +699,31 @@ export default function Scene3D() {
   // Time-of-day sun rig (drives sky + key light + fill so window light and
   // the visible sky always agree).
   const sun = sunModel(sunTime);
+  // Place the key light exactly along `sun.dir` (uniform scale, no per-axis
+  // fudge) so the shadow direction matches the sky's sun instead of drifting
+  // from it. Distance is irrelevant to a directional light — only the angle is.
+  const sunDist = radius * 2.5 + 10;
   const sunPos: [number, number, number] = [
-    center[0] + sun.dir[0] * radius * 1.5,
-    sun.dir[1] * radius * 1.6 + 4,
-    center[2] + sun.dir[2] * radius * 1.5,
+    center[0] + sun.dir[0] * sunDist,
+    center[1] + sun.dir[1] * sunDist,
+    center[2] + sun.dir[2] * sunDist,
   ];
+  // A low sun throws long shadows, so the ortho shadow frustum has to widen as
+  // the sun drops or the far end of every shadow is clipped away.
+  const shadowExtent = radius * (1.25 + (1 - sun.day) * 0.9);
+
+  // Textured site ground. The old flat #eceae4 plane read as "no ground at all"
+  // from outside — the building floated and cast shadows onto nothing. Procedural
+  // (see textures.ts) so this costs no APK bytes.
+  const groundKind: GroundKind = 'grass';
+  const groundDef = GROUND_DEFAULTS[groundKind];
+  const groundTex = useMemo(() => {
+    const patchM = 4;
+    const t = getGroundTexture(groundKind, groundDef.color, patchM);
+    // Plane is 400 m and its UVs are 0..1, so repeat = size / patch.
+    t.repeat.set(400 / patchM, 400 / patchM);
+    return t;
+  }, [groundKind, groundDef.color]);
   // Sky wants a direction, not a world point.
   const skySun: [number, number, number] = [sun.dir[0], Math.max(0.02, sun.dir[1]), sun.dir[2]];
 
@@ -899,13 +920,13 @@ export default function Scene3D() {
         // stops contact points detaching ("peter-panning").
         shadow-bias={-0.0001}
         shadow-normalBias={0.02}
-        shadow-camera-left={-radius * 1.25}
-        shadow-camera-right={radius * 1.25}
-        shadow-camera-top={radius * 1.25}
-        shadow-camera-bottom={-radius * 1.25}
-        // The sun sits at ~radius*1.6 up and ~radius*1.5 out, so a fixed 80 m far
-        // plane silently clipped shadows on large plans. Scale it with the design.
-        shadow-camera-far={radius * 4 + 20}
+        shadow-camera-left={-shadowExtent}
+        shadow-camera-right={shadowExtent}
+        shadow-camera-top={shadowExtent}
+        shadow-camera-bottom={-shadowExtent}
+        // A fixed 80 m far plane silently clipped shadows on large plans; the
+        // light now sits sunDist away, so scale the far plane past it.
+        shadow-camera-far={sunDist + radius * 2 + 20}
       />
       {/* Cool sky fill from the opposite side (fades at night). */}
       <directionalLight
@@ -943,7 +964,7 @@ export default function Scene3D() {
         }}
       >
         <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#eceae4" roughness={1} />
+        <meshStandardMaterial map={groundTex} color={groundDef.color} roughness={groundDef.roughness} />
       </mesh>
       <Grid
         position={[center[0], 0, center[2]]}

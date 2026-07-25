@@ -5,6 +5,56 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.93 - 2026-07-24 (versionCode 10093)
+
+Owner: "check over the 3D mode and make a plan to make it look better — I want
+outdoor elements and a roof so we can do external renders too." This is the first
+stage of that work: the visual-quality pass. Roof, outdoor hardscape/boundary and
+the exterior render mode follow.
+
+### Fixed — built-in floor materials were photoreal in 2D but procedural in 3D
+`FloorMesh` looked up the chosen `FloorMaterial` but read only `.kind`/`.color` and
+then built a low-res procedural canvas texture — it never read `.texture`, the
+photoreal Poly Haven image the 2D plan already renders (and which that field's own
+doc comment says should drive "both the 3D surface and the 2D plan fill"). Now
+resolved through `materialUrl()` with the material's real `scaleCm`/`roughness`/
+`metalness`, reusing the existing custom-texture path. Every saved design gains real
+wood/tile/stone in 3D with no data change and no migration. Carpets keep the
+procedural weave (they intentionally ship without an image).
+
+### Fixed — the sun never sat low, so cast shadows were invisible
+`sunModel` clamped the sun high all day (`dir.y = 0.15 + day*1.2`) and always placed
+it on `+z`, the same side as the default camera — so shadows were short and fell
+behind the building, out of view. This was the main reason exteriors read as flat and
+unlit. The sun now follows a real altitude (`asin(day)`, floored at ~6° so shadows
+can't stretch to infinity) on an east → south → west sweep, giving long raking
+morning/evening shadows that fall where you can see them. The key light is also
+positioned along `sun.dir` with a uniform scale, so the shadow direction matches the
+sky's sun instead of drifting from it.
+
+### Changed — real shadow resolution
+Sun shadow map 1024 → 2048 over a frustum tightened from ±radius*2 to ±radius*1.25
+(~4× more texels per metre), widening automatically as the sun drops so long shadows
+aren't clipped. Added `shadow-normalBias`, which let the depth bias drop 4× (fixes
+acne without detaching contact shadows), and replaced the fixed
+`shadow-camera-far={80}` — which already silently clipped shadows on larger plans —
+with one that scales with the scene.
+
+### Added — textured site ground
+The 400 m ground plane was flat untextured `#eceae4`, so from outside the building
+floated with nothing to catch its shadow. It now renders a procedural mown lawn
+(`getGroundTexture` in `src/lib/textures.ts`, following the existing floor-texture
+generator pattern) with gravel/paving/plain also available. Procedural on purpose:
+**zero added APK bytes**. Mow stripes are kept deliberately wide — narrow bands alias
+into coarse moiré across the lawn at grazing angles.
+
+Still to come in this phase: device tiering + a user Quality setting, derived normal
+maps for surface relief, and one-tap exterior wall finishes.
+
+Verified headless at 1440×900: exterior now shows a lit façade with a clearly visible
+cast shadow on the lawn, and the dollhouse interior is unchanged apart from the
+photoreal floor. tsc + lint + build clean.
+
 ## 1.0.92 - 2026-07-23 (versionCode 10092)
 
 Owner (3D screenshot): kitchen cabinets look too small.

@@ -132,6 +132,87 @@ function marbleTexture(ctx: CanvasRenderingContext2D, color: string) {
   }
 }
 
+/** Lawn: mown tonal banding plus fine blade speckle. Deliberately procedural —
+ *  a photo texture would add APK weight for something noise-based reads fine as. */
+function grassTexture(ctx: CanvasRenderingContext2D, color: string) {
+  const rand = rng(53);
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  // Mown stripes. Keep these WIDE (2 per tile => ~2 m at the default 4 m patch):
+  // narrow bands alias badly against the mip chain at grazing angles and show up
+  // as coarse moiré banding across the lawn.
+  const bands = 2;
+  for (let i = 0; i < bands; i++) {
+    ctx.fillStyle = shade(color, i % 2 ? 5 : -5);
+    ctx.fillRect(0, (i * SIZE) / bands, SIZE, SIZE / bands);
+  }
+  // Blades: short strokes in varied greens.
+  for (let i = 0; i < 9000; i++) {
+    const x = rand() * SIZE;
+    const y = rand() * SIZE;
+    ctx.strokeStyle = shade(color, (rand() - 0.45) * 46);
+    ctx.lineWidth = 0.7 + rand() * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + (rand() - 0.5) * 3, y - 1.5 - rand() * 3);
+    ctx.stroke();
+  }
+  // A few darker clumps to break up any perceived tiling.
+  for (let i = 0; i < 90; i++) {
+    const x = rand() * SIZE;
+    const y = rand() * SIZE;
+    const r = 4 + rand() * 12;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(0,0,0,${0.05 + rand() * 0.06})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** Outdoor ground surfaces for the 3D site plane (not room floor materials). */
+export type GroundKind = 'grass' | 'gravel' | 'paving' | 'plain';
+
+const GROUND_GENERATORS: Record<GroundKind, (c: CanvasRenderingContext2D, col: string) => void> = {
+  grass: grassTexture,
+  gravel: concreteTexture,
+  paving: tileTexture,
+  plain: (c, col) => {
+    c.fillStyle = col;
+    c.fillRect(0, 0, SIZE, SIZE);
+  },
+};
+
+export const GROUND_DEFAULTS: Record<GroundKind, { color: string; roughness: number }> = {
+  grass: { color: '#7c9455', roughness: 0.95 },
+  gravel: { color: '#b6b2a8', roughness: 0.95 },
+  paving: { color: '#c9c5bd', roughness: 0.7 },
+  plain: { color: '#eceae4', roughness: 1 },
+};
+
+/**
+ * Texture for the big outdoor ground plane. `patchM` is the real-world size one
+ * tile covers; the caller sets `repeat` from the plane size so it tiles at scale.
+ */
+export function getGroundTexture(kind: GroundKind, color: string, patchM = 4): THREE.CanvasTexture {
+  const key = `ground:${kind}:${color}:${patchM}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d')!;
+  GROUND_GENERATORS[kind](ctx, color);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  cache.set(key, tex);
+  return tex;
+}
+
 const GENERATORS: Record<FloorKind, (ctx: CanvasRenderingContext2D, color: string) => void> = {
   wood: woodTexture,
   tile: tileTexture,
