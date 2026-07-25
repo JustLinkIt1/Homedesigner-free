@@ -579,4 +579,12 @@ export const DE: Record<string, string> = {
   "Couldn't sign out safely — check your connection and try again.": 'Sicheres Abmelden war nicht möglich — prüfe deine Verbindung und versuche es erneut.',
   'Sign in': 'Anmelden',
   'Plans and Pro access sync across your signed-in Android devices.': 'Deine Pläne und der Pro-Zugang werden auf deinen angemeldeten Android-Geräten synchronisiert.',
+  '3D graphics': '3D-Grafik',
+  'Auto': 'Automatisch',
+  'Battery saver': 'Energiesparen',
+  'Balanced': 'Ausgewogen',
+  'Best looking': 'Beste Qualität',
+  'Matched to your device': 'An dein Gerät angepasst',
+  'Higher settings add shadows and detail but use more battery.': 'Höhere Einstellungen bringen Schatten und Details, verbrauchen aber mehr Akku.',
+  'Takes effect next time you open 3D.': 'Wird beim nächsten Öffnen der 3D-Ansicht wirksam.',
 };

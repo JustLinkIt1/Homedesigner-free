@@ -5,6 +5,49 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.94 - 2026-07-24 (versionCode 10094)
+
+Second stage of the 3D work. 1.0.93 improved the sun, shadows, floors and ground —
+but **none of it reached phones**, because the viewer disabled every effect on any
+touch device. This release fixes that, which is the point of it.
+
+### Fixed — phones got no shadows at all, regardless of hardware
+The renderer branched on a single `matchMedia('(pointer: coarse)')` check, so a
+current flagship phone was treated exactly like a 2016 tablet: no sun shadows, no
+contact shadows, no soft shadows, no post-processing. Since HomeDesigner ships on
+Android, that meant essentially every real user saw none of the lighting work.
+New `src/lib/perfTier.ts` grades the device (`low`/`mid`/`high`) from pointer type,
+core count and memory, and each effect is switched from its own capability flag
+instead of one blunt boolean. Mid-range and better phones now get real sun shadows
+(1024 map) and contact shadows. Post-processing and PCSS soft shadows stay off on
+touch by design — those are the expensive parts, and the ones that have actually
+crashed drivers in the field.
+
+### Added — Settings → 3D graphics
+**Auto / Battery saver / Balanced / Best looking**, so the automatic guess can stay
+conservative without trapping anyone on the wrong setting. Auto shows which tier it
+picked. Translated in all 12 locales.
+
+### Fixed — the CAD grid was drawn across the lawn
+The infinite reference grid rendered unconditionally in 3D, so every exterior view
+(and every render) had survey lines over the ground. It now appears only while a
+build tool is armed, which is the only time it's actually useful.
+
+### Note on the device probe
+The first cut of the tier detection read `WEBGL_debug_renderer_info` to identify the
+GPU by name. That required creating a throwaway WebGL context during render, and
+this app already runs several live canvases at once (the scene plus a preview canvas
+per catalog item). The extra context churn destabilised the catalog list and the
+smoke suite caught it. Dropped the GPU sniff — core count, memory and pointer type
+are coarser but cost nothing and cannot perturb the renderer.
+
+Verified: tsc + lint + build clean; 37 smoke checks green; headless mobile emulation
+(390×844, touch) confirms shadows present at Balanced/Best looking and absent at
+Battery saver.
+
+Still to come in this phase: derived normal maps for surface relief, and one-tap
+exterior wall finishes. Then the roof.
+
 ## 1.0.93 - 2026-07-24 (versionCode 10093)
 
 Owner: "check over the 3D mode and make a plan to make it look better — I want

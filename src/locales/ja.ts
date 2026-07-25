@@ -579,4 +579,12 @@ export const JA: Record<string, string> = {
   "Couldn't sign out safely — check your connection and try again.": '安全にログアウトできませんでした — 接続を確認して再試行してください。',
   'Sign in': 'ログイン',
   'Plans and Pro access sync across your signed-in Android devices.': 'ログイン中の Android 端末間でプランと Pro アクセスが同期されます。',
+  '3D graphics': '3D グラフィック',
+  'Auto': '自動',
+  'Battery saver': 'バッテリー節約',
+  'Balanced': 'バランス',
+  'Best looking': '高画質',
+  'Matched to your device': 'お使いの端末に合わせて調整',
+  'Higher settings add shadows and detail but use more battery.': '高い設定は影と精細さが増しますが、バッテリー消費も増えます。',
+  'Takes effect next time you open 3D.': '次に 3D を開いたときに適用されます。',
 };

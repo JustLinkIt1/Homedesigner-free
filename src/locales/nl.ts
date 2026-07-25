@@ -579,4 +579,12 @@ export const NL: Record<string, string> = {
   "Couldn't sign out safely — check your connection and try again.": 'Veilig uitloggen is mislukt — controleer je verbinding en probeer het opnieuw.',
   'Sign in': 'Inloggen',
   'Plans and Pro access sync across your signed-in Android devices.': 'Je plannen en Pro-toegang synchroniseren op je aangemelde Android-apparaten.',
+  '3D graphics': '3D-graphics',
+  'Auto': 'Automatisch',
+  'Battery saver': 'Batterijbesparing',
+  'Balanced': 'Gebalanceerd',
+  'Best looking': 'Beste kwaliteit',
+  'Matched to your device': 'Afgestemd op je apparaat',
+  'Higher settings add shadows and detail but use more battery.': 'Hogere instellingen geven schaduwen en detail, maar kosten meer batterij.',
+  'Takes effect next time you open 3D.': 'Wordt actief als je 3D opnieuw opent.',
 };

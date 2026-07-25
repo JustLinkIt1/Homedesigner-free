@@ -579,4 +579,12 @@ export const KO: Record<string, string> = {
   "Couldn't sign out safely — check your connection and try again.": '안전하게 로그아웃하지 못했습니다 — 연결을 확인하고 다시 시도하세요.',
   'Sign in': '로그인',
   'Plans and Pro access sync across your signed-in Android devices.': '로그인한 Android 기기 간에 도면과 Pro 이용 권한이 동기화됩니다.',
+  '3D graphics': '3D 그래픽',
+  'Auto': '자동',
+  'Battery saver': '배터리 절약',
+  'Balanced': '균형',
+  'Best looking': '최고 화질',
+  'Matched to your device': '기기에 맞게 설정됨',
+  'Higher settings add shadows and detail but use more battery.': '높은 설정은 그림자와 디테일이 좋아지지만 배터리를 더 씁니다.',
+  'Takes effect next time you open 3D.': '다음에 3D를 열 때 적용됩니다.',
 };

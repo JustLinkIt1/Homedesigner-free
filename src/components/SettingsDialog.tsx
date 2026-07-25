@@ -4,6 +4,7 @@ import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { hapticsEnabled, setHapticsEnabled, tapLight } from '../lib/haptics';
 import { introEnabled, setIntroEnabled } from '../lib/introPref';
+import { qualityPref, setQualityPref, detectTier, type QualityPref, type PerfTier } from '../lib/perfTier';
 import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
 import { APP_NAME, APP_VERSION, PRIVACY_URL } from '../lib/appInfo';
@@ -28,6 +29,19 @@ function GoogleMark() {
   );
 }
 
+const QUALITY_OPTIONS: { id: QualityPref; label: string }[] = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'low', label: 'Battery saver' },
+  { id: 'mid', label: 'Balanced' },
+  { id: 'high', label: 'Best looking' },
+];
+
+const TIER_LABEL: Record<PerfTier, string> = {
+  low: 'Battery saver',
+  mid: 'Balanced',
+  high: 'Best looking',
+};
+
 /** Central app preferences (theme, units, haptics, editor defaults, tour). */
 export default function SettingsDialog({
   onClose,
@@ -46,6 +60,7 @@ export default function SettingsDialog({
   const setShowDimensions = useDesign((s) => s.setShowDimensions);
   const [haptics, setHaptics] = useState(hapticsEnabled);
   const [intro, setIntro] = useState(introEnabled);
+  const [quality, setQuality] = useState<QualityPref>(qualityPref);
   const account = useAuthStore((s) => s.account);
   const authConfigured = useAuthStore((s) => s.configured);
   const authBusy = useAuthStore((s) => s.busy);
@@ -191,6 +206,32 @@ export default function SettingsDialog({
                 }}
               />
             </label>
+          </section>
+
+          <section>
+            <h3>{t('3D graphics')}</h3>
+            <div className="seg" role="radiogroup" aria-label={t('3D graphics')}>
+              {QUALITY_OPTIONS.map((o) => (
+                <button
+                  key={o.id}
+                  className={quality === o.id ? 'active' : ''}
+                  role="radio"
+                  aria-checked={quality === o.id}
+                  onClick={() => {
+                    setQualityPref(o.id);
+                    setQuality(o.id);
+                  }}
+                >
+                  {t(o.label)}
+                </button>
+              ))}
+            </div>
+            <p className="settings-hint">
+              {quality === 'auto'
+                ? `${t('Matched to your device')} — ${t(TIER_LABEL[detectTier()])}. `
+                : `${t('Higher settings add shadows and detail but use more battery.')} `}
+              {t('Takes effect next time you open 3D.')}
+            </p>
           </section>
 
           <section>

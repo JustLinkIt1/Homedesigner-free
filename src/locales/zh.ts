@@ -579,4 +579,12 @@ export const ZH: Record<string, string> = {
   "Couldn't sign out safely — check your connection and try again.": '无法安全退出登录 — 请检查网络连接后重试。',
   'Sign in': '登录',
   'Plans and Pro access sync across your signed-in Android devices.': '您的方案和 Pro 权限会在已登录的 Android 设备间同步。',
+  '3D graphics': '3D 图形',
+  'Auto': '自动',
+  'Battery saver': '省电模式',
+  'Balanced': '均衡',
+  'Best looking': '最佳画质',
+  'Matched to your device': '已根据您的设备调整',
+  'Higher settings add shadows and detail but use more battery.': '更高的设置会增加阴影和细节，但更耗电。',
+  'Takes effect next time you open 3D.': '下次打开 3D 时生效。',
 };

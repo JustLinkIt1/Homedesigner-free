@@ -6,6 +6,7 @@ import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
 import { snapToGrid } from '../../lib/geometry';
+import { activeTier, tierCaps } from '../../lib/perfTier';
 import { getGroundTexture, GROUND_DEFAULTS, type GroundKind } from '../../lib/textures';
 import { buildSnapElements, nearestSnap, lockToAngle } from '../../lib/snapping';
 import { formatLength } from '../../lib/units';
@@ -137,10 +138,10 @@ const IS_TOUCH =
 /** Soft, fully-offline image-based lighting (no CDN HDR fetch). `day` (0..1)
  *  scales the sky-dome contribution so night actually reads dark and interior
  *  fixtures take over. Re-keyed on the day bucket so the env map rebakes. */
-function StudioEnvironment({ day, lowPower }: { day: number; lowPower: boolean }) {
+function StudioEnvironment({ day, envResolution }: { day: number; envResolution: number }) {
   const k = 0.24 + day * 0.96; // keep a dim floor so nothing goes pure black
   return (
-    <Environment resolution={lowPower ? 128 : 256} frames={1}>
+    <Environment resolution={envResolution} frames={1}>
       <Lightformer intensity={1.35 * k} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
       <Lightformer intensity={0.95 * k} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
       <Lightformer intensity={0.7 * k} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
@@ -715,6 +716,9 @@ export default function Scene3D() {
   // Textured site ground. The old flat #eceae4 plane read as "no ground at all"
   // from outside — the building floated and cast shadows onto nothing. Procedural
   // (see textures.ts) so this costs no APK bytes.
+  // Grid is a drawing aid, not scenery: show it only when a build tool is armed.
+  const gridVisible = !walkMode && (tool === 'wall' || tool === 'room' || tool === 'kitchen');
+
   const groundKind: GroundKind = 'grass';
   const groundDef = GROUND_DEFAULTS[groundKind];
   const groundTex = useMemo(() => {
@@ -735,9 +739,14 @@ export default function Scene3D() {
   const [paintTap, setPaintTap] = useState<SurfaceTap | null>(null);
   // If post-processing fails on this GPU, drop it and render the plain scene.
   const [postFailed, setPostFailed] = useState(false);
-  // Touch devices get the light render tier (no post/shadows, lower DPR).
-  const lowPower = IS_TOUCH;
-  const noPost = postFailed || lowPower;
+  // Graded device capability (+ user override) instead of a bare touch check, so
+  // capable phones keep shadows instead of losing every effect at once.
+  const caps = useMemo(() => tierCaps(activeTier(), IS_TOUCH), []);
+  // `lowPower` now means "skip the expensive extras", not "is touch" — a capable
+  // phone keeps shadows. Post-processing stays off for any non-`post` tier, and a
+  // driver crash (postFailed) disables it permanently for this session.
+  const lowPower = !caps.shadows;
+  const noPost = postFailed || !caps.post;
   useEffect(() => {
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
@@ -861,7 +870,7 @@ export default function Scene3D() {
       // DPR — the biggest GPU costs — to keep 3D navigation smooth on Android.
       // (High-res photo/plan exports are separate and stay full quality.)
       flat={!noPost} // when post is dropped, let three apply its own tone mapping
-      shadows={!lowPower}
+      shadows={caps.shadows}
       frameloop={walkMode || interacting ? 'always' : 'demand'}
       // MSAA + a higher DPR ceiling are the real fix for the mobile "jaggies":
       // the light tier used to ship with antialias off and DPR capped at 1.25,
@@ -869,7 +878,7 @@ export default function Scene3D() {
       // mobile GPUs; AdaptiveDpr still pulls the resolution down (smoothly, not
       // pixelated) if a frame budget slips, and the heavy costs (post-processing,
       // real-time shadows) stay gated by lowPower.
-      dpr={[1, 2]}
+      dpr={[1, caps.maxDpr]}
       performance={{ min: lowPower ? 0.6 : 0.5, debounce: 250 }}
       gl={{ antialias: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' }}
       camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
@@ -898,7 +907,7 @@ export default function Scene3D() {
           itself. The old radius*5..14 range sat inside the zoom range, so zooming
           out washed the whole model to the fog colour ("fades to white"). */}
       <fog attach="fog" args={[sun.isNight ? '#0e1420' : '#dfe6ee', radius * 8 + 15, radius * 18 + 80]} />
-      {!lowPower && <SoftShadows size={24} samples={12} />}
+      {caps.softShadows && <SoftShadows size={24} samples={12} />}
 
       {/* Airier interiors: lifted ambient/hemisphere + softened shadows so
           rooms behind walls read bright and clean instead of murky. */}
@@ -910,11 +919,11 @@ export default function Scene3D() {
         position={sunPos}
         intensity={sun.sunIntensity}
         color={sun.sunColor}
-        castShadow={!lowPower}
+        castShadow={caps.shadows}
         shadow-intensity={0.8}
         // 2048 over a frustum tightened to the design (was 1024 over ±radius*2,
         // i.e. ~4x fewer texels per metre) — shadow edges now read as edges.
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[caps.shadowMapSize, caps.shadowMapSize]}
         // normalBias is what actually fixes acne on large flat surfaces (floors,
         // and later the roof); with it the depth bias can be much gentler, which
         // stops contact points detaching ("peter-panning").
@@ -934,11 +943,11 @@ export default function Scene3D() {
         intensity={0.1 + sun.day * 0.24}
         color="#cdd8ff"
       />
-      <StudioEnvironment key={Math.round(sun.day * 4)} day={sun.day} lowPower={lowPower} />
+      <StudioEnvironment key={Math.round(sun.day * 4)} day={sun.day} envResolution={caps.envResolution} />
 
       {/* Soft contact shadows ground the furniture & walls realistically
           (desktop only — they re-render the scene each frame). */}
-      {!lowPower && (
+      {caps.contactShadows && (
         <ContactShadows
           position={[center[0], 0.015, center[2]]}
           scale={Math.max(20, radius * 4)}
@@ -966,16 +975,21 @@ export default function Scene3D() {
         <planeGeometry args={[400, 400]} />
         <meshStandardMaterial map={groundTex} color={groundDef.color} roughness={groundDef.roughness} />
       </mesh>
-      <Grid
-        position={[center[0], 0, center[2]]}
-        args={[120, 120]}
-        cellSize={1}
-        cellColor="#dadce0"
-        sectionSize={5}
-        sectionColor="#c6c9ce"
-        fadeDistance={radius * 6}
-        infiniteGrid
-      />
+      {/* CAD grid only while actually drawing. It used to render unconditionally,
+          which put survey lines across the lawn in every exterior view (and every
+          render). Building tools still get their alignment reference. */}
+      {gridVisible && (
+        <Grid
+          position={[center[0], 0, center[2]]}
+          args={[120, 120]}
+          cellSize={1}
+          cellColor="#dadce0"
+          sectionSize={5}
+          sectionColor="#c6c9ce"
+          fadeDistance={radius * 6}
+          infiniteGrid
+        />
+      )}
 
       {/* Force solid walls while walking so the real interior is visible. */}
       <DesignScene

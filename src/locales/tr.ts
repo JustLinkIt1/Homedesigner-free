@@ -579,4 +579,12 @@ export const TR: Record<string, string> = {
   "Couldn't sign out safely — check your connection and try again.": 'Güvenli şekilde çıkış yapılamadı — bağlantınızı kontrol edip tekrar deneyin.',
   'Sign in': 'Giriş yap',
   'Plans and Pro access sync across your signed-in Android devices.': 'Planlarınız ve Pro erişimi, oturum açtığınız Android cihazlar arasında senkronize olur.',
+  '3D graphics': '3B grafikler',
+  'Auto': 'Otomatik',
+  'Battery saver': 'Pil tasarrufu',
+  'Balanced': 'Dengeli',
+  'Best looking': 'En iyi görünüm',
+  'Matched to your device': 'Cihazınıza göre ayarlandı',
+  'Higher settings add shadows and detail but use more battery.': 'Yüksek ayarlar gölge ve ayrıntı ekler ancak daha çok pil harcar.',
+  'Takes effect next time you open 3D.': 'Bir dahaki 3B açılışında geçerli olur.',
 };
