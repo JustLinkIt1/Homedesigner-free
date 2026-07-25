@@ -610,4 +610,5 @@ export const ZH: Record<string, string> = {
   'Shingle': '沥青瓦',
   'Cedar Shake': '雪松木瓦',
   'Standing Seam': '立缝金属',
+  'Reading the plan…': '正在读取图纸…',
 };

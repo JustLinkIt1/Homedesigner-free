@@ -610,4 +610,5 @@ export const RU: Record<string, string> = {
   'Shingle': 'Гонт',
   'Cedar Shake': 'Кедровый гонт',
   'Standing Seam': 'Фальцевая кровля',
+  'Reading the plan…': 'Чтение плана…',
 };

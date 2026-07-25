@@ -610,4 +610,5 @@ export const ES: Record<string, string> = {
   'Shingle': 'Teja asfáltica',
   'Cedar Shake': 'Tabla de cedro',
   'Standing Seam': 'Junta alzada',
+  'Reading the plan…': 'Leyendo el plano…',
 };

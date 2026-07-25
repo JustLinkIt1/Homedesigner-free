@@ -41,6 +41,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
   // Live preview of what auto-trace will produce.
   const [previewSegs, setPreviewSegs] = useState<PixelSegment[]>([]);
   const [previewCount, setPreviewCount] = useState(0);
+  const [tracing, setTracing] = useState(false);
 
   // dxf state
   const [dxfText, setDxfText] = useState<string | null>(null);
@@ -54,21 +55,31 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
 
   // Recompute the live wall preview whenever inputs change. Auto mode may
   // retry across a threshold ladder when Otsu's first pick finds nothing.
+  //
+  // Debounced: a trace is 0.2-1.5s of straight-line main-thread work on a
+  // desktop and several seconds on a phone, and these inputs include a text
+  // field — running it per keystroke froze the dialog hard enough to look like
+  // the import had hung.
   useEffect(() => {
     if (stage !== 'raster' || !rendered) return;
-    const segs = autoMode
-      ? traceWallsAuto(rendered.imageData, { minLength: minLenCm / cmPerPx })
-      : traceWallsV2(rendered.imageData, {
-          threshold: sensitivity,
-          minLength: minLenCm / cmPerPx,
-        });
-    setPreviewSegs(segs);
-    const walls = segmentsToWalls(segs, cmPerPx, { x: 0, y: 0 }, {
-      height: s.defaultWallHeight,
-      thickness: s.defaultWallThickness,
-    });
-    setPreviewCount(walls.length);
-    setTraceInfo(null);
+    setTracing(true);
+    const id = setTimeout(() => {
+      const segs = autoMode
+        ? traceWallsAuto(rendered.imageData, { minLength: minLenCm / cmPerPx })
+        : traceWallsV2(rendered.imageData, {
+            threshold: sensitivity,
+            minLength: minLenCm / cmPerPx,
+          });
+      setPreviewSegs(segs);
+      const walls = segmentsToWalls(segs, cmPerPx, { x: 0, y: 0 }, {
+        height: s.defaultWallHeight,
+        thickness: s.defaultWallThickness,
+      });
+      setPreviewCount(walls.length);
+      setTraceInfo(null);
+      setTracing(false);
+    }, 260);
+    return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, rendered, effThreshold, minLenCm, realWidthM]);
 
@@ -248,7 +259,9 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
               </div>
               <div className="trace-status">
                 <Wand2 className="icon" style={{ color: 'var(--brand)' }} />
-                {previewCount > 0 ? (
+                {tracing ? (
+                  <span>{t('Reading the plan…')}</span>
+                ) : previewCount > 0 ? (
                   <span><strong>{previewCount}</strong> {t('walls detected — ready to trace.')}</span>
                 ) : (
                   <span>{t('No walls found yet — adjust the options below.')}</span>

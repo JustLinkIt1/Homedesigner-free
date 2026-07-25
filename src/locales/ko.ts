@@ -610,4 +610,5 @@ export const KO: Record<string, string> = {
   'Shingle': '슁글',
   'Cedar Shake': '시더 셰이크',
   'Standing Seam': '거멀접기',
+  'Reading the plan…': '도면을 읽는 중…',
 };

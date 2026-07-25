@@ -610,4 +610,5 @@ export const FR: Record<string, string> = {
   'Shingle': 'Bardeau',
   'Cedar Shake': 'Bardeau de cèdre',
   'Standing Seam': 'Joint debout',
+  'Reading the plan…': 'Lecture du plan…',
 };

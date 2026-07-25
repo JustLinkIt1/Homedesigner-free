@@ -5,6 +5,48 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.97 - 2026-07-25 (versionCode 10097)
+
+Plan import, from user feedback: "I tried to upload 3 different plans and all of
+them failed to create the basic outline."
+
+### Fixed — the downsample was dropping thin lines
+`binarize` (src/lib/wallTrace.ts) point-sampled one source pixel per output
+pixel. On a 3500px scan that is one sample every 3.5px, so a 2-3px CAD line was
+hit on some rows and missed on others: a continuous wall reached the Hough stage
+as a dashed line and came back as a dozen short fragments. Measured on the same
+drawing, a 6-wall plan produced **6 walls at 2000px and 19 at 3500px**; a skewed
+phone photo produced **44**. Fragments don't meet at corners, so room detection
+finds no closed loops and there is no outline — exactly the reported symptom.
+The downsample now min-pools (darkest source pixel per cell), which is the
+standard way to binarize line art: a thin dark stroke can never fall between
+samples. Same plan now gives 8-9 walls at any resolution.
+
+### Fixed — the wall-thickness filter was switched off above ~2.5x downscale
+The tracer separates walls from text, dimension lines, door arcs and furniture by
+stroke thickness, via a distance transform. The floor was computed as
+`minHalfThickness / scale`, which on a 3500px scan is 0.7 processed px — but the
+distance transform cannot resolve below one pixel, so **every** ink pixel cleared
+it. Nothing was filtered, every plan was classified as "solid walls" regardless of
+how it was drawn, and all the clutter reached the Hough stage. The floor is now
+clamped to 1.2px, the smallest value that still rejects a one-pixel stroke. A
+single-stroke scan at 3500px is correctly detected as a line drawing again.
+
+### Fixed — the import preview froze the dialog
+A trace is 0.2-1.5s of straight-line main-thread work on a desktop and several
+seconds on a phone. The live preview ran it on every change to the threshold,
+minimum length **and the plan-width text field** — so once per keystroke. It is
+now debounced with a "Reading the plan…" state.
+
+### Tests
+New `tests/trace.mjs` (47 assertions), wired into `npm test`. It draws plans in
+the styles real files arrive in — filled/poché walls, double-line CAD exports,
+single-stroke scans, 45° hatched walls, drawing frames, coloured exports, skewed
+noisy phone photos, dense 10-room layouts — at 2000-3500px, runs the real tracer
+over them in a browser canvas, and asserts the outline and rooms come back. It
+also pins resolution stability, which is the specific property that was broken.
+Verified it fails (5 assertions) against the old code.
+
 ## 1.0.96 - 2026-07-25 (versionCode 10096)
 
 Phase B: roofs. HomeDesigner could not draw one at all, so with dollhouse off the

@@ -610,4 +610,5 @@ export const JA: Record<string, string> = {
   'Shingle': 'シングル',
   'Cedar Shake': 'シダーシェイク',
   'Standing Seam': '立平葺き',
+  'Reading the plan…': '図面を読み取り中…',
 };

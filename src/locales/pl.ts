@@ -610,4 +610,5 @@ export const PL: Record<string, string> = {
   'Shingle': 'Gont',
   'Cedar Shake': 'Gont cedrowy',
   'Standing Seam': 'Rąbek stojący',
+  'Reading the plan…': 'Odczytywanie rzutu…',
 };

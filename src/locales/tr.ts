@@ -610,4 +610,5 @@ export const TR: Record<string, string> = {
   'Shingle': 'Shingle',
   'Cedar Shake': 'Sedir shake',
   'Standing Seam': 'Dik dikiş',
+  'Reading the plan…': 'Plan okunuyor…',
 };

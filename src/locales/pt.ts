@@ -610,4 +610,5 @@ export const PT: Record<string, string> = {
   'Shingle': 'Telha shingle',
   'Cedar Shake': 'Telha de cedro',
   'Standing Seam': 'Junta vertical',
+  'Reading the plan…': 'Lendo a planta…',
 };

@@ -43,19 +43,39 @@ interface Bin {
   scale: number; // source px per processed px
 }
 
+/**
+ * Downscale and binarize.
+ *
+ * The downsample MIN-pools (darkest source pixel in each cell) rather than
+ * point-sampling. Point sampling only looks at one source pixel per output
+ * pixel, so on a high-resolution scan a 2-3px CAD line is hit on some rows and
+ * missed on others: a continuous wall arrives at the Hough stage as a dashed
+ * line and comes back as a dozen short fragments instead of one segment. Taking
+ * the darkest pixel in the cell is the standard fix for binarizing line art —
+ * a thin dark stroke can never fall between samples.
+ */
 function binarize(img: ImageData, threshold: number, maxDim: number): Bin {
   const scale = Math.max(1, Math.max(img.width, img.height) / maxDim);
   const w = Math.round(img.width / scale);
   const h = Math.round(img.height / scale);
   const data = new Uint8Array(w * h);
   const src = img.data;
+  // Bound the work per cell; 4x4 taps is plenty to catch a 1px stroke.
+  const taps = Math.min(4, Math.max(1, Math.round(scale)));
+  const step = scale / taps;
   for (let y = 0; y < h; y++) {
-    const sy = Math.min(img.height - 1, Math.floor(y * scale));
     for (let x = 0; x < w; x++) {
-      const sx = Math.min(img.width - 1, Math.floor(x * scale));
-      const i = (sy * img.width + sx) * 4;
-      const a = src[i + 3];
-      const lum = a < 10 ? 255 : 0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2];
+      let lum = 255;
+      for (let ty = 0; ty < taps; ty++) {
+        const sy = Math.min(img.height - 1, Math.floor(y * scale + ty * step));
+        for (let tx = 0; tx < taps; tx++) {
+          const sx = Math.min(img.width - 1, Math.floor(x * scale + tx * step));
+          const i = (sy * img.width + sx) * 4;
+          // Transparent pixels are background (255), never ink.
+          const l = src[i + 3] < 10 ? 255 : 0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2];
+          if (l < lum) lum = l;
+        }
+      }
       data[y * w + x] = lum < threshold ? 1 : 0;
     }
   }
@@ -519,7 +539,15 @@ export function traceWallsStages(img: ImageData, options: Partial<TraceConfig> =
   const dist = distanceTransform(bin);
   // minHalfThickness is specified in source px; convert to the downscaled
   // processed-px units the distance transform works in.
-  const mask = thickMask(bin, dist, cfg.minHalfThickness / bin.scale);
+  //
+  // The floor is clamped because the distance transform cannot resolve below
+  // one processed pixel: on a 3500px scan (scale 3.5) the raw conversion gives
+  // 0.7px, and since every ink pixel bordering background already measures 1px,
+  // NOTHING got filtered — every plan was classified 'solid' and text, door
+  // arcs, dimension lines and furniture all reached the Hough stage. 1.2px is
+  // the smallest floor that still rejects a one-pixel stroke.
+  const halfFloor = Math.max(1.2, cfg.minHalfThickness / bin.scale);
+  const mask = thickMask(bin, dist, halfFloor);
 
   // Mode pick: plans either FILL their walls (thick ink bands — the mask keeps
   // them and drops thin furniture/text) or OUTLINE them (CAD/PDF exports draw
