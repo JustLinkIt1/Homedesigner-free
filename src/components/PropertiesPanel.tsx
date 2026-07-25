@@ -43,6 +43,64 @@ const PRO_OPENING_STYLES = new Set(
 const isProStyle = (kind: 'door' | 'window', style: OpeningStyle) =>
   PRO_OPENING_STYLES.has(`${kind}:${style}`);
 
+/**
+ * One-tap exterior cladding. Painting an outside wall face already works via the
+ * 3D paint popover, but it is effectively unreachable: dollhouse mode is on by
+ * default and faded walls ignore taps, so the faces you can see from outside are
+ * exactly the ones that won't respond. This finishes every outward-facing face in
+ * a single undoable commit, using materials already bundled with the app.
+ */
+function ExteriorCard() {
+  const t = useI18n();
+  const apply = useDesign((st) => st.applyExteriorFinish);
+  const wallCount = useDesign((st) => st.walls.length);
+  if (!wallCount) return null;
+
+  const items = wallMaterials().filter((m) =>
+    ['Brick', 'Plaster', 'Concrete', 'Wood'].includes(m.group),
+  );
+
+  const run = (color: string, texture?: CustomTexture) => {
+    const n = apply(color, texture);
+    if (n === 0) toast.info(t('No outside wall faces found — draw the outer walls first.'));
+    else toast.success(`${t('Exterior applied to')} ${n} ${n > 1 ? t('faces') : t('face')}`);
+  };
+
+  return (
+    <div className="props" style={{ paddingTop: 0 }}>
+      <div className="prop-card">
+        <div className="prop-title">{t('Exterior')}</div>
+        <p className="prop-hint">{t('Clad every outside wall face in one go.')}</p>
+        <div className="pp-swatches">
+          {WALL_PAINTS.slice(0, 6).map((c) => (
+            <button
+              key={c}
+              className="pp-swatch"
+              style={{ background: c }}
+              title={c}
+              onClick={() => run(c, undefined)}
+            />
+          ))}
+          {items.map((m) => {
+            const src = materialUrl(m.id);
+            return (
+              <button
+                key={m.id}
+                className="pp-swatch"
+                style={{ backgroundImage: `url(${src})`, backgroundSize: 'cover' }}
+                title={t(m.name)}
+                onClick={() =>
+                  run(m.color, { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness })
+                }
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PropertiesPanel({ open = false }: { open?: boolean }) {
   const s = useDesign(useShallow((st) => ({
     selection: st.selection,
@@ -161,6 +219,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <Sparkles className="icon" /> {t('Auto-detect rooms')}
               </button>
             </div>
+            <ExteriorCard />
             {s.background ? (
               <BackgroundProps />
             ) : (

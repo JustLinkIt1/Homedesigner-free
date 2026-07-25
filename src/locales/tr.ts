@@ -587,4 +587,10 @@ export const TR: Record<string, string> = {
   'Matched to your device': 'Cihazınıza göre ayarlandı',
   'Higher settings add shadows and detail but use more battery.': 'Yüksek ayarlar gölge ve ayrıntı ekler ancak daha çok pil harcar.',
   'Takes effect next time you open 3D.': 'Bir dahaki 3B açılışında geçerli olur.',
+  'Exterior': 'Dış cephe',
+  'Clad every outside wall face in one go.': 'Tüm dış duvar yüzeylerini tek seferde kaplayın.',
+  'Exterior applied to': 'Dış cephe uygulandı:',
+  'face': 'yüz',
+  'faces': 'yüz',
+  'No outside wall faces found — draw the outer walls first.': 'Dış duvar yüzeyi bulunamadı — önce dış duvarları çizin.',
 };

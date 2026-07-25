@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
   BackgroundPlan,
+  CustomTexture,
   FloorGeom,
   FloorInfo,
   FurnitureItem,
@@ -11,8 +12,11 @@ import type {
   ToolMode,
   ViewMode,
   Wall,
+  WallFaceRange,
 } from '../types';
 import { uid, dist } from '../lib/geometry';
+import { exteriorFaces } from '../lib/exteriorFaces';
+import { withFaceFinish } from '../lib/wallFaces';
 import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from '../data/furnitureCatalog';
 import { kitchenRunUnits, kitchenUpperUnits } from '../lib/kitchenRun';
 import { splitPolygonBySegment } from '../lib/roomSplit';
@@ -152,6 +156,8 @@ interface DesignState extends DesignSnapshot {
   distributeSelected: (axis: 'h' | 'v') => void;
   /** Apply a coordinated style (wall paint + flooring) to one room or 'all'. */
   applyRoomStyle: (roomId: string | 'all', styleId: string) => void;
+  /** Finish every outward-facing wall face at once (exterior cladding). */
+  applyExteriorFinish: (color: string, texture?: CustomTexture) => number;
   duplicateSelection: () => void;
   copySelection: () => void;
   paste: (at?: Point) => void;
@@ -922,6 +928,33 @@ export const useDesign = create<DesignState>((set, get) => {
         );
       });
       haptics.tapLight();
+    },
+
+    applyExteriorFinish: (color, texture) => {
+      const { walls, rooms } = get();
+      const faces = exteriorFaces(walls, rooms);
+      if (!faces.length) return 0;
+      // Group by wall so a wall exterior on both sides is finished in one pass
+      // (withFaceFinish returns a new list each call, so it must be chained).
+      const byWall = new Map<string, WallFaceRange[]>();
+      for (const f of faces) {
+        const arr = byWall.get(f.wallId) ?? [];
+        arr.push(f.face);
+        byWall.set(f.wallId, arr);
+      }
+      commit((d) => {
+        d.walls = d.walls.map((w) => {
+          const ranges = byWall.get(w.id);
+          if (!ranges) return w;
+          let next = w;
+          for (const face of ranges) {
+            next = { ...next, faceFinishes: withFaceFinish(next, face, { color, texture }) };
+          }
+          return next;
+        });
+      });
+      haptics.tapLight();
+      return faces.length;
     },
 
     // Copy the active storey's shell (walls, their openings and rooms) onto a

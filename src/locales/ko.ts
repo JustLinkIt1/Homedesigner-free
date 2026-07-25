@@ -587,4 +587,10 @@ export const KO: Record<string, string> = {
   'Matched to your device': '기기에 맞게 설정됨',
   'Higher settings add shadows and detail but use more battery.': '높은 설정은 그림자와 디테일이 좋아지지만 배터리를 더 씁니다.',
   'Takes effect next time you open 3D.': '다음에 3D를 열 때 적용됩니다.',
+  'Exterior': '외벽',
+  'Clad every outside wall face in one go.': '모든 외벽 면을 한 번에 마감합니다.',
+  'Exterior applied to': '외벽 적용:',
+  'face': '면',
+  'faces': '면',
+  'No outside wall faces found — draw the outer walls first.': '외벽 면이 없습니다 — 먼저 외벽을 그려 주세요.',
 };

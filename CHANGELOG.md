@@ -5,6 +5,35 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.95 - 2026-07-25 (versionCode 10095)
+
+Completes the 3D visual pass (Phase A). Roof next.
+
+### Added — surface relief without shipping a single extra byte
+Our material library is albedo-only. Bundling Poly Haven's real normal/roughness
+maps for all 30 materials would roughly triple texture weight in the APK, which is
+not a good trade for a phone app. Instead `derivedNormalTexture` (src/lib/textures.ts)
+treats luminance as a height field and Sobel-filters it into a tangent-space normal
+map at load time, cached and wrapped so tiling still lines up. Not physically exact —
+luminance only correlates with height — but on brick, plaster, stone, gravel and
+timber it reads convincingly. Wired into wall materials and floors (both the built-in
+photoreal textures and user uploads), and skipped on the low tier where the pass
+isn't worth the CPU.
+
+### Added — one-tap exterior cladding
+Painting an outside wall face already worked, but was effectively unreachable:
+dollhouse mode is on by default and faded walls ignore taps, so from outside the
+building the faces you can actually see are exactly the ones that won't respond.
+New **Exterior** card in Properties (no-selection state) finishes every outward-facing
+wall face in a single undoable commit. `src/lib/exteriorFaces.ts` decides which sides
+face open air by probing just past each face and testing it against every room;
+`applyExteriorFinish` in the store applies them, chaining `withFaceFinish` per wall so
+a wall exterior on both sides is handled correctly. Uses already-bundled
+brick/plaster/concrete/timber textures — zero new bytes. Translated in 12 locales.
+
+Verified headless: the Exterior card applies to all 4 perimeter faces of the sample
+home with the interior left untouched. tsc + lint + build clean; 37 smoke checks green.
+
 ## 1.0.94 - 2026-07-24 (versionCode 10094)
 
 Second stage of the 3D work. 1.0.93 improved the sun, shadows, floors and ground —

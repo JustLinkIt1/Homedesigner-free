@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
 import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
-import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry } from '../../lib/textures';
+import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry, derivedNormalTexture } from '../../lib/textures';
+import { activeTier, tierCaps } from '../../lib/perfTier';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
 import { wallFaceAt } from '../../lib/wallFaces';
@@ -13,8 +14,11 @@ import Furniture3D from './Furniture3D';
 import type { CustomTexture, FloorGeom, FurnitureItem, Opening, Point, Room, Wall, WallFaceFinish, WallFaceRange } from '../../types';
 
 export const M = 0.01; // cm -> m
+/** Whether to synthesise normal maps — resolved once, not per material. */
+const RELIEF = tierCaps(activeTier()).derivedNormals;
 const NO_FACE_FINISHES: WallFaceFinish[] = [];
 const NO_STAIRS: FurnitureItem[] = [];
+const NORMAL_SCALE = new THREE.Vector2(0.5, 0.5);
 
 interface Span {
   a: number; // start along wall (cm from start)
@@ -83,6 +87,15 @@ function wallMaterial(color: string, texture?: CustomTexture): THREE.MeshStandar
     material.map = map;
     material.roughness = texture.roughness ?? 0.92;
     material.metalness = texture.metalness ?? 0;
+    // Synthesised relief (see textures.ts) — brick/plaster/stone gain real depth
+    // for zero APK bytes. Skipped on the low tier, where the Sobel pass isn't
+    // worth the CPU.
+    if (RELIEF) {
+      const nrm = derivedNormalTexture(texture.src, 1);
+      nrm.repeat.copy(map.repeat);
+      material.normalMap = nrm;
+      material.normalScale = new THREE.Vector2(0.6, 0.6);
+    }
   } else {
     material.color = new THREE.Color(color);
   }
@@ -627,6 +640,19 @@ function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: Furn
     return { texture: t, roughness: entry?.roughness, metalness: entry?.metalness };
   }, [builtInId]);
 
+  // Relief for photoreal floors (tile grout, plank seams, stone). Only for real
+  // image textures — the procedural canvas ones are already flat by design.
+  const reliefSrc = room.texture?.src ?? (builtInId ? materialUrl(builtInId) : null);
+  const normal = useMemo(
+    () => (RELIEF && reliefSrc ? derivedNormalTexture(reliefSrc, 1) : null),
+    [reliefSrc],
+  );
+  useEffect(() => {
+    if (!normal) return;
+    const r = (custom ?? builtIn?.texture)?.repeat;
+    if (r) normal.repeat.copy(r);
+  }, [normal, custom, builtIn]);
+
   const useCustom = !!custom;
   const roughness = useCustom
     ? room.texture?.roughness ?? 0.6
@@ -659,6 +685,8 @@ function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: Furn
     >
       <meshStandardMaterial
         map={custom ?? builtIn?.texture ?? proc}
+        normalMap={normal}
+        normalScale={NORMAL_SCALE}
         roughness={roughness}
         metalness={metalness}
         side={THREE.DoubleSide}

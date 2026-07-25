@@ -587,4 +587,10 @@ export const NL: Record<string, string> = {
   'Matched to your device': 'Afgestemd op je apparaat',
   'Higher settings add shadows and detail but use more battery.': 'Hogere instellingen geven schaduwen en detail, maar kosten meer batterij.',
   'Takes effect next time you open 3D.': 'Wordt actief als je 3D opnieuw opent.',
+  'Exterior': 'Buitenkant',
+  'Clad every outside wall face in one go.': 'Bekleed alle buitenmuren in één keer.',
+  'Exterior applied to': 'Buitenkant toegepast op',
+  'face': 'vlak',
+  'faces': 'vlakken',
+  'No outside wall faces found — draw the outer walls first.': 'Geen buitenvlakken gevonden — teken eerst de buitenmuren.',
 };

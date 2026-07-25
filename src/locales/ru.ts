@@ -587,4 +587,10 @@ export const RU: Record<string, string> = {
   'Matched to your device': 'Подобрано под ваше устройство',
   'Higher settings add shadows and detail but use more battery.': 'Высокие настройки добавляют тени и детализацию, но расходуют больше заряда.',
   'Takes effect next time you open 3D.': 'Применится при следующем открытии 3D.',
+  'Exterior': 'Фасад',
+  'Clad every outside wall face in one go.': 'Отделайте все наружные грани стен разом.',
+  'Exterior applied to': 'Фасад применён к',
+  'face': 'грань',
+  'faces': 'граней',
+  'No outside wall faces found — draw the outer walls first.': 'Наружные грани не найдены — сначала начертите внешние стены.',
 };

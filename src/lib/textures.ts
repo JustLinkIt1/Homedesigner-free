@@ -359,3 +359,96 @@ export function paintedBoxGeometry(
   uv.needsUpdate = true;
   return geo;
 }
+
+// ---------------------------------------------------------------------------
+// Derived normal maps
+// ---------------------------------------------------------------------------
+// Our material library is albedo-only (public/textures/*.webp). Shipping Poly
+// Haven's real _nor_gl/_rough maps alongside them would roughly triple texture
+// bytes in the APK, which isn't worth it for a phone app. Instead we treat
+// luminance as a height field and run a Sobel filter over it to synthesise a
+// tangent-space normal map. That's not physically correct — luminance and height
+// only correlate — but on the materials this app actually uses (brick, plaster,
+// stone, gravel, timber, shingle) it reads convincingly and costs nothing to ship.
+
+const normalCache = new Map<string, THREE.Texture>();
+
+/** Flat-normal fill (128,128,255) so a texture is valid before the source loads. */
+function flatNormalCanvas(size = 4): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = 'rgb(128,128,255)';
+  ctx.fillRect(0, 0, size, size);
+  return c;
+}
+
+/** Sobel the luminance of `img` into a tangent-space normal map, in place. */
+function sobelNormals(img: HTMLImageElement, strength: number): HTMLCanvasElement {
+  // Cap the working size: normal detail past ~512 is invisible at our texel
+  // densities and the O(n²) pass would stall the main thread on large uploads.
+  const n = Math.min(512, Math.max(16, img.naturalWidth || 256));
+  const c = document.createElement('canvas');
+  c.width = c.height = n;
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(img, 0, 0, n, n);
+  const src = ctx.getImageData(0, 0, n, n);
+  const lum = new Float32Array(n * n);
+  for (let i = 0; i < n * n; i++) {
+    const o = i * 4;
+    lum[i] = (src.data[o] * 0.299 + src.data[o + 1] * 0.587 + src.data[o + 2] * 0.114) / 255;
+  }
+  const out = ctx.createImageData(n, n);
+  const at = (x: number, y: number) => lum[((y + n) % n) * n + ((x + n) % n)]; // wrap: textures tile
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const dx =
+        at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1) -
+        (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1));
+      const dy =
+        at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1) -
+        (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1));
+      // Normalise (dx, dy, 1/strength) into the 0..255 encoding.
+      const nz = 1 / Math.max(0.05, strength);
+      const len = Math.hypot(dx, dy, nz) || 1;
+      const o = (y * n + x) * 4;
+      out.data[o] = ((dx / len) * 0.5 + 0.5) * 255;
+      out.data[o + 1] = ((dy / len) * 0.5 + 0.5) * 255;
+      out.data[o + 2] = ((nz / len) * 0.5 + 0.5) * 255;
+      out.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(out, 0, 0);
+  return c;
+}
+
+/**
+ * A normal map synthesised from an albedo image URL. Returns immediately with a
+ * flat normal and swaps in the real one once the source decodes, so callers
+ * never have to await. Cached per (src, strength).
+ */
+export function derivedNormalTexture(src: string, strength = 1): THREE.Texture {
+  const key = `${src}|${strength}`;
+  const hit = normalCache.get(key);
+  if (hit) return hit;
+
+  const tex = new THREE.CanvasTexture(flatNormalCanvas());
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  // Normal maps are data, not colour — must stay linear.
+  tex.colorSpace = THREE.NoColorSpace;
+  normalCache.set(key, tex);
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      tex.image = sobelNormals(img, strength);
+      tex.needsUpdate = true;
+    } catch {
+      /* tainted canvas or decode failure — keep the flat normal */
+    }
+  };
+  img.src = src;
+  return tex;
+}

@@ -587,4 +587,10 @@ export const JA: Record<string, string> = {
   'Matched to your device': 'お使いの端末に合わせて調整',
   'Higher settings add shadows and detail but use more battery.': '高い設定は影と精細さが増しますが、バッテリー消費も増えます。',
   'Takes effect next time you open 3D.': '次に 3D を開いたときに適用されます。',
+  'Exterior': '外装',
+  'Clad every outside wall face in one go.': '外壁の面をまとめて仕上げます。',
+  'Exterior applied to': '外装を適用:',
+  'face': '面',
+  'faces': '面',
+  'No outside wall faces found — draw the outer walls first.': '外壁面が見つかりません — 先に外周の壁を描いてください。',
 };

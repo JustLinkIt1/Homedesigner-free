@@ -587,4 +587,10 @@ export const ZH: Record<string, string> = {
   'Matched to your device': '已根据您的设备调整',
   'Higher settings add shadows and detail but use more battery.': '更高的设置会增加阴影和细节，但更耗电。',
   'Takes effect next time you open 3D.': '下次打开 3D 时生效。',
+  'Exterior': '外墙',
+  'Clad every outside wall face in one go.': '一次性为所有外墙面铺设饰面。',
+  'Exterior applied to': '外墙已应用于',
+  'face': '面',
+  'faces': '面',
+  'No outside wall faces found — draw the outer walls first.': '未找到外墙面 — 请先绘制外墙。',
 };

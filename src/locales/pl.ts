@@ -587,4 +587,10 @@ export const PL: Record<string, string> = {
   'Matched to your device': 'Dopasowane do urządzenia',
   'Higher settings add shadows and detail but use more battery.': 'Wyższe ustawienia dodają cienie i szczegóły, ale zużywają więcej baterii.',
   'Takes effect next time you open 3D.': 'Zadziała przy następnym otwarciu widoku 3D.',
+  'Exterior': 'Elewacja',
+  'Clad every outside wall face in one go.': 'Wykończ wszystkie zewnętrzne ściany naraz.',
+  'Exterior applied to': 'Elewacja zastosowana do',
+  'face': 'ściana',
+  'faces': 'ścian',
+  'No outside wall faces found — draw the outer walls first.': 'Nie znaleziono ścian zewnętrznych — najpierw narysuj mury zewnętrzne.',
 };
