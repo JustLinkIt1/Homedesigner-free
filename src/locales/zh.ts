@@ -619,4 +619,6 @@ export const ZH: Record<string, string> = {
   'floors': '层',
   'Leave out the': '排除',
   'lines on demolition layers (shows the proposed state).': '拆除图层上的线条（显示改造后状态）。',
+  'DXF for CAD': 'CAD 用 DXF',
+  'Plan exported as a layered DXF drawing': '已导出为带图层的 DXF 图纸',
 };

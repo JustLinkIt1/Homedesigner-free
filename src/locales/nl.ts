@@ -619,4 +619,6 @@ export const NL: Record<string, string> = {
   'floors': 'etages',
   'Leave out the': 'Laat de',
   'lines on demolition layers (shows the proposed state).': 'lijnen op sloop-lagen weg (toont de nieuwe situatie).',
+  'DXF for CAD': 'DXF voor CAD',
+  'Plan exported as a layered DXF drawing': 'Plattegrond geëxporteerd als DXF met lagen',
 };

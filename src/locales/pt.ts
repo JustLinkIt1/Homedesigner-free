@@ -619,4 +619,6 @@ export const PT: Record<string, string> = {
   'floors': 'andares',
   'Leave out the': 'Ignorar as',
   'lines on demolition layers (shows the proposed state).': 'linhas das camadas de demolição (mostra o estado proposto).',
+  'DXF for CAD': 'DXF para CAD',
+  'Plan exported as a layered DXF drawing': 'Planta exportada como DXF com camadas',
 };

@@ -48,14 +48,15 @@ const RULES: { kind: LayerKind; words: string[] }[] = [
   { kind: 'dimension', words: ['cotation', 'dimension', 'bemassung', 'masse', 'quote', 'acotacion', 'dim-', 'a-dim', 'dims'] },
   { kind: 'annotation', words: ['texte', 'text', 'label', 'legende', 'legend', 'titre', 'title', 'marque', 'coupe', 'section', 'image', 'scan', 'nord', 'north', 'repere', 'anno'] },
   { kind: 'door', words: ['porte', 'door', 'tuer', 'puerta', 'porta'] },
-  { kind: 'window', words: ['fenetre', 'window', 'fenster', 'ventana', 'finestra', 'baie'] },
-  { kind: 'stair', words: ['escalier', 'stair', 'treppe', 'escalera', 'scala', 'ascenseur', 'elevator', 'lift'] },
+  // 'glaz' is the AIA standard term (A-GLAZ), used across UK/US practice.
+  { kind: 'window', words: ['fenetre', 'window', 'fenster', 'ventana', 'finestra', 'baie', 'glaz'] },
+  { kind: 'stair', words: ['escalier', 'stair', 'strs', 'treppe', 'escalera', 'scala', 'ascenseur', 'elevator', 'lift'] },
   { kind: 'roof', words: ['toit', 'roof', 'dach', 'tejado', 'toiture', 'couverture'] },
-  { kind: 'zone', words: ['zone', 'piece', 'room', 'raum', 'local', 'surface', 'espace'] },
+  { kind: 'zone', words: ['zone', 'piece', 'room', 'raum', 'local', 'surface', 'espace', 'area'] },
   // NB: no 'exter' here — "Murs extérieurs" is an exterior WALL layer, and the
   // outdoor keywords must not swallow it.
   { kind: 'outdoor', words: ['vegetation', 'plantation', 'jardin', 'garden', 'terrasse', 'terrace', 'patio', 'landscape', 'amenagement'] },
-  { kind: 'furniture', words: ['mobilier', 'furniture', 'meuble', 'equipement', 'sanitaire', 'cuisine', 'appliance', 'objet'] },
+  { kind: 'furniture', words: ['mobilier', 'furniture', 'furn', 'meuble', 'equipement', 'sanitaire', 'cuisine', 'appliance', 'objet'] },
   // Walls last: "mur" is a substring of several other words, so everything more
   // specific gets first refusal.
   { kind: 'wall', words: ['mur', 'wall', 'wand', 'muro', 'cloison', 'parete', 'structure', 'a-wall'] },

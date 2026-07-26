@@ -619,4 +619,6 @@ export const JA: Record<string, string> = {
   'floors': '階',
   'Leave out the': '除外:',
   'lines on demolition layers (shows the proposed state).': '解体レイヤーの線（計画後の状態を表示）。',
+  'DXF for CAD': 'CAD用DXF',
+  'Plan exported as a layered DXF drawing': 'レイヤー付きDXFとして書き出しました',
 };

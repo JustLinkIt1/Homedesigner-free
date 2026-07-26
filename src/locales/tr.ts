@@ -619,4 +619,6 @@ export const TR: Record<string, string> = {
   'floors': 'kat',
   'Leave out the': 'Şunları hariç tut:',
   'lines on demolition layers (shows the proposed state).': 'yıkım katmanlarındaki çizgiler (önerilen durumu gösterir).',
+  'DXF for CAD': 'CAD için DXF',
+  'Plan exported as a layered DXF drawing': 'Plan katmanlı DXF olarak dışa aktarıldı',
 };

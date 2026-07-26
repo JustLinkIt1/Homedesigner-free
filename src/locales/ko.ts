@@ -619,4 +619,6 @@ export const KO: Record<string, string> = {
   'floors': '층',
   'Leave out the': '제외:',
   'lines on demolition layers (shows the proposed state).': '철거 레이어의 선 (계획된 상태를 표시).',
+  'DXF for CAD': 'CAD용 DXF',
+  'Plan exported as a layered DXF drawing': '레이어가 있는 DXF로 내보냈습니다',
 };

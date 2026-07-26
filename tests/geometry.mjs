@@ -2,14 +2,16 @@
 // building geometry and are exactly the kind of thing that must not be validated
 // by eyeball, so they get deterministic assertions instead.
 import { execFileSync } from 'node:child_process';
-import { writeFileSync, mkdtempSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // Compile the two TS modules under test to a temp ESM bundle via esbuild (already
 // a Vite dependency), so this runs with plain `node` and no browser.
 const dir = mkdtempSync(join(tmpdir(), 'hdgeo-'));
-const entry = join(dir, 'entry.ts');
+// The entry has to live inside the project: esbuild resolves bare imports
+// (dxf-parser, three) relative to the entry file, not the working directory.
+const entry = join(process.cwd(), '.geometry-entry.tmp.ts');
 writeFileSync(entry, `
 export { offsetPolygon, orientedBox, boxFillRatio } from '${process.cwd()}/src/lib/polygonOffset.ts';
 export { detectBuildingOutline, detectRooms } from '${process.cwd()}/src/lib/roomDetection.ts';
@@ -17,19 +19,26 @@ export { polygonArea } from '${process.cwd()}/src/lib/geometry.ts';
 export { buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines } from '${process.cwd()}/src/lib/roofGeometry.ts';
 export { wallCentrelines } from '${process.cwd()}/src/lib/wallCentrelines.ts';
 export { classifyOpening } from '${process.cwd()}/src/lib/dxfOpenings.ts';
+export { buildDxf, LAYERS } from '${process.cwd()}/src/lib/dxfExport.ts';
+export { flattenPath } from '${process.cwd()}/src/lib/svgPath.ts';
+export { importDxf } from '${process.cwd()}/src/lib/dxfImport.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${process.cwd()}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${process.cwd()}/src/lib/roof.ts';
 `);
 const out = join(dir, 'bundle.mjs');
 execFileSync(join(process.cwd(), 'node_modules/.bin/esbuild'), [
-  entry, '--bundle', '--format=esm', '--platform=neutral', `--outfile=${out}`,
+  // platform=node so CommonJS-only deps (dxf-parser) resolve via "main";
+  // platform=neutral leaves mainFields empty and cannot find them.
+  entry, '--bundle', '--format=esm', '--platform=node', `--outfile=${out}`,
 ], { stdio: 'pipe' });
+rmSync(entry, { force: true });
 
 const {
-  offsetPolygon, orientedBox, boxFillRatio, detectBuildingOutline, polygonArea,
+  offsetPolygon, orientedBox, boxFillRatio, detectBuildingOutline, detectRooms, polygonArea,
   buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
+  buildDxf, LAYERS, flattenPath, importDxf,
 } = await import(out);
 
 let fails = 0;
@@ -457,6 +466,116 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   check('opening: distant symbols ignored',
     classifyOpening({ x: 245, y: 0 }, 20, [{ kind: 'door', a: { x: 900, y: 900 }, b: { x: 950, y: 900 } }]) === null);
   check('opening: no symbols is unclassified', classifyOpening({ x: 0, y: 0 }, 50, []) === null);
+}
+
+// ---- SVG path flattening (furniture symbols -> line work) -----------------
+{
+  const polys = flattenPath('M0,0 H100 V50 H0 Z');
+  check('path: closed rectangle', polys.length === 1 && polys[0].length === 5, JSON.stringify(polys.map(p=>p.length)));
+  if (polys[0]) {
+    const xs = polys[0].map((p) => p.x), ys = polys[0].map((p) => p.y);
+    check('path: rectangle extents', Math.max(...xs) === 100 && Math.max(...ys) === 50);
+    check('path: closes back to start', near(polys[0][4].x, 0) && near(polys[0][4].y, 0));
+  }
+}
+{
+  // The symbols use A (arc) for circles and Q for rounded corners.
+  const circle = flattenPath('M0,50 A50,50 0 1 0 100,50 A50,50 0 1 0 0,50 Z');
+  const pts = circle.flat();
+  const r = pts.map((p) => Math.hypot(p.x - 50, p.y - 50));
+  check('path: circle arcs stay on the radius',
+    pts.length > 12 && Math.max(...r) < 50.6 && Math.min(...r) > 49.4,
+    `r ${Math.min(...r).toFixed(2)}..${Math.max(...r).toFixed(2)}`);
+  const q = flattenPath('M0,0 Q50,0 50,50');
+  check('path: quadratic sampled', q.length === 1 && q[0].length > 5 && near(q[0][q[0].length-1].x, 50, 1e-6));
+}
+{
+  check('path: separate subpaths', flattenPath('M0,0 H10 M50,50 H60').length === 2);
+  check('path: empty is safe', flattenPath('').length === 0 && flattenPath('Z').length === 0);
+}
+
+// ---- DXF export, and a round trip back through the importer ---------------
+{
+  const mkWall = (id, x1, y1, x2, y2, t = 20) => ({
+    id, start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: t, height: 270, color: '#fff',
+  });
+  // A 6m x 4m room with a door in the south wall and a window in the north.
+  const W = 600, H = 400;
+  const walls = [
+    mkWall('n', 0, 0, W, 0), mkWall('e', W, 0, W, H),
+    mkWall('s', W, H, 0, H), mkWall('w', 0, H, 0, 0),
+  ];
+  const openings = [
+    { id: 'd1', wallId: 's', type: 'door', offset: 0.5, width: 90, height: 205, sill: 0 },
+    { id: 'w1', wallId: 'n', type: 'window', offset: 0.4, width: 120, height: 120, sill: 90 },
+  ];
+  const rooms = [{ id: 'r1', name: 'Living', points: [ {x:10,y:10},{x:W-10,y:10},{x:W-10,y:H-10},{x:10,y:H-10} ], floorMaterial: 'wood_floor', color: '#fff' }];
+  const furniture = [{ id: 'f1', type: 'sofa', name: 'Sofa', position: { x: 300, y: 300 }, rotation: 0, width: 200, depth: 90, height: 80, color: '#888' }];
+  const floors = [{ id: 'g', name: 'Ground floor', elevation: 0 }];
+  const dxf = buildDxf({
+    projectName: 'Test', floors,
+    geom: { g: { walls, rooms, furniture, openings } },
+  });
+
+  check('dxf: is a DXF file', dxf.startsWith('0\nSECTION') && dxf.trimEnd().endsWith('EOF'));
+  check('dxf: declares centimetres', dxf.includes('$INSUNITS'));
+  const layerLines = dxf.split('\n');
+  const declared = layerLines.filter((l, i) => layerLines[i - 1] === '2' && /^L\d\d-A-/.test(l));
+  check('dxf: layers are declared in the table', declared.length >= 5, JSON.stringify([...new Set(declared)]));
+  for (const [what, name] of Object.entries(LAYERS)) {
+    check(`dxf: ${what} on layer ${name}`, dxf.includes(`L00-${name}`), name);
+  }
+  check('dxf: furniture became line work', (dxf.match(/L00-A-FURN/g) || []).length > 8);
+  check('dxf: door swing is a real ARC', dxf.includes('ARC'));
+
+  // The real test: read our own file back with the importer.
+  const back = importDxf(dxf, { wallHeight: 270, wallThickness: 10 });
+  check('round trip: layers understood', back.layerAware);
+  check('round trip: one storey', back.storeys.length === 1 && back.storeys[0].index === 0,
+    JSON.stringify(back.storeys.map((s) => s.index)));
+  check('round trip: dimensions not imported as walls', (back.kindCounts.dimension ?? 0) > 0);
+  check('round trip: furniture not imported as walls', (back.kindCounts.furniture ?? 0) > 0);
+
+  const rt = back.storeys[0];
+  check('round trip: four walls recovered', rt.walls.length === 4, `got ${rt.walls.length}`);
+  const thick = [...new Set(rt.walls.map((x) => Math.round(x.thickness)))];
+  check('round trip: wall thickness preserved', thick.length === 1 && thick[0] === 20, JSON.stringify(thick));
+  const span = (sel) => {
+    const v = rt.walls.flatMap((x) => [sel(x.start), sel(x.end)]);
+    return Math.max(...v) - Math.min(...v);
+  };
+  // Within half a wall thickness, by design: the importer runs centrelines out
+  // to the outer face at corners so the loops close for room detection, which
+  // makes the outer ring measure fractionally large. 10cm on 6m.
+  check('round trip: plan size preserved to half a wall',
+    near(span((p) => p.x), W, 12) && near(span((p) => p.y), H, 12),
+    `${span((p) => p.x).toFixed(1)} x ${span((p) => p.y).toFixed(1)}`);
+
+  const doors = rt.openings.filter((o) => o.type === 'door');
+  const wins = rt.openings.filter((o) => o.type === 'window');
+  check('round trip: door recovered', doors.length === 1 && Math.abs(doors[0].width - 90) <= 6,
+    JSON.stringify(rt.openings.map((o) => [o.type, Math.round(o.width)])));
+  check('round trip: window recovered', wins.length === 1 && Math.abs(wins[0].width - 120) <= 8,
+    JSON.stringify(rt.openings.map((o) => [o.type, Math.round(o.width)])));
+  check('round trip: room detected', detectRooms(rt.walls).length >= 1, `${detectRooms(rt.walls).length}`);
+}
+{
+  // Multi-storey: layer prefixes must bring the levels back separately.
+  const mk = (id, x1, y1, x2, y2) => ({ id, start:{x:x1,y:y1}, end:{x:x2,y:y2}, thickness: 20, height: 270, color:'#fff' });
+  const ring = (p) => [mk(p+'n',0,0,500,0), mk(p+'e',500,0,500,300), mk(p+'s',500,300,0,300), mk(p+'w',0,300,0,0)];
+  const dxf = buildDxf({
+    projectName: 'Two', 
+    floors: [{ id:'a', name:'Ground', elevation:0 }, { id:'b', name:'First', elevation:280 }],
+    geom: {
+      a: { walls: ring('a'), rooms: [], furniture: [], openings: [] },
+      b: { walls: ring('b'), rooms: [], furniture: [], openings: [] },
+    },
+  });
+  check('dxf: storey prefixes written', dxf.includes('L00-A-WALL') && dxf.includes('L01-A-WALL'));
+  const back = importDxf(dxf, { wallHeight: 270, wallThickness: 10 });
+  check('round trip: two storeys', back.storeys.length === 2, JSON.stringify(back.storeys.map((s)=>s.index)));
+  check('round trip: walls on both storeys', back.storeys.every((s) => s.walls.length === 4),
+    JSON.stringify(back.storeys.map((s)=>s.walls.length)));
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

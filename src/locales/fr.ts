@@ -619,4 +619,6 @@ export const FR: Record<string, string> = {
   'floors': 'étages',
   'Leave out the': 'Ignorer les',
   'lines on demolition layers (shows the proposed state).': 'lignes des calques de démolition (affiche l’état projeté).',
+  'DXF for CAD': 'DXF pour CAO',
+  'Plan exported as a layered DXF drawing': 'Plan exporté en DXF avec calques',
 };

@@ -5,6 +5,55 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.2.0 - 2026-07-26 (versionCode 10200)
+
+CAD export — the import work pointed the other way.
+
+### Added — Export → DXF for CAD
+A layered drawing structured the way an architect's file is structured, since
+that is precisely what the last several releases have been learning to read.
+
+**Layers** follow the AIA convention and are prefixed per storey, so a
+three-storey house opens with its levels separable:
+`L00-A-WALL`, `L00-A-DOOR`, `L00-A-GLAZ`, `L00-A-FURN`, `L00-A-AREA`,
+`L00-A-AREA-IDEN`, `L00-A-ANNO-DIMS`, then `L01-…` and so on. Every layer is
+declared in the LAYER table with a drafting colour, not just referenced.
+
+**Walls** are drawn as their two FACES with the openings cut out — how CAD
+actually represents a wall, rather than as centrelines. The faces run between
+the mitred corners so the end caps close on them exactly; drawing them on the
+wall axis instead left the caps protruding half a thickness and the plan
+measured 10 cm over on a round trip.
+
+**Doors** get a leaf, jambs and a real 90° `ARC` swing. **Windows** get glazing
+lines and reveals. **Rooms** get a boundary plus name and area as TEXT.
+**Furniture** exports as wireframe plan symbols on `A-FURN` — the same SVG
+symbols the 2D canvas already draws, flattened to line work by a new pure
+`flattenPath` (M L H V C S Q T A Z, absolute and relative). Doing that without
+the DOM keeps the export testable in plain Node and stops a library module
+depending on a browser. Overall dimensions go on the annotation layer.
+
+Output is ASCII DXF R12 — the most widely readable interchange format there is,
+and every entity is a LINE, ARC or TEXT so nothing can misread it. DWG proper is
+a closed binary format with no practical browser-side writer; every CAD
+application opens DXF.
+
+### The test that matters
+Export, then read it back with our own importer. On the sample home:
+**6 walls → 6, 3 rooms → 3, 13 openings → 12**, plan 11.0 × 8.5 m → 11.1 × 8.6 m.
+The importer classifies every layer correctly, so the 2,927 furniture segments
+and the dimension lines stay out of the walls. Multi-storey round-trips too —
+the `L00-`/`L01-` prefixes come back as separate floors.
+
+Size is preserved to within half a wall thickness by design: the importer runs
+centrelines out to the outer face at corners so the loops close for room
+detection, which measures the outer ring fractionally large.
+
+### Changed — the classifier learned the AIA names
+`A-GLAZ` (glazing), `A-FLOR-STRS` (stairs), `A-AREA` and `A-FURN` are now
+recognised on import. That was needed to read our own exports back, and it
+improves imports from any UK/US practice using the standard.
+
 ## 1.1.1 - 2026-07-26 (versionCode 10101)
 
 **Corrects 1.1.0.** That entry justified an indirect approach to openings with a

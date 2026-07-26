@@ -10,6 +10,7 @@ import {
   Box,
   Check,
   Download,
+  Ruler,
   FileImage,
   FileText,
   ClipboardList,
@@ -20,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
-import { exportPlanPNG, exportPlanPDF } from '../lib/planExport';
+import { exportPlanPNG, exportPlanPDF, exportPlanDXF } from '../lib/planExport';
 import { toast } from '../lib/ui';
 import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { requirePro } from '../lib/pro';
@@ -143,10 +144,10 @@ export default function Toolbar({
     }
   };
 
-  const runExport = async (kind: 'png' | 'pdf') => {
+  const runExport = async (kind: 'png' | 'pdf' | 'dxf') => {
     setExportOpen(false);
     // PDF export is a Pro feature (PNG stays free).
-    if (kind === 'pdf' && !requirePro('pdfExport')) return;
+    if ((kind === 'pdf' || kind === 'dxf') && !requirePro('pdfExport')) return;
     // Clear selection so editing handles don't appear in the export, then let
     // React drop those nodes before we rasterise the stage.
     s.clearSelection();
@@ -155,6 +156,10 @@ export default function Toolbar({
       if (kind === 'png') {
         const ok = await exportPlanPNG(s.projectName);
         if (ok) toast.success(t('Plan exported as PNG'));
+        else toast.info(t('Nothing to export yet — add walls or rooms first'));
+      } else if (kind === 'dxf') {
+        const ok = await exportPlanDXF(s.projectName);
+        if (ok) toast.success(t('Plan exported as a layered DXF drawing'));
         else toast.info(t('Nothing to export yet — add walls or rooms first'));
       } else {
         const pages = await exportPlanPDF(s.projectName);
@@ -224,6 +229,10 @@ export default function Toolbar({
                 </button>
                 <button role="menuitem" onClick={() => runExport('pdf')}>
                   <FileText className="icon" /> {t('PDF document')}
+                  {!isPro && <span className="pro-tag">PRO</span>}
+                </button>
+                <button role="menuitem" onClick={() => runExport('dxf')}>
+                  <Ruler className="icon" /> {t('DXF for CAD')}
                   {!isPro && <span className="pro-tag">PRO</span>}
                 </button>
                 <button

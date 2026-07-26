@@ -4,7 +4,7 @@
 // floor area) plus a summary page with a per-room area schedule, the total
 // living area and a doors & windows schedule.
 import { planCapture, type PlanShot } from './renderBridge';
-import { saveImage } from './native';
+import { saveImage, saveText } from './native';
 import { slugify as slug, APP_NAME } from './appInfo';
 import { applyWatermark } from './watermark';
 import { useProStore } from '../store/proStore';
@@ -12,6 +12,7 @@ import { useDesign } from '../store/designStore';
 import { formatArea, formatLength, type Units } from './units';
 import { buildFloorSchedules, buildOpeningSchedule } from './planSchedule';
 import { buildBom } from './bom';
+import { buildDxf } from './dxfExport';
 import { t, useLang } from './i18n';
 
 /** Capture the current design as a framed PNG data URL (null if empty). */
@@ -302,4 +303,25 @@ export async function exportPlanPDF(projectName: string): Promise<number> {
   const dataUri = pdf.output('datauristring');
   await saveImage(dataUri, `${slug(projectName)}-plan.pdf`);
   return pages;
+}
+
+/**
+ * Save the design as a layered DXF CAD drawing — one set of AIA-style layers
+ * per storey, walls drawn as faces with the openings cut out, and furniture as
+ * wireframe plan symbols. Returns false when there is nothing to export.
+ */
+export async function exportPlanDXF(projectName: string): Promise<boolean> {
+  const s = useDesign.getState();
+  const geom: Parameters<typeof buildDxf>[0]['geom'] = {};
+  let anything = false;
+  for (const f of s.floors) {
+    const g = s.floorGeom[f.id];
+    if (!g) continue;
+    if (g.walls.length || g.rooms.length || g.furniture.length) anything = true;
+    geom[f.id] = { walls: g.walls, rooms: g.rooms, furniture: g.furniture, openings: g.openings };
+  }
+  if (!anything) return false;
+  const dxf = buildDxf({ projectName, floors: s.floors, geom });
+  await saveText(dxf, `${slug(projectName)}.dxf`, 'application/dxf');
+  return true;
 }
