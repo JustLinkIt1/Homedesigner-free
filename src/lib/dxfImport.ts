@@ -2,6 +2,8 @@ import DxfParser from 'dxf-parser';
 import type { Point, Wall } from '../types';
 import { boundsOf, dist, uid } from './geometry';
 import { classifyLayer, isDemolished, storeyOf, type LayerKind } from './dxfLayers';
+import { wallCentrelines } from './wallCentrelines';
+import { snapCorners } from './wallBuilder';
 
 interface RawSegment {
   a: Point;
@@ -143,6 +145,8 @@ export interface DxfImportResult {
   layerAware: boolean;
   /** Segments dropped because their layer is demolition work. */
   demolishedDropped: number;
+  /** Segments sitting on demolition layers, whether or not they were dropped. */
+  demolishedCount: number;
 }
 
 export function importDxf(
@@ -152,8 +156,13 @@ export function importDxf(
     wallThickness: number;
     unitScale?: number;
     minLen?: number;
-    /** Import demolition layers too (default false). */
-    includeDemolished?: boolean;
+    /**
+     * Leave out layers marked as demolition work, giving the PROPOSED state.
+     * Off by default: those walls are existing fabric that is physically there,
+     * and dropping them punches holes in the shell — on a measured file the
+     * ground floor went from 4 rooms and a 69 m2 footprint down to 2 and 49 m2.
+     */
+    excludeDemolished?: boolean;
     /** Restrict to one storey index; omit for all. */
     storey?: number;
   },
@@ -173,7 +182,7 @@ export function importDxf(
 
   let segs = all.filter(wanted);
   const beforeDemo = segs.length;
-  if (!opts.includeDemolished) segs = segs.filter((s) => !s.demolished);
+  if (opts.excludeDemolished) segs = segs.filter((s) => !s.demolished);
   const demolishedDropped = beforeDemo - segs.length;
   if (opts.storey !== undefined) segs = segs.filter((s) => (s.storey ?? 0) === opts.storey);
 
@@ -207,33 +216,46 @@ export function importDxf(
   const pts = segs.flatMap((s) => [s.a, s.b]);
   const { min } = pts.length ? boundsOf(pts) : { min: { x: 0, y: 0 } };
 
-  const toWall = (s: RawSegment): Wall | null => {
-    // Translate to origin and scale to cm. DXF Y is up; our plan Y is down.
-    const a: Point = { x: (s.a.x - min.x) * unitScale, y: -(s.a.y - min.y) * unitScale };
-    const b: Point = { x: (s.b.x - min.x) * unitScale, y: -(s.b.y - min.y) * unitScale };
-    // Reject malformed (non-finite) coordinates from a corrupt DXF.
-    if (![a.x, a.y, b.x, b.y].every(Number.isFinite)) return null;
-    if (dist(a, b) < minLen) return null;
-    return {
-      id: uid(),
-      start: a,
-      end: b,
-      thickness: opts.wallThickness,
-      height: opts.wallHeight,
-      color: '#ece6db',
-    };
-  };
+  // Translate to origin and scale to cm. DXF Y is up; our plan Y is down.
+  const toPlan = (p: Point): Point => ({ x: (p.x - min.x) * unitScale, y: -(p.y - min.y) * unitScale });
+
+  // Collapse wall FACES into centrelines, per storey. CAD draws each wall as a
+  // closed outline; importing the faces directly doubles every wall and leaves
+  // room detection walking the inside of wall rectangles instead of the rooms.
+  // Done per storey so a face on one level can't pair with one on another.
+  const segsByStorey = new Map<number, RawSegment[]>();
+  for (const s of segs) {
+    const idx = s.storey ?? 0;
+    const list = segsByStorey.get(idx) ?? [];
+    list.push(s);
+    segsByStorey.set(idx, list);
+  }
 
   const byStorey = new Map<number, Wall[]>();
   const walls: Wall[] = [];
-  for (const s of segs) {
-    const w = toWall(s);
-    if (!w) continue;
-    walls.push(w);
-    const idx = s.storey ?? 0;
-    const list = byStorey.get(idx) ?? [];
-    list.push(w);
-    byStorey.set(idx, list);
+  for (const [idx, list] of segsByStorey) {
+    const planSegs = list
+      .map((s) => ({ a: toPlan(s.a), b: toPlan(s.b) }))
+      .filter((s) => [s.a.x, s.a.y, s.b.x, s.b.y].every(Number.isFinite));
+    const centrelines = wallCentrelines(planSegs, { minLength: minLen });
+    const made: Wall[] = [];
+    for (const c of centrelines) {
+      if (dist(c.a, c.b) < minLen) continue;
+      made.push({
+        id: uid(),
+        start: c.a,
+        end: c.b,
+        // A paired wall knows its own thickness; a single-line one does not.
+        thickness: c.paired ? Math.round(c.thickness) : opts.wallThickness,
+        height: opts.wallHeight,
+        color: '#ece6db',
+      });
+    }
+    // Centrelines already run out to the outer face at corners; this closes
+    // what is left — chiefly walls interrupted by a door-width opening.
+    snapCorners(made, 90);
+    walls.push(...made);
+    byStorey.set(idx, made);
   }
 
   const storeys: DxfStorey[] = [...byStorey.entries()]
@@ -265,5 +287,6 @@ export function importDxf(
     kindCounts,
     layerAware,
     demolishedDropped,
+    demolishedCount: all.filter((s) => s.demolished && wanted(s)).length,
   };
 }

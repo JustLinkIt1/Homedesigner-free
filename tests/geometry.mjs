@@ -15,6 +15,7 @@ export { offsetPolygon, orientedBox, boxFillRatio } from '${process.cwd()}/src/l
 export { detectBuildingOutline, detectRooms } from '${process.cwd()}/src/lib/roomDetection.ts';
 export { polygonArea } from '${process.cwd()}/src/lib/geometry.ts';
 export { buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines } from '${process.cwd()}/src/lib/roofGeometry.ts';
+export { wallCentrelines } from '${process.cwd()}/src/lib/wallCentrelines.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${process.cwd()}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${process.cwd()}/src/lib/roof.ts';
 `);
@@ -27,7 +28,7 @@ const {
   offsetPolygon, orientedBox, boxFillRatio, detectBuildingOutline, polygonArea,
   buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
-  classifyLayer, storeyOf, isDemolished,
+  classifyLayer, storeyOf, isDemolished, wallCentrelines,
 } = await import(out);
 
 let fails = 0;
@@ -296,6 +297,95 @@ const bboxOf = (geo) => {
   check('layer: demolition detected', isDemolished('0._ _1_D\ufffdmoli_Portes Archicad'));
   check('layer: new work is not demolition', !isDemolished('0._ _1_Nouveau_Portes Archicad'));
   check('layer: unknown stays unknown', classifyLayer('Layer1') === 'unknown');
+}
+
+// ---- wall centrelines from outlines --------------------------------------
+// CAD draws a wall as its two FACES. These must collapse to one centreline with
+// the real thickness, or every wall imports doubled and room detection fails.
+const seg = (x1, y1, x2, y2) => ({ a: { x: x1, y: y1 }, b: { x: x2, y: y2 } });
+/** The two long faces of a wall from (x1,y1) to (x2,y2) of thickness t. */
+const faces = (x1, y1, x2, y2, t) => {
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+  const nx = (-dy / L) * (t / 2), ny = (dx / L) * (t / 2);
+  return [
+    seg(x1 + nx, y1 + ny, x2 + nx, y2 + ny),
+    seg(x1 - nx, y1 - ny, x2 - nx, y2 - ny),
+  ];
+};
+const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
+
+{
+  const cl = wallCentrelines(faces(0, 0, 500, 0, 20));
+  check('centreline: one wall from two faces', cl.length === 1, `got ${cl.length}`);
+  if (cl[0]) {
+    check('centreline: thickness recovered', near(cl[0].thickness, 20, 0.01), `got ${cl[0].thickness}`);
+    check('centreline: sits between the faces', near(cl[0].a.y, 0, 0.01) && near(cl[0].b.y, 0, 0.01));
+    check('centreline: full length', near(clLen(cl[0]), 500, 0.01), `got ${clLen(cl[0])}`);
+  }
+}
+{
+  // A closed rectangle: two long faces plus two end caps. The caps are short
+  // and perpendicular, and must not survive as walls.
+  const r = [
+    seg(0, -10, 500, -10), seg(500, -10, 500, 10),
+    seg(500, 10, 0, 10), seg(0, 10, 0, -10),
+  ];
+  const cl = wallCentrelines(r);
+  check('centreline: wall rectangle gives exactly one wall', cl.length === 1, JSON.stringify(cl.map(clLen)));
+  if (cl[0]) check('centreline: rectangle thickness', near(cl[0].thickness, 20, 0.01));
+}
+{
+  // Skewed wall — real plots are not square to the page.
+  const t = 24, ang = (13 * Math.PI) / 180;
+  const x2 = 600 * Math.cos(ang), y2 = 600 * Math.sin(ang);
+  const cl = wallCentrelines(faces(0, 0, x2, y2, t));
+  check('centreline: skewed wall pairs', cl.length === 1 && near(cl[0].thickness, t, 0.05),
+    JSON.stringify(cl.map((c) => c.thickness)));
+  if (cl[0]) check('centreline: skewed length', near(clLen(cl[0]), 600, 0.05), `got ${clLen(cl[0])}`);
+}
+{
+  // Opposite walls of a 3 m room must NOT pair into one fat wall.
+  const cl = wallCentrelines([seg(0, 0, 500, 0), seg(0, 300, 500, 300)]);
+  check('centreline: room width is not a wall', cl.every((c) => !c.paired), JSON.stringify(cl.map((c) => c.thickness)));
+}
+{
+  // A face broken by a door opening still yields one continuous wall.
+  const [top, bot] = faces(0, 0, 600, 0, 20);
+  const broken = [
+    seg(top.a.x, top.a.y, 200, top.a.y),
+    seg(290, top.a.y, top.b.x, top.b.y), // 90cm door gap
+    bot,
+  ];
+  const cl = wallCentrelines(broken);
+  check('centreline: door gap bridged', cl.length === 1 && near(clLen(cl[0]), 600, 1), JSON.stringify(cl.map(clLen)));
+}
+{
+  // Two parallel walls 40cm apart (a service duct) must stay two walls.
+  const cl = wallCentrelines([...faces(0, 0, 400, 0, 15), ...faces(0, 60, 400, 60, 15)]);
+  const paired = cl.filter((c) => c.paired);
+  check('centreline: adjacent walls stay separate', paired.length === 2, JSON.stringify(paired.map((c) => c.thickness)));
+}
+{
+  // A single-line wall (some plans draw thin walls with one stroke) survives.
+  const cl = wallCentrelines([seg(0, 0, 400, 0)]);
+  check('centreline: long single line kept', cl.length === 1 && cl[0].paired === false);
+  // Short stray strokes (furniture, hatch ticks) do not.
+  check('centreline: short stray dropped', wallCentrelines([seg(0, 0, 30, 0)]).length === 0);
+}
+{
+  check('centreline: empty input is safe', wallCentrelines([]).length === 0);
+}
+{
+  // A full rectangular room drawn as wall outlines -> 4 centrelines.
+  const W = 600, H = 400, t = 20;
+  const outline = [
+    ...faces(0, 0, W, 0, t), ...faces(W, 0, W, H, t),
+    ...faces(W, H, 0, H, t), ...faces(0, H, 0, 0, t),
+  ];
+  const cl = wallCentrelines(outline);
+  const paired = cl.filter((c) => c.paired);
+  check('centreline: four-wall room gives four walls', paired.length === 4, `got ${paired.length} of ${cl.length}`);
+  check('centreline: all thicknesses correct', paired.every((c) => near(c.thickness, t, 0.05)));
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

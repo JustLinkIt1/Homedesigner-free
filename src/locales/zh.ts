@@ -617,4 +617,6 @@ export const ZH: Record<string, string> = {
   'storeys found — they will be stacked as separate floors.': '层 — 将堆叠为独立楼层。',
   'Imported': '已导入',
   'floors': '层',
+  'Leave out the': '排除',
+  'lines on demolition layers (shows the proposed state).': '拆除图层上的线条（显示改造后状态）。',
 };

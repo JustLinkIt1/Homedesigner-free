@@ -617,4 +617,6 @@ export const JA: Record<string, string> = {
   'storeys found — they will be stacked as separate floors.': '階を検出 — 別々のフロアとして積み重ねます。',
   'Imported': '読み込み完了',
   'floors': '階',
+  'Leave out the': '除外:',
+  'lines on demolition layers (shows the proposed state).': '解体レイヤーの線（計画後の状態を表示）。',
 };

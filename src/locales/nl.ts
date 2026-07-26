@@ -617,4 +617,6 @@ export const NL: Record<string, string> = {
   'storeys found — they will be stacked as separate floors.': 'verdiepingen gevonden — ze worden als aparte etages gestapeld.',
   'Imported': 'Geïmporteerd',
   'floors': 'etages',
+  'Leave out the': 'Laat de',
+  'lines on demolition layers (shows the proposed state).': 'lijnen op sloop-lagen weg (toont de nieuwe situatie).',
 };

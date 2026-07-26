@@ -617,4 +617,6 @@ export const TR: Record<string, string> = {
   'storeys found — they will be stacked as separate floors.': 'kat bulundu — ayrı katlar olarak üst üste yerleştirilecek.',
   'Imported': 'İçe aktarıldı',
   'floors': 'kat',
+  'Leave out the': 'Şunları hariç tut:',
+  'lines on demolition layers (shows the proposed state).': 'yıkım katmanlarındaki çizgiler (önerilen durumu gösterir).',
 };

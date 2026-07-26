@@ -5,6 +5,62 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.99 - 2026-07-26 (versionCode 10099)
+
+The centreline fix promised in 1.0.98's "known, not fixed".
+
+### Added — wall centrelines from wall outlines
+CAD does not draw a wall as a line down its middle; it draws the wall's two
+faces, usually as a closed rectangle per wall. HomeDesigner's model is the
+opposite — a wall IS a centreline plus a thickness. Importing faces directly
+doubled every wall and left room detection walking the inside of wall rectangles
+instead of the rooms, so a 6 × 22 m house reported a 10 m² footprint.
+
+New `src/lib/wallCentrelines.ts` finds pairs of parallel faces that sit a
+plausible wall-thickness apart and overlap along their length, and emits the line
+between them. Two details matter more than the pairing itself:
+
+- **Corners.** A wall's two faces do not end together: the outer face carries on
+  past a junction while the inner one stops at the internal corner. Truncating
+  the centreline to their overlap left every corner open by a wall thickness and
+  room detection found nothing. Centrelines now run out to the outer face, capped
+  at one wall thickness so a long shared face can't drag a wall past its end.
+- **Openings.** Faces are broken at every door and window, so runs are merged
+  across gaps up to 260 cm before pairing.
+
+Everything happens in a rotated frame per direction cluster, so skewed plans —
+which real plots almost always are — work the same as square ones. The
+perpendicular distance gives each wall its **real thickness** instead of a flat
+default: the measured files now carry walls from 6 cm to 39 cm.
+
+Measured on the architect's three-storey DWG, per floor:
+
+| | walls | rooms | footprint |
+|---|---|---|---|
+| before | 101 / 121 / 110 | 2 / 1 / 6 | 125 / 87 / 104 m² (shell only) |
+| after | 26 / 31 / 11 | 4 / 7 / 5 | 69 / 95 / 100 m² |
+
+### Changed — demolition layers are kept by default
+Dropping them punches holes in the shell: those walls are existing fabric that is
+physically there. On the measured file the ground floor fell from 4 rooms and a
+69 m² footprint to 2 and 49 m². The import dialog now offers a checkbox to leave
+them out instead, which gives the proposed rather than the existing state.
+
+### Tests
+16 new centreline assertions in `tests/geometry.mjs`: thickness recovery, skewed
+walls, a closed wall rectangle collapsing to exactly one wall, a door gap being
+bridged, and — the cases that keep this honest — opposite walls of a room NOT
+pairing into one fat wall, adjacent walls staying separate, and short strays
+being dropped.
+
+### Known
+The smoke suite's `Side Table` check is intermittently timing out in this
+container (3 failures, 2 clean runs across five attempts, always the same
+assertion). It is unrelated to import — the catalog renders a live WebGL preview
+per item and Playwright's actionability wait doesn't settle under software
+rendering. An attempted fix made it worse and was reverted rather than shipped
+unverified.
+
 ## 1.0.98 - 2026-07-26 (versionCode 10098)
 
 Plan import, part two — driven by three real plans and three real DWG files

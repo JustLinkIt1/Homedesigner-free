@@ -47,7 +47,8 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
 
   // dxf state
   const [dxfText, setDxfText] = useState<string | null>(null);
-  const [dxfInfo, setDxfInfo] = useState<{ count: number; unit: number; floors: number; layerAware: boolean; dimensions: number } | null>(null);
+  const [excludeDemolished, setExcludeDemolished] = useState(false);
+  const [dxfInfo, setDxfInfo] = useState<{ count: number; unit: number; floors: number; layerAware: boolean; dimensions: number; demolished: number } | null>(null);
 
   const cmPerPx = rendered ? (realWidthM * 100) / rendered.width : 1;
 
@@ -116,6 +117,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
           floors: res.storeys.filter((st) => st.walls.length > 0).length,
           layerAware: res.layerAware,
           dimensions: res.kindCounts.dimension ?? 0,
+          demolished: res.demolishedCount,
         });
         setStage('dxf');
       } else {
@@ -181,6 +183,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     const res = importDxf(dxfText, {
       wallHeight: s.defaultWallHeight,
       wallThickness: s.defaultWallThickness,
+      excludeDemolished,
     });
     // A CAD file names its storeys on the layers ("0._ _1_", "1._ _2_", ...),
     // and architects lay them out side by side in model space. Import each one
@@ -357,6 +360,19 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
                   {t('Layers recognised — using the wall layers only.')}
                   {dxfInfo.dimensions > 0 && ` ${t('Skipped')} ${dxfInfo.dimensions} ${t('dimension lines.')}`}
                 </p>
+              )}
+              {dxfInfo.demolished > 0 && (
+                <label className="auto-row" style={{ marginTop: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={excludeDemolished}
+                    onChange={(e) => setExcludeDemolished(e.target.checked)}
+                  />
+                  <span>
+                    {t('Leave out the')} {dxfInfo.demolished}{' '}
+                    {t('lines on demolition layers (shows the proposed state).')}
+                  </span>
+                </label>
               )}
               {dxfInfo.floors > 1 && (
                 <p className="muted">

@@ -44,7 +44,7 @@ export function segmentsToWalls(
  * what let room auto-detection find enclosed areas (CubiCasa-style cleanup,
  * done with simple snapping rather than an ML model).
  */
-function snapCorners(walls: Wall[], tol: number): void {
+export function snapCorners(walls: Wall[], tol: number): void {
   // Two rounds: clustering closes point-to-point gaps, projection closes
   // T-junctions (an endpoint stopping just short of another wall's body).
   // A second round catches corners that only line up after the first fixes

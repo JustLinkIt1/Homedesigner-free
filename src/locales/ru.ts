@@ -617,4 +617,6 @@ export const RU: Record<string, string> = {
   'storeys found — they will be stacked as separate floors.': 'этажей найдено — они будут сложены как отдельные этажи.',
   'Imported': 'Импортировано',
   'floors': 'этажей',
+  'Leave out the': 'Исключить',
+  'lines on demolition layers (shows the proposed state).': 'линий на слоях сноса (показывает проектное состояние).',
 };

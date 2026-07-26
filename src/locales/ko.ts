@@ -617,4 +617,6 @@ export const KO: Record<string, string> = {
   'storeys found — they will be stacked as separate floors.': '층을 찾았습니다 — 별도의 층으로 쌓입니다.',
   'Imported': '가져옴',
   'floors': '층',
+  'Leave out the': '제외:',
+  'lines on demolition layers (shows the proposed state).': '철거 레이어의 선 (계획된 상태를 표시).',
 };

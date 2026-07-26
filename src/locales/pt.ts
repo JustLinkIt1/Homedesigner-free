@@ -617,4 +617,6 @@ export const PT: Record<string, string> = {
   'storeys found — they will be stacked as separate floors.': 'pavimentos encontrados — serão empilhados como andares separados.',
   'Imported': 'Importado',
   'floors': 'andares',
+  'Leave out the': 'Ignorar as',
+  'lines on demolition layers (shows the proposed state).': 'linhas das camadas de demolição (mostra o estado proposto).',
 };
