@@ -1,8 +1,9 @@
 import DxfParser from 'dxf-parser';
-import type { Point, Wall } from '../types';
+import type { Opening, Point, Wall } from '../types';
 import { boundsOf, dist, uid } from './geometry';
 import { classifyLayer, isDemolished, storeyOf, type LayerKind } from './dxfLayers';
 import { wallCentrelines } from './wallCentrelines';
+import { classifyOpening, symbolSpansOnWall, OPENING_DEFAULTS, type KindedSeg } from './dxfOpenings';
 import { snapCorners } from './wallBuilder';
 
 interface RawSegment {
@@ -131,12 +132,16 @@ export interface DxfStorey {
   /** Index from the layer prefix (0 = ground) — or 0 when the file has none. */
   index: number;
   walls: Wall[];
+  /** Doors and windows cut into this storey's walls. */
+  openings: Opening[];
 }
 
 export interface DxfImportResult {
   walls: Wall[];
   unitScale: number;
   segmentCount: number;
+  /** Doors and windows across every storey. */
+  openings: Opening[];
   /** Storeys found in the drawing. Always at least one. */
   storeys: DxfStorey[];
   /** How many segments each layer kind contributed, for the import summary. */
@@ -231,17 +236,34 @@ export function importDxf(
     segsByStorey.set(idx, list);
   }
 
-  const byStorey = new Map<number, Wall[]>();
+  // Door and window symbols, kept per storey so they can label that storey's
+  // holes. These never become walls; they only say what each hole is.
+  const symbolsByStorey = new Map<number, KindedSeg[]>();
+  for (const s of all) {
+    if (s.kind !== 'door' && s.kind !== 'window') continue;
+    if (!opts.excludeDemolished || !s.demolished) {
+      const idx = s.storey ?? 0;
+      const list = symbolsByStorey.get(idx) ?? [];
+      list.push({ a: toPlan(s.a), b: toPlan(s.b), kind: s.kind });
+      symbolsByStorey.set(idx, list);
+    }
+  }
+
+  const byStorey = new Map<number, { walls: Wall[]; openings: Opening[] }>();
   const walls: Wall[] = [];
+  const openings: Opening[] = [];
   for (const [idx, list] of segsByStorey) {
     const planSegs = list
       .map((s) => ({ a: toPlan(s.a), b: toPlan(s.b) }))
       .filter((s) => [s.a.x, s.a.y, s.b.x, s.b.y].every(Number.isFinite));
     const centrelines = wallCentrelines(planSegs, { minLength: minLen });
+    const symbols = symbolsByStorey.get(idx) ?? [];
     const made: Wall[] = [];
+    const madeOpenings: Opening[] = [];
     for (const c of centrelines) {
-      if (dist(c.a, c.b) < minLen) continue;
-      made.push({
+      const wallLen = dist(c.a, c.b);
+      if (wallLen < minLen) continue;
+      const wall: Wall = {
         id: uid(),
         start: c.a,
         end: c.b,
@@ -249,18 +271,65 @@ export function importDxf(
         thickness: c.paired ? Math.round(c.thickness) : opts.wallThickness,
         height: opts.wallHeight,
         color: '#ece6db',
-      });
+      };
+      made.push(wall);
+
+      // Each hole in this wall becomes a door or a window, per the symbol
+      // nearest its centre. Holes with no symbol beside them are still real
+      // holes — they import as doorless passages rather than being discarded.
+      const onThisWall: Opening[] = [];
+      const add = (type: 'door' | 'window', offset: number, width: number, style?: 'passage') => {
+        // One hole per stretch of wall.
+        const c0 = offset * wallLen;
+        const clash = onThisWall.some(
+          (o) => Math.abs(o.offset * wallLen - c0) < (o.width + width) / 2,
+        );
+        if (clash) return;
+        const d = OPENING_DEFAULTS[type];
+        onThisWall.push({
+          id: uid(),
+          wallId: wall.id,
+          type,
+          style,
+          offset,
+          width: Math.round(width),
+          height: d.height,
+          sill: d.sill,
+        });
+      };
+
+      for (const g of c.gaps) {
+        const centre = {
+          x: c.a.x + (c.b.x - c.a.x) * g.offset,
+          y: c.a.y + (c.b.y - c.a.y) * g.offset,
+        };
+        const kind = classifyOpening(centre, g.width / 2 + 60, symbols);
+        add(kind ?? 'door', g.offset, g.width, kind === null ? 'passage' : undefined);
+      }
+
+      // Windows usually leave no hole — the wall runs straight through them —
+      // so they are read from their own layer instead. Anything overlapping a
+      // hole already found is skipped by `add`.
+      const windowSyms = symbols.filter((sy) => sy.kind === 'window');
+      if (windowSyms.length) {
+        for (const span of symbolSpansOnWall(wall, windowSyms)) {
+          add('window', span.offset, span.width);
+        }
+      }
+      madeOpenings.push(...onThisWall);
     }
     // Centrelines already run out to the outer face at corners; this closes
-    // what is left — chiefly walls interrupted by a door-width opening.
+    // what is left. Openings are stored as a FRACTION along their wall, so
+    // they follow the endpoints this moves.
     snapCorners(made, 90);
     walls.push(...made);
-    byStorey.set(idx, made);
+    openings.push(...madeOpenings);
+    byStorey.set(idx, { walls: made, openings: madeOpenings });
   }
 
   const storeys: DxfStorey[] = [...byStorey.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([index, ws]) => ({ index, walls: ws }));
+    .map(([index, v]) => ({ index, walls: v.walls, openings: v.openings }));
 
   // Architects lay the storeys out SIDE BY SIDE in model space, but a building
   // stacks them. Bring each storey back to a common origin by its own bounding
@@ -283,7 +352,8 @@ export function importDxf(
     walls,
     unitScale,
     segmentCount: segs.length,
-    storeys: storeys.length ? storeys : [{ index: 0, walls }],
+    openings,
+    storeys: storeys.length ? storeys : [{ index: 0, walls, openings }],
     kindCounts,
     layerAware,
     demolishedDropped,

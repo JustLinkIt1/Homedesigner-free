@@ -16,6 +16,7 @@ export { detectBuildingOutline, detectRooms } from '${process.cwd()}/src/lib/roo
 export { polygonArea } from '${process.cwd()}/src/lib/geometry.ts';
 export { buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines } from '${process.cwd()}/src/lib/roofGeometry.ts';
 export { wallCentrelines } from '${process.cwd()}/src/lib/wallCentrelines.ts';
+export { classifyOpening } from '${process.cwd()}/src/lib/dxfOpenings.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${process.cwd()}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${process.cwd()}/src/lib/roof.ts';
 `);
@@ -28,7 +29,7 @@ const {
   offsetPolygon, orientedBox, boxFillRatio, detectBuildingOutline, polygonArea,
   buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
-  classifyLayer, storeyOf, isDemolished, wallCentrelines,
+  classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
 } = await import(out);
 
 let fails = 0;
@@ -386,6 +387,76 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   const paired = cl.filter((c) => c.paired);
   check('centreline: four-wall room gives four walls', paired.length === 4, `got ${paired.length} of ${cl.length}`);
   check('centreline: all thicknesses correct', paired.every((c) => near(c.thickness, t, 0.05)));
+}
+
+// ---- openings: holes in the wall, classified by the symbol layers ---------
+// The hole itself comes from wallCentrelines (both faces stop and restart);
+// the door/window layers only say which kind it is.
+{
+  // A 6 m wall with a 90 cm hole at 2 m, drawn as two wall rectangles.
+  const t = 20;
+  const piece = (x0, x1) => [
+    { a: { x: x0, y: -t / 2 }, b: { x: x1, y: -t / 2 } },
+    { a: { x: x0, y: t / 2 }, b: { x: x1, y: t / 2 } },
+  ];
+  const cl = wallCentrelines([...piece(0, 200), ...piece(290, 600)]);
+  check('opening: wall with a hole is still one wall', cl.length === 1, JSON.stringify(cl.map((c) => c.gaps)));
+  if (cl[0]) {
+    check('opening: one hole found', cl[0].gaps.length === 1, JSON.stringify(cl[0].gaps));
+    if (cl[0].gaps[0]) {
+      check('opening: hole width measured', near(cl[0].gaps[0].width, 90, 0.5), `got ${cl[0].gaps[0].width}`);
+      check('opening: hole position measured', near(cl[0].gaps[0].offset, 245 / 600, 0.01),
+        `got ${cl[0].gaps[0].offset}`);
+    }
+  }
+}
+{
+  // A break in ONE face only is not an opening — it is a wall butting in, or a
+  // drafting artefact. Both faces must be pierced.
+  const t = 20;
+  const segs = [
+    { a: { x: 0, y: -t / 2 }, b: { x: 200, y: -t / 2 } },
+    { a: { x: 290, y: -t / 2 }, b: { x: 600, y: -t / 2 } },
+    { a: { x: 0, y: t / 2 }, b: { x: 600, y: t / 2 } }, // unbroken face
+  ];
+  const cl = wallCentrelines(segs);
+  check('opening: one-sided break is not an opening', cl[0] && cl[0].gaps.length === 0,
+    JSON.stringify(cl.map((c) => c.gaps)));
+}
+{
+  // Two holes in one wall.
+  const t = 20;
+  const piece = (x0, x1) => [
+    { a: { x: x0, y: -t / 2 }, b: { x: x1, y: -t / 2 } },
+    { a: { x: x0, y: t / 2 }, b: { x: x1, y: t / 2 } },
+  ];
+  const cl = wallCentrelines([...piece(0, 150), ...piece(250, 500), ...piece(620, 900)]);
+  check('opening: two holes in one wall', cl[0] && cl[0].gaps.length === 2,
+    JSON.stringify(cl[0] && cl[0].gaps));
+}
+{
+  // A gap wider than maxOpening is the wall ending, not a hole.
+  const t = 20;
+  const piece = (x0, x1) => [
+    { a: { x: x0, y: -t / 2 }, b: { x: x1, y: -t / 2 } },
+    { a: { x: x0, y: t / 2 }, b: { x: x1, y: t / 2 } },
+  ];
+  const cl = wallCentrelines([...piece(0, 150), ...piece(600, 900)], { gapTol: 600 });
+  const holes = cl.reduce((n, c) => n + c.gaps.length, 0);
+  check('opening: an over-wide gap is not a hole', holes === 0, JSON.stringify(cl.map((c) => c.gaps)));
+}
+{
+  // Classification from the symbol layers.
+  const doorSym = [{ kind: 'door', a: { x: 240, y: 0 }, b: { x: 240, y: 80 } }];
+  const winSym = [{ kind: 'window', a: { x: 240, y: -2 }, b: { x: 300, y: -2 } }];
+  check('opening: classified as a door', classifyOpening({ x: 245, y: 0 }, 60, doorSym) === 'door');
+  check('opening: classified as a window', classifyOpening({ x: 245, y: 0 }, 60, winSym) === 'window');
+  // Window sits 2cm from the probe, door 5cm: the nearer one decides.
+  check('opening: nearest symbol wins',
+    classifyOpening({ x: 245, y: 0 }, 60, [...doorSym, ...winSym]) === 'window');
+  check('opening: distant symbols ignored',
+    classifyOpening({ x: 245, y: 0 }, 20, [{ kind: 'door', a: { x: 900, y: 900 }, b: { x: 950, y: 900 } }]) === null);
+  check('opening: no symbols is unclassified', classifyOpening({ x: 0, y: 0 }, 50, []) === null);
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

@@ -5,6 +5,49 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.1.0 - 2026-07-26 (versionCode 10100)
+
+Doors and windows on CAD import.
+
+### Added — openings come in with the walls
+The obvious approach — read the door symbols — was tried and abandoned, and the
+reason is worth recording. A door in plan is jambs plus a leaf plus a 90° swing
+arc sweeping a door's-width into the room, so its raw extent is roughly twice the
+real opening; and its parts only group together reliably when the draughtsman
+happened to make them touch. Both problems disappear if you measure the **hole in
+the wall** instead, which is data we were already computing and discarding:
+`wallCentrelines` bridges breaks in each wall face, and where BOTH faces break at
+the same place, that is an opening — located and sized exactly. A break in only
+one face is a wall butting in, not a hole, so the two faces' gaps are intersected.
+
+Door widths on the measured file come out at 91, 92, 97 and 101 cm. Holes with no
+symbol beside them import as doorless passages rather than being dropped.
+
+Windows needed a second route. Measured on the same file, ArchiCAD cuts the wall
+polygon for doors but runs it straight **through** windows, which are drawn as
+glazing lines over unbroken wall — so the hole method finds the doors and almost
+no windows. A window suits being read from its symbol precisely where a door does
+not: its lines run along the opening for its full width, so projecting the parts
+that lie inside the wall onto the wall's axis gives a band whose extent is the
+opening. `symbolSpansOnWall` does that; doors keep using wall gaps.
+
+Height and sill are not in a 2D plan, so they take sensible defaults (door
+205/0 cm, window 120/90 cm) and are editable like any other opening.
+
+### Coverage, honestly
+This finds a useful subset, not everything: 9 openings across the three storeys
+of the measured file, where the drawing has appreciably more. The ones it finds
+are accurate — correct wall, correct position, believable widths — and the rest
+can be added by hand. Raising coverage means understanding, per CAD application,
+which openings cut the wall and which are drawn over it; the door path is solid,
+the window path is a first pass.
+
+### Tests
+12 new assertions covering hole discovery (position, width, two holes in one
+wall), the guards that keep it honest (a one-sided break is not an opening, an
+over-wide gap is the wall ending rather than a hole) and symbol classification
+including nearest-symbol-wins.
+
 ## 1.0.99 - 2026-07-26 (versionCode 10099)
 
 The centreline fix promised in 1.0.98's "known, not fixed".

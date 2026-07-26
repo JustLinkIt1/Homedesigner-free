@@ -191,7 +191,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     const storeys = res.storeys.filter((st) => st.walls.length > 0);
     storeys.forEach((st, i) => {
       if (i > 0) s.addFloor();
-      s.importWalls(st.walls, true);
+      s.importWalls(st.walls, true, st.openings);
       s.detectRoomsFromWalls(); // auto-create rooms from the imported walls
     });
     if (storeys.length > 1) {

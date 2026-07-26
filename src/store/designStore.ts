@@ -182,7 +182,7 @@ interface DesignState extends DesignSnapshot {
    *  pass null to remove it. Always applies to the top storey. */
   setRoof: (patch: Partial<Roof> | null) => void;
 
-  importWalls: (walls: Wall[], replace?: boolean) => void;
+  importWalls: (walls: Wall[], replace?: boolean, openings?: Opening[]) => void;
   detectRoomsFromWalls: () => number;
   setBackground: (bg: BackgroundPlan | null) => void;
   updateBackground: (patch: Partial<BackgroundPlan>) => void;
@@ -1065,13 +1065,19 @@ export const useDesign = create<DesignState>((set, get) => {
         });
       }),
 
-    importWalls: (walls, replace = false) =>
+    importWalls: (walls, replace = false, openings) =>
       commit((d) => {
         if (replace) {
           d.walls = [];
           d.openings = [];
         }
         d.walls.push(...walls);
+        // Openings reference wall ids, so they can only be imported alongside
+        // the walls that carry them.
+        if (openings?.length) {
+          const ids = new Set(walls.map((w) => w.id));
+          d.openings.push(...openings.filter((o) => ids.has(o.wallId)));
+        }
       }),
 
     detectRoomsFromWalls: () => {

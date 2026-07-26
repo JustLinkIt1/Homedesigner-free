@@ -32,6 +32,12 @@ export interface Centreline {
   thickness: number;
   /** False when this came through unpaired (a wall drawn as a single line). */
   paired: boolean;
+  /**
+   * Holes in the wall — where BOTH faces stop and start again. CAD cuts the
+   * wall at every door and window, so these gaps are the openings themselves,
+   * located and sized exactly. Positions are fractions along a→b.
+   */
+  gaps: { offset: number; width: number }[];
 }
 
 export interface CentrelineOptions {
@@ -47,6 +53,10 @@ export interface CentrelineOptions {
   gapTol: number;
   /** Discard anything shorter than this. */
   minLength: number;
+  /** Narrowest hole to report as an opening. */
+  minOpening: number;
+  /** Widest. Beyond this the wall simply ended rather than being pierced. */
+  maxOpening: number;
   /** Keep unpaired runs at least this long as single-line walls. */
   keepUnpairedOver: number;
 }
@@ -59,6 +69,8 @@ export const DEFAULT_CENTRELINE_OPTIONS: CentrelineOptions = {
   // Real plans break a wall's ink at every opening; patio doors reach ~250cm.
   gapTol: 260,
   minLength: 25,
+  minOpening: 45,
+  maxOpening: 400,
   keepUnpairedOver: 120,
 };
 
@@ -83,6 +95,8 @@ interface Run {
   offset: number; // perpendicular position of the line
   t0: number; // start along the line
   t1: number; // end
+  /** Breaks bridged while building this run — candidate openings. */
+  gaps: [number, number][];
   /** Portions already consumed by a pairing, so a face can serve two walls. */
   used: [number, number][];
 }
@@ -188,16 +202,20 @@ export function wallCentrelines(segs: Seg[], options: Partial<CentrelineOptions>
     for (const line of lines) {
       line.parts.sort((p, q) => p.t0 - q.t0);
       let cur = { ...line.parts[0] };
+      let gaps: [number, number][] = [];
       for (let i = 1; i < line.parts.length; i++) {
         const p = line.parts[i];
         if (p.t0 - cur.t1 <= o.gapTol) {
+          // Bridged: remember where the face was interrupted.
+          if (p.t0 > cur.t1) gaps.push([cur.t1, p.t0]);
           cur.t1 = Math.max(cur.t1, p.t1);
         } else {
-          runs.push({ offset: line.off, t0: cur.t0, t1: cur.t1, used: [] });
+          runs.push({ offset: line.off, t0: cur.t0, t1: cur.t1, gaps, used: [] });
           cur = { ...p };
+          gaps = [];
         }
       }
-      runs.push({ offset: line.off, t0: cur.t0, t1: cur.t1, used: [] });
+      runs.push({ offset: line.off, t0: cur.t0, t1: cur.t1, gaps, used: [] });
     }
 
     // Candidate face pairs: parallel, a wall-thickness apart, overlapping.
@@ -248,12 +266,32 @@ export function wallCentrelines(segs: Seg[], options: Partial<CentrelineOptions>
       const e0 = t0 - outerLo <= reach ? outerLo : t0;
       const e1 = outerHi - t1 <= reach ? outerHi : t1;
 
+      // A real opening pierces BOTH faces at the same place. A break in only
+      // one face is something else — a wall meeting this one, a change of
+      // material, a drafting artefact — so intersecting the two faces' gaps is
+      // what separates genuine holes from noise.
+      const span = e1 - e0;
+      const gaps: { offset: number; width: number }[] = [];
+      if (span > 0) {
+        for (const [ga0, ga1] of A.gaps) {
+          for (const [gb0, gb1] of B.gaps) {
+            const lo = Math.max(ga0, gb0, e0);
+            const hi = Math.min(ga1, gb1, e1);
+            const w = hi - lo;
+            if (w < o.minOpening || w > o.maxOpening) continue;
+            gaps.push({ offset: ((lo + hi) / 2 - e0) / span, width: w });
+          }
+        }
+      }
+      gaps.sort((p, q) => p.offset - q.offset);
+
       const mid = (A.offset + B.offset) / 2;
       out.push({
         a: toWorld(e0, mid),
         b: toWorld(e1, mid),
         thickness: thick,
         paired: true,
+        gaps,
       });
     }
 
@@ -268,6 +306,7 @@ export function wallCentrelines(segs: Seg[], options: Partial<CentrelineOptions>
         b: toWorld(free[1], run.offset),
         thickness: 0,
         paired: false,
+        gaps: [],
       });
     }
   }
