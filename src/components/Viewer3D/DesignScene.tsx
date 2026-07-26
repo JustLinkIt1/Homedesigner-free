@@ -8,7 +8,8 @@ import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry, de
 import { activeTier, tierCaps } from '../../lib/perfTier';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
-import { wallFaceAt } from '../../lib/wallFaces';
+import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
+import { exteriorFaces } from '../../lib/exteriorFaces';
 import { buildRoofGeometry, roofOutlines } from '../../lib/roofGeometry';
 import { roofOf } from '../../lib/roof';
 import { useRemoteCatalog } from '../../lib/remoteCatalog';
@@ -613,28 +614,50 @@ function CeilingMesh({ room, height }: { room: Room; height: number }) {
  * Lives on the top storey and is hidden in dollhouse mode for the same reason
  * the ceiling is: you have to be able to look in from above.
  */
-function RoofMesh({ walls, roof, eaveY }: { walls: Wall[]; roof: Roof; eaveY: number }) {
+function RoofMesh({ walls, rooms, roof, eaveY }: { walls: Wall[]; rooms: Room[]; roof: Roof; eaveY: number }) {
   const built = useMemo(() => {
     const o = roofOutlines(walls, roof.overhang);
     if (!o) return null;
     return buildRoofGeometry(o.eave, o.wall, roof, eaveY);
   }, [walls, roof, eaveY]);
 
-  // The gable end reads as part of the wall, so it takes the storey's dominant
-  // wall colour rather than a constant.
-  const infillColor = useMemo(() => {
-    const tally = new Map<string, number>();
-    for (const w of walls) tally.set(w.color, (tally.get(w.color) ?? 0) + 1);
-    let best = '#f2efe9';
-    let n = 0;
-    tally.forEach((count, color) => {
-      if (count > n) {
-        n = count;
-        best = color;
-      }
+  // The gable end is part of the OUTSIDE of the building, so it has to match
+  // whatever the outside is clad in — brick, render, timber. Taking the plain
+  // wall colour instead left a brick house with a beige triangle over its front
+  // door. Look up the finish actually applied to the exterior faces; fall back
+  // to the dominant wall colour when nothing has been clad.
+  const infill = useMemo(() => {
+    const tally = new Map<string, { n: number; color: string; texture?: CustomTexture }>();
+    const bump = (color: string, texture?: CustomTexture) => {
+      const key = `${color}|${texture?.src ?? ''}`;
+      const hit = tally.get(key);
+      if (hit) hit.n++;
+      else tally.set(key, { n: 1, color, texture });
+    };
+    const byId = new Map(walls.map((w) => [w.id, w]));
+    for (const { wallId, face } of exteriorFaces(walls, rooms)) {
+      const w = byId.get(wallId);
+      if (!w) continue;
+      const f = finishForFace(w, face);
+      if (f) bump(f.color, f.texture);
+      else bump(w.color, w.texture);
+    }
+    if (!tally.size) for (const w of walls) bump(w.color, w.texture);
+    let best: { n: number; color: string; texture?: CustomTexture } = { n: 0, color: '#f2efe9' };
+    tally.forEach((v) => {
+      if (v.n > best.n) best = v;
     });
     return best;
-  }, [walls]);
+  }, [walls, rooms]);
+
+  const infillMap = useMemo(() => {
+    if (!infill.texture) return null;
+    const t = customTexture(infill.texture.src);
+    const patternM = Math.max(0.02, infill.texture.scaleCm * M);
+    t.repeat.set(1 / patternM, 1 / patternM);
+    return t;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [infill.texture?.src, infill.texture?.scaleCm]);
 
   // Roof UVs are in metres, so repeat maps directly to tiles-per-metre.
   const customSrc = roof.texture?.src;
@@ -675,7 +698,13 @@ function RoofMesh({ walls, roof, eaveY }: { walls: Wall[]; roof: Roof; eaveY: nu
         // Gable ends and the strip under the eaves are masonry, so they take the
         // wall finish rather than the roof covering.
         <mesh geometry={built.infill} castShadow receiveShadow>
-          <meshStandardMaterial color={infillColor} roughness={0.9} metalness={0} side={THREE.DoubleSide} />
+          <meshStandardMaterial
+            map={infillMap}
+            color={infillMap ? '#ffffff' : infill.color}
+            roughness={infill.texture?.roughness ?? 0.9}
+            metalness={infill.texture?.metalness ?? 0}
+            side={THREE.DoubleSide}
+          />
         </mesh>
       )}
     </>
@@ -874,7 +903,9 @@ function FloorContent({
       {isTop && !dollhouse && geom.rooms.map((r) => (
         <CeilingMesh key={`ceil-${r.id}`} room={r} height={ceilingHeight} />
       ))}
-      {roof && !dollhouse && <RoofMesh walls={geom.walls} roof={roof} eaveY={ceilingHeight} />}
+      {roof && !dollhouse && (
+        <RoofMesh walls={geom.walls} rooms={geom.rooms} roof={roof} eaveY={ceilingHeight} />
+      )}
       {geom.rooms.map((r) => (
         <FloorMesh key={r.id} room={r} stairsBelow={stairsBelow} onTap={onTap} />
       ))}
@@ -969,9 +1000,14 @@ export default function DesignScene({
   // zooming into (say) the ground floor is never blocked by the slab of the
   // storey above — switching floors in the FloorSwitcher reveals them again.
   const activeElevation = floors.find((f) => f.id === activeFloorId)?.elevation ?? 0;
-  // Walk mode keeps the complete building present while the camera moves
-  // between storeys. Orbit/dollhouse mode retains the active-floor cutaway.
-  const visible = walkMode ? floors : floors.filter((f) => f.elevation <= activeElevation);
+  // The cutaway exists so the storey above does not put its slab between you
+  // and the floor you are editing — which only matters when you are looking
+  // INTO the building. With dollhouse off you are looking at the outside of it,
+  // and hiding the upper storeys there made a two-storey house read as a
+  // bungalow: the roof sat on the ground floor and the first floor was missing
+  // entirely. Walk mode has always kept the whole building for the same reason.
+  const cutaway = dollhouse && !walkMode;
+  const visible = cutaway ? floors.filter((f) => f.elevation <= activeElevation) : floors;
   const orderedFloors = useMemo(() => [...floors].sort((a, b) => a.elevation - b.elevation), [floors]);
   const stairsBelowByFloor = useMemo(() => {
     const result = new Map<string, FurnitureItem[]>();

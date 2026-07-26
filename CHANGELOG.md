@@ -5,6 +5,46 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.3.1 - 2026-07-26 (versionCode 10301)
+
+The sample homes finally use the features built for them.
+
+### Fixed — every sample was a white box from outside
+The samples were authored before roofs and exterior cladding existed, so
+switching a template to 3D showed an untextured white box with a flat white
+ceiling for a lid — which is the *first thing* a new user sees. Everything
+needed to fix that shipped in 1.0.93–1.0.96 and none of it was being used.
+
+Each sample now gets a roof and an exterior suited to what it is: clay-tiled
+gable over beige render for the open-plan home, slate gable over red brick for
+the family house, a flat roof and grey render for the city studio, grey-tiled
+hip over warm brick for the terrace. Cladding is applied only to wall faces
+that no room sits against, so interiors stay painted.
+
+### Fixed — a two-storey house rendered as a bungalow
+Storeys above the active floor were hidden in *all* orbit views. That cutaway
+exists so the slab above doesn't block the floor you're editing — which only
+matters when looking INTO the building. With dollhouse off you are looking at
+the outside, and hiding the upper storeys put the roof on the ground floor and
+dropped the first floor entirely. The cutaway is now dollhouse-only; walk mode
+already worked this way for the same reason.
+
+### Fixed — gable ends ignored the cladding
+The roof's masonry infill took the plain wall colour, so a brick house had a
+beige triangle over its front door. It now uses the finish actually applied to
+the exterior faces, texture included.
+
+### Fixed — "Painted Brick" is blue
+Measured the average colour of every wall texture against what the catalog
+declares. All are darker than declared, but `painted_brick` is a different
+*hue*: declared `#d8d2c8` (warm off-white), actually `#779ea9` (teal). The
+swatch shows the photo so users always saw blue, but the untextured fallback
+colour was wrong. Corrected.
+
+Worth noting the rest drift too — `marble_01` declares `#ece9e4` and measures
+`#b09c79`. Those only affect swatch tints and untextured fallbacks, so they are
+left alone rather than changed under a "sample quality" release.
+
 ## 1.3.0 - 2026-07-26 (versionCode 10300)
 
 The app now tells you when there's a new version.

@@ -3,8 +3,11 @@
 // fresh snapshot — single-floor samples return a GeomSnapshot and the store's
 // withFloors() wraps them; the two-storey house returns full floor data.
 import type { MaybeFloored } from '../store/designStore';
-import type { FurnitureItem, Opening, OpeningStyle, Wall, Room, FloorGeom } from '../types';
+import type { CustomTexture, FurnitureItem, Opening, OpeningStyle, Roof, Wall, Room, FloorGeom } from '../types';
 import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from './furnitureCatalog';
+import { MATERIAL_BY_ID, materialUrl } from './materials';
+import { exteriorFaces } from '../lib/exteriorFaces';
+import { withFaceFinish } from '../lib/wallFaces';
 import { uid } from '../lib/geometry';
 
 let n = 0;
@@ -493,6 +496,89 @@ function terraceHouse(): MaybeFloored {
 
 /* ------------------------------------------------------------------ registry */
 
+/**
+ * Give a finished sample its outside.
+ *
+ * The samples were authored before roofs and exterior cladding existed, so from
+ * the outside every one of them was an untextured white box with a flat white
+ * ceiling for a lid — which is what a first-run user sees the moment they switch
+ * to 3D. This dresses the shell without touching the interior: only the wall
+ * faces that no room sits against are clad, so inside stays painted.
+ */
+function dressed(
+  snap: MaybeFloored,
+  opts: { roof: Roof; exterior: { color: string; material?: string } },
+): MaybeFloored {
+  const clad = (walls: Wall[], rooms: Room[]): Wall[] => {
+    const entry = opts.exterior.material ? MATERIAL_BY_ID[opts.exterior.material] : undefined;
+    const texture: CustomTexture | undefined = entry
+      ? {
+          src: materialUrl(entry.id),
+          scaleCm: entry.scaleCm,
+          roughness: entry.roughness,
+          metalness: entry.metalness,
+        }
+      : undefined;
+    const byId = new Map(walls.map((w) => [w.id, w]));
+    for (const { wallId, face } of exteriorFaces(walls, rooms)) {
+      const w = byId.get(wallId);
+      if (!w) continue;
+      byId.set(wallId, {
+        ...w,
+        faceFinishes: withFaceFinish(w, face, { color: opts.exterior.color, texture }),
+      });
+    }
+    return walls.map((w) => byId.get(w.id) ?? w);
+  };
+
+  // Single-storey samples return bare geometry; materialise a floor so the roof
+  // has somewhere to live (the store's withFloors would otherwise invent one).
+  if (!snap.floors?.length || !snap.floorGeom || !snap.activeFloorId) {
+    const fid = uid();
+    const walls = clad(snap.walls, snap.rooms);
+    const geom: FloorGeom = {
+      walls,
+      rooms: snap.rooms,
+      furniture: snap.furniture,
+      openings: snap.openings,
+      background: null,
+    };
+    return {
+      ...snap,
+      walls,
+      floors: [{ id: fid, name: 'Ground floor', elevation: 0, roof: opts.roof }],
+      floorGeom: { [fid]: geom },
+      activeFloorId: fid,
+    };
+  }
+
+  const floorGeom: Record<string, FloorGeom> = {};
+  for (const fid in snap.floorGeom) {
+    const g = snap.floorGeom[fid];
+    floorGeom[fid] = { ...g, walls: clad(g.walls, g.rooms) };
+  }
+  // The roof belongs on the highest storey.
+  let topId = snap.floors[0].id;
+  for (const f of snap.floors) {
+    if (f.elevation >= (snap.floors.find((x) => x.id === topId)?.elevation ?? 0)) topId = f.id;
+  }
+  const active = floorGeom[snap.activeFloorId];
+  return {
+    ...snap,
+    walls: active ? active.walls : snap.walls,
+    floors: snap.floors.map((f) => (f.id === topId ? { ...f, roof: opts.roof } : f)),
+    floorGeom,
+  };
+}
+
+/** Roof presets, so each sample reads as the kind of house it is. */
+const ROOFS = {
+  clayGable: { type: 'gable', pitch: 32, overhang: 45, thickness: 18, covering: 'tile', coveringScaleCm: 100, color: '#b45f3c' },
+  slateGable: { type: 'gable', pitch: 38, overhang: 40, thickness: 18, covering: 'slate', coveringScaleCm: 90, color: '#4a4f55' },
+  greyHip: { type: 'hip', pitch: 28, overhang: 50, thickness: 18, covering: 'tile', coveringScaleCm: 100, color: '#6f7275' },
+  cityFlat: { type: 'flat', pitch: 5, overhang: 25, thickness: 22, covering: 'plain', coveringScaleCm: 100, color: '#8d9298' },
+} satisfies Record<string, Roof>;
+
 export interface SampleDef {
   id: string;
   name: string;
@@ -510,28 +596,40 @@ export const SAMPLES: SampleDef[] = [
     id: 'open-plan',
     name: 'Sunlit open-plan home',
     blurb: 'Kitchen, dining and living in one bright great room',
-    build: openPlan,
+    build: () => dressed(openPlan(), {
+      roof: ROOFS.clayGable,
+      exterior: { color: '#9e8d77', material: 'beige_wall_001' },
+    }),
     hasPreview: true,
   },
   {
     id: 'family-house',
     name: 'Maple family house',
     blurb: 'Two storeys — living below, three rooms above',
-    build: familyHouse,
+    build: () => dressed(familyHouse(), {
+      roof: ROOFS.slateGable,
+      exterior: { color: '#63493b', material: 'brick_wall_001' },
+    }),
     hasPreview: true,
   },
   {
     id: 'city-studio',
     name: 'City studio',
     blurb: 'A clever compact studio with every zone in place',
-    build: cityStudio,
+    build: () => dressed(cityStudio(), {
+      roof: ROOFS.cityFlat,
+      exterior: { color: '#8b8573', material: 'grey_plaster' },
+    }),
     hasPreview: true,
   },
   {
     id: 'terrace-house',
     name: 'Terraced townhouse',
     blurb: 'Narrow terrace — living, WC & stairs, dining, rear bedroom',
-    build: terraceHouse,
+    build: () => dressed(terraceHouse(), {
+      roof: ROOFS.greyHip,
+      exterior: { color: '#b69068', material: 'brown_brick_02' },
+    }),
     hasPreview: true,
   },
 ];

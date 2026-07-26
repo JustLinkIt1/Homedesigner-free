@@ -53,7 +53,10 @@ export const MATERIALS: Material[] = [
   { id: 'brick_wall_001', name: 'Red Brick', group: 'Brick', target: 'wall', scaleCm: 120, roughness: 0.9, metalness: 0, color: '#9c5a44' },
   { id: 'brick_wall_10', name: 'Rustic Brick', group: 'Brick', target: 'wall', scaleCm: 120, roughness: 0.9, metalness: 0, color: '#a86a4e' },
   { id: 'brown_brick_02', name: 'Brown Brick', group: 'Brick', target: 'wall', scaleCm: 120, roughness: 0.9, metalness: 0, color: '#7c5240' },
-  { id: 'painted_brick', name: 'Painted Brick', group: 'Brick', target: 'wall', scaleCm: 120, roughness: 0.85, metalness: 0, color: '#d8d2c8' },
+  // Measured from the image: this one is BLUE-painted brick. The swatch shows
+  // the photo so users always saw that, but `color` (the untextured fallback)
+  // claimed a warm off-white, which is a different hue entirely.
+  { id: 'painted_brick', name: 'Painted Brick', group: 'Brick', target: 'wall', scaleCm: 120, roughness: 0.85, metalness: 0, color: '#779ea9' },
   // Plaster
   { id: 'beige_wall_001', name: 'Beige Plaster', group: 'Plaster', target: 'wall', scaleCm: 250, roughness: 0.92, metalness: 0, color: '#ded5c4' },
   { id: 'grey_plaster', name: 'Grey Plaster', group: 'Plaster', target: 'wall', scaleCm: 250, roughness: 0.92, metalness: 0, color: '#b8b4ac' },
