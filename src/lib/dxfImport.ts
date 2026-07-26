@@ -16,10 +16,52 @@ interface RawSegment {
   demolished: boolean;
 }
 
-/** Pull straight segments out of LINE / (LW)POLYLINE entities. */
+/** A 2D placement: rotation, scale and translation, as an INSERT applies it. */
+interface Xform {
+  cos: number;
+  sin: number;
+  sx: number;
+  sy: number;
+  tx: number;
+  ty: number;
+}
+const IDENTITY: Xform = { cos: 1, sin: 0, sx: 1, sy: 1, tx: 0, ty: 0 };
+const apply = (m: Xform, p: Point): Point => {
+  const x = p.x * m.sx;
+  const y = p.y * m.sy;
+  return { x: m.cos * x - m.sin * y + m.tx, y: m.sin * x + m.cos * y + m.ty };
+};
+const compose = (outer: Xform, inner: Xform): Xform => {
+  const o = apply(outer, { x: inner.tx, y: inner.ty });
+  const ang = Math.atan2(outer.sin, outer.cos) + Math.atan2(inner.sin, inner.cos);
+  return {
+    cos: Math.cos(ang),
+    sin: Math.sin(ang),
+    sx: outer.sx * inner.sx,
+    sy: outer.sy * inner.sy,
+    tx: o.x,
+    ty: o.y,
+  };
+};
+
+/**
+ * Pull straight segments out of a DXF's entities.
+ *
+ * Handles the four things architects' files actually contain:
+ *  - LINE and (LW)POLYLINE, the obvious ones;
+ *  - ARC, which is how door swings are drawn — dropping them left a door symbol
+ *    as two isolated jamb strokes with nothing between, which is precisely what
+ *    made the door symbols hard to group; and
+ *  - INSERT, a reference to a reusable block. This one matters most: in a
+ *    measured file every door and window was an INSERT on layers named `Doors`
+ *    and `Windows`, so ignoring INSERT meant ignoring every opening in the
+ *    drawing. Blocks are expanded in place, transformed by the insert's
+ *    position, rotation and scale, so their contents flow through the rest of
+ *    the importer as ordinary geometry — walls included, since some files put
+ *    those in blocks too.
+ */
 function extractSegments(dxf: any): RawSegment[] {
   const segs: RawSegment[] = [];
-  const entities = dxf?.entities ?? [];
   const cache = new Map<string, { kind: LayerKind; storey: number | null; demolished: boolean }>();
   const meta = (layer: string) => {
     let m = cache.get(layer);
@@ -29,20 +71,76 @@ function extractSegments(dxf: any): RawSegment[] {
     }
     return m;
   };
-  for (const e of entities) {
-    const type = e.type;
-    const layer = typeof e.layer === 'string' ? e.layer : '';
-    const m = meta(layer);
-    const push = (a: Point, b: Point) => segs.push({ a, b, layer, ...m });
-    if (type === 'LINE' && e.vertices?.length >= 2) {
-      const [a, b] = e.vertices;
-      push({ x: a.x, y: a.y }, { x: b.x, y: b.y });
-    } else if ((type === 'LWPOLYLINE' || type === 'POLYLINE') && e.vertices?.length >= 2) {
-      const vs: Point[] = e.vertices.map((v: any) => ({ x: v.x, y: v.y }));
-      for (let i = 0; i < vs.length - 1; i++) push(vs[i], vs[i + 1]);
-      if (e.shape || e.closed) push(vs[vs.length - 1], vs[0]);
+
+  const walk = (entities: any[], m: Xform, inheritedLayer: string, depth: number) => {
+    if (!Array.isArray(entities) || depth > 6) return;
+    for (const e of entities) {
+      // Entities inside a block often sit on layer "0", meaning "whatever layer
+      // the block was inserted on".
+      const own = typeof e.layer === 'string' ? e.layer : '';
+      const layer = !own || own === '0' ? inheritedLayer : own;
+      const info = meta(layer);
+      const push = (a: Point, b: Point) =>
+        segs.push({ a: apply(m, a), b: apply(m, b), layer, ...info });
+
+      switch (e.type) {
+        case 'LINE':
+          if (e.vertices?.length >= 2) push(e.vertices[0], e.vertices[1]);
+          break;
+        case 'LWPOLYLINE':
+        case 'POLYLINE': {
+          const vs: Point[] = (e.vertices ?? []).map((v: any) => ({ x: v.x, y: v.y }));
+          for (let i = 0; i < vs.length - 1; i++) push(vs[i], vs[i + 1]);
+          if ((e.shape || e.closed) && vs.length > 2) push(vs[vs.length - 1], vs[0]);
+          break;
+        }
+        case 'ARC':
+        case 'CIRCLE': {
+          const c = e.center;
+          const r = e.radius;
+          if (!c || !(r > 0)) break;
+          const full = e.type === 'CIRCLE';
+          const a0 = full ? 0 : ((e.startAngle ?? 0));
+          let a1 = full ? Math.PI * 2 : ((e.endAngle ?? 0));
+          if (!full && a1 <= a0) a1 += Math.PI * 2;
+          // ~8 degrees per step: enough for a door swing to read as a dense run.
+          const steps = Math.max(3, Math.ceil(((a1 - a0) / Math.PI) * 22));
+          let prev = { x: c.x + r * Math.cos(a0), y: c.y + r * Math.sin(a0) };
+          for (let i = 1; i <= steps; i++) {
+            const a = a0 + ((a1 - a0) * i) / steps;
+            const cur = { x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) };
+            push(prev, cur);
+            prev = cur;
+          }
+          break;
+        }
+        case 'INSERT': {
+          const block = dxf?.blocks?.[e.name];
+          if (!block?.entities) break;
+          const rot = ((e.rotation ?? 0) * Math.PI) / 180;
+          const base = block.position ?? { x: 0, y: 0 };
+          const sx = e.xScale ?? 1;
+          const sy = e.yScale ?? 1;
+          // Place the block: scale and rotate about its base point, then move to
+          // the insertion point.
+          const local: Xform = {
+            cos: Math.cos(rot),
+            sin: Math.sin(rot),
+            sx,
+            sy,
+            tx: (e.position?.x ?? 0) - (base.x * sx * Math.cos(rot) - base.y * sy * Math.sin(rot)),
+            ty: (e.position?.y ?? 0) - (base.x * sx * Math.sin(rot) + base.y * sy * Math.cos(rot)),
+          };
+          walk(block.entities, compose(m, local), layer, depth + 1);
+          break;
+        }
+        default:
+          break;
+      }
     }
-  }
+  };
+
+  walk(dxf?.entities ?? [], IDENTITY, '', 0);
   return segs;
 }
 
@@ -298,6 +396,25 @@ export function importDxf(
         });
       };
 
+      // The drawing labels its doors and windows, so read them off their own
+      // layers first — that is both simpler and more complete than inferring
+      // openings from the shape of the walls.
+      for (const kind of ['door', 'window'] as const) {
+        const syms = symbols.filter((sy) => sy.kind === kind);
+        if (!syms.length) continue;
+        // A door narrower than 60cm is not a door, it is a fragment of one
+        // whose symbol the drawing left too sparse to group. Better to miss it
+        // than to import a 38cm doorway.
+        const minWidth = kind === 'door' ? 60 : 35;
+        for (const span of symbolSpansOnWall(wall, syms, { minWidth })) {
+          add(kind, span.offset, span.width);
+        }
+      }
+
+      // Then the holes in the wall itself. These add the openings the symbol
+      // layers miss — and carry files that have no opening layers at all, where
+      // a gap between two wall pieces is the only evidence a door exists.
+      // `add` skips anything overlapping an opening already found.
       for (const g of c.gaps) {
         const centre = {
           x: c.a.x + (c.b.x - c.a.x) * g.offset,
@@ -305,16 +422,6 @@ export function importDxf(
         };
         const kind = classifyOpening(centre, g.width / 2 + 60, symbols);
         add(kind ?? 'door', g.offset, g.width, kind === null ? 'passage' : undefined);
-      }
-
-      // Windows usually leave no hole — the wall runs straight through them —
-      // so they are read from their own layer instead. Anything overlapping a
-      // hole already found is skipped by `add`.
-      const windowSyms = symbols.filter((sy) => sy.kind === 'window');
-      if (windowSyms.length) {
-        for (const span of symbolSpansOnWall(wall, windowSyms)) {
-          add('window', span.offset, span.width);
-        }
       }
       madeOpenings.push(...onThisWall);
     }

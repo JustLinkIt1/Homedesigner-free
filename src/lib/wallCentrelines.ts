@@ -53,7 +53,8 @@ export interface CentrelineOptions {
   gapTol: number;
   /** Discard anything shorter than this. */
   minLength: number;
-  /** Narrowest hole to report as an opening. */
+  /** Narrowest hole to report as an opening. Below ~55cm a break in the wall
+   *  is far more likely to be a drafting artefact than a doorway. */
   minOpening: number;
   /** Widest. Beyond this the wall simply ended rather than being pierced. */
   maxOpening: number;
@@ -69,7 +70,7 @@ export const DEFAULT_CENTRELINE_OPTIONS: CentrelineOptions = {
   // Real plans break a wall's ink at every opening; patio doors reach ~250cm.
   gapTol: 260,
   minLength: 25,
-  minOpening: 45,
+  minOpening: 55,
   maxOpening: 400,
   keepUnpairedOver: 120,
 };

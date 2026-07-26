@@ -54,28 +54,34 @@ export function classifyOpening(
 }
 
 /**
- * Openings read from the symbol layers directly, for the ones that leave no
- * hole in the wall.
+ * Openings read straight off their own layer — the simple way, and the one that
+ * should be tried first.
  *
- * Measured on a real ArchiCAD export: the wall polygons are cut for DOORS but
- * run straight through WINDOWS, which are drawn as glazing lines laid over an
- * unbroken wall. So the wall-gap method finds every door and almost no window.
+ * The drawing already says which entities are doors and which are windows, so
+ * all that is left is measurement, and measurement turns out to be easy once you
+ * project onto the wall. A door's swing arc looks alarming because it sweeps a
+ * door's-width into the room, but that bulge is entirely PERPENDICULAR to the
+ * wall: measured along the wall, a hinge-at-x, 90 cm door spans exactly x to
+ * x+90. So the along-wall extent of an opening's symbol is the opening width,
+ * with no filtering needed.
  *
- * A window is well suited to being read from its symbol, because its lines run
- * ALONG the opening for its full width: projecting the parts that lie inside the
- * wall onto the wall's axis gives a dense band whose extent IS the opening.
- * That is not true of a door — its symbol is two jambs a door's-width apart plus
- * a swing arc, which is exactly the ambiguity ("two jambs of one door" vs "two
- * separate openings") this cannot resolve. Hence doors come from wall gaps and
- * windows come from here.
+ * The one thing that does matter is capturing the whole symbol. Door swings are
+ * ARC entities and, in some files, the entire door is an INSERT block reference;
+ * with those dropped a door arrives as two isolated jamb strokes 90 cm apart,
+ * indistinguishable from two separate openings. `extractSegments` expands both,
+ * which is what makes this work.
+ *
+ * Points are gathered near the wall rather than strictly inside it, so a symbol
+ * drawn slightly proud of the wall face still registers; the clustering along
+ * the wall axis is what separates one opening from the next.
  */
 export function symbolSpansOnWall(
   wall: Wall,
   symbols: KindedSeg[],
   opts: { insideMargin?: number; clusterGap?: number; minWidth?: number; maxWidth?: number } = {},
 ): { offset: number; width: number }[] {
-  const insideMargin = opts.insideMargin ?? 14;
-  const clusterGap = opts.clusterGap ?? 35;
+  const insideMargin = opts.insideMargin ?? 30;
+  const clusterGap = opts.clusterGap ?? 45;
   const minWidth = opts.minWidth ?? 35;
   const maxWidth = opts.maxWidth ?? 500;
 
@@ -96,7 +102,7 @@ export function symbolSpansOnWall(
       ts.push(t);
     }
   }
-  if (ts.length < 3) return [];
+  if (ts.length < 2) return [];
   ts.sort((a, b) => a - b);
 
   const out: { offset: number; width: number }[] = [];

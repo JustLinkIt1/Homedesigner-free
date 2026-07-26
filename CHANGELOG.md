@@ -5,6 +5,52 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.1.1 - 2026-07-26 (versionCode 10101)
+
+**Corrects 1.1.0.** That entry justified an indirect approach to openings with a
+claim that turns out to be false, and the simple approach — just use the door and
+window layers — was the right one all along.
+
+### The claim that was wrong
+1.1.0 said a door symbol's raw extent is "roughly twice the real opening"
+because of its swing arc. Measured: for a door hinged at x with width w, the
+symbol spans exactly x to x+w **along the wall**. The arc's bulge is entirely
+PERPENDICULAR to the wall (it reaches 100 cm across for a 90 cm door), and
+openings are measured along the wall, so it never inflated anything. There was
+never a reason to avoid reading the opening layers directly.
+
+### What was actually broken: two entity types were being ignored
+`extractSegments` only handled LINE and (LW)POLYLINE.
+
+- **INSERT** — a reference to a reusable block — was dropped entirely. In one
+  measured file *every* door and window is an INSERT on layers named `Doors` and
+  `Windows`, so the importer was blind to all of them. Blocks are now expanded in
+  place, transformed by the insert's position, rotation and scale, and nested
+  blocks are followed. Entities inside a block that sit on layer `0` inherit the
+  layer the block was inserted on, which is what makes them classify correctly.
+  That file went from **0 openings to 4**, all correctly placed.
+- **ARC** was dropped, which is how door swings are drawn. Without it a door
+  arrived as two isolated jamb strokes 90 cm apart with nothing between —
+  indistinguishable from two separate openings. That, not the swing geometry, is
+  what made the symbols hard to group. Arcs and circles are now tessellated.
+
+Both were plain gaps in the DXF reader, and fixing them also feeds walls: a file
+that puts its walls in blocks now imports them too.
+
+### Openings now read their layers first
+`symbolSpansOnWall` projects each layer's geometry onto the wall it sits in and
+takes the extent, which is the opening width. The hole-in-the-wall detector from
+1.1.0 is kept, but demoted to a supplement: it adds openings the symbol layers
+miss, and carries files that have no opening layers at all, where a gap between
+two wall pieces is the only evidence a door exists.
+
+Doors below 60 cm and wall breaks below 55 cm are rejected — measured widths on
+the test files were otherwise polluted with 37-51 cm "doors", which are fragments
+of symbols too sparse to group. Better to miss one than import a 38 cm doorway.
+
+Measured across the two CAD files: **14 openings**, widths 60-102 cm for doors
+and 37-91 cm for windows, each on the right wall.
+
 ## 1.1.0 - 2026-07-26 (versionCode 10100)
 
 Doors and windows on CAD import.
