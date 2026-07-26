@@ -15,6 +15,7 @@ export { offsetPolygon, orientedBox, boxFillRatio } from '${process.cwd()}/src/l
 export { detectBuildingOutline, detectRooms } from '${process.cwd()}/src/lib/roomDetection.ts';
 export { polygonArea } from '${process.cwd()}/src/lib/geometry.ts';
 export { buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines } from '${process.cwd()}/src/lib/roofGeometry.ts';
+export { classifyLayer, storeyOf, isDemolished } from '${process.cwd()}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${process.cwd()}/src/lib/roof.ts';
 `);
 const out = join(dir, 'bundle.mjs');
@@ -26,6 +27,7 @@ const {
   offsetPolygon, orientedBox, boxFillRatio, detectBuildingOutline, polygonArea,
   buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
+  classifyLayer, storeyOf, isDemolished,
 } = await import(out);
 
 let fails = 0;
@@ -261,6 +263,39 @@ const bboxOf = (geo) => {
   const r = normalizeRoofs(floors)[0].roof;
   check('roof: out-of-range values clamped', r.pitch === 60 && r.overhang === 0 && r.thickness === DEFAULT_ROOF.thickness,
     JSON.stringify(r));
+}
+
+// ---- CAD layer classification --------------------------------------------
+// Layer names from a real ArchiCAD export (a French practice), including the
+// mojibake that DWG->DXF conversion produces for accented characters.
+{
+  const cases = [
+    ['0._ _1_Structure - Murs ext\ufffdrieurs', 'wall', 0],
+    ['1._ _2_Structure - Murs ext\ufffdrieurs', 'wall', 1],
+    ['2._ _3_Nouveau_Structure - Murs ext\ufffdrieurs', 'wall', 2],
+    ['0._ _1_2D - Cotations - existant ET nouveau', 'dimension', 0],
+    ['0._ _1_Portes Archicad', 'door', 0],
+    ['1._ _2_Fen\ufffdtres Archicad', 'window', 1],
+    ['0._ _1_Int\ufffdrieur - Escaliers & ascenseurs', 'stair', 0],
+    ['2._ _3_Toits - Toitures', 'roof', 2],
+    ['0._ _1_Zones - existant 01', 'zone', 0],
+    ['0._ _1_Nouveau_Exter - V\ufffdg\ufffdtation', 'outdoor', 0],
+    ['0._ _1_Marques - Coupes non vues', 'annotation', 0],
+    ['A-WALL-FULL', 'wall', null],
+    ['A-DIMS', 'dimension', null],
+  ];
+  for (const [name, kind, storey] of cases) {
+    check(`layer: ${name.slice(0, 34)} -> ${kind}`, classifyLayer(name) === kind, `got ${classifyLayer(name)}`);
+    if (storey !== null) check(`layer storey: ${name.slice(0, 26)} -> ${storey}`, storeyOf(name) === storey, `got ${storeyOf(name)}`);
+  }
+  // The bug this guards: 'tur' (German Tuer) is a substring of "strucTURe", so
+  // plain substring matching classified every exterior wall layer as a door.
+  check('layer: "Structure" is not a door', classifyLayer('Structure - Murs') === 'wall');
+  // And 'exter' must not make "Murs exterieurs" an outdoor layer.
+  check('layer: "Murs exterieurs" is not outdoor', classifyLayer('Structure - Murs exterieurs') === 'wall');
+  check('layer: demolition detected', isDemolished('0._ _1_D\ufffdmoli_Portes Archicad'));
+  check('layer: new work is not demolition', !isDemolished('0._ _1_Nouveau_Portes Archicad'));
+  check('layer: unknown stays unknown', classifyLayer('Layer1') === 'unknown');
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

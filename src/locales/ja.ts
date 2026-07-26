@@ -611,4 +611,10 @@ export const JA: Record<string, string> = {
   'Cedar Shake': 'シダーシェイク',
   'Standing Seam': '立平葺き',
   'Reading the plan…': '図面を読み取り中…',
+  'Layers recognised — using the wall layers only.': 'レイヤーを認識しました — 壁レイヤーのみ使用します。',
+  'Skipped': 'スキップ',
+  'dimension lines.': '寸法線。',
+  'storeys found — they will be stacked as separate floors.': '階を検出 — 別々のフロアとして積み重ねます。',
+  'Imported': '読み込み完了',
+  'floors': '階',
 };

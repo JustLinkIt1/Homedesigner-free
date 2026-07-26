@@ -5,6 +5,79 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.0.98 - 2026-07-26 (versionCode 10098)
+
+Plan import, part two — driven by three real plans and three real DWG files
+rather than synthetic tests, which is what finally exposed these.
+
+### Fixed — grey-filled walls were being erased
+Plenty of architectural software fills walls with mid-GREY rather than black,
+which makes the image three-toned: white paper, grey wall fill, black linework.
+Otsu's method is a **two**-class algorithm, so it split off the black linework
+and handed the grey walls to the background. On a real plan — 12% of pixels grey
+wall at luminance 195 — Otsu chose 154 and the walls were simply erased. The
+tracer saw only dimension lines and text and returned **zero rooms and no
+outline**, which is precisely the reported symptom.
+
+`autoThreshold` now also fits a three-class threshold and cuts above the middle
+tone when there is one. That alone is not enough to be safe: grey ROOM fill and
+the speckle of a noisy phone photo also look like "a middle tone under a paper
+majority", and cutting above those wrecks the trace (caught by the regression
+suite, which failed on exactly those two cases). So the middle tone additionally
+has to be **shaped** like a wall — a distance transform measures its typical
+half-width, and it counts only if that lands between one pixel (speckle) and 5%
+of the image's short edge (a filled room). The affected plan goes from 0 rooms /
+no outline to 3 rooms / an 82 m² footprint; black-walled plans are untouched.
+
+### Added — CAD imports read the drawing's layers
+An architect's DWG is not a picture of a plan, it is a structured drawing where
+every entity already says what it is. A real ArchiCAD export measured here:
+
+```
+0._ _1_Structure - Murs extérieurs          1._ _2_Structure - Murs extérieurs
+0._ _1_2D - Cotations - existant ET nouveau 0._ _1_Intérieur - Escaliers
+0._ _1_Portes Archicad                      2._ _3_Toits - Toitures
+```
+
+New `src/lib/dxfLayers.ts` classifies layer names (wall / door / window /
+dimension / stair / roof / zone / outdoor / annotation, matched in several
+languages and tolerant of the mojibake DWG→DXF conversion makes of accents), and
+reads the **storey index** out of the layer prefix. The importer now uses only
+wall layers, skips demolition layers, and returns one `DxfStorey` per level.
+On the measured file: 330 dimension lines, 263 stair lines, 434 window lines and
+316 door lines no longer arrive as walls — 715 "walls" became 250 real ones.
+Unrecognised layer schemes fall back to the previous behaviour untouched.
+
+### Fixed — CAD imports came in at absurd scale
+Model space holds the title block, the elevations and every storey side by side,
+so guessing the unit scale from the drawing's extent gave a **206 m wide house**.
+The importer now reads `$INSUNITS` from the header — but verifies it, because
+headers are routinely wrong: one file here declared centimetres for a drawing
+plainly authored in metres, which would have imported an 18 m house as 18 cm and
+dropped every wall as sub-minimum-length. The header only wins if it puts the
+building at a believable size. Extents are also taken from percentiles now, so a
+stray entity 30 km from the origin (seen in a real file) can't drag the scale or
+the origin with it. All three test files now import at 6.4–7.0 m × 21.8–23.0 m.
+
+### Added — multi-storey CAD import
+Architects lay storeys out side by side; a building stacks them. Each storey is
+now brought back to a common origin and imported onto its own floor, and the
+import summary says how many were found.
+
+### Tests
+`tests/geometry.mjs` gains layer-classification assertions built from the real
+layer names, including a guard for a bug found while writing this: `'tur'`
+(German *Tür* without its umlaut) is a substring of "s**tur**e", so plain
+substring matching classified every `Structure - Murs extérieurs` layer as a
+DOOR and discarded every wall in the drawing. Matching is now word-start
+anchored.
+
+### Known, not fixed
+CAD files draw each wall as a closed **outline** (two parallel faces), so room
+detection — which expects centrelines — still finds few or no rooms on DXF
+imports even though the walls themselves are now correct. Extracting centrelines
+from wall outlines is the next piece of work.
+
 ## 1.0.97 - 2026-07-25 (versionCode 10097)
 
 Plan import, from user feedback: "I tried to upload 3 different plans and all of

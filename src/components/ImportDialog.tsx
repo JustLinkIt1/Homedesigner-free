@@ -8,6 +8,7 @@ import { importDxf } from '../lib/dxfImport';
 import { autoThreshold, type PixelSegment } from '../lib/autoTrace';
 import { traceWallsV2, traceWallsAuto } from '../lib/wallTrace';
 import { segmentsToWalls } from '../lib/wallBuilder';
+import { toast } from '../lib/ui';
 
 type Stage = 'pick' | 'raster' | 'dxf' | 'busy';
 
@@ -21,6 +22,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     updateBackground: st.updateBackground,
     importWalls: st.importWalls,
     detectRoomsFromWalls: st.detectRoomsFromWalls,
+    addFloor: st.addFloor,
     requestFit: st.requestFit,
     setView: st.setView,
   })));
@@ -45,7 +47,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
 
   // dxf state
   const [dxfText, setDxfText] = useState<string | null>(null);
-  const [dxfInfo, setDxfInfo] = useState<{ count: number; unit: number } | null>(null);
+  const [dxfInfo, setDxfInfo] = useState<{ count: number; unit: number; floors: number; layerAware: boolean; dimensions: number } | null>(null);
 
   const cmPerPx = rendered ? (realWidthM * 100) / rendered.width : 1;
 
@@ -108,7 +110,13 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
           wallHeight: s.defaultWallHeight,
           wallThickness: s.defaultWallThickness,
         });
-        setDxfInfo({ count: res.walls.length, unit: res.unitScale });
+        setDxfInfo({
+          count: res.walls.length,
+          unit: res.unitScale,
+          floors: res.storeys.filter((st) => st.walls.length > 0).length,
+          layerAware: res.layerAware,
+          dimensions: res.kindCounts.dimension ?? 0,
+        });
         setStage('dxf');
       } else {
         setStage('busy');
@@ -174,8 +182,18 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
       wallHeight: s.defaultWallHeight,
       wallThickness: s.defaultWallThickness,
     });
-    s.importWalls(res.walls, true);
-    s.detectRoomsFromWalls(); // auto-create floors from the imported walls
+    // A CAD file names its storeys on the layers ("0._ _1_", "1._ _2_", ...),
+    // and architects lay them out side by side in model space. Import each one
+    // onto its own floor so the building stacks the way it is built.
+    const storeys = res.storeys.filter((st) => st.walls.length > 0);
+    storeys.forEach((st, i) => {
+      if (i > 0) s.addFloor();
+      s.importWalls(st.walls, true);
+      s.detectRoomsFromWalls(); // auto-create rooms from the imported walls
+    });
+    if (storeys.length > 1) {
+      toast.success(`${t('Imported')} ${storeys.length} ${t('floors')}`);
+    }
     s.requestFit();
     s.setView('2d');
     onClose();
@@ -334,6 +352,18 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
                 {t('Estimated unit scale:')} <strong style={{ color: 'var(--text)' }}>{dxfInfo.unit} cm</strong>{' '}
                 {t('per drawing unit (auto-detected). Walls will be created as editable geometry.')}
               </p>
+              {dxfInfo.layerAware && (
+                <p className="muted">
+                  {t('Layers recognised — using the wall layers only.')}
+                  {dxfInfo.dimensions > 0 && ` ${t('Skipped')} ${dxfInfo.dimensions} ${t('dimension lines.')}`}
+                </p>
+              )}
+              {dxfInfo.floors > 1 && (
+                <p className="muted">
+                  <strong style={{ color: 'var(--text)' }}>{dxfInfo.floors}</strong>{' '}
+                  {t('storeys found — they will be stacked as separate floors.')}
+                </p>
+              )}
             </div>
           )}
         </div>

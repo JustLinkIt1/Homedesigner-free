@@ -611,4 +611,10 @@ export const KO: Record<string, string> = {
   'Cedar Shake': '시더 셰이크',
   'Standing Seam': '거멀접기',
   'Reading the plan…': '도면을 읽는 중…',
+  'Layers recognised — using the wall layers only.': '레이어를 인식했습니다 — 벽 레이어만 사용합니다.',
+  'Skipped': '건너뜀',
+  'dimension lines.': '치수선.',
+  'storeys found — they will be stacked as separate floors.': '층을 찾았습니다 — 별도의 층으로 쌓입니다.',
+  'Imported': '가져옴',
+  'floors': '층',
 };

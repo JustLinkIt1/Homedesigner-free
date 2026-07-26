@@ -611,4 +611,10 @@ export const RU: Record<string, string> = {
   'Cedar Shake': 'Кедровый гонт',
   'Standing Seam': 'Фальцевая кровля',
   'Reading the plan…': 'Чтение плана…',
+  'Layers recognised — using the wall layers only.': 'Слои распознаны — используются только слои стен.',
+  'Skipped': 'Пропущено',
+  'dimension lines.': 'размерных линий.',
+  'storeys found — they will be stacked as separate floors.': 'этажей найдено — они будут сложены как отдельные этажи.',
+  'Imported': 'Импортировано',
+  'floors': 'этажей',
 };

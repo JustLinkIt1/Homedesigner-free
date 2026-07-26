@@ -611,4 +611,10 @@ export const ZH: Record<string, string> = {
   'Cedar Shake': '雪松木瓦',
   'Standing Seam': '立缝金属',
   'Reading the plan…': '正在读取图纸…',
+  'Layers recognised — using the wall layers only.': '已识别图层 — 仅使用墙体图层。',
+  'Skipped': '已跳过',
+  'dimension lines.': '条尺寸线。',
+  'storeys found — they will be stacked as separate floors.': '层 — 将堆叠为独立楼层。',
+  'Imported': '已导入',
+  'floors': '层',
 };

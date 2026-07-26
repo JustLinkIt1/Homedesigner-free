@@ -611,4 +611,10 @@ export const NL: Record<string, string> = {
   'Cedar Shake': 'Cederhouten shake',
   'Standing Seam': 'Felsdak',
   'Reading the plan…': 'Plattegrond wordt gelezen…',
+  'Layers recognised — using the wall layers only.': 'Lagen herkend — alleen de muurlagen worden gebruikt.',
+  'Skipped': 'Overgeslagen',
+  'dimension lines.': 'maatlijnen.',
+  'storeys found — they will be stacked as separate floors.': 'verdiepingen gevonden — ze worden als aparte etages gestapeld.',
+  'Imported': 'Geïmporteerd',
+  'floors': 'etages',
 };

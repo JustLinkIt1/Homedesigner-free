@@ -611,4 +611,10 @@ export const TR: Record<string, string> = {
   'Cedar Shake': 'Sedir shake',
   'Standing Seam': 'Dik dikiş',
   'Reading the plan…': 'Plan okunuyor…',
+  'Layers recognised — using the wall layers only.': 'Katmanlar tanındı — yalnızca duvar katmanları kullanılıyor.',
+  'Skipped': 'Atlandı',
+  'dimension lines.': 'ölçü çizgisi.',
+  'storeys found — they will be stacked as separate floors.': 'kat bulundu — ayrı katlar olarak üst üste yerleştirilecek.',
+  'Imported': 'İçe aktarıldı',
+  'floors': 'kat',
 };

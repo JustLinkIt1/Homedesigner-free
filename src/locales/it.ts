@@ -611,4 +611,10 @@ export const IT: Record<string, string> = {
   'Cedar Shake': 'Scandola di cedro',
   'Standing Seam': 'Aggraffatura',
   'Reading the plan…': 'Lettura della planimetria…',
+  'Layers recognised — using the wall layers only.': 'Livelli riconosciuti: si usano solo quelli dei muri.',
+  'Skipped': 'Ignorato',
+  'dimension lines.': 'linee di quota.',
+  'storeys found — they will be stacked as separate floors.': 'piani trovati: saranno impilati come livelli separati.',
+  'Imported': 'Importato',
+  'floors': 'piani',
 };
