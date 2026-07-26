@@ -621,4 +621,10 @@ export const IT: Record<string, string> = {
   'lines on demolition layers (shows the proposed state).': 'linee dei livelli di demolizione (mostra lo stato di progetto).',
   'DXF for CAD': 'DXF per CAD',
   'Plan exported as a layered DXF drawing': 'Planimetria esportata in DXF con livelli',
+  'Version': 'Versione',
+  'is available.': 'è disponibile.',
+  'A new version is available.': 'È disponibile una nuova versione.',
+  'Update': 'Aggiorna',
+  'Updating…': 'Aggiornamento…',
+  'Reload': 'Ricarica',
 };

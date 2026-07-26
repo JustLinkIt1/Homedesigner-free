@@ -1,6 +1,30 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import pkg from './package.json';
+
+/**
+ * Emit `version.json` beside the build.
+ *
+ * The web app is a plain SPA on GitHub Pages: a tab left open for a week keeps
+ * running whatever bundle it loaded, with no way to learn that a new one
+ * shipped. This is the smallest thing that can tell it — a file the running app
+ * can poll and compare against the version compiled into it. Deliberately not a
+ * service worker: that would add an install/activate lifecycle and a whole new
+ * class of stale-cache bug to an app that currently has none.
+ */
+function versionManifest(): Plugin {
+  return {
+    name: 'homedesigner-version-manifest',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({ version: pkg.version, builtAt: new Date().toISOString() }, null, 2),
+      });
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -10,7 +34,7 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
-  plugins: [react()],
+  plugins: [react(), versionManifest()],
   resolve: {
     // A single three instance is essential — three-mesh-bvh / the path tracer
     // do instanceof + BVH checks that break if three is duplicated.

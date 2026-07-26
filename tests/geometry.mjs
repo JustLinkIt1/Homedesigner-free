@@ -22,6 +22,7 @@ export { classifyOpening } from '${process.cwd()}/src/lib/dxfOpenings.ts';
 export { buildDxf, LAYERS } from '${process.cwd()}/src/lib/dxfExport.ts';
 export { flattenPath } from '${process.cwd()}/src/lib/svgPath.ts';
 export { importDxf } from '${process.cwd()}/src/lib/dxfImport.ts';
+export { isNewer } from '${process.cwd()}/src/lib/appUpdate.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${process.cwd()}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${process.cwd()}/src/lib/roof.ts';
 `);
@@ -38,7 +39,7 @@ const {
   buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
-  buildDxf, LAYERS, flattenPath, importDxf,
+  buildDxf, LAYERS, flattenPath, importDxf, isNewer,
 } = await import(out);
 
 let fails = 0;
@@ -576,6 +577,23 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   check('round trip: two storeys', back.storeys.length === 2, JSON.stringify(back.storeys.map((s)=>s.index)));
   check('round trip: walls on both storeys', back.storeys.every((s) => s.walls.length === 4),
     JSON.stringify(back.storeys.map((s)=>s.walls.length)));
+}
+
+// ---- update version comparison -------------------------------------------
+// A wrong answer here either nags users forever or never offers the update.
+{
+  check('update: patch bump is newer', isNewer('1.2.1', '1.2.0'));
+  check('update: minor bump is newer', isNewer('1.3.0', '1.2.9'));
+  check('update: major bump is newer', isNewer('2.0.0', '1.99.99'));
+  check('update: same version is not newer', !isNewer('1.2.0', '1.2.0'));
+  check('update: older is not newer', !isNewer('1.1.9', '1.2.0'));
+  // 10 > 9 numerically, but string comparison would say otherwise.
+  check('update: compares numerically not lexically', isNewer('1.10.0', '1.9.0'));
+  check('update: 1.0.100 beats 1.0.99', isNewer('1.0.100', '1.0.99'));
+  // A broken manifest must never trigger a reload loop.
+  check('update: garbage is never newer', !isNewer('banana', '1.2.0') && !isNewer('', '1.2.0'));
+  check('update: missing current is safe', !isNewer('9.9.9', 'dev'));
+  check('update: suffixes ignored', isNewer('1.2.1-beta', '1.2.0'));
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

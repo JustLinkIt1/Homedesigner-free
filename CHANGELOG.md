@@ -5,6 +5,51 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.3.0 - 2026-07-26 (versionCode 10300)
+
+The app now tells you when there's a new version.
+
+### Added — update offer on startup
+One banner, two mechanisms behind it, because the two builds genuinely update
+differently:
+
+- **Android** asks Google Play through the Play In-App Updates API
+  (`@capawesome/capacitor-app-update`). Play knows what is published and can
+  download the new build in the background while the app stays usable, then swap
+  it in — nothing else can offer that, so the native path uses it rather than
+  bouncing people to a store listing.
+- **Web / desktop** compares the version compiled into the running bundle
+  against a new `version.json` emitted beside it at build time. A tab left open
+  for a week keeps running whatever bundle it loaded; this is how it finds out.
+  Updating is a reload.
+
+Deliberately **not** a service worker. That would add an install/activate
+lifecycle and a whole class of stale-cache bugs to an app that currently has
+none, to solve a problem a 60-byte JSON file solves.
+
+It checks on startup and again whenever the app comes back to the foreground —
+that second one is what catches long-lived tabs and backgrounded phones.
+Dismissing remembers **which version** was waved away, so the next release still
+asks rather than the prompt going quiet forever.
+
+Every failure path is silent: no network, an offline device, a build sideloaded
+rather than installed from Play — all normal, all just mean no prompt.
+
+### Verified
+Five assertions in the smoke suite drive the real app against a manifest
+claiming a newer release: the banner appears and names the version, dismissing
+stops it asking, a *newer* release asks again, and the running version never
+prompts. Ten more cover the version comparison itself — including that `1.10.0`
+beats `1.9.0` (string comparison says otherwise) and that a malformed manifest
+can never nag anyone into a pointless reload.
+
+### Note on the Android path
+The Play flow cannot be exercised here — in-app updates only work for a build
+installed from the Play Store, against a higher version already published. The
+code is written defensively and the signed release builds with the plugin in
+place, but the first real test is a Play track with 1.3.0 published above an
+installed 1.2.0.
+
 ## 1.2.0 - 2026-07-26 (versionCode 10200)
 
 CAD export — the import work pointed the other way.

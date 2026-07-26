@@ -621,4 +621,10 @@ export const JA: Record<string, string> = {
   'lines on demolition layers (shows the proposed state).': '解体レイヤーの線（計画後の状態を表示）。',
   'DXF for CAD': 'CAD用DXF',
   'Plan exported as a layered DXF drawing': 'レイヤー付きDXFとして書き出しました',
+  'Version': 'バージョン',
+  'is available.': 'が利用できます。',
+  'A new version is available.': '新しいバージョンがあります。',
+  'Update': '更新',
+  'Updating…': '更新中…',
+  'Reload': '再読み込み',
 };

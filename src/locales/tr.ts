@@ -621,4 +621,10 @@ export const TR: Record<string, string> = {
   'lines on demolition layers (shows the proposed state).': 'yıkım katmanlarındaki çizgiler (önerilen durumu gösterir).',
   'DXF for CAD': 'CAD için DXF',
   'Plan exported as a layered DXF drawing': 'Plan katmanlı DXF olarak dışa aktarıldı',
+  'Version': 'Sürüm',
+  'is available.': 'kullanılabilir.',
+  'A new version is available.': 'Yeni bir sürüm mevcut.',
+  'Update': 'Güncelle',
+  'Updating…': 'Güncelleniyor…',
+  'Reload': 'Yeniden yükle',
 };

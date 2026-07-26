@@ -621,4 +621,10 @@ export const RU: Record<string, string> = {
   'lines on demolition layers (shows the proposed state).': 'линий на слоях сноса (показывает проектное состояние).',
   'DXF for CAD': 'DXF для САПР',
   'Plan exported as a layered DXF drawing': 'План экспортирован в DXF со слоями',
+  'Version': 'Версия',
+  'is available.': 'доступна.',
+  'A new version is available.': 'Доступна новая версия.',
+  'Update': 'Обновить',
+  'Updating…': 'Обновление…',
+  'Reload': 'Перезагрузить',
 };

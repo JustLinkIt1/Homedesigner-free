@@ -42,6 +42,7 @@ import { useProStore } from './store/proStore';
 import { useAuthStore } from './store/authStore';
 import { requirePro } from './lib/pro';
 import { Toaster, ConfirmHost } from './components/Overlays';
+import UpdateBanner from './components/UpdateBanner';
 import { useDesign } from './store/designStore';
 import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
 import { TOOLS } from './data/tools';
@@ -409,6 +410,7 @@ export default function App() {
           />
         )}
         <ProUpsellModal />
+        <UpdateBanner />
         <Toaster />
         <ConfirmHost />
       </div>
@@ -939,6 +941,7 @@ export default function App() {
       )}
 
       <ProUpsellModal />
+      <UpdateBanner />
       <Toaster />
       <ConfirmHost />
     </div>

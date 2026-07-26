@@ -495,6 +495,41 @@ check(
 );
 await recoveryPage.close();
 
+// ---- update offer on startup ----------------------------------------------
+// A fresh page with a version.json claiming a newer release. This is the whole
+// point of the feature and it is invisible to every other check.
+{
+  const upd = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  let served = { version: '9.9.9' };
+  await upd.route('**/version.json*', (r) =>
+    r.fulfill({ contentType: 'application/json', body: JSON.stringify(served) }));
+  await upd.goto(BASE, { waitUntil: 'networkidle' });
+  const banner = upd.locator('.update-banner');
+  check('update: banner offers a newer version',
+    await banner.waitFor({ state: 'visible', timeout: 8000 }).then(() => true).catch(() => false));
+  check('update: banner names the version',
+    ((await banner.textContent().catch(() => '')) || '').includes('9.9.9'));
+
+  await upd.locator('.update-banner .ub-close').click();
+  await upd.reload({ waitUntil: 'networkidle' });
+  await upd.waitForTimeout(1200);
+  check('update: a dismissed version stops asking', !(await banner.isVisible().catch(() => false)));
+
+  served = { version: '9.9.10' };
+  await upd.reload({ waitUntil: 'networkidle' });
+  check('update: a newer release asks again',
+    await banner.waitFor({ state: 'visible', timeout: 8000 }).then(() => true).catch(() => false));
+
+  // And the running version must never prompt.
+  const pkgVersion = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version;
+  served = { version: pkgVersion };
+  await upd.evaluate(() => localStorage.removeItem('homedesigner.update.dismissed'));
+  await upd.reload({ waitUntil: 'networkidle' });
+  await upd.waitForTimeout(1200);
+  check('update: no prompt when already up to date', !(await banner.isVisible().catch(() => false)));
+  await upd.close();
+}
+
 check('zero page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));
 
 await browser.close();
