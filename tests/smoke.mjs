@@ -55,7 +55,14 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
   args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'],
 });
-const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+// `reducedMotion: 'reduce'` makes this suite deterministic: <MotionConfig
+// reducedMotion="user"> collapses every overlay animation to an instant state
+// change, so a dialog is gone from the DOM the moment it closes and clicks never
+// land on a still-fading backdrop. It also means the whole suite exercises the
+// reduced-motion path. Animation itself is asserted separately, in a second
+// context that leaves motion on — otherwise "all green" would be compatible with
+// having shipped no animation at all.
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
 
@@ -589,6 +596,87 @@ if (process.env.SMOKE_SKIP_3D) {
     );
     check('a real 40px drag still does not open the menu', !hold.dragged.opened);
   }
+}
+
+// ---- shared dialog shell: Escape, a11y, and real motion --------------------
+// Before <Modal> none of the seven dialogs closed on Escape, none trapped focus
+// and only one carried a role. All of that is now in one place, so assert it
+// once against a representative dialog.
+// Uses its own page on the projects screen, where Settings has a direct button —
+// the main `page` is deep in the 3D editor by now and its state is not worth
+// unwinding just to open a dialog.
+{
+  const a11y = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'reduce' });
+  await a11y.goto(BASE);
+  await a11y.waitForSelector('.projects-screen', { timeout: 20000 });
+  await a11y.locator('.ps-head .ps-settings-btn').click();
+  // Let the dialog mount and its key/focus effect attach before driving it. The
+  // listener is installed in an effect, so a keypress dispatched in the same
+  // tick as the opening click lands before anything is listening.
+  await a11y.waitForTimeout(400);
+  const shown = await a11y.locator('.modal.settings').isVisible().catch(() => false);
+  check('settings dialog opens', shown);
+  if (shown) {
+    check(
+      'dialog announces itself (role + aria-modal + label)',
+      await a11y.evaluate(() => {
+        const el = document.querySelector('.modal.settings');
+        if (!el) return false;
+        const id = el.getAttribute('aria-labelledby');
+        return el.getAttribute('role') === 'dialog'
+          && el.getAttribute('aria-modal') === 'true'
+          && !!id && !!document.getElementById(id);
+      }),
+    );
+    check(
+      'focus moves into the dialog on open',
+      await a11y.evaluate(() => !!document.querySelector('.modal.settings')?.contains(document.activeElement)),
+    );
+    // Before <Modal> not one dialog in the app responded to Escape.
+    // Poll rather than waiting a fixed slice: the panel is removed only once its
+    // exit finishes, and under software rendering that lands around 0.6s once
+    // Playwright's own round-trips are counted.
+    await a11y.keyboard.press('Escape');
+    let closed = false;
+    for (let i = 0; i < 25 && !closed; i++) {
+      closed = (await a11y.locator('.modal.settings').count()) === 0;
+      if (!closed) await a11y.waitForTimeout(60);
+    }
+    check('Escape closes the dialog', closed);
+  }
+  await a11y.close();
+}
+
+// Motion is disabled for the rest of this suite (reducedMotion: 'reduce'), which
+// is what keeps it deterministic — but that means nothing above would fail if the
+// animations were never wired up. This context leaves motion ON and checks that a
+// closing dialog actually lingers for a frame instead of vanishing instantly.
+{
+  const motionPage = await browser.newPage({ viewport: { width: 1100, height: 800 } });
+  await motionPage.goto(BASE);
+  await motionPage.waitForSelector('.projects-screen', { timeout: 20000 });
+  await motionPage.locator('.ps-head .ps-settings-btn').click();
+  const opened = await motionPage.locator('.modal.settings').isVisible().catch(() => false);
+  check('motion context: settings dialog opens', opened);
+  if (opened) {
+    await motionPage.locator('.modal.settings .modal-foot .btn.primary').click();
+    // Immediately after the close click the panel must STILL be there (it is
+    // animating out). With no exit animation this is 0 and the check fails —
+    // which is the point: it is what stops "all green" from being compatible
+    // with having shipped no animation.
+    const during = await motionPage.locator('.modal.settings').count();
+    // ...and it must still finish. A never-completing exit would leave a
+    // backdrop swallowing every click, which is exactly what an earlier draft
+    // of <Modal> did (mixed element- and variant-level transitions).
+    let gone = false;
+    for (let i = 0; i < 25 && !gone; i++) {
+      gone = (await motionPage.locator('.modal.settings').count()) === 0;
+      if (!gone) await motionPage.waitForTimeout(60);
+    }
+    check('dialog animates out instead of vanishing in one frame', during === 1 && gone,
+      `during=${during} gone=${gone}`);
+  }
+  await motionPage.close();
 }
 
 // ---- 6. No page errors ------------------------------------------------------

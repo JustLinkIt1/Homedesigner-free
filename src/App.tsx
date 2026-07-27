@@ -398,17 +398,16 @@ export default function App() {
             <ImportDialog onClose={() => setShowImport(false)} />
           </Suspense>
         )}
-        {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
-        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} onReplayTour={replayTour} />}
-        {showSettings && (
-          <SettingsDialog
-            onClose={() => setShowSettings(false)}
-            onReplayTour={() => {
-              setShowSettings(false);
-              replayTour();
-            }}
-          />
-        )}
+        <AboutDialog open={showAbout} onClose={() => setShowAbout(false)} />
+        <HelpPanel open={showHelp} onClose={() => setShowHelp(false)} onReplayTour={replayTour} />
+        <SettingsDialog
+          open={showSettings}
+          onClose={() => setShowSettings(false)}
+          onReplayTour={() => {
+            setShowSettings(false);
+            replayTour();
+          }}
+        />
         <ProUpsellModal />
         <UpdateBanner />
         <Toaster />
@@ -840,18 +839,20 @@ export default function App() {
         {/* The Objects catalog opens as a partial-height bottom sheet, so no
             backdrop — the plan stays visible above it and tappable for placing
             furniture (Planner-5D style). Props/Build keep their modal backdrop. */}
-        {drawer && drawer !== 'catalog' && (
-          <div
-            className="drawer-backdrop"
-            onClick={() => {
-              // A manual close while something is selected means "leave me
-              // alone about this object" — suppress re-auto-opening it.
-              if (drawer === 'props' && selection.id) suppressedIdRef.current = selection.id;
-              autoOpenedRef.current = false;
-              setDrawer(null);
-            }}
-          />
-        )}
+        {/* Always mounted and toggled by class, exactly like .build-sheet and
+            .sidebar. Conditional rendering gave it no enter transition, so the
+            scrim used to hard-cut in while the sheet it dims slid over 0.24s —
+            the mismatch was very visible. */}
+        <div
+          className={`drawer-backdrop${drawer && drawer !== 'catalog' ? ' open' : ''}`}
+          onClick={() => {
+            // A manual close while something is selected means "leave me
+            // alone about this object" — suppress re-auto-opening it.
+            if (drawer === 'props' && selection.id) suppressedIdRef.current = selection.id;
+            autoOpenedRef.current = false;
+            setDrawer(null);
+          }}
+        />
         <div className="mobile-tabs">
           <button
             className={drawer === 'build' || buildModeActive ? 'active' : ''}
@@ -892,18 +893,17 @@ export default function App() {
         </Suspense>
       )}
 
-      {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
-      {showHelp && <HelpPanel onClose={() => setShowHelp(false)} onReplayTour={replayTour} />}
-      {showList && <ShoppingList onClose={() => setShowList(false)} />}
-      {showSettings && (
-        <SettingsDialog
-          onClose={() => setShowSettings(false)}
-          onReplayTour={() => {
-            setShowSettings(false);
-            replayTour();
-          }}
-        />
-      )}
+      <AboutDialog open={showAbout} onClose={() => setShowAbout(false)} />
+      <HelpPanel open={showHelp} onClose={() => setShowHelp(false)} onReplayTour={replayTour} />
+      <ShoppingList open={showList} onClose={() => setShowList(false)} />
+      <SettingsDialog
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        onReplayTour={() => {
+          setShowSettings(false);
+          replayTour();
+        }}
+      />
 
       {offerTour && view === '2d' && !showImport && !photoMode && (
         <WelcomeTour

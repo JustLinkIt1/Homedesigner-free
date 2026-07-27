@@ -9,6 +9,7 @@ import { autoThreshold, type PixelSegment } from '../lib/autoTrace';
 import { traceWallsV2, traceWallsAuto } from '../lib/wallTrace';
 import { segmentsToWalls } from '../lib/wallBuilder';
 import { toast } from '../lib/ui';
+import Modal from './Modal';
 
 type Stage = 'pick' | 'raster' | 'dxf' | 'busy';
 
@@ -203,9 +204,13 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-head">
+    // `open` is hardcoded true: this dialog stays behind `{showImport && …}` in
+    // App.tsx because it is lazy()-loaded to keep pdfjs and dxf-parser out of
+    // the initial bundle. Keeping it permanently mounted just to animate its
+    // exit would defeat that split, so it animates in but not out.
+    <Modal open onClose={onClose} labelledBy="import-title">
+      <>
+        <div className="modal-head" id="import-title">
           <Ruler className="icon" /> {t('Import a 2D plan')}
         </div>
         <div className="modal-body">
@@ -404,7 +409,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

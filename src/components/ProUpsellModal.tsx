@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Crown, Layers, FileText, Sofa, FolderOpen, Sparkles, Check } from 'lucide-react';
 import { useProStore } from '../store/proStore';
@@ -6,6 +6,7 @@ import { isWebBillingConfigured, type ProFeature } from '../lib/pro';
 import { useAuthStore } from '../store/authStore';
 import { APP_NAME } from '../lib/appInfo';
 import { useI18n } from '../lib/i18n';
+import Modal from './Modal';
 
 const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blurb: string }> = {
   multiFloor: {
@@ -47,23 +48,20 @@ export default function ProUpsellModal() {
   const t = useI18n();
 
   const open = !!upsellFeature && !isPro;
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeUpsell();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, closeUpsell]);
-
-  if (!open) return null;
+  // Escape, focus handling and presence now live in <Modal>. Because the modal
+  // stays mounted while it animates out, `upsellFeature` may already be null —
+  // keep the last one so the closing frame still renders its copy instead of
+  // blanking or crashing on the lookup below.
+  const lastFeature = useRef<ProFeature | null>(upsellFeature);
+  if (upsellFeature) lastFeature.current = upsellFeature;
+  const feature = upsellFeature ?? lastFeature.current;
 
   const native = Capacitor.isNativePlatform();
   const webBilling = !native && isWebBillingConfigured();
   const actionBusy = busy || authBusy;
   const showPlanChoices = webBilling && !!account && plans.length > 0;
-  const copy = FEATURE_COPY[upsellFeature];
-  const Icon = copy.icon;
+  const copy = feature ? FEATURE_COPY[feature] : null;
+  const Icon = copy?.icon;
   const buyLabel = native || (webBilling && account)
     ? `${t('Unlock Pro')}${priceLabel ? ` — ${priceLabel}` : ''}`
     : webBilling
@@ -76,17 +74,21 @@ export default function ProUpsellModal() {
   ];
 
   return (
-    <div className="modal-backdrop" onMouseDown={closeUpsell}>
-      <div className="modal pro-upsell" onMouseDown={(e) => e.stopPropagation()}>
+    <Modal open={open} onClose={closeUpsell} className="pro-upsell" labelledBy="pro-title">
+      <>
         <div className="pro-hero">
-          <span className="pro-badge">
+          <span className="pro-badge" id="pro-title">
             <Crown className="icon" /> {APP_NAME} Pro
           </span>
-          <span className="pro-hero-icon">
-            <Icon className="icon" />
-          </span>
-          <h2>{t(copy.title)}</h2>
-          <p>{t(copy.blurb)}</p>
+          {copy && Icon && (
+            <>
+              <span className="pro-hero-icon">
+                <Icon className="icon" />
+              </span>
+              <h2>{t(copy.title)}</h2>
+              <p>{t(copy.blurb)}</p>
+            </>
+          )}
         </div>
         <ul className="pro-benefits">
           {benefits.map((b) => (
@@ -138,7 +140,7 @@ export default function ProUpsellModal() {
             {t('Maybe later')}
           </button>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

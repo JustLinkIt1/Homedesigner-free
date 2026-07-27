@@ -5,6 +5,63 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.5.0 - 2026-07-27 (versionCode 10500)
+
+Menu and dialog polish — *"in professionally developed apps the UI of the menus
+just looks more slick and animated"*.
+
+### Added — dialogs now open and close like dialogs
+All seven dialogs (Settings, About, Help, Shopping list, Import, Pro, and the
+confirm prompt) hand-rolled the same backdrop/panel markup, and **none of them
+animated at all** — they hard-cut in over a blurred scrim and vanished in a
+single frame. They now share one `Modal` component that fades the scrim and
+lifts the panel in, and reverses it on close.
+
+It also fixes things that had nothing to do with animation and were simply
+missing: **Escape now closes a dialog** (not one of them responded to it
+before), Tab is trapped inside the panel instead of walking the editor behind
+it, focus moves into the dialog on open and returns to whatever opened it on
+close, the page behind can no longer scroll under it, and each dialog carries
+`role="dialog"`, `aria-modal` and a proper label for screen readers.
+
+### Added — toasts leave, and the stack settles
+Dismissing a toast spliced it out of the list, so it disappeared instantly and
+every toast above it jumped down by its own height plus the gap. Toasts now
+animate out and the survivors glide into their new positions.
+
+### Fixed — popovers jumped instead of growing
+The 3D decorate popover and the openings flyout both carry their own transform
+to position themselves (`translate(-50%,-100%)` and `translateY(-50%)`). They
+shared a keyframe whose first frame replaced `transform` outright, so each one
+started life un-positioned and snapped into place. Each now has a keyframe that
+scales while keeping its offset.
+
+### Improved — menus
+Context menus grow out of the point you actually tapped rather than their own
+centre, and flip back over it near a screen edge instead of rendering partly
+off-screen (easy to hit on a phone, where you long-press wherever you like).
+Menu items fade in a beat behind the panel. Elevation is now a layered
+contact + ambient shadow pair rather than one wide blur, which is most of what
+makes a menu read as expensive. The mobile drawer scrim fades in step with the
+sheet it dims instead of hard-cutting, and the tour bubble glides between steps
+rather than teleporting.
+
+Everything honours `prefers-reduced-motion`, and the browser suite runs in that
+mode — with separate checks that deliberately leave motion on, so a green suite
+cannot be achieved by shipping no animation at all.
+
+### Notes
+Motion uses Framer Motion, pinned into its own `motion-vendor` chunk and loaded
+through `LazyMotion` so it stays out of the editor's first paint. Measured:
+**45.3 kB gzipped in that chunk; the main bundle is unchanged at ~185 kB.**
+
+A planned blanket retiming of all 34 CSS transitions was **dropped**. It broke
+the browser suite (the docked 3D catalog click failed three runs in a row where
+clean 1.4.0 passed 61/61, and reverting only `index.css` turned it green again),
+and it was the lowest-value part of the change — dozens of rules unrelated to
+menus. The targeted work above lands instead, at 97 added CSS lines rather than
+a whole-file rewrite.
+
 ## 1.4.0 - 2026-07-27 (versionCode 10400)
 
 Acting on the Play Console tester reports. Seven testers, no crashes; two of

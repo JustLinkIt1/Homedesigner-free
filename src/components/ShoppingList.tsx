@@ -9,9 +9,10 @@ import { toast } from '../lib/ui';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
+import Modal from './Modal';
 
 /** Aggregated furniture list across all storeys — a shareable shopping list. */
-export default function ShoppingList({ onClose }: { onClose: () => void }) {
+export default function ShoppingList({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useI18n();
   const floors = useDesign((s) => s.floors);
   const floorGeom = useDesign((s) => s.floorGeom);
@@ -41,9 +42,9 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
-      <div className="modal shopping-list" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-head">
+    <Modal open={open} onClose={onClose} className="shopping-list" labelledBy="shopping-title">
+      <>
+        <div className="modal-head" id="shopping-title">
           <ClipboardList className="icon" /> {t('Shopping list')}
         </div>
         <div className="modal-body bom-body">
@@ -105,7 +106,7 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
             {t('Done')}
           </button>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

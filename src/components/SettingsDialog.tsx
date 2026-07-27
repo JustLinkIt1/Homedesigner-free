@@ -11,6 +11,7 @@ import { APP_NAME, APP_VERSION, PRIVACY_URL } from '../lib/appInfo';
 import { useAuthStore } from '../store/authStore';
 import { deleteCloudProjects } from '../lib/cloudSync';
 import { toast } from '../lib/ui';
+import Modal from './Modal';
 
 const THEME_OPTIONS: { id: ThemePref; label: string; icon: typeof Sun }[] = [
   { id: 'system', label: 'System', icon: Monitor },
@@ -44,9 +45,11 @@ const TIER_LABEL: Record<PerfTier, string> = {
 
 /** Central app preferences (theme, units, haptics, editor defaults, tour). */
 export default function SettingsDialog({
+  open,
   onClose,
   onReplayTour,
 }: {
+  open: boolean;
   onClose: () => void;
   onReplayTour: () => void;
 }) {
@@ -70,9 +73,9 @@ export default function SettingsDialog({
   const t = useI18n();
 
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
-      <div className="modal settings" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-head">
+    <Modal open={open} onClose={onClose} className="settings" labelledBy="settings-title">
+      <>
+        <div className="modal-head" id="settings-title">
           <Settings className="icon" /> {t('Settings')}
         </div>
         <div className="modal-body settings-body">
@@ -268,7 +271,7 @@ export default function SettingsDialog({
             {t('Done')}
           </button>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

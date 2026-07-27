@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { LazyMotion, MotionConfig, domMax } from 'framer-motion';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useDesign } from './store/designStore';
@@ -27,7 +28,26 @@ if (!completedGooglePopup) {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <ErrorBoundary>
-        <App />
+        {/*
+          Motion is configured once, here, because App has two return branches
+          (projects screen and editor) and both render dialogs and toasts.
+
+          `domMax` rather than the smaller `domAnimation` because the toast
+          stack uses `layout` to reflow when one is dismissed, and layout
+          projection only ships in domMax. `strict` makes a bare `motion.div` a
+          runtime error, forcing every call site to use `m.div`, which is what
+          keeps the feature set (and the bundle) from quietly growing further.
+
+          `reducedMotion="user"` honours the OS setting globally, so overlays
+          become instant state changes for users who ask for that — and it is
+          what makes the Playwright suite deterministic under
+          `reducedMotion: 'reduce'`.
+        */}
+        <LazyMotion features={domMax} strict>
+          <MotionConfig reducedMotion="user">
+            <App />
+          </MotionConfig>
+        </LazyMotion>
       </ErrorBoundary>
     </React.StrictMode>,
   );

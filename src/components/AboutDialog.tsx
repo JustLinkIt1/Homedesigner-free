@@ -1,4 +1,5 @@
 import { Info, ExternalLink, Mail } from 'lucide-react';
+import Modal from './Modal';
 import { APP_NAME, APP_TAGLINE, APP_VERSION, PRIVACY_URL, SUPPORT_EMAIL, CREDITS } from '../lib/appInfo';
 
 const supportHref = () =>
@@ -7,11 +8,11 @@ const supportHref = () =>
   )}`;
 
 /** App info, privacy link and third-party attributions (required for CC-BY assets). */
-export default function AboutDialog({ onClose }: { onClose: () => void }) {
+export default function AboutDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
-      <div className="modal about" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-head">
+    <Modal open={open} onClose={onClose} className="about" labelledBy="about-title">
+      <>
+        <div className="modal-head" id="about-title">
           <Info className="icon" /> About {APP_NAME}
         </div>
         <div className="modal-body">
@@ -46,7 +47,7 @@ export default function AboutDialog({ onClose }: { onClose: () => void }) {
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

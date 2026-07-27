@@ -1,4 +1,5 @@
 import { CircleHelp } from 'lucide-react';
+import Modal from './Modal';
 
 // Touch devices have no keyboard/right-click, so the shortcut chips are noise
 // there. On a coarse pointer we drop the keyboard-only rows and swap in the
@@ -71,16 +72,18 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
 /** Feature reference + (on desktop) keyboard shortcuts. Reachable from the "?"
  *  menu item and the home "Explore ideas" tip. */
 export default function HelpPanel({
+  open,
   onClose,
   onReplayTour,
 }: {
+  open: boolean;
   onClose: () => void;
   onReplayTour?: () => void;
 }) {
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
-      <div className="modal help-panel" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-head">
+    <Modal open={open} onClose={onClose} className="help-panel" labelledBy="help-title">
+      <>
+        <div className="modal-head" id="help-title">
           <CircleHelp className="icon" /> {IS_TOUCH ? 'Tips & gestures' : 'Tips & shortcuts'}
         </div>
         <div className="modal-body help-body">
@@ -119,7 +122,7 @@ export default function HelpPanel({
             Got it
           </button>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

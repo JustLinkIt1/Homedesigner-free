@@ -58,6 +58,9 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
           'konva-vendor': ['konva', 'react-konva'],
+          // Motion is used by overlays only — keep it out of the main chunk so
+          // the editor's first paint doesn't pay for it.
+          'motion-vendor': ['framer-motion'],
           'three-vendor': ['three', '@react-three/fiber', '@react-three/drei', '@react-three/postprocessing', 'postprocessing'],
         },
       },

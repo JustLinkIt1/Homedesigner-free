@@ -61,8 +61,12 @@
   /* Elevation */
   --shadow-xs: 0 1px 2px rgba(20, 26, 38, 0.06);
   --shadow-sm: 0 1px 3px rgba(20, 26, 38, 0.08), 0 1px 2px rgba(20, 26, 38, 0.04);
-  --shadow-md: 0 6px 16px rgba(20, 26, 38, 0.1);
-  --shadow-lg: 0 16px 40px rgba(20, 26, 38, 0.16);
+  /* md/lg are layered like --shadow-sm: a tight contact shadow that anchors the
+     surface to the page, plus a wide ambient one. A single large blur reads as a
+     grey halo; the pair is most of what makes a menu look "expensive". */
+  --shadow-md: 0 2px 4px rgba(20, 26, 38, 0.06), 0 6px 16px rgba(20, 26, 38, 0.09);
+  --shadow-lg: 0 1px 2px rgba(20, 26, 38, 0.08), 0 4px 10px rgba(20, 26, 38, 0.07),
+    0 16px 40px rgba(20, 26, 38, 0.14);
 
   /* Radii */
   --r-sm: 8px;
@@ -110,8 +114,9 @@
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 8px 22px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.7);
+  --shadow-md: 0 2px 5px rgba(0, 0, 0, 0.5), 0 8px 22px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 1px 2px rgba(0, 0, 0, 0.6), 0 5px 14px rgba(0, 0, 0, 0.5),
+    0 20px 48px rgba(0, 0, 0, 0.6);
 
   color-scheme: dark;
 }
@@ -404,7 +409,7 @@ button.brand:hover .brand-name {
   flex-direction: column;
   gap: 2px;
   transform-origin: top right;
-  animation: menu-pop 0.13s ease-out;
+  animation: menu-pop var(--dur) var(--ease);
 }
 @keyframes menu-pop {
   from { opacity: 0; transform: translateY(-4px) scale(0.97); }
@@ -1266,7 +1271,15 @@ button.brand:hover .brand-name {
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-lg);
   z-index: 20;
-  animation: ctx-in 0.12s ease;
+  /* Same reason as .paint-pop: preserve the translateY(-50%) centring. */
+  transform-origin: left center;
+  animation: flyout-in var(--dur) var(--ease);
+}
+@keyframes flyout-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.94) translateX(-6px);
+  }
 }
 .of-title {
   font-size: 12px;
@@ -3718,6 +3731,9 @@ button.brand:hover .brand-name {
   border-radius: 14px;
   box-shadow: var(--shadow-lg);
   padding: 14px 16px;
+  /* The tour repositions this per step via inline left/top. Without a transition
+     it teleported, making the tour feel like unrelated popups. */
+  transition: left 0.24s var(--ease), top 0.24s var(--ease);
 }
 .coach-arrow {
   position: absolute;
@@ -4230,6 +4246,16 @@ button.brand:hover .brand-name {
     inset: 0;
     background: rgba(20, 24, 33, 0.4);
     z-index: 55;
+    /* Fades in step with the sheet it dims (same 0.24s curve). Always in the
+       DOM now, so pointer-events must follow the open state or it would
+       swallow taps on the closed plan. */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.24s var(--ease);
+  }
+  .drawer-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
   }
   .mobile-tabs {
     display: grid;
@@ -4292,7 +4318,17 @@ button.brand:hover .brand-name {
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-lg);
   padding: 10px 12px 12px;
-  animation: ctx-in 0.12s ease;
+  /* NOT ctx-in: this popover carries its own translate(-50%,-100%) to sit above
+     the tapped surface, and ctx-in's `transform` in the from-frame replaced it
+     outright — so it used to start un-translated and jump into place. */
+  transform-origin: bottom center;
+  animation: pop-in var(--dur) var(--ease);
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.94);
+  }
 }
 .pp-head {
   display: flex;
@@ -4374,14 +4410,50 @@ button.brand:hover .brand-name {
   border: 1px solid var(--border);
   border-radius: var(--r);
   box-shadow: var(--shadow-lg);
-  animation: ctx-in 0.1s ease;
+  /* Grow out of the point that was tapped. Canvas2D sets --ctx-origin from the
+     tap coordinates; the fallback keeps a sensible corner if it is missing. */
+  transform-origin: var(--ctx-origin, top left);
+  animation: ctx-in var(--dur) var(--ease);
 }
 @keyframes ctx-in {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    transform: scale(0.94);
   }
 }
+/* Items fade up a beat behind the panel, so the menu reads as unfolding rather
+   than appearing whole. Capped at the 6th child: past that a stagger stops
+   feeling responsive and starts feeling slow. Purely decorative — the buttons
+   are clickable from frame one, this only animates opacity/transform. */
+@media (prefers-reduced-motion: no-preference) {
+  .ctx-menu .ctx-item,
+  .export-menu button,
+  .more-menu button {
+    animation: item-in 0.18s var(--ease) both;
+  }
+  .ctx-menu .ctx-item:nth-child(n + 2),
+  .export-menu button:nth-child(n + 2),
+  .more-menu button:nth-child(n + 2) { animation-delay: 0.02s; }
+  .ctx-menu .ctx-item:nth-child(n + 3),
+  .export-menu button:nth-child(n + 3),
+  .more-menu button:nth-child(n + 3) { animation-delay: 0.04s; }
+  .ctx-menu .ctx-item:nth-child(n + 4),
+  .export-menu button:nth-child(n + 4),
+  .more-menu button:nth-child(n + 4) { animation-delay: 0.06s; }
+  .ctx-menu .ctx-item:nth-child(n + 5),
+  .export-menu button:nth-child(n + 5),
+  .more-menu button:nth-child(n + 5) { animation-delay: 0.08s; }
+  .ctx-menu .ctx-item:nth-child(n + 6),
+  .export-menu button:nth-child(n + 6),
+  .more-menu button:nth-child(n + 6) { animation-delay: 0.1s; }
+}
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
 .ctx-item {
   display: flex;
   align-items: center;
@@ -4446,8 +4518,9 @@ button.brand:hover .brand-name {
   font-size: 13.5px;
   font-weight: 600;
   pointer-events: auto;
-  /* Spring slide-up so notifications feel alive as they arrive. */
-  animation: toast-in 0.32s var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+  /* The enter/exit spring now lives in Overlays.tsx (Framer Motion), so the
+     stack can also reflow when a toast in the middle is dismissed — a CSS
+     keyframe can animate arrival but not the survivors' new positions. */
 }
 .toast .icon {
   width: 18px;
@@ -4491,25 +4564,15 @@ button.brand:hover .brand-name {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
 /* ---------- Confirm dialog ---------- */
-.confirm {
-  background: var(--surface);
-  border-radius: var(--r-xl);
+/* Now a `.modal` variant, so surface/radius/shadow come from `.modal` and only
+   the size and padding differ. `overflow: visible` because the confirm has no
+   scrolling body to clip, unlike the larger dialogs. */
+.modal.confirm {
   width: 420px;
-  max-width: 100%;
   padding: 24px;
-  box-shadow: var(--shadow-lg);
+  overflow: visible;
 }
 .confirm h3 {
   margin: 0 0 8px;
@@ -4560,13 +4623,19 @@ button.brand:hover .brand-name {
 @media (prefers-reduced-motion: reduce) {
   .projects-screen,
   .app > .body,
-  .toast,
   .ctx-menu,
   .paint-pop,
   .openings-flyout,
+  .export-menu,
+  .more-menu,
+  .lang-menu,
+  .intro-video,
+  .intro-video.closing,
   .pro-code-input.error {
     animation: none;
   }
+  /* Toasts and dialogs are Framer Motion now and are handled globally by
+     <MotionConfig reducedMotion="user"> in main.tsx. */
 }
 
 /* The 2D stage owns all of its touch gestures (pan/pinch/draw). */
@@ -4767,7 +4836,7 @@ button:focus:not(:focus-visible) {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 16px; box-shadow: var(--shadow-lg, 0 16px 40px rgba(0,0,0,0.28));
   padding: 12px; display: flex; flex-direction: column; gap: 10px;
-  transform-origin: top right; animation: menu-pop 0.13s ease-out;
+  transform-origin: top right; animation: menu-pop var(--dur) var(--ease);
 }
 .account-menu-head { display: grid; grid-template-columns: 40px minmax(0,1fr); align-items: center; gap: 11px; }
 .account-menu-head > img { width: 40px; height: 40px; border-radius: 50%; }

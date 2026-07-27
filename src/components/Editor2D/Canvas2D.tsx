@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { Stage, Layer, Line, Rect, Group, Text, Circle, Arc, Image as KImage } from 'react-konva';
 import Konva from 'konva';
@@ -1822,6 +1822,52 @@ function ContextMenu({
 }) {
   const s = useDesign();
   const t = useI18n();
+
+  // Keep the menu on screen and grow it from the corner nearest the tap.
+  // It is placed with its top-left ON the tap point, so near the right or
+  // bottom edge — which on a phone is most of the screen — it used to render
+  // partly outside the viewport. Flip it back over the tap point instead, and
+  // move the transform-origin to match so it still appears to come from the
+  // finger rather than sliding in from nowhere.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [place, setPlace] = useState({ x: menu.x, y: menu.y, origin: 'top left' });
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    // Correct against where the menu ACTUALLY landed, not against menu.x/menu.y.
+    // `.ctx-menu` is position:fixed, but an ancestor carries a transform, which
+    // makes it a containing block — so `left/top` resolve against that box, not
+    // the viewport, and the menu renders offset from the pointer by the
+    // toolbar's height. Comparing viewport coordinates against those values gave
+    // the wrong answer (it flipped the transform-origin while leaving the
+    // position untouched). Measuring the rect sidesteps the whole question.
+    //
+    // offsetWidth/Height rather than the rect's size: the entry animation is
+    // still scaling the element, so the rect reports the visual (smaller) box.
+    const width = el.offsetWidth;
+    const height = el.offsetHeight;
+    const r = el.getBoundingClientRect();
+    const pad = 8;
+    // How far the menu, at full size, spills past each viewport edge.
+    const overRight = r.left + width + pad - window.innerWidth;
+    const overBottom = r.top + height + pad - window.innerHeight;
+    const overLeft = pad - r.left;
+    const overTop = pad - r.top;
+    let x = menu.x;
+    let y = menu.y;
+    if (overRight > 0) x -= overRight;
+    if (overBottom > 0) y -= overBottom;
+    if (overLeft > 0) x += overLeft;
+    if (overTop > 0) y += overTop;
+    setPlace({
+      x,
+      y,
+      // Grow from the corner nearest the pointer, so a menu that had to move up
+      // or left still reads as coming out of the finger.
+      origin: `${overBottom > 0 ? 'bottom' : 'top'} ${overRight > 0 ? 'right' : 'left'}`,
+    });
+  }, [menu.x, menu.y]);
+
   useEffect(() => {
     const close = () => onClose();
     window.addEventListener('pointerdown', close);
@@ -1853,7 +1899,12 @@ function ContextMenu({
 
   const noun = multi ? `${count} ${t('items')}` : t(menu.kind);
   return (
-    <div className="ctx-menu" style={{ left: menu.x, top: menu.y }} onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      ref={boxRef}
+      className="ctx-menu"
+      style={{ left: place.x, top: place.y, ['--ctx-origin' as string]: place.origin }}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       {menu.kind === 'empty' ? (
         <>
           {item(t('Paste'), () => s.paste(menu.wp ?? undefined), { sub: '⌘V' })}
