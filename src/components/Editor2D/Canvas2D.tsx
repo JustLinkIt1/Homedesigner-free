@@ -55,6 +55,15 @@ const IS_COARSE =
   typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 const HANDLE_R = IS_COARSE ? 14 : 8; // radius in screen px (÷ zoom at render)
 
+// How far a finger may wander before a tap becomes a drag/pan. This also
+// bounds the long-press menu: a tester reported that holding an object never
+// produced the delete menu, and the old 7px was the cause — a finger held for
+// half a second on a high-DPI phone drifts well past that, so the hold turned
+// into a pan instead. 12px is still under Konva's own 8px node dragDistance
+// plus a fingertip's width, so deliberate drags are unaffected.
+const TAP_SLOP = IS_COARSE ? 12 : 7;
+const LONG_PRESS_MS = 500; // matches Android's ViewConfiguration long-press
+
 // Handle visuals (screen-space px; divided by zoom at render to stay constant).
 
 export default function Canvas2D() {
@@ -700,7 +709,7 @@ export default function Canvas2D() {
           } else {
             openMenu(cx, cy, 'empty', '');
           }
-        }, 500);
+        }, LONG_PRESS_MS);
       }
     }
   };
@@ -732,7 +741,7 @@ export default function Canvas2D() {
       if (!touchMoved.current) {
         // Tap slop: fingers jitter a few px — don't turn taps into drags.
         const st0 = touchStartPt.current;
-        if (st0 && Math.hypot(cur.x - st0.x, cur.y - st0.y) < 7) return;
+        if (st0 && Math.hypot(cur.x - st0.x, cur.y - st0.y) < TAP_SLOP) return;
         touchMoved.current = true;
         cancelLongPress();
         if (touchPanEligible.current && !lastPan.current) {
@@ -769,6 +778,28 @@ export default function Canvas2D() {
       endPan();
     }
   };
+
+  // Android takes touches away mid-gesture (system back-swipe, notification
+  // shade, the WebView's own long-press). Without this, `longPressFired` stayed
+  // true because onTouchEnd never ran, and the NEXT tap was silently swallowed.
+  // Konva maps DOM touchcancel onto its internal pointercancel and never emits
+  // a `touchcancel` event of its own, so this has to be a plain DOM listener.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const cancel = () => {
+      cancelLongPress();
+      longPressFired.current = false;
+      pinch.current = null;
+      touchStartPt.current = null;
+      touchPanEligible.current = false;
+      touchMoved.current = false;
+      lastPan.current = null;
+      setIsPanning(false);
+    };
+    el.addEventListener('touchcancel', cancel);
+    return () => el.removeEventListener('touchcancel', cancel);
+  }, []);
 
   const onMouseMove = () => {
     // While panning, the layer is moving imperatively — a cursor-snap setState
@@ -1790,6 +1821,7 @@ function ContextMenu({
   onClose: () => void;
 }) {
   const s = useDesign();
+  const t = useI18n();
   useEffect(() => {
     const close = () => onClose();
     window.addEventListener('pointerdown', close);
@@ -1819,27 +1851,27 @@ function ContextMenu({
     </button>
   );
 
-  const noun = multi ? `${count} items` : menu.kind;
+  const noun = multi ? `${count} ${t('items')}` : t(menu.kind);
   return (
     <div className="ctx-menu" style={{ left: menu.x, top: menu.y }} onPointerDown={(e) => e.stopPropagation()}>
       {menu.kind === 'empty' ? (
         <>
-          {item('Paste', () => s.paste(menu.wp ?? undefined), { sub: '⌘V' })}
-          {item('Select all', () => s.setSelectedIds(s.furniture.map((f) => f.id)), { sub: '⌘A' })}
+          {item(t('Paste'), () => s.paste(menu.wp ?? undefined), { sub: '⌘V' })}
+          {item(t('Select all'), () => s.setSelectedIds(s.furniture.map((f) => f.id)), { sub: '⌘A' })}
         </>
       ) : (
         <>
           {(menu.kind === 'furniture' || menu.kind === 'wall' || menu.kind === 'opening') &&
-            item('Duplicate', () => s.duplicateSelection(), { sub: '⌘D' })}
-          {menu.kind === 'furniture' && item('Copy', () => s.copySelection(), { sub: '⌘C' })}
+            item(t('Duplicate'), () => s.duplicateSelection(), { sub: '⌘D' })}
+          {menu.kind === 'furniture' && item(t('Copy'), () => s.copySelection(), { sub: '⌘C' })}
           {menu.kind === 'furniture' && !multi && (
             <>
-              {item('Bring to front', () => s.bringToFront(menu.id))}
-              {item('Send to back', () => s.sendToBack(menu.id))}
+              {item(t('Bring to front'), () => s.bringToFront(menu.id))}
+              {item(t('Send to back'), () => s.sendToBack(menu.id))}
             </>
           )}
           <div className="ctx-sep" />
-          {item(`Delete ${noun}`, () => s.deleteSelected(), { danger: true, sub: '⌫' })}
+          {item(`${t('Delete')} ${noun}`, () => s.deleteSelected(), { danger: true, sub: '⌫' })}
         </>
       )}
     </div>

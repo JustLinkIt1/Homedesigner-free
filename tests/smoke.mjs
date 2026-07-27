@@ -477,6 +477,120 @@ if (process.env.SMOKE_SKIP_3D) {
   }
 }
 
+// ---- tester feedback: whole-plan rotation + the touch long-press menu -------
+// Both come from Play Console test reports: "Is there a way to rotate the full
+// floor plan?" and "I had a hard time deleting an object... tap and hold ...
+// apparently, it doesn't work that way."
+{
+  const rot = await page.evaluate(async () => {
+    const s = window.useDesign.getState();
+    const span = () => {
+      const ws = window.useDesign.getState().walls;
+      const xs = ws.flatMap((w) => [w.start.x, w.end.x]);
+      const ys = ws.flatMap((w) => [w.start.y, w.end.y]);
+      return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+    };
+    const wallsJson = () => JSON.stringify(window.useDesign.getState().walls);
+    const before = span();
+    const beforeWalls = wallsJson();
+    const beforeRot = window.useDesign.getState().furniture.map((f) => f.rotation);
+    const beforeOpenings = JSON.stringify(window.useDesign.getState().openings);
+    s.rotateDesign(90);
+    await new Promise((r) => setTimeout(r, 50));
+    const after = span();
+    const afterRot = window.useDesign.getState().furniture.map((f) => f.rotation);
+    const afterOpenings = JSON.stringify(window.useDesign.getState().openings);
+    // Three more right turns must land exactly back on the original geometry.
+    for (let i = 0; i < 3; i++) window.useDesign.getState().rotateDesign(90);
+    await new Promise((r) => setTimeout(r, 50));
+    return {
+      before, after, beforeWalls, backWalls: wallsJson(),
+      turned: afterRot.every((r, i) => ((r - beforeRot[i]) % 360 + 360) % 360 === 90),
+      openingsUntouched: beforeOpenings === afterOpenings,
+    };
+  });
+  check(
+    'rotate plan: 90° swaps the plan bounding box',
+    Math.abs(rot.after.w - rot.before.h) < 0.01 && Math.abs(rot.after.h - rot.before.w) < 0.01,
+    JSON.stringify({ before: rot.before, after: rot.after }),
+  );
+  check('rotate plan: furniture turns with the building', rot.turned);
+  check('rotate plan: openings stay on their walls', rot.openingsUntouched);
+  check('rotate plan: four right turns restore the plan exactly', rot.backWalls === rot.beforeWalls);
+
+  // The 3D section above left the viewer mounted; the long-press gesture lives
+  // on the 2D Konva stage, so go back to the plan first.
+  await page.click('.view-toggle button:nth-child(1)');
+  await page.waitForSelector('.konvajs-content canvas', { timeout: 15000 });
+  await page.waitForTimeout(300);
+
+  // The long-press menu is the only route to copy/z-order on a phone, and the
+  // old 7px tap slop cancelled it: a finger settling on the glass drifts
+  // further than that before the 500ms timer fires.
+  const hold = await page.evaluate(async () => {
+    const s = window.useDesign.getState();
+    s.setTool('select');
+    s.setMoveLock(false);
+    s.clearSelection();
+    if (typeof Touch !== 'function') return { supported: false };
+    const f = s.furniture[0];
+    if (!f) return { supported: false };
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const st = window.useDesign.getState();
+    const content = document.querySelector('.konvajs-content');
+    const rect = content.getBoundingClientRect();
+    const x = rect.left + st.pan.x + f.position.x * st.zoom;
+    const y = rect.top + st.pan.y + f.position.y * st.zoom;
+    const mk = (cx, cy) => new Touch({
+      identifier: 11, target: content, clientX: cx, clientY: cy,
+      screenX: cx, screenY: cy, pageX: cx, pageY: cy,
+    });
+    const fire = (t, tt, ch) => content.dispatchEvent(new TouchEvent(t, {
+      bubbles: true, cancelable: true, touches: tt, targetTouches: tt, changedTouches: ch,
+    }));
+    const run = async (drift) => {
+      window.useDesign.getState().clearSelection();
+      const t0 = mk(x, y);
+      fire('touchstart', [t0], [t0]);
+      // Settle early (as a real fingertip does), then hold past 500ms.
+      for (let i = 1; i <= 3; i++) {
+        await new Promise((r) => setTimeout(r, 50));
+        const j = mk(x + (drift * i) / 3, y);
+        fire('touchmove', [j], [j]);
+      }
+      for (let i = 0; i < 5; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        const j = mk(x + drift + (i % 2 ? 0.5 : -0.5), y);
+        fire('touchmove', [j], [j]);
+      }
+      const opened = !!document.querySelector('.ctx-menu');
+      const labels = [...document.querySelectorAll('.ctx-item')].map((b) => b.textContent);
+      fire('touchend', [], [mk(x + drift, y)]);
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 120));
+      return { opened, labels };
+    };
+    const settled = await run(10); // a hold that drifts like a real finger
+    const dragged = await run(40); // an unmistakable drag
+    return { supported: true, settled, dragged };
+  });
+  if (!hold.supported) {
+    check('long-press menu: touch events unavailable (skipped)', true);
+  } else {
+    check(
+      'long-press menu opens despite a settling finger (10px drift)',
+      hold.settled.opened,
+      JSON.stringify(hold.settled),
+    );
+    check(
+      'long-press menu offers Delete',
+      hold.settled.labels.some((l) => /Delete/i.test(l)),
+      JSON.stringify(hold.settled.labels),
+    );
+    check('a real 40px drag still does not open the menu', !hold.dragged.opened);
+  }
+}
+
 // ---- 6. No page errors ------------------------------------------------------
 // Old releases could leave a project JSON without a corresponding index row.
 // A reload must recover it so the next authenticated sync uploads it.

@@ -15,7 +15,7 @@ const entry = join(process.cwd(), '.geometry-entry.tmp.ts');
 writeFileSync(entry, `
 export { offsetPolygon, orientedBox, boxFillRatio } from '${process.cwd()}/src/lib/polygonOffset.ts';
 export { detectBuildingOutline, detectRooms } from '${process.cwd()}/src/lib/roomDetection.ts';
-export { polygonArea } from '${process.cwd()}/src/lib/geometry.ts';
+export { polygonArea, rotatePoint, boundsOf } from '${process.cwd()}/src/lib/geometry.ts';
 export { buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines } from '${process.cwd()}/src/lib/roofGeometry.ts';
 export { wallCentrelines } from '${process.cwd()}/src/lib/wallCentrelines.ts';
 export { classifyOpening } from '${process.cwd()}/src/lib/dxfOpenings.ts';
@@ -39,7 +39,7 @@ const {
   buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
-  buildDxf, LAYERS, flattenPath, importDxf, isNewer,
+  buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
 } = await import(out);
 
 let fails = 0;
@@ -594,6 +594,61 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   check('update: garbage is never newer', !isNewer('banana', '1.2.0') && !isNewer('', '1.2.0'));
   check('update: missing current is safe', !isNewer('9.9.9', 'dev'));
   check('update: suffixes ignored', isNewer('1.2.1-beta', '1.2.0'));
+}
+
+// ---- whole-plan rotation (a tester asked for it; there was no way to do it) ----
+{
+  const O = { x: 0, y: 0 };
+  // Plan Y grows downwards, so a positive angle reads clockwise on screen.
+  const r90 = rotatePoint({ x: 100, y: 0 }, 90, O);
+  check('rotate: +90° takes +X to +Y (clockwise on screen)', near(r90.x, 0) && near(r90.y, 100), JSON.stringify(r90));
+  const l90 = rotatePoint({ x: 100, y: 0 }, -90, O);
+  check('rotate: -90° takes +X to -Y', near(l90.x, 0) && near(l90.y, -100), JSON.stringify(l90));
+
+  // Right angles must land EXACTLY on axis, or rotated walls stop snapping.
+  check('rotate: 90° is exact, not 6e-15', rotatePoint({ x: 250, y: 137 }, 90, O).x === -137);
+  check('rotate: 180° is exact', JSON.stringify(rotatePoint({ x: 30, y: 40 }, 180, O)) === JSON.stringify({ x: -30, y: -40 }));
+
+  // Four right turns are the identity — a user can spin back to where they were.
+  let p = { x: 321, y: -87 };
+  for (let i = 0; i < 4; i++) p = rotatePoint(p, 90, { x: 55, y: 12 });
+  check('rotate: 4×90° returns the original point', p.x === 321 && p.y === -87, JSON.stringify(p));
+
+  // The pivot itself never moves.
+  const piv = { x: 17, y: 92 };
+  const fixed = rotatePoint(piv, 37, piv);
+  check('rotate: the pivot is fixed', near(fixed.x, piv.x) && near(fixed.y, piv.y));
+
+  // Rotation is rigid: distances between any two points are preserved.
+  const a = { x: 10, y: 20 };
+  const b = { x: 310, y: 420 };
+  const ra = rotatePoint(a, 37, piv);
+  const rb = rotatePoint(b, 37, piv);
+  check(
+    'rotate: preserves distance (rigid motion)',
+    near(Math.hypot(b.x - a.x, b.y - a.y), Math.hypot(rb.x - ra.x, rb.y - ra.y), 1e-9),
+  );
+
+  // A 90° turn of an axis-aligned plan swaps its width and height.
+  const plan = [{ x: 0, y: 0 }, { x: 800, y: 0 }, { x: 800, y: 500 }, { x: 0, y: 500 }];
+  const c = { x: 400, y: 250 };
+  const spun = plan.map((q) => rotatePoint(q, 90, c));
+  const bb = boundsOf(spun);
+  check(
+    'rotate: 90° swaps plan width and height',
+    near(bb.max.x - bb.min.x, 500) && near(bb.max.y - bb.min.y, 800),
+    JSON.stringify(bb),
+  );
+  // Rotating about the bounding-box centre keeps the plan centred there, so a
+  // rotated design does not fly off into empty canvas.
+  check(
+    'rotate: about the centre keeps the centre',
+    near((bb.min.x + bb.max.x) / 2, c.x) && near((bb.min.y + bb.max.y) / 2, c.y),
+  );
+  check('rotate: area is unchanged', near(Math.abs(polygonArea(spun)), Math.abs(polygonArea(plan)), 1e-6));
+
+  // 360° and 0° are no-ops the store short-circuits on.
+  check('rotate: 360° is the identity', JSON.stringify(rotatePoint(a, 360, piv)) === JSON.stringify(a));
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

@@ -52,6 +52,41 @@ const isProStyle = (kind: 'door' | 'window', style: OpeningStyle) =>
  * exactly the ones that won't respond. This finishes every outward-facing face in
  * a single undoable commit, using materials already bundled with the app.
  */
+/**
+ * Whole-plan orientation. A tester asked "is there a way to rotate the full
+ * floor plan?" — there wasn't. Like "Detect rooms" and "Exterior" this acts on
+ * the design rather than a selection, so it lives in the no-selection state.
+ * Rotation turns every storey about one shared pivot, so a stack stays aligned.
+ */
+function PlanCard() {
+  const t = useI18n();
+  const rotateDesign = useDesign((st) => st.rotateDesign);
+  const wallCount = useDesign((st) => st.walls.length);
+  const roomCount = useDesign((st) => st.rooms.length);
+  const furnCount = useDesign((st) => st.furniture.length);
+  if (!wallCount && !roomCount && !furnCount) return null;
+
+  return (
+    <div className="props" style={{ paddingTop: 0 }}>
+      <div className="prop-card">
+        <div className="prop-title">{t('Plan')}</div>
+        <p className="prop-hint">{t('Turn the whole plan — every storey rotates together.')}</p>
+        <div className="prop-row">
+          <label>{t('Rotate')}</label>
+          <div className="align-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+            <button title={t('Rotate 90° left')} onClick={() => rotateDesign(-90)}>
+              <RotateCcw className="icon" />
+            </button>
+            <button title={t('Rotate 90° right')} onClick={() => rotateDesign(90)}>
+              <RotateCw className="icon" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ExteriorCard() {
   const t = useI18n();
   const apply = useDesign((st) => st.applyExteriorFinish);
@@ -331,6 +366,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <Sparkles className="icon" /> {t('Auto-detect rooms')}
               </button>
             </div>
+            <PlanCard />
             <ExteriorCard />
             <RoofCard />
             {s.background ? (

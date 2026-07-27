@@ -5,6 +5,59 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.4.0 - 2026-07-27 (versionCode 10400)
+
+Acting on the Play Console tester reports. Seven testers, no crashes; two of
+them named something concrete and both are fixed here.
+
+### Added — rotate the whole floor plan
+> *"Is there a way to rotate the full floor plan? Maybe I'm blind? lol"* — Word Guess
+
+Not blind: there was no such feature. Properties → **Plan** (with nothing
+selected, beside "Auto-detect rooms" and "Exterior") now has rotate 90° left
+and right. It turns walls, rooms, furniture and the traced background plan
+about a single pivot taken across **every** storey, so a stack of floors stays
+aligned instead of each one spinning about its own centre. Furniture turns with
+the building, so a sofa keeps facing the wall it was against. Openings ride
+their wall untouched — their position is a fraction along it, not a coordinate.
+Right angles are snapped to exact 0/±1 in the rotation, so a 90° turn lands on
+whole centimetres; without that, axis-aligned walls come back a hair off-axis
+and quietly stop snapping to each other. One undo reverses a whole rotation.
+
+### Fixed — the long-press menu was unreachable on a real phone
+> *"I had a hard time deleting an object. On mobile, the most intuitive way for
+> me is to tap and hold the object and wait for a pop-up with different options,
+> but apparently, it doesn't work that way."* — Mercury
+
+It was supposed to work exactly that way. The gesture was wired up, but the tap
+slop was 7px: any finger that wandered further than that during the hold turned
+into a pan and cancelled the pending menu. A fingertip *settles* as it flattens
+against the glass — it rolls several pixels in the first ~150ms, long before the
+500ms long-press timer fires — so on a real phone the hold usually became a pan
+and no menu ever appeared. Touch slop is now 12px, which is still comfortably
+below a deliberate drag (a 40px drag still pans, asserted in the suite).
+
+This was reproduced before it was fixed: with the old 7px value the smoke check
+fails, with 12px it passes.
+
+Also fixed alongside it: `touchcancel` was not handled at all. When Android took
+the gesture away mid-hold (system back-swipe, notification shade), the
+"long-press already fired" flag stayed set because `touchend` never ran, and the
+**next** tap anywhere was silently swallowed. Konva folds DOM `touchcancel` into
+its internal pointercancel and never emits a `touchcancel` event of its own, so
+this had to be a plain DOM listener.
+
+### Fixed — the context menu was English in all 12 languages
+Every label in the 2D right-click / long-press menu (Copy, Paste, Select all,
+Bring to front, Send to back, Delete …) was a hardcoded English string. Now
+translated, along with the new Plan card — 14 keys × 12 locales.
+
+### Notes on the other reports
+Guiterra ("maybe more features before paying mandatory") is about where the
+paywall sits, not a defect — a product decision, left alone. Porch Ledger
+("polish the UI slightly") gave nothing specific to act on; the menu
+localisation above is the one concrete polish item that fell out of it.
+
 ## 1.3.1 - 2026-07-26 (versionCode 10301)
 
 The sample homes finally use the features built for them.

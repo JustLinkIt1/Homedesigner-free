@@ -15,7 +15,7 @@ import type {
   Wall,
   WallFaceRange,
 } from '../types';
-import { uid, dist } from '../lib/geometry';
+import { uid, dist, boundsOf, rotatePoint } from '../lib/geometry';
 import { exteriorFaces } from '../lib/exteriorFaces';
 import { withFaceFinish } from '../lib/wallFaces';
 import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from '../data/furnitureCatalog';
@@ -169,6 +169,7 @@ interface DesignState extends DesignSnapshot {
 
   /** Uniformly scale the whole drawing's plan geometry (for calibration). */
   scaleDesign: (factor: number) => void;
+  rotateDesign: (deg: number) => void;
   /** Move every wall endpoint at `from` to `to` (a shared corner moves together). */
   moveCorner: (from: Point, to: Point, tol?: number) => void;
 
@@ -844,6 +845,57 @@ export const useDesign = create<DesignState>((set, get) => {
         d.openings = a.openings;
         d.background = a.background;
       });
+      set((s) => ({ selection: { kind: null, id: null }, selectedIds: [], fitRequest: s.fitRequest + 1 }));
+    },
+
+    rotateDesign: (deg) => {
+      const turn = ((deg % 360) + 360) % 360;
+      if (turn === 0) return;
+      const st = get();
+      // One pivot for the WHOLE building, taken across every storey — rotating
+      // each floor about its own centre would slide the storeys out of line.
+      const pts: Point[] = [];
+      for (const id in st.floorGeom) {
+        const g = st.floorGeom[id];
+        for (const w of g.walls) pts.push(w.start, w.end);
+        for (const r of g.rooms) pts.push(...r.points);
+        for (const f of g.furniture) pts.push(f.position);
+        if (g.background) pts.push({ x: g.background.x, y: g.background.y });
+      }
+      if (!pts.length) return;
+      const { min, max } = boundsOf(pts);
+      const pivot = { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2 };
+      const rp = (p: Point): Point => rotatePoint(p, turn, pivot);
+      // Angles stay in [0, 360) like everywhere else that turns an item
+      // (norm360 in editHandles), so the rotation field never reads "450°".
+      const spinDeg = (a: number): number => (((a + turn) % 360) + 360) % 360;
+      const spin = (g: FloorGeom): FloorGeom => ({
+        walls: g.walls.map((w) => ({ ...w, start: rp(w.start), end: rp(w.end) })),
+        rooms: g.rooms.map((r) => ({ ...r, points: r.points.map(rp) })),
+        // Items turn with the building, so a sofa keeps facing the same wall.
+        furniture: g.furniture.map((fi) => ({ ...fi, position: rp(fi.position), rotation: spinDeg(fi.rotation) })),
+        // Openings ride their wall: `offset` is a 0..1 fraction along it and
+        // the wall has already moved, so there is nothing to rotate here.
+        openings: g.openings,
+        // Konva rotates the traced plan about its own (x, y) anchor, so the
+        // anchor rotates about the pivot and the image spins on top of that.
+        background: g.background
+          ? { ...g.background, ...rp({ x: g.background.x, y: g.background.y }), rotation: spinDeg(g.background.rotation) }
+          : null,
+      });
+      commit((d) => {
+        const next: Record<string, FloorGeom> = {};
+        for (const id in d.floorGeom) next[id] = spin(d.floorGeom[id]);
+        d.floorGeom = next;
+        const a = next[d.activeFloorId];
+        d.walls = a.walls;
+        d.rooms = a.rooms;
+        d.furniture = a.furniture;
+        d.openings = a.openings;
+        d.background = a.background;
+      });
+      // The roof is rebuilt from the wall outline every render, and pitch /
+      // overhang / thickness are all rotation-invariant, so it follows for free.
       set((s) => ({ selection: { kind: null, id: null }, selectedIds: [], fitRequest: s.fitRequest + 1 }));
     },
 

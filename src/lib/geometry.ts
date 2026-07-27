@@ -128,6 +128,23 @@ export const boundsOf = (pts: Point[]): { min: Point; max: Point } => {
   return { min, max };
 };
 
+/**
+ * Rotate `p` by `deg` (clockwise on screen, since plan Y grows downwards)
+ * about `origin`. Right angles are snapped to exact 0/±1 so a 90° plan
+ * rotation lands on whole centimetres instead of 1e-14 drift — otherwise
+ * axis-aligned walls come back a hair off-axis and stop snapping to each other.
+ */
+export const rotatePoint = (p: Point, deg: number, origin: Point = { x: 0, y: 0 }): Point => {
+  const r = (deg * Math.PI) / 180;
+  const raw = { c: Math.cos(r), s: Math.sin(r) };
+  const near = (v: number) => (Math.abs(v) < 1e-12 ? 0 : Math.abs(Math.abs(v) - 1) < 1e-12 ? Math.sign(v) : v);
+  const c = near(raw.c);
+  const s = near(raw.s);
+  const dx = p.x - origin.x;
+  const dy = p.y - origin.y;
+  return { x: origin.x + dx * c - dy * s, y: origin.y + dx * s + dy * c };
+};
+
 /** Signed distance from p to the polygon outline: +inside, −outside (cm). */
 const signedEdgeDistance = (p: Point, poly: Point[]): number => {
   let min = Infinity;
