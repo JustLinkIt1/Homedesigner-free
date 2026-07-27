@@ -5,6 +5,44 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.6.0 - 2026-07-27 (versionCode 10600)
+
+Three things reported after 1.5.0: rotation couldn't be found in 3D, the tour
+was too thin, and "Need inspiration?" led somewhere untranslated.
+
+### Fixed — rotate the plan is now reachable in 3D
+1.5.0 put whole-plan rotation in Properties. On a phone in 3D that panel sits
+behind the **Edit** tab *and* only shows its whole-home controls when nothing is
+selected — and tapping anything in 3D selects it. So in practice rotation was
+unreachable exactly where people looked for it. It now also sits in the **View**
+popover in 3D, beside Dollhouse and Walk through, labelled "Rotate plan".
+
+### Fixed — the Tips panel was English in all 12 languages
+The home screen's "Need inspiration? → Explore ideas" button opens the Tips &
+shortcuts panel. The banner itself was translated; **the entire panel behind it
+was not** — it had no i18n wiring at all, so every non-English user landed on a
+wall of English. All of it is now translated: the four section headings and
+every tip, in both its pointer and touch wording.
+
+### Improved — a much more thorough first-run tour
+The tour was three steps (build tools, 3D, furnish) and stopped at "you can draw
+and look at it". It's now **eight**, adding the things people actually struggle
+to find: importing a real PDF/DXF/DWG plan and setting its scale, turning walls
+into rooms with auto-detect, what selecting something gets you (and what the
+no-selection panel offers — cladding, roof, rotate), stacking storeys, and
+exporting/rendering/shopping-list. The step text is translated too.
+
+Two bugs surfaced while building it. The tour anchors to live DOM nodes by
+selector, and the Import and Export buttons had no stable class — they now do
+(`.import-btn`, `.export-btn-wrap`), so those steps can't silently skip. And the
+bubble was positioned against a hardcoded 132px height estimate; the richer copy
+made several bubbles taller than that, so on a phone they ran off the bottom of
+the screen and the Next button became unclickable. Placement now re-clamps
+against the bubble's measured height.
+
+The browser suite walks the whole tour end to end in French, which is what
+catches both of those — a skipped step or a stranded button fails the run.
+
 ## 1.5.0 - 2026-07-27 (versionCode 10500)
 
 Menu and dialog polish — *"in professionally developed apps the UI of the menus

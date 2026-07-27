@@ -206,12 +206,12 @@ export default function Toolbar({
       </div>
 
       <div className="tool-group">
-        <button className="tbtn ghost" onClick={onImport} title={t('Import a 2D plan (PDF / DXF / image)')}>
+        <button className="tbtn ghost import-btn" onClick={onImport} title={t('Import a 2D plan (PDF / DXF / image)')}>
           <Import className="icon" />
           <span>{t('Import plan')}</span>
         </button>
         {s.view === '2d' && (
-          <div className="export-wrap" ref={exportRef}>
+          <div className="export-wrap export-btn-wrap" ref={exportRef}>
             <button
               className="tbtn ghost"
               title={t('Export the 2D plan as PNG or PDF')}

@@ -456,6 +456,15 @@ if (process.env.SMOKE_SKIP_3D) {
     cloudTv?.url.endsWith('/models/tests/cloud-smoke-tv.glb') && cloudTv.fit === 'width',
     JSON.stringify(cloudTv),
   );
+  // The docked catalog slides in from margin-left:-281px over 0.24s, and the
+  // `.docked` class itself is applied by a matchMedia listener. Until both have
+  // settled the sidebar is genuinely outside the viewport, so Playwright can
+  // scroll all it likes and the click still can't land — this is the long-
+  // standing "Side Table" flake. Wait for the panel to actually be on screen.
+  await page.waitForFunction(() => {
+    const el = document.querySelector('.catalog.docked');
+    return !!el && el.getBoundingClientRect().left >= 0;
+  }, null, { timeout: 15000 }).catch(() => {});
   await page.locator('.catalog.docked .cat-item[title="Side Table"]').click();
   check(
     'catalog opens 3D model preview',
@@ -608,6 +617,11 @@ if (process.env.SMOKE_SKIP_3D) {
 {
   const a11y = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'reduce' });
   await a11y.goto(BASE);
+  // Mark the first-run tour as seen BEFORE the app boots. CoachMarks installs a
+  // document-level Escape handler of its own, and on a fresh profile it was
+  // racing this block's Escape — the source of an intermittent failure here.
+  await a11y.evaluate(() => localStorage.setItem('homedesigner.tour.v1', 'done'));
+  await a11y.reload();
   await a11y.waitForSelector('.projects-screen', { timeout: 20000 });
   await a11y.locator('.ps-head .ps-settings-btn').click();
   // Let the dialog mount and its key/focus effect attach before driving it. The
@@ -677,6 +691,88 @@ if (process.env.SMOKE_SKIP_3D) {
       `during=${during} gone=${gone}`);
   }
   await motionPage.close();
+}
+
+// ---- onboarding: tour depth, and the Tips panel in a non-English locale -----
+// Testers reported the tour "isn't thorough enough" and that the home screen's
+// "Need inspiration?" destination wasn't translated — the whole Tips panel had
+// shipped in English for all 12 locales.
+{
+  const fr = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+  await fr.goto(BASE);
+  await fr.evaluate(() => localStorage.setItem('homedesigner.lang.v1', 'fr'));
+  await fr.reload();
+  await fr.waitForSelector('.projects-screen', { timeout: 20000 });
+
+  const banner = await fr.locator('.ps-inspire').innerText().catch(() => '');
+  check('inspiration banner is translated', /inspiration/i.test(banner) && !/Explore ideas/.test(banner));
+
+  await fr.locator('.ps-inspire').click();
+  await fr.waitForTimeout(500);
+  const help = await fr.locator('.modal.help-panel').innerText().catch(() => '');
+  check('Tips panel opens from the inspiration banner', help.length > 50);
+  // The section headings and footer are the giveaway if i18n regresses.
+  check(
+    'Tips panel is translated, not English',
+    !/Drawing walls & rooms|Measure & scale|Floors & 3D|Got it|Tips & (gestures|shortcuts)/.test(help),
+    JSON.stringify(help.slice(0, 80)),
+  );
+  await fr.keyboard.press('Escape');
+  await fr.waitForTimeout(400);
+
+  // The tour is offered only on a blank project, and is opt-in.
+  await fr.locator('button', { hasText: /Nouveau projet|New project/i }).first().click();
+  await fr.waitForSelector('.toolbar', { timeout: 20000 });
+  await fr.waitForTimeout(700);
+  const offered = await fr.locator('.welcome-tour').isVisible().catch(() => false);
+  check('first-run tour is offered on a blank project', offered);
+  if (offered) {
+    await fr.locator('.welcome-tour .btn.primary').click();
+    await fr.waitForTimeout(700);
+    const bubble = await fr.locator('.coach-bubble').innerText().catch(() => '');
+    check('tour is translated', bubble.length > 20 && !/Build tools|Draw walls and rooms/.test(bubble));
+    // Walk it end to end. This is the real check: a step whose anchor is
+    // missing silently skips, and a bubble taller than the placement estimate
+    // used to run off a phone screen and strand the Next button.
+    let seen = 0;
+    for (let i = 0; i < 12; i++) {
+      if (!(await fr.locator('.coach-bubble').isVisible().catch(() => false))) break;
+      seen++;
+      const next = fr.locator('.coach-next');
+      if (!(await next.isVisible().catch(() => false))) break;
+      await next.click();
+      await fr.waitForTimeout(350);
+    }
+    check('every tour step resolves an anchor and stays on screen', seen === 8, `saw ${seen}`);
+  }
+  await fr.close();
+}
+
+// ---- rotate the plan from 3D ------------------------------------------------
+// It lived only in Properties, which in 3D on a phone is behind the Edit tab AND
+// only appears with nothing selected — so in practice it was unreachable there.
+if (!process.env.SMOKE_SKIP_3D) {
+  const r3 = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+  await r3.goto(BASE);
+  await r3.waitForSelector('.projects-screen', { timeout: 20000 });
+  await r3.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
+  await r3.waitForSelector('.toolbar', { timeout: 20000 });
+  await r3.locator('.coach-skip').click().catch(() => {});
+  await r3.waitForTimeout(500);
+  await r3.click('.view-toggle button:nth-child(2)');
+  await r3.waitForTimeout(14000);
+  await r3.locator('.view-pill > button').click();
+  await r3.waitForTimeout(400);
+  const rotateVisible = await r3.locator('.view-menu-row button[title*="90"]').first().isVisible().catch(() => false);
+  check('rotate plan is reachable in 3D', rotateVisible);
+  if (rotateVisible) {
+    const before = await r3.evaluate(() => JSON.stringify(window.useDesign.getState().walls.map((w) => w.start)));
+    await r3.locator('.view-menu-row button[title*="90"]').first().click();
+    await r3.waitForTimeout(400);
+    const after = await r3.evaluate(() => JSON.stringify(window.useDesign.getState().walls.map((w) => w.start)));
+    check('rotating from 3D turns the plan', before !== after);
+  }
+  await r3.close();
 }
 
 // ---- 6. No page errors ------------------------------------------------------

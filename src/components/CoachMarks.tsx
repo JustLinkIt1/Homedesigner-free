@@ -3,10 +3,14 @@ import { tapLight } from '../lib/haptics';
 import { useI18n } from '../lib/i18n';
 
 /**
- * Tiny self-contained first-run tour: three fixed-position bubbles anchored to
- * live DOM targets via querySelector + getBoundingClientRect. No cutouts, no
- * libraries — a scrim blocks interaction and the bubble sits beside its target.
- * Selectors are load-bearing: a missing target simply skips that step.
+ * Self-contained first-run tour: fixed-position bubbles anchored to live DOM
+ * targets via querySelector + getBoundingClientRect. No cutouts, no libraries —
+ * a scrim blocks interaction and the bubble sits beside its target.
+ *
+ * Selectors are load-bearing: a missing target simply skips that step, which is
+ * how one step list serves both phone and desktop. Anchors that exist only for
+ * this tour (`.import-btn`, `.export-btn-wrap`) are named in Toolbar.tsx —
+ * don't rename them without updating the step below.
  */
 interface Step {
   sel: string;
@@ -35,6 +39,40 @@ const STEPS: Step[] = [
     alt: '.mobile-tabs',
     title: 'Furnish it',
     text: 'Open the catalog and tap an object, then tap the plan to place it.',
+  },
+  // Testers asked for a more thorough tour: the three steps above stopped at
+  // "you can draw and look at it", which left the features people actually
+  // struggle to find — importing a real plan, turning walls into rooms,
+  // editing a selection, and stacking storeys — entirely undiscovered.
+  {
+    sel: '.import-btn',
+    alt: '.toolbar',
+    title: 'Start from a real plan',
+    text: 'Import a PDF, image, DXF or DWG and HomeDesigner traces the walls for you — then set the scale from one known length.',
+  },
+  {
+    sel: '.props .btn.primary.block',
+    alt: COARSE ? '.mobile-tabs button:last-child' : '.sidebar.right',
+    title: 'Turn walls into rooms',
+    text: 'Once your walls form closed loops, Auto-detect rooms fills them in so you can floor, paint and furnish each one.',
+  },
+  {
+    sel: COARSE ? '.mobile-tabs button:last-child' : '.sidebar.right',
+    alt: '.mobile-tabs',
+    title: 'Edit anything you select',
+    text: 'Select a wall, room or object to change its size, height, colour and material. With nothing selected you get whole-home controls: exterior cladding, the roof, and rotating the plan.',
+  },
+  {
+    sel: '.floor-switcher',
+    alt: '.floor-add',
+    title: 'Add more storeys',
+    text: 'Build upstairs and down, copy a floor to reuse its layout, and see the whole house stacked in 3D.',
+  },
+  {
+    sel: '.export-btn-wrap',
+    alt: '.toolbar',
+    title: 'Share the finished home',
+    text: 'Export a print-ready PDF or a layered DXF for CAD, render a photo of any view, or send a shopping list of everything you placed.',
   },
 ];
 
@@ -77,7 +115,24 @@ export default function CoachMarks({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [pos, setPos] = useState<Pos | null>(null);
   const doneRef = useRef(false);
+  const bubbleRef = useRef<HTMLDivElement>(null);
   const t = useI18n();
+
+  // BUBBLE_H is only an estimate, and the richer step copy added later made
+  // several bubbles taller than it — so the estimate-based clamp let them run
+  // off the bottom of a phone screen and the Next button became unclickable.
+  // Re-clamp against the measured height once the bubble has actually rendered.
+  useLayoutEffect(() => {
+    const el = bubbleRef.current;
+    if (!el || !pos) return;
+    const h = el.offsetHeight;
+    const maxTop = window.innerHeight - h - MARGIN;
+    const clamped = Math.max(MARGIN, Math.min(pos.top, maxTop));
+    if (Math.abs(clamped - pos.top) > 0.5) {
+      // Keep the arrow pointing at the target as the bubble slides.
+      setPos({ ...pos, top: clamped, arrowTop: pos.arrowTop + (pos.top - clamped) });
+    }
+  }, [pos]);
 
   const finish = () => {
     if (doneRef.current) return;
@@ -133,7 +188,7 @@ export default function CoachMarks({ onDone }: { onDone: () => void }) {
   return (
     <>
       <div className="coach-scrim" onClick={finish} />
-      <div className="coach-bubble" style={{ left: pos.left, top: pos.top, width: BUBBLE_W }} role="dialog" aria-label={t(s.title)}>
+      <div ref={bubbleRef} className="coach-bubble" style={{ left: pos.left, top: pos.top, width: BUBBLE_W }} role="dialog" aria-label={t(s.title)}>
         <div className={`coach-arrow ${pos.arrow}`} style={{ left: pos.arrowLeft, top: pos.arrowTop }} />
         <div className="coach-step">{step + 1} / {STEPS.length}</div>
         <h4>{t(s.title)}</h4>

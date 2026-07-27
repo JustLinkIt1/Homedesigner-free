@@ -3961,6 +3961,40 @@ button.brand:hover .brand-name {
   background: var(--border);
   margin: 5px 2px;
 }
+/* A labelled pair of actions inside the View popover (Rotate plan). */
+.view-menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 9px;
+}
+.view-menu-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.view-menu-actions {
+  display: flex;
+  gap: 6px;
+}
+.view-menu-actions button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.view-menu-actions button:hover {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
 
 @media (min-width: 881px) {
   /* No Build tab on desktop — the left tool dock plays this role. */

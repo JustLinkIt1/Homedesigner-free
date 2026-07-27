@@ -1,4 +1,5 @@
 import { CircleHelp } from 'lucide-react';
+import { useI18n } from '../lib/i18n';
 import Modal from './Modal';
 
 // Touch devices have no keyboard/right-click, so the shortcut chips are noise
@@ -80,11 +81,12 @@ export default function HelpPanel({
   onClose: () => void;
   onReplayTour?: () => void;
 }) {
+  const t = useI18n();
   return (
     <Modal open={open} onClose={onClose} className="help-panel" labelledBy="help-title">
       <>
         <div className="modal-head" id="help-title">
-          <CircleHelp className="icon" /> {IS_TOUCH ? 'Tips & gestures' : 'Tips & shortcuts'}
+          <CircleHelp className="icon" /> {IS_TOUCH ? t('Tips & gestures') : t('Tips & shortcuts')}
         </div>
         <div className="modal-body help-body">
           {SECTIONS.map((s) => {
@@ -93,7 +95,7 @@ export default function HelpPanel({
               .filter((r) => (IS_TOUCH ? r.touchText ?? r.text : r.text));
             return (
               <section key={s.title}>
-                <h3>{s.title}</h3>
+                <h3>{t(s.title)}</h3>
                 <ul>
                   {rows.map((r, i) => (
                     <li key={i}>
@@ -104,7 +106,7 @@ export default function HelpPanel({
                           ))}
                         </span>
                       )}
-                      <span>{IS_TOUCH ? r.touchText ?? r.text : r.text}</span>
+                      <span>{t(IS_TOUCH ? r.touchText ?? r.text : r.text)}</span>
                     </li>
                   ))}
                 </ul>
@@ -115,11 +117,11 @@ export default function HelpPanel({
         <div className="modal-foot">
           {onReplayTour && (
             <button className="btn" onClick={onReplayTour}>
-              Show intro again
+              {t('Show intro again')}
             </button>
           )}
           <button className="btn primary" onClick={onClose}>
-            Got it
+            {t('Got it')}
           </button>
         </div>
       </>

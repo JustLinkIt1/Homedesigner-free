@@ -19,6 +19,8 @@ import {
   PenTool,
   X,
   Crown,
+  RotateCcw,
+  RotateCw,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
 import ToolDock from './components/ToolDock';
@@ -71,6 +73,7 @@ export default function App() {
     sunTime, setSunTime, lightsOn, setLightsOn,
     kitchenUppers, setKitchenUppers,
     moveLock, setMoveLock,
+    rotateDesign,
   } = useDesign(useShallow((s) => ({
     view: s.view,
     setView: s.setView,
@@ -100,6 +103,7 @@ export default function App() {
     setKitchenUppers: s.setKitchenUppers,
     moveLock: s.moveLock,
     setMoveLock: s.setMoveLock,
+    rotateDesign: s.rotateDesign,
   })));
   const t = useI18n();
   const isPro = useProStore((st) => st.isPro);
@@ -715,6 +719,30 @@ export default function App() {
                       >
                         <Footprints className="icon" style={{ width: 16, height: 16 }} /> {t('Walk through')}
                       </button>
+                      <div className="view-menu-sep" />
+                      {/* Rotating the plan lives in Properties, which in 3D on a
+                          phone is behind the Edit tab AND only shows with
+                          nothing selected — so in practice it was unreachable
+                          here. Surface it where you actually are. */}
+                      <div className="view-menu-row">
+                        <span className="view-menu-label">{t('Rotate plan')}</span>
+                        <span className="view-menu-actions">
+                          <button
+                            title={t('Rotate 90° left')}
+                            aria-label={t('Rotate 90° left')}
+                            onClick={() => rotateDesign(-90)}
+                          >
+                            <RotateCcw className="icon" style={{ width: 15, height: 15 }} />
+                          </button>
+                          <button
+                            title={t('Rotate 90° right')}
+                            aria-label={t('Rotate 90° right')}
+                            onClick={() => rotateDesign(90)}
+                          >
+                            <RotateCw className="icon" style={{ width: 15, height: 15 }} />
+                          </button>
+                        </span>
+                      </div>
                       <div className="view-menu-sep" />
                       <button
                         className={`toggle ${lightsOn ? 'on' : ''}`}
