@@ -685,4 +685,12 @@ export const IT: Record<string, string> = {
   '3D view: Dollhouse fades walls; Walk through explores at eye level (WASD / on-screen stick)': 'Vista 3D: Casa delle bambole sfuma i muri; Percorso esplora ad altezza occhi (WASD / stick a schermo)',
   '3D view: Dollhouse fades walls; Walk through explores at eye level with the on-screen stick': 'Vista 3D: Casa delle bambole sfuma i muri; Percorso esplora ad altezza occhi con lo stick a schermo',
   'Render image saves a snapshot; Photo mode ray-traces a realistic still': '«Renderizza» salva un’istantanea; la modalità Foto calcola un’immagine realistica in ray tracing',
+  'Outdoor surface': 'Superficie esterna',
+  'Outdoor area': 'Area esterna',
+  'Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.': 'Trasforma quest’area in un patio, una pedana, un vialetto o un sentiero. Poggia sul terreno e non ha soffitto sopra.',
+  'Paving': 'Pavimentazione',
+  'Decking': 'Pedana in legno',
+  'Gravel': 'Ghiaia',
+  'Asphalt': 'Asfalto',
+  'Lawn': 'Prato',
 };

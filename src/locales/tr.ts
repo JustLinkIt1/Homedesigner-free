@@ -685,4 +685,12 @@ export const TR: Record<string, string> = {
   '3D view: Dollhouse fades walls; Walk through explores at eye level (WASD / on-screen stick)': '3B görünüm: Oyuncak ev duvarları soluklaştırır; Gezinti göz hizasında dolaştırır (WASD / ekran çubuğu)',
   '3D view: Dollhouse fades walls; Walk through explores at eye level with the on-screen stick': '3B görünüm: Oyuncak ev duvarları soluklaştırır; Gezinti ekran çubuğuyla göz hizasında dolaştırır',
   'Render image saves a snapshot; Photo mode ray-traces a realistic still': '«Görüntü işle» anlık görüntü kaydeder; Fotoğraf modu ışın izleyerek gerçekçi bir kare üretir',
+  'Outdoor surface': 'Dış mekân yüzeyi',
+  'Outdoor area': 'Dış mekân alanı',
+  'Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.': 'Bu alanı teras, ahşap deck, araç yolu veya patikaya dönüştürün. Zemine oturur ve üzerinde tavan olmaz.',
+  'Paving': 'Döşeme taşı',
+  'Decking': 'Ahşap deck',
+  'Gravel': 'Çakıl',
+  'Asphalt': 'Asfalt',
+  'Lawn': 'Çim',
 };

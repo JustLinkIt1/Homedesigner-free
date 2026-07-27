@@ -685,4 +685,12 @@ export const KO: Record<string, string> = {
   '3D view: Dollhouse fades walls; Walk through explores at eye level (WASD / on-screen stick)': '3D 보기: 돌하우스는 벽을 흐리게 하고, 워크스루는 눈높이에서 둘러봅니다 (WASD / 화면 스틱)',
   '3D view: Dollhouse fades walls; Walk through explores at eye level with the on-screen stick': '3D 보기: 돌하우스는 벽을 흐리게 하고, 워크스루는 화면 스틱으로 눈높이에서 둘러봅니다',
   'Render image saves a snapshot; Photo mode ray-traces a realistic still': '「이미지 렌더」는 스냅숏을 저장하고, 사진 모드는 레이트레이싱으로 사실적인 정지 이미지를 만듭니다',
+  'Outdoor surface': '실외 표면',
+  'Outdoor area': '실외 영역',
+  'Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.': '이 영역을 파티오, 데크, 진입로 또는 산책로로 만듭니다. 지면에 놓이며 위에 천장이 없습니다.',
+  'Paving': '포장',
+  'Decking': '목재 데크',
+  'Gravel': '자갈',
+  'Asphalt': '아스팔트',
+  'Lawn': '잔디',
 };

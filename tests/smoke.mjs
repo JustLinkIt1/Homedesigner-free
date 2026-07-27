@@ -549,42 +549,69 @@ if (process.env.SMOKE_SKIP_3D) {
   check('rotate plan: furniture turns with the building', rot.turned);
   check('rotate plan: openings stay on their walls', rot.openingsUntouched);
   check('rotate plan: four right turns restore the plan exactly', rot.backWalls === rot.beforeWalls);
+}
 
-  // The 3D section above left the viewer mounted; the long-press gesture lives
-  // on the 2D Konva stage, so go back to the plan first.
-  await page.click('.view-toggle button:nth-child(1)');
-  await page.waitForSelector('.konvajs-content canvas', { timeout: 15000 });
-  // Leave furniture mode so the docked catalog retracts, then re-fit. The 3D
-  // section leaves the catalog docked, which makes the 2D canvas ~280px
-  // narrower — enough that the item this block targets can sit outside the
-  // visible stage and the synthetic touch lands on nothing. (Before the docking
-  // transition was removed this happened to work, because the panel was still
-  // mid-slide when the rect was measured.)
-  await store(() => {
+// ---- long-press context menu ------------------------------------------------
+// Only needs the 2D Konva stage, so it no longer sits inside the 3D section and
+// still runs with SMOKE_SKIP_3D=1. On a phone this is the only route to
+// copy/duplicate/z-order, so it is worth covering everywhere.
+{
+  // Run the gesture in its OWN page. Sharing `page` made this block flaky in
+  // both directions: it inherits ~50 prior interactions (drags, a delete+undo,
+  // a 3D round-trip that docks the catalog, four 90° plan rotations), and that
+  // accumulated stage state intermittently swallowed the synthetic touch
+  // entirely — no menu, no selection, no drag — or left a drag armed so the
+  // item slid out from under the menu. In a clean page the same gesture is
+  // deterministic (verified 8/8 by hand, before and after the fix). Touch
+  // simulation is sensitive to stage state, so give it an untouched stage.
+  const lp = await browser.newPage({
+    viewport: { width: 1280, height: 800 },
+    hasTouch: true,
+    reducedMotion: 'reduce',
+  });
+  await lp.goto(BASE);
+  await lp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await lp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
+  await lp.waitForSelector('.toolbar', { timeout: 20000 });
+  await lp.locator('.coach-skip').click().catch(() => {});
+  await lp.waitForSelector('.konvajs-content canvas', { timeout: 15000 });
+  await lp.evaluate(() => {
     const s = window.useDesign.getState();
     s.setTool('select');
     s.clearSelection();
     s.requestFit();
   });
-  await page.waitForTimeout(700);
+  await lp.waitForTimeout(700);
 
   // The long-press menu is the only route to copy/z-order on a phone, and the
   // old 7px tap slop cancelled it: a finger settling on the glass drifts
   // further than that before the 500ms timer fires.
-  const hold = await page.evaluate(async () => {
+  const hold = await lp.evaluate(async () => {
     const s = window.useDesign.getState();
     s.setTool('select');
     s.setMoveLock(false);
     s.clearSelection();
     if (typeof Touch !== 'function') return { supported: false };
-    const f = s.furniture[0];
-    if (!f) return { supported: false };
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     const st = window.useDesign.getState();
     const content = document.querySelector('.konvajs-content');
     const rect = content.getBoundingClientRect();
-    const x = rect.left + st.pan.x + f.position.x * st.zoom;
-    const y = rect.top + st.pan.y + f.position.y * st.zoom;
+    // Pick an item that is genuinely INSIDE the visible stage, rather than
+    // assuming furniture[0] is. The stage width changes with the docked catalog
+    // and the fit, so a fixed index sometimes resolved to a point off-canvas and
+    // the synthetic touch hit nothing — which looked like the gesture failing.
+    const screenOf = (it) => ({
+      x: rect.left + st.pan.x + it.position.x * st.zoom,
+      y: rect.top + st.pan.y + it.position.y * st.zoom,
+    });
+    const inset = 40;
+    const f = st.furniture.find((it) => {
+      const p = screenOf(it);
+      return p.x > rect.left + inset && p.x < rect.right - inset
+        && p.y > rect.top + inset && p.y < rect.bottom - inset;
+    });
+    if (!f) return { supported: false, reason: 'no furniture inside the visible stage' };
+    const { x, y } = screenOf(f);
     const mk = (cx, cy) => new Touch({
       identifier: 11, target: content, clientX: cx, clientY: cy,
       screenX: cx, screenY: cy, pageX: cx, pageY: cy,
@@ -592,31 +619,52 @@ if (process.env.SMOKE_SKIP_3D) {
     const fire = (t, tt, ch) => content.dispatchEvent(new TouchEvent(t, {
       bubbles: true, cancelable: true, touches: tt, targetTouches: tt, changedTouches: ch,
     }));
+    // Sample the menu at every step and report whether it appeared AT ALL,
+    // rather than reading once at the end. The menu opens on a 500ms timer and
+    // the old single read landed ~150ms after it — thin enough that a loaded
+    // machine (this block runs right after the 3D teardown) pushed the timer
+    // past the read and the check failed intermittently. Polling also makes the
+    // negative case stricter: the drag must never open the menu at any point,
+    // not merely be closed again by the time we look.
+    const posOf = (id) => {
+      const it = window.useDesign.getState().furniture.find((q) => q.id === id);
+      return it ? { x: it.position.x, y: it.position.y } : null;
+    };
     const run = async (drift) => {
       window.useDesign.getState().clearSelection();
+      const before = posOf(f.id);
       const t0 = mk(x, y);
       fire('touchstart', [t0], [t0]);
+      let opened = false;
+      let labels = [];
+      const sample = () => {
+        if (opened || !document.querySelector('.ctx-menu')) return;
+        opened = true;
+        labels = [...document.querySelectorAll('.ctx-item')].map((b) => b.textContent);
+      };
       // Settle early (as a real fingertip does), then hold past 500ms.
       for (let i = 1; i <= 3; i++) {
         await new Promise((r) => setTimeout(r, 50));
         const j = mk(x + (drift * i) / 3, y);
         fire('touchmove', [j], [j]);
+        sample();
       }
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 8; i++) {
         await new Promise((r) => setTimeout(r, 100));
         const j = mk(x + drift + (i % 2 ? 0.5 : -0.5), y);
         fire('touchmove', [j], [j]);
+        sample();
       }
-      const opened = !!document.querySelector('.ctx-menu');
-      const labels = [...document.querySelectorAll('.ctx-item')].map((b) => b.textContent);
       fire('touchend', [], [mk(x + drift, y)]);
       document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
       await new Promise((r) => setTimeout(r, 120));
-      return { opened, labels };
+      const after = posOf(f.id);
+      const moved = before && after ? Math.hypot(after.x - before.x, after.y - before.y) : -1;
+      return { opened, labels, moved };
     };
     const settled = await run(10); // a hold that drifts like a real finger
     const dragged = await run(40); // an unmistakable drag
-    return { supported: true, settled, dragged };
+    return { supported: true, settled, dragged, at: [Math.round(x), Math.round(y)] };
   });
   if (!hold.supported) {
     check('long-press menu: touch events unavailable (skipped)', true);
@@ -624,7 +672,7 @@ if (process.env.SMOKE_SKIP_3D) {
     check(
       'long-press menu opens despite a settling finger (10px drift)',
       hold.settled.opened,
-      JSON.stringify(hold.settled),
+      JSON.stringify({ ...hold.settled, at: hold.at }),
     );
     check(
       'long-press menu offers Delete',
@@ -632,7 +680,15 @@ if (process.env.SMOKE_SKIP_3D) {
       JSON.stringify(hold.settled.labels),
     );
     check('a real 40px drag still does not open the menu', !hold.dragged.opened);
+    // Konva's dragDistance used to be 8 against a 12px tap slop, so a settling
+    // finger opened the menu AND slid the item ~9cm out from under it.
+    check(
+      'a settling finger does not nudge the item it long-presses',
+      hold.settled.moved === 0,
+      `moved ${hold.settled.moved}`,
+    );
   }
+  await lp.close();
 }
 
 // ---- shared dialog shell: Escape, a11y, and real motion --------------------
@@ -801,6 +857,59 @@ if (!process.env.SMOKE_SKIP_3D) {
     check('rotating from 3D turns the plan', before !== after);
   }
   await r3.close();
+}
+
+// ---- outdoor surfaces (Phase C) --------------------------------------------
+// Patios/decks/driveways reuse the Room primitive with an `outdoor` flag, so the
+// thing worth asserting is that the flag actually changes what renders: no slab
+// beneath, no ceiling above, and the outdoor material list instead of flooring.
+{
+  const od = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  await od.goto(BASE);
+  await od.waitForSelector('.projects-screen', { timeout: 20000 });
+  await od.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
+  await od.waitForSelector('.toolbar', { timeout: 20000 });
+  await od.locator('.coach-skip').click().catch(() => {});
+  await od.waitForTimeout(500);
+
+  const made = await od.evaluate(() => {
+    const s = window.useDesign.getState();
+    const xs = s.walls.flatMap((w) => [w.start.x, w.end.x]);
+    const ys = s.walls.flatMap((w) => [w.start.y, w.end.y]);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const id = s.addRoom([
+      { x: maxX + 20, y: minY + 40 }, { x: maxX + 420, y: minY + 40 },
+      { x: maxX + 420, y: minY + 340 }, { x: maxX + 20, y: minY + 340 },
+    ]);
+    window.useDesign.getState().updateRoom(id, { outdoor: true, floorMaterial: 'out_deck' });
+    const r = window.useDesign.getState().rooms.find((x) => x.id === id);
+    return { id, outdoor: r.outdoor, mat: r.floorMaterial };
+  });
+  check('a room can be marked as an outdoor surface', made.outdoor === true && made.mat === 'out_deck', JSON.stringify(made));
+
+  await od.evaluate((id) => window.useDesign.getState().select({ kind: 'room', id }), made.id);
+  await od.waitForTimeout(500);
+  const panel = await od.evaluate(() => ({
+    titles: [...document.querySelectorAll('.prop-title')].map((e) => e.textContent),
+    checked: document.querySelector('.toggle-row input')?.checked,
+    swatches: [...document.querySelectorAll('.swatch .sw-name')].map((e) => e.textContent),
+  }));
+  check('Outdoor card appears for a selected room', (panel.titles || []).includes('Outdoor surface'), JSON.stringify(panel.titles));
+  check('outdoor toggle reflects the room state', panel.checked === true);
+  check('outdoor surfaces are offered', (panel.swatches || []).includes('Decking'), JSON.stringify(panel.swatches));
+  // Indoor flooring is meaningless on a patio and must not be offered there.
+  check('indoor flooring is hidden for outdoor rooms', !(panel.swatches || []).includes('Oak Wood'));
+
+  // Round-trips through save/load like any other room.
+  const persisted = await od.evaluate(async (id) => {
+    const s = window.useDesign.getState();
+    const snap = JSON.parse(JSON.stringify({ rooms: s.rooms }));
+    s.loadSnapshot({ ...s, rooms: snap.rooms });
+    return window.useDesign.getState().rooms.find((r) => r.id === id)?.outdoor === true;
+  }, made.id);
+  check('outdoor flag survives a snapshot round trip', persisted);
+  await od.close();
 }
 
 // ---- 6. No page errors ------------------------------------------------------

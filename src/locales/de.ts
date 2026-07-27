@@ -685,4 +685,12 @@ export const DE: Record<string, string> = {
   '3D view: Dollhouse fades walls; Walk through explores at eye level (WASD / on-screen stick)': '3D-Ansicht: Puppenhaus blendet Wände aus; Rundgang erkundet auf Augenhöhe (WASD / Bildschirm-Stick)',
   '3D view: Dollhouse fades walls; Walk through explores at eye level with the on-screen stick': '3D-Ansicht: Puppenhaus blendet Wände aus; Rundgang erkundet auf Augenhöhe mit dem Bildschirm-Stick',
   'Render image saves a snapshot; Photo mode ray-traces a realistic still': '„Bild rendern“ speichert eine Aufnahme; der Fotomodus berechnet ein realistisches Bild per Raytracing',
+  'Outdoor surface': 'Außenfläche',
+  'Outdoor area': 'Außenbereich',
+  'Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.': 'Mach aus dieser Fläche eine Terrasse, ein Deck, eine Einfahrt oder einen Weg. Sie liegt auf dem Boden, ohne Decke darüber.',
+  'Paving': 'Pflaster',
+  'Decking': 'Holzdeck',
+  'Gravel': 'Kies',
+  'Asphalt': 'Asphalt',
+  'Lawn': 'Rasen',
 };

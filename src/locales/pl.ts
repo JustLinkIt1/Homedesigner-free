@@ -685,4 +685,12 @@ export const PL: Record<string, string> = {
   '3D view: Dollhouse fades walls; Walk through explores at eye level (WASD / on-screen stick)': 'Widok 3D: Domek dla lalek wygasza ściany; Spacer zwiedza na wysokości oczu (WASD / gałka na ekranie)',
   '3D view: Dollhouse fades walls; Walk through explores at eye level with the on-screen stick': 'Widok 3D: Domek dla lalek wygasza ściany; Spacer zwiedza na wysokości oczu gałką na ekranie',
   'Render image saves a snapshot; Photo mode ray-traces a realistic still': '„Renderuj obraz” zapisuje zrzut; tryb Foto śledzi promienie dla realistycznego ujęcia',
+  'Outdoor surface': 'Nawierzchnia zewnętrzna',
+  'Outdoor area': 'Strefa zewnętrzna',
+  'Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.': 'Zamień ten obszar w taras, pomost, podjazd lub ścieżkę. Leży na gruncie i nie ma nad sobą sufitu.',
+  'Paving': 'Kostka',
+  'Decking': 'Deski tarasowe',
+  'Gravel': 'Żwir',
+  'Asphalt': 'Asfalt',
+  'Lawn': 'Trawnik',
 };

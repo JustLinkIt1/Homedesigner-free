@@ -5,6 +5,53 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.7.0 - 2026-07-27 (versionCode 10700)
+
+### Added — patios, decks, driveways and paths
+A room can now be marked as an **outdoor area** (Properties → Outdoor surface).
+Outdoor areas reuse the room primitive rather than introducing a new object
+type, which means every tool that already works on rooms — drawing, reshaping,
+area readout, snapshots — works on a terrace for free.
+
+What the flag changes in 3D: the area is drawn **on the ground** with a
+hardscape surface, and it gets **no floor slab beneath and no ceiling above**.
+Without those two exclusions a patio rendered as a windowless box.
+
+Five surfaces ship: **Paving, Decking, Gravel, Asphalt and Lawn**. All are
+generated procedurally at runtime, so they add **zero bytes** to the APK — the
+same approach the ground plane and roofs already use. Indoor flooring, wall
+style and texture controls are hidden for outdoor areas, where they mean
+nothing.
+
+Decking needed a deliberate departure from physical accuracy. A real 5mm board
+gap is sub-pixel at plausible texture resolutions and mipmapping averaged it
+into a flat tan smear — the boards were invisible. The gap is drawn wider and
+darker, with more tone variation between boards, so the decking reads as
+decking at the distance you actually view it from.
+
+All eight new strings are translated into all 12 locales.
+
+### Fixed — a long-press no longer drags the thing you are pressing
+Holding an item to open its context menu could also **slide the item ~9cm** out
+from under the menu. Konva's `dragDistance` was 8px while our tap slop is 12px,
+leaving a 4px band where the two disagreed: the gesture counted as a hold (so
+the menu opened) *and* as a drag (so the item moved). The drag threshold is now
+tied to the tap slop, so inside the slop nothing moves. Caught by measuring the
+item's position across repeated gestures, not by inspection.
+
+### Testing
+The browser suite is at **83 checks**, green on three consecutive runs.
+
+The long-press checks were genuinely flaky — failing roughly half the time in
+both directions. The cause was test-side, not product-side: the block ran on a
+page carrying ~50 prior interactions (drags, a delete/undo, a 3D round-trip,
+four 90° plan rotations), and that accumulated stage state intermittently
+swallowed the synthetic touch entirely. In a clean page the identical gesture is
+deterministic 8/8. The block now runs in its own page, and no longer sits inside
+the 3D section, so it also runs with `SMOKE_SKIP_3D=1`. It asserts the menu
+appeared at *any* point during the hold rather than at one instant, which also
+makes the negative case (a real 40px drag must never open it) stricter.
+
 ## 1.6.1 - 2026-07-27 (versionCode 10601)
 
 ### Fixed — the Objects catalog could be invisible in desktop 3D

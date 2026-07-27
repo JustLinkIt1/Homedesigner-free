@@ -685,4 +685,12 @@ export const ZH: Record<string, string> = {
   '3D view: Dollhouse fades walls; Walk through explores at eye level (WASD / on-screen stick)': '3D 视图：娃娃屋模式淡化墙体；漫游以视平线探索（WASD / 屏幕摇杆）',
   '3D view: Dollhouse fades walls; Walk through explores at eye level with the on-screen stick': '3D 视图：娃娃屋模式淡化墙体；漫游用屏幕摇杆以视平线探索',
   'Render image saves a snapshot; Photo mode ray-traces a realistic still': '“渲染图像”保存快照；照片模式用光线追踪生成写实静帧',
+  'Outdoor surface': '室外地面',
+  'Outdoor area': '室外区域',
+  'Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.': '把这块区域变成露台、木平台、车道或小径。它位于地面上，上方没有天花板。',
+  'Paving': '铺石',
+  'Decking': '木平台',
+  'Gravel': '碎石',
+  'Asphalt': '沥青',
+  'Lawn': '草坪',
 };

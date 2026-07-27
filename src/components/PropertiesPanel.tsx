@@ -8,7 +8,7 @@ import {
 import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useDesign } from '../store/designStore';
-import { FLOOR_MATERIALS, CATALOG_BY_TYPE, FURNITURE_CATALOG } from '../data/furnitureCatalog';
+import { FLOOR_MATERIALS, FLOOR_BY_ID, OUTDOOR_MATERIALS, OUTDOOR_BY_ID, CATALOG_BY_TYPE, FURNITURE_CATALOG } from '../data/furnitureCatalog';
 import { requirePro } from '../lib/pro';
 import { useProStore } from '../store/proStore';
 import { ROOM_STYLES } from '../data/roomStyles';
@@ -20,7 +20,7 @@ import { finishForFace, withFaceFinish } from '../lib/wallFaces';
 import { useI18n } from '../lib/i18n';
 import { roofOf } from '../lib/roof';
 import { roofFootprint, roofNeedsFallback } from '../lib/roofGeometry';
-import type { CustomTexture, OpeningStyle, RoofType } from '../types';
+import type { CustomTexture, OpeningStyle, RoofType, Room } from '../types';
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 
@@ -46,12 +46,60 @@ const isProStyle = (kind: 'door' | 'window', style: OpeningStyle) =>
   PRO_OPENING_STYLES.has(`${kind}:${style}`);
 
 /**
- * One-tap exterior cladding. Painting an outside wall face already works via the
- * 3D paint popover, but it is effectively unreachable: dollhouse mode is on by
- * default and faded walls ignore taps, so the faces you can see from outside are
- * exactly the ones that won't respond. This finishes every outward-facing face in
- * a single undoable commit, using materials already bundled with the app.
+ * Turns a room polygon into an outdoor surface — a patio, deck, driveway, path
+ * or lawn — and picks its material.
+ *
+ * Deliberately the same `Room` primitive rather than a new site type: drawing,
+ * editing, area, 2D rendering and deletion all come for free. The only
+ * difference is in how it renders (on the ground, no slab beneath, no ceiling
+ * above) and which materials it offers. Surfaces are generated procedurally, so
+ * this adds no APK weight.
  */
+function OutdoorCard({ room }: { room: Room }) {
+  const t = useI18n();
+  const updateRoom = useDesign((st) => st.updateRoom);
+
+  const setOutdoor = (on: boolean) => {
+    updateRoom(room.id, {
+      outdoor: on || undefined,
+      // Moving in or out of doors makes the old material meaningless, so swap to
+      // a sensible default for the new mode rather than leaving oak decking or
+      // asphalt carpet behind.
+      floorMaterial: on ? 'out_paving' : 'oak',
+      texture: undefined,
+      color: on ? OUTDOOR_BY_ID.out_paving.color : FLOOR_BY_ID.oak.color,
+    });
+  };
+
+  return (
+    <div className="prop-card">
+      <div className="prop-title">{t('Outdoor surface')}</div>
+      <p className="prop-hint">
+        {t('Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.')}
+      </p>
+      <label className="toggle-row">
+        <input type="checkbox" checked={!!room.outdoor} onChange={(e) => setOutdoor(e.target.checked)} />
+        <span>{t('Outdoor area')}</span>
+      </label>
+      {room.outdoor && (
+        <div className="swatches" style={{ marginTop: 10 }}>
+          {OUTDOOR_MATERIALS.map((m) => (
+            <button
+              key={m.id}
+              className={`swatch ${room.floorMaterial === m.id ? 'active' : ''}`}
+              style={{ background: m.color }}
+              title={t(m.name)}
+              onClick={() => updateRoom(room.id, { floorMaterial: m.id, color: m.color, texture: undefined })}
+            >
+              <span className="sw-name">{t(m.name)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Whole-plan orientation. A tester asked "is there a way to rotate the full
  * floor plan?" — there wasn't. Like "Detect rooms" and "Exterior" this acts on
@@ -87,6 +135,13 @@ function PlanCard() {
   );
 }
 
+/**
+ * One-tap exterior cladding. Painting an outside wall face already works via the
+ * 3D paint popover, but it is effectively unreachable: dollhouse mode is on by
+ * default and faded walls ignore taps, so the faces you can see from outside are
+ * exactly the ones that won't respond. This finishes every outward-facing face in
+ * a single undoable commit, using materials already bundled with the app.
+ */
 function ExteriorCard() {
   const t = useI18n();
   const apply = useDesign((st) => st.applyExteriorFinish);
@@ -467,7 +522,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <span className="field-val">{formatArea(polygonArea(room.points), s.units)}</span>
               </div>
             </div>
-            <StyleCard roomId={room.id} />
+            <OutdoorCard room={room} />
+            {!room.outdoor && <StyleCard roomId={room.id} />}
+            {!room.outdoor && (
             <div className="prop-card">
               <div className="prop-label">{t('Flooring')}</div>
               <div className="mat-group-title">{t('Basic')}</div>
@@ -510,6 +567,8 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 );
               })}
             </div>
+            )}
+            {!room.outdoor && (
             <TextureCard
               label={t('Custom floor image')}
               texture={room.texture}
@@ -518,6 +577,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               onApplyAll={(t) => { for (const r of s.rooms) s.updateRoom(r.id, { texture: t }); }}
               applyAllLabel={t('Apply to all rooms')}
             />
+            )}
             <button className="btn-danger" onClick={() => s.deleteById('room', room.id)}>
               <Trash2 className="icon" /> {t('Delete room')}
             </button>

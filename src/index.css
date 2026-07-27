@@ -3978,6 +3978,24 @@ button.brand:hover .brand-name {
   background: var(--border);
   margin: 5px 2px;
 }
+/* Checkbox + label row inside a properties card (e.g. "Outdoor area"). */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-row input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--brand);
+  flex: none;
+}
+
 /* A labelled pair of actions inside the View popover (Rotate plan). */
 .view-menu-row {
   display: flex;

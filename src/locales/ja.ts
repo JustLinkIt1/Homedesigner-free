@@ -685,4 +685,12 @@ export const JA: Record<string, string> = {
   '3D view: Dollhouse fades walls; Walk through explores at eye level (WASD / on-screen stick)': '3D ビュー：ドールハウスは壁を薄くし、ウォークスルーは目線の高さで歩けます（WASD／画面スティック）',
   '3D view: Dollhouse fades walls; Walk through explores at eye level with the on-screen stick': '3D ビュー：ドールハウスは壁を薄くし、ウォークスルーは画面スティックで目線の高さを歩けます',
   'Render image saves a snapshot; Photo mode ray-traces a realistic still': '「画像を書き出し」はスナップショットを保存し、フォトモードはレイトレーシングで写実的な静止画を作ります',
+  'Outdoor surface': '屋外の面',
+  'Outdoor area': '屋外エリア',
+  'Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.': 'このエリアをテラス・デッキ・アプローチ・小道にします。地面の上に置かれ、天井は付きません。',
+  'Paving': '舗装',
+  'Decking': 'ウッドデッキ',
+  'Gravel': '砂利',
+  'Asphalt': 'アスファルト',
+  'Lawn': '芝生',
 };

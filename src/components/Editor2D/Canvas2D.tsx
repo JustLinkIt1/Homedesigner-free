@@ -1088,7 +1088,12 @@ export default function Canvas2D() {
         height={size.h}
         // Require deliberate movement before any node drag starts, so a tap or
         // small finger jitter selects without nudging furniture/walls/corners.
-        dragDistance={IS_COARSE ? 8 : 3}
+        // On touch this MUST match TAP_SLOP. It used to be 8 against a slop of
+        // 12, which left a 4px band where the two disagreed: a finger settling
+        // ~10px still counted as a hold (so the long-press menu opened) while
+        // Konva had already started dragging, so the item shifted under the
+        // menu you were opening. Inside the slop, nothing moves.
+        dragDistance={IS_COARSE ? TAP_SLOP : 3}
         onWheel={onWheel}
         onMouseDown={onMouseDown}
         onMouseMove={onStageMouseMove}

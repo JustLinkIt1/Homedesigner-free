@@ -685,4 +685,12 @@ export const NL: Record<string, string> = {
   '3D view: Dollhouse fades walls; Walk through explores at eye level (WASD / on-screen stick)': '3D-weergave: Poppenhuis vervaagt muren; Rondlopen verkent op ooghoogte (WASD / stick op het scherm)',
   '3D view: Dollhouse fades walls; Walk through explores at eye level with the on-screen stick': '3D-weergave: Poppenhuis vervaagt muren; Rondlopen verkent op ooghoogte met de stick op het scherm',
   'Render image saves a snapshot; Photo mode ray-traces a realistic still': '„Afbeelding renderen” slaat een opname op; Fotomodus raytracet een realistisch beeld',
+  'Outdoor surface': 'Buitenoppervlak',
+  'Outdoor area': 'Buitenruimte',
+  'Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.': 'Maak van dit vlak een terras, vlonder, oprit of pad. Het ligt op de grond en heeft geen plafond erboven.',
+  'Paving': 'Bestrating',
+  'Decking': 'Vlonder',
+  'Gravel': 'Grind',
+  'Asphalt': 'Asfalt',
+  'Lawn': 'Gazon',
 };

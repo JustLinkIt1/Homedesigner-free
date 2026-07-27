@@ -685,4 +685,12 @@ export const RU: Record<string, string> = {
   '3D view: Dollhouse fades walls; Walk through explores at eye level (WASD / on-screen stick)': 'Вид 3D: «Кукольный дом» приглушает стены; «Прогулка» — обзор на уровне глаз (WASD / экранный джойстик)',
   '3D view: Dollhouse fades walls; Walk through explores at eye level with the on-screen stick': 'Вид 3D: «Кукольный дом» приглушает стены; «Прогулка» — обзор на уровне глаз экранным джойстиком',
   'Render image saves a snapshot; Photo mode ray-traces a realistic still': '«Рендер» сохраняет снимок; режим «Фото» строит реалистичный кадр трассировкой лучей',
+  'Outdoor surface': 'Наружное покрытие',
+  'Outdoor area': 'Наружная зона',
+  'Turn this area into a patio, deck, driveway or path. It sits on the ground with no ceiling above it.': 'Превратите эту область в патио, настил, подъезд или дорожку. Она лежит на земле, потолка над ней нет.',
+  'Paving': 'Мощение',
+  'Decking': 'Настил',
+  'Gravel': 'Гравий',
+  'Asphalt': 'Асфальт',
+  'Lawn': 'Газон',
 };

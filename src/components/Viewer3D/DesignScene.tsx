@@ -4,7 +4,11 @@ import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
 import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
-import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry, derivedNormalTexture, getRoofTexture } from '../../lib/textures';
+import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry, derivedNormalTexture, getRoofTexture, getGroundTexture, GROUND_DEFAULTS } from '../../lib/textures';
+
+/** Real-world size one outdoor surface tile covers, in metres. Bigger than an
+ *  indoor pattern so paving and decking read at garden scale, not doll scale. */
+const OUTDOOR_PATCH_M = 2;
 import { activeTier, tierCaps } from '../../lib/perfTier';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
@@ -719,6 +723,18 @@ function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: Furn
   const mat = FLOOR_BY_ID[room.floorMaterial];
   const kind = mat?.kind ?? 'wood';
   const color = mat?.color ?? room.color;
+  // Outdoor surfaces (patio, deck, driveway, path, lawn) are generated rather
+  // than sampled from a photo — same reason as the site lawn, no APK cost. They
+  // bypass the whole indoor floor-material path below.
+  const ground = room.outdoor ? mat?.ground ?? 'paving' : null;
+  const groundDef = ground ? GROUND_DEFAULTS[ground] : null;
+  const groundTex = useMemo(() => {
+    if (!ground) return null;
+    const t = getGroundTexture(ground, groundDef?.color ?? color, OUTDOOR_PATCH_M);
+    // Room ShapeGeometry UVs are in world metres, so repeat == tiles per metre.
+    t.repeat.set(1 / OUTDOOR_PATCH_M, 1 / OUTDOOR_PATCH_M);
+    return t;
+  }, [ground, groundDef?.color, color]);
   const proc = useMemo(() => getFloorTexture(kind, color), [kind, color]);
   // Room ShapeGeometry UVs are already in world metres, so `repeat` maps
   // directly to "tiles per metre" — 1/patternMetres tiles once per pattern.
@@ -790,11 +806,11 @@ function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: Furn
       }
     >
       <meshStandardMaterial
-        map={custom ?? builtIn?.texture ?? proc}
-        normalMap={normal}
+        map={groundTex ?? custom ?? builtIn?.texture ?? proc}
+        normalMap={groundTex ? null : normal}
         normalScale={NORMAL_SCALE}
-        roughness={roughness}
-        metalness={metalness}
+        roughness={groundDef?.roughness ?? roughness}
+        metalness={groundTex ? 0 : metalness}
         side={THREE.DoubleSide}
       />
     </mesh>
@@ -899,8 +915,8 @@ function FloorContent({
 
   return (
     <group position={[0, elevation * M, 0]}>
-      {elevation > 0 && geom.rooms.map((r) => <SlabMesh key={`slab-${r.id}`} room={r} stairsBelow={stairsBelow} />)}
-      {isTop && !dollhouse && geom.rooms.map((r) => (
+      {elevation > 0 && geom.rooms.filter((r) => !r.outdoor).map((r) => <SlabMesh key={`slab-${r.id}`} room={r} stairsBelow={stairsBelow} />)}
+      {isTop && !dollhouse && geom.rooms.filter((r) => !r.outdoor).map((r) => (
         <CeilingMesh key={`ceil-${r.id}`} room={r} height={ceilingHeight} />
       ))}
       {roof && !dollhouse && (

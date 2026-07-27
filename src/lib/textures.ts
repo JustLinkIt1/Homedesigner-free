@@ -177,25 +177,32 @@ function deckingTexture(ctx: CanvasRenderingContext2D, color: string) {
   const rand = rng(71);
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, SIZE, SIZE);
-  const boards = 6;
+  // 5 boards per tile with a deliberately CHUNKY gap. A physically accurate
+  // 5mm gap on a 33cm board is sub-pixel at any normal viewing distance — the
+  // mip chain averages it away and the deck renders as a flat tan rectangle
+  // (measured: it did). Legibility wins over literal scale here.
+  const boards = 5;
   const bh = SIZE / boards;
+  const gap = 5;
   for (let i = 0; i < boards; i++) {
     const y = i * bh;
-    ctx.fillStyle = shade(color, (rand() - 0.5) * 14);
-    ctx.fillRect(0, y, SIZE, bh - 2);
+    // Per-board tone variation, wide enough to read as separate planks even
+    // once the gap itself starts to blur.
+    ctx.fillStyle = shade(color, (rand() - 0.5) * 26);
+    ctx.fillRect(0, y, SIZE, bh - gap);
     // Grain along the board.
-    for (let g = 0; g < 90; g++) {
-      const gy = y + rand() * (bh - 2);
-      ctx.strokeStyle = shade(color, (rand() - 0.5) * 20);
-      ctx.lineWidth = 0.6;
+    for (let g = 0; g < 110; g++) {
+      const gy = y + rand() * (bh - gap);
+      ctx.strokeStyle = shade(color, (rand() - 0.5) * 24);
+      ctx.lineWidth = 0.7;
       ctx.beginPath();
       ctx.moveTo(rand() * SIZE, gy);
       ctx.lineTo(rand() * SIZE, gy + (rand() - 0.5) * 2);
       ctx.stroke();
     }
     // Shadowed gap between boards.
-    ctx.fillStyle = 'rgba(0,0,0,0.32)';
-    ctx.fillRect(0, y + bh - 2, SIZE, 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, y + bh - gap, SIZE, gap);
   }
 }
 
