@@ -274,6 +274,10 @@ export interface FloorMaterial {
    *  both the 3D surface and the 2D plan fill. Omitted for carpets, which read
    *  cleaner as a flat colour top-down than as a stretched fibre photo. */
   texture?: string;
+  /** Outdoor hardscape surface (Phase C). Rendered procedurally from
+   *  `GroundKind` rather than a bundled photo, and only offered for rooms
+   *  flagged `outdoor`. */
+  ground?: 'grass' | 'gravel' | 'paving' | 'decking' | 'asphalt';
 }
 
 export const FLOOR_MATERIALS: FloorMaterial[] = [
@@ -287,5 +291,19 @@ export const FLOOR_MATERIALS: FloorMaterial[] = [
   { id: 'marble', name: 'Marble', color: '#eceef0', kind: 'marble', texture: 'marble_01' },
 ];
 
+/** Outdoor hardscape surfaces for rooms flagged `outdoor` (Phase C). Kept in the
+ *  same shape as FLOOR_MATERIALS so the 2D plan fill, the swatch grid and
+ *  `room.floorMaterial` all keep working with no special cases. */
+export const OUTDOOR_MATERIALS: FloorMaterial[] = [
+  { id: 'out_paving', name: 'Paving', color: '#c9c5bd', kind: 'tile', ground: 'paving' },
+  { id: 'out_deck', name: 'Decking', color: '#9c7a52', kind: 'wood', ground: 'decking' },
+  { id: 'out_gravel', name: 'Gravel', color: '#b6b2a8', kind: 'concrete', ground: 'gravel' },
+  { id: 'out_asphalt', name: 'Asphalt', color: '#4a4a4d', kind: 'concrete', ground: 'asphalt' },
+  { id: 'out_lawn', name: 'Lawn', color: '#7c9455', kind: 'concrete', ground: 'grass' },
+];
+
+export const OUTDOOR_BY_ID: Record<string, FloorMaterial> =
+  Object.fromEntries(OUTDOOR_MATERIALS.map((m) => [m.id, m]));
+
 export const FLOOR_BY_ID: Record<string, FloorMaterial> =
-  Object.fromEntries(FLOOR_MATERIALS.map((m) => [m.id, m]));
+  Object.fromEntries([...FLOOR_MATERIALS, ...OUTDOOR_MATERIALS].map((m) => [m.id, m]));

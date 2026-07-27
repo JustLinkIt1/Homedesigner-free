@@ -456,21 +456,37 @@ if (process.env.SMOKE_SKIP_3D) {
     cloudTv?.url.endsWith('/models/tests/cloud-smoke-tv.glb') && cloudTv.fit === 'width',
     JSON.stringify(cloudTv),
   );
-  // The docked catalog slides in from margin-left:-281px over 0.24s, and the
-  // `.docked` class itself is applied by a matchMedia listener. Until both have
-  // settled the sidebar is genuinely outside the viewport, so Playwright can
-  // scroll all it likes and the click still can't land — this is the long-
-  // standing "Side Table" flake. Wait for the panel to actually be on screen.
+  // The docked catalog used to animate in via `transition: margin-left`, and
+  // that transition could wedge — the CSSTransition stayed `running`, the
+  // computed margin never left -281px, and the whole panel sat off the left
+  // edge of the screen. That was the long-standing "Side Table" flake: not a
+  // timing issue in the test, a panel that genuinely never arrived. Assert it
+  // is actually on screen rather than merely present in the DOM.
   await page.waitForFunction(() => {
     const el = document.querySelector('.catalog.docked');
     return !!el && el.getBoundingClientRect().left >= 0;
   }, null, { timeout: 15000 }).catch(() => {});
+  const dockRect = await page.evaluate(() => {
+    const el = document.querySelector('.catalog.docked');
+    if (!el) return null;
+    const b = el.getBoundingClientRect();
+    return { left: Math.round(b.left), width: Math.round(b.width), margin: getComputedStyle(el).marginLeft };
+  });
+  check(
+    'docked 3D catalog is on screen, not parked off the left edge',
+    !!dockRect && dockRect.left >= 0 && dockRect.width > 100,
+    JSON.stringify(dockRect),
+  );
   await page.locator('.catalog.docked .cat-item[title="Side Table"]').click();
   check(
     'catalog opens 3D model preview',
-    await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: 15000 }).then(() => true).catch(() => false),
+    // 30s, not 15s: the preview spins up a SECOND WebGL context alongside the
+    // live 3D scene. That is genuinely slow under swiftshader — and it only
+    // started happening once the docked panel was fixed to actually be on
+    // screen, because an off-screen panel never rendered its preview at all.
+    await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: 30000 }).then(() => true).catch(() => false),
   );
-  await page.locator('.catalog.docked .catalog-place').click();
+  await page.locator('.catalog.docked .catalog-place').click({ timeout: 30000 });
   check(
     '3D placement guidance appears',
     await page.locator('.placement-affordance', { hasText: 'Tap a floor to place Side Table' }).isVisible().catch(() => false),
@@ -538,7 +554,19 @@ if (process.env.SMOKE_SKIP_3D) {
   // on the 2D Konva stage, so go back to the plan first.
   await page.click('.view-toggle button:nth-child(1)');
   await page.waitForSelector('.konvajs-content canvas', { timeout: 15000 });
-  await page.waitForTimeout(300);
+  // Leave furniture mode so the docked catalog retracts, then re-fit. The 3D
+  // section leaves the catalog docked, which makes the 2D canvas ~280px
+  // narrower — enough that the item this block targets can sit outside the
+  // visible stage and the synthetic touch lands on nothing. (Before the docking
+  // transition was removed this happened to work, because the panel was still
+  // mid-slide when the rect was measured.)
+  await store(() => {
+    const s = window.useDesign.getState();
+    s.setTool('select');
+    s.clearSelection();
+    s.requestFit();
+  });
+  await page.waitForTimeout(700);
 
   // The long-press menu is the only route to copy/z-order on a phone, and the
   // old 7px tap slop cancelled it: a finger settling on the glass drifts

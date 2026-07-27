@@ -172,13 +172,61 @@ function grassTexture(ctx: CanvasRenderingContext2D, color: string) {
   }
 }
 
-/** Outdoor ground surfaces for the 3D site plane (not room floor materials). */
-export type GroundKind = 'grass' | 'gravel' | 'paving' | 'plain';
+/** Decking: sawn boards with a visible gap between them, run along one axis. */
+function deckingTexture(ctx: CanvasRenderingContext2D, color: string) {
+  const rand = rng(71);
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  const boards = 6;
+  const bh = SIZE / boards;
+  for (let i = 0; i < boards; i++) {
+    const y = i * bh;
+    ctx.fillStyle = shade(color, (rand() - 0.5) * 14);
+    ctx.fillRect(0, y, SIZE, bh - 2);
+    // Grain along the board.
+    for (let g = 0; g < 90; g++) {
+      const gy = y + rand() * (bh - 2);
+      ctx.strokeStyle = shade(color, (rand() - 0.5) * 20);
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(rand() * SIZE, gy);
+      ctx.lineTo(rand() * SIZE, gy + (rand() - 0.5) * 2);
+      ctx.stroke();
+    }
+    // Shadowed gap between boards.
+    ctx.fillStyle = 'rgba(0,0,0,0.32)';
+    ctx.fillRect(0, y + bh - 2, SIZE, 2);
+  }
+}
+
+/** Asphalt: dark aggregate speckle, no structure — reads as a driveway. */
+function asphaltTexture(ctx: CanvasRenderingContext2D, color: string) {
+  const rand = rng(97);
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  for (let i = 0; i < 22000; i++) {
+    ctx.fillStyle = shade(color, (rand() - 0.45) * 40);
+    const r = 0.5 + rand() * 1.4;
+    ctx.beginPath();
+    ctx.arc(rand() * SIZE, rand() * SIZE, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/**
+ * Outdoor ground surfaces — used both for the big 3D site plane and, since
+ * Phase C, for outdoor Rooms (patios, decks, driveways, paths). Procedural for
+ * the same reason the lawn is: noise-based surfaces read fine without spending
+ * APK bytes on photos.
+ */
+export type GroundKind = 'grass' | 'gravel' | 'paving' | 'decking' | 'asphalt' | 'plain';
 
 const GROUND_GENERATORS: Record<GroundKind, (c: CanvasRenderingContext2D, col: string) => void> = {
   grass: grassTexture,
   gravel: concreteTexture,
   paving: tileTexture,
+  decking: deckingTexture,
+  asphalt: asphaltTexture,
   plain: (c, col) => {
     c.fillStyle = col;
     c.fillRect(0, 0, SIZE, SIZE);
@@ -189,6 +237,8 @@ export const GROUND_DEFAULTS: Record<GroundKind, { color: string; roughness: num
   grass: { color: '#7c9455', roughness: 0.95 },
   gravel: { color: '#b6b2a8', roughness: 0.95 },
   paving: { color: '#c9c5bd', roughness: 0.7 },
+  decking: { color: '#9c7a52', roughness: 0.75 },
+  asphalt: { color: '#4a4a4d', roughness: 0.9 },
   plain: { color: '#eceae4', roughness: 1 },
 };
 

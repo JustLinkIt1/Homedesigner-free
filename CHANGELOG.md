@@ -5,6 +5,46 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.6.1 - 2026-07-27 (versionCode 10601)
+
+### Fixed — the Objects catalog could be invisible in desktop 3D
+Opening **Objects** in 3D on a desktop-width window could leave the whole
+catalog panel rendering off the left edge of the screen — present in the DOM,
+completely invisible, no way to pick furniture.
+
+The panel docks by animating `margin-left` from `-281px` to `0`. That
+transition could **wedge**: the `CSSTransition` stayed `running` indefinitely,
+so the computed margin never left `-281px` and nothing could override it — an
+inline `margin-left: 0` was ignored while the stuck transition was in flight.
+Verified in a production build: forcing `transition: none` on the same element
+resolved it to `0px` and snapped the panel into view immediately.
+
+It was animating a layout-owning property while the WebGL scene drives the main
+thread, which is the likely trigger. The transition is gone — the panel docks
+instantly. A panel that sometimes never appears is far worse than one that does
+not slide. If the animation is ever wanted back it must move to a compositor
+property on an inner wrapper, never the margin that owns the layout.
+
+This is also the honest explanation for the long-standing "Side Table" flake in
+the browser suite: the test was not badly written, the panel genuinely never
+arrived. That check now asserts the panel is actually on screen.
+
+Two knock-on test fixes, both consequences of the panel now working:
+- The catalog preview spins up a **second** WebGL context beside the live 3D
+  scene and only really renders now that the panel is visible. That is slow
+  under software rendering, so its budget went 15s → 30s.
+- The 3D section leaves the catalog docked, and with the slide removed the 2D
+  canvas resizes instantly — narrow enough that the long-press block's target
+  could fall outside the stage. It now leaves furniture mode and re-fits first.
+
+### Groundwork — Phase C (outdoor surfaces)
+Inert scaffolding only, nothing user-visible yet: two new procedural outdoor
+surfaces (decking, asphalt) alongside the existing grass/gravel/paving — zero
+APK bytes, same approach as the Phase A lawn — plus an optional `outdoor` flag
+on `Room` and an `OUTDOOR_MATERIALS` set wired into the existing floor-material
+lookup so the 2D fill and swatch grid need no special cases. The 3D rendering
+rules and the UI to draw patios/decks/driveways come next.
+
 ## 1.6.0 - 2026-07-27 (versionCode 10600)
 
 Three things reported after 1.5.0: rotation couldn't be found in 3D, the tour

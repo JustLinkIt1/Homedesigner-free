@@ -60,6 +60,12 @@ export interface Room {
   auto?: boolean;
   /** Optional custom floor image — overrides `floorMaterial` in the 3D view. */
   texture?: CustomTexture;
+  /**
+   * An outdoor surface (patio, deck, driveway, path, lawn) rather than an
+   * interior room. Same polygon primitive — it just renders on the ground with
+   * no slab beneath and no ceiling above, and takes an outdoor material.
+   */
+  outdoor?: boolean;
 }
 
 /** Visual/behavioural variant of an opening.

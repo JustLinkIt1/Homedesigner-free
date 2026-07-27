@@ -3833,7 +3833,24 @@ button.brand:hover .brand-name {
 @media (min-width: 881px) {
   .sidebar:not(.right) {
     margin-left: -281px; /* width + border */
-    transition: margin-left 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    /*
+      Deliberately NOT transitioned.
+
+      This used to be `transition: margin-left 0.22s`, and that transition could
+      wedge: the CSSTransition stayed `running` indefinitely, so the computed
+      margin never left -281px and the docked catalog sat permanently off the
+      left edge of the screen. Verified in a production build — with the
+      transition forced off, the same element resolves to 0px and snaps into
+      view immediately; an inline `margin-left: 0` could not override it while
+      the stuck transition was in flight.
+
+      It is a layout-affecting property being animated while the WebGL scene is
+      driving the main thread, which is the likely trigger. A panel that
+      sometimes never appears is far worse than one that docks instantly, so
+      the slide is gone. If it is ever wanted back, animate a compositor
+      property (transform) on an inner wrapper — never the margin that owns the
+      layout.
+    */
   }
   .sidebar:not(.right).docked {
     margin-left: 0;
