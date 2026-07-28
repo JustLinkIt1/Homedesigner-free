@@ -1,7 +1,7 @@
 # WIP handoff — HomeDesigner exteriors
 
-Written at **1.10.1 (versionCode 11001)**, branch
-`claude/home-design-app-2d-plans-12y5u5`. Everything described as shipped is
+Written at **1.11.0 (versionCode 11100)**, branch
+`agent/catalog-performance-1.11.0`. Everything described as shipped is
 committed and pushed. Read this before touching exteriors.
 
 ---
@@ -43,6 +43,21 @@ worth more than an hour of unpushed work.
 | 1.9.0 | The garden set: Outdoor 5 → 19 entries, procedural foliage |
 | 1.10.0 | Gardens in all four samples; `tests/samples.mjs` clash suite; Patio Slider |
 | 1.10.1 | Sliding doors rebuilt (they rendered as an opaque grey slab) |
+| 1.11.0 | Lazy photoreal catalogue cards, favourites, and on-demand 3D previews |
+
+### Catalogue state at 1.11.0
+
+- Cards use lazy-decoded top-down WebP renders when the sprite pipeline has an
+  asset, and fall back to the existing lightweight SVG plan symbol.
+- Selecting a card does **not** import Three.js or create a preview WebGL
+  context. The one rotatable canvas mounts only after **View in 3D** is pressed.
+  Keep this boundary: the catalogue is usable beside the live 3D scene, where a
+  second eager context was a measurable software-rendering and phone-GPU cost.
+- `src/lib/favorites.ts` stores a device-local ordered set under
+  `homedesigner.favorites.v1`. It is deliberately not project or undo state.
+- The browser suite asserts the zero-canvas selection path, sprite card,
+  favourites row and opt-in 3D path. The pure suites use the esbuild JS API so
+  they run cross-platform.
 
 ### Phase C status
 
@@ -197,7 +212,10 @@ new version has.
 **must stay gitignored**. `mcp__github__actions_run_trigger` returns 403 here,
 so AABs are built locally, not by the workflow.
 
-AABs delivered so far: 1.8.0 (10800), 1.9.0 (10900), **1.10.1 (11001)**.
+AABs delivered so far: 1.8.0 (10800), 1.9.0 (10900), 1.10.1 (11001),
+**1.11.0 (11100)**. The 1.11.0 bundle is 29,512,085 bytes, SHA-256
+`D539D0561140CFE4F8CED78689500531846A9E9ADC9E5DA9453B64B059480E6D`, and
+was verified against the expected Nathan Joppich upload certificate.
 
 ---
 

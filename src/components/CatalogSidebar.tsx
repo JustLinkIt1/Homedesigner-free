@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Search, Sofa, Lock, History, X, Box, Move3D, Cloud, RefreshCw } from 'lucide-react';
+import { Search, Sofa, Lock, History, Star, X, Box, Move3D, Cloud, RefreshCw } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
@@ -11,9 +11,11 @@ import {
   type CatalogGroup,
 } from '../data/furnitureCatalog';
 import { getRecent } from '../lib/recent';
+import { getFavorites, toggleFavorite } from '../lib/favorites';
 import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
 import { loadRemoteCatalog, useRemoteCatalog } from '../lib/remoteCatalog';
+import { FURNITURE_SPRITES, spriteUrl } from '../data/furnitureSprites';
 
 // Keep Three.js out of the initial 2D editor path; load it only after a user
 // actually asks to inspect an object.
@@ -22,11 +24,15 @@ const CatalogPreview = lazy(() => import('./CatalogPreview'));
 function CatalogItem({
   entry,
   previewed,
+  favorite,
   onPreview,
+  onToggleFavorite,
 }: {
   entry: CatalogEntry;
   previewed: boolean;
+  favorite: boolean;
   onPreview: () => void;
+  onToggleFavorite: () => void;
 }) {
   const pendingFurnitureType = useDesign((state) => state.pendingFurnitureType);
   const isPro = useProStore((state) => state.isPro);
@@ -35,19 +41,48 @@ function CatalogItem({
   const name = t(entry.name);
 
   return (
-    <button
+    <div
       className={`cat-item ${previewed || pendingFurnitureType === entry.type ? 'active' : ''} ${locked ? 'locked' : ''}`}
-      onClick={onPreview}
       title={locked ? `${name} — Pro` : name}
     >
+      <button
+        className="cat-item-select"
+        onClick={onPreview}
+        aria-label={name}
+      >
+        <CatalogVisual entry={entry} className="ci-visual" />
+        <span className="label">{name}</span>
+      </button>
+      <button
+        className={`ci-favorite ${favorite ? 'active' : ''}`}
+        onClick={onToggleFavorite}
+        aria-label={t(favorite ? 'Remove from favourites' : 'Add to favourites')}
+        aria-pressed={favorite}
+        title={t(favorite ? 'Remove from favourites' : 'Add to favourites')}
+      >
+        <Star className="icon" />
+      </button>
       {locked && (
         <span className="ci-lock" aria-label="Pro item">
           <Lock className="icon" />
         </span>
       )}
-      <SymbolIcon shape={entry.shape} className="ci-symbol" />
-      <span className="label">{name}</span>
-    </button>
+    </div>
+  );
+}
+
+function CatalogVisual({ entry, className }: { entry: CatalogEntry; className: string }) {
+  return FURNITURE_SPRITES.has(entry.type) ? (
+    <img
+      className={`${className} ci-sprite`}
+      src={spriteUrl(entry.type)}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+    />
+  ) : (
+    <SymbolIcon shape={entry.shape} className={`${className} ci-symbol`} />
   );
 }
 
@@ -75,6 +110,8 @@ export default function CatalogSidebar({
   const [category, setCategory] = useState('All');
   const [browseBy, setBrowseBy] = useState<'room' | 'type'>('room');
   const [previewEntry, setPreviewEntry] = useState<CatalogEntry | null>(null);
+  const [interactivePreview, setInteractivePreview] = useState(false);
+  const [favoriteTypes, setFavoriteTypes] = useState(() => getFavorites());
   const [desktop, setDesktop] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(min-width: 881px)').matches,
   );
@@ -99,6 +136,7 @@ export default function CatalogSidebar({
   }, [active]);
 
   useEffect(() => setCategory('All'), [browseBy]);
+  useEffect(() => setInteractivePreview(false), [previewEntry?.type]);
 
   const categories = useMemo(() => {
     const values = new Set<string>();
@@ -114,6 +152,13 @@ export default function CatalogSidebar({
     // Arming a new object updates this value and therefore refreshes recents.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pendingFurnitureType],
+  );
+
+  const favorites = useMemo(
+    () => favoriteTypes
+      .map((type) => catalog.find((entry) => entry.type === type))
+      .filter((entry): entry is CatalogEntry => !!entry),
+    [favoriteTypes, catalog],
   );
 
   const grouped = useMemo(() => {
@@ -159,7 +204,9 @@ export default function CatalogSidebar({
       key={key}
       entry={entry}
       previewed={previewEntry?.type === entry.type}
+      favorite={favoriteTypes.includes(entry.type)}
       onPreview={() => setPreviewEntry(entry)}
+      onToggleFavorite={() => setFavoriteTypes(toggleFavorite(entry.type))}
     />
   );
 
@@ -223,10 +270,21 @@ export default function CatalogSidebar({
         {previewEntry && (
           <div className="catalog-preview">
             <div className="catalog-preview-visual">
-              <Suspense fallback={<div className="catalog-preview-loading">{t('Loading 3D preview…')}</div>}>
-                <CatalogPreview entry={previewEntry} />
-              </Suspense>
-              <span className="catalog-preview-hint"><Move3D className="icon" /> {t('Drag to rotate')}</span>
+              {interactivePreview ? (
+                <>
+                  <Suspense fallback={<div className="catalog-preview-loading">{t('Loading 3D preview…')}</div>}>
+                    <CatalogPreview entry={previewEntry} />
+                  </Suspense>
+                  <span className="catalog-preview-hint"><Move3D className="icon" /> {t('Drag to rotate')}</span>
+                </>
+              ) : (
+                <div className="catalog-preview-static">
+                  <CatalogVisual entry={previewEntry} className="catalog-preview-image" />
+                  <button className="catalog-preview-3d" onClick={() => setInteractivePreview(true)}>
+                    <Move3D className="icon" /> {t('View in 3D')}
+                  </button>
+                </div>
+              )}
             </div>
             <div className="catalog-preview-info">
               <div>
@@ -245,6 +303,14 @@ export default function CatalogSidebar({
           </div>
         )}
         <div className="sidebar-scroll">
+          {!query.trim() && category === 'All' && favorites.length > 0 && (
+            <div className="cat-section" key="__favorites">
+              <div className="cat-title">
+                <Star className="icon" style={{ width: 13, height: 13, verticalAlign: -2 }} /> {t('Favourites')}
+              </div>
+              <div className="cat-grid">{favorites.map((entry) => renderItem(entry, `f-${entry.type}`))}</div>
+            </div>
+          )}
           {!query.trim() && category === 'All' && recent.length > 0 && (
             <div className="cat-section" key="__recent">
               <div className="cat-title">

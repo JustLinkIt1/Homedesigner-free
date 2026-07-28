@@ -13,6 +13,10 @@ export const KO: Record<string, string> = {
   Outdoor: '실외',
   Openings: '개구부',
   Recent: '최근',
+  Favourites: '즐겨찾기',
+  'Add to favourites': '즐겨찾기에 추가',
+  'Remove from favourites': '즐겨찾기에서 제거',
+  'View in 3D': '3D로 보기',
 
   /* ---------- Catalog: items ---------- */
   Sofa: '소파',

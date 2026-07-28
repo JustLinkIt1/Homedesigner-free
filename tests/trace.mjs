@@ -12,26 +12,32 @@
 // produce about the same number of walls. It did not used to, and that is what
 // turned a clean 6-wall plan into 44 fragments on a high-resolution scan.
 
-import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
+import { build } from 'esbuild';
 
 const root = process.cwd();
+const sourceRoot = root.replaceAll('\\', '/');
 const dir = mkdtempSync(join(tmpdir(), 'hdtrace-'));
 const entry = join(dir, 'entry.ts');
 writeFileSync(entry, `
-export { traceWallsAuto, traceWallsStages } from '${root}/src/lib/wallTrace.ts';
-export { autoThreshold } from '${root}/src/lib/autoTrace.ts';
-export { segmentsToWalls } from '${root}/src/lib/wallBuilder.ts';
-export { detectRooms, detectBuildingOutline } from '${root}/src/lib/roomDetection.ts';
-export { polygonArea } from '${root}/src/lib/geometry.ts';
+export { traceWallsAuto, traceWallsStages } from '${sourceRoot}/src/lib/wallTrace.ts';
+export { autoThreshold } from '${sourceRoot}/src/lib/autoTrace.ts';
+export { segmentsToWalls } from '${sourceRoot}/src/lib/wallBuilder.ts';
+export { detectRooms, detectBuildingOutline } from '${sourceRoot}/src/lib/roomDetection.ts';
+export { polygonArea } from '${sourceRoot}/src/lib/geometry.ts';
 `);
 const bundleFile = join(dir, 'bundle.js');
-execFileSync(join(root, 'node_modules/.bin/esbuild'), [
-  entry, '--bundle', '--format=iife', '--global-name=TR', '--platform=browser', `--outfile=${bundleFile}`,
-], { stdio: 'pipe' });
+await build({
+  entryPoints: [entry],
+  bundle: true,
+  format: 'iife',
+  globalName: 'TR',
+  platform: 'browser',
+  outfile: bundleFile,
+});
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,

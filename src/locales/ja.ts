@@ -13,6 +13,10 @@ export const JA: Record<string, string> = {
   Outdoor: '屋外',
   Openings: '開口部',
   Recent: '最近',
+  Favourites: 'お気に入り',
+  'Add to favourites': 'お気に入りに追加',
+  'Remove from favourites': 'お気に入りから削除',
+  'View in 3D': '3Dで表示',
 
   /* ---------- Catalog: items ---------- */
   Sofa: 'ソファ',
