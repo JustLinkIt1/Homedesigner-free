@@ -693,4 +693,13 @@ export const JA: Record<string, string> = {
   'Gravel': '砂利',
   'Asphalt': 'アスファルト',
   'Lawn': '芝生',
+  'Fence or railing': 'フェンス・手すり',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'これを壁ではなく庭のフェンス・敷地境界・デッキの手すりにします。屋根は付かず、部屋を囲むこともありません。',
+  'Fence': 'フェンス',
+  'Picket': 'ピケット',
+  'Privacy': '目隠し',
+  'Post and rail': '横木柵',
+  'Railing': '手すり',
+  'Draw fence': 'フェンスを描く',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'クリックしてフェンスの線を引きます。描いた後にプロパティでスタイルと高さを選べます',
 };

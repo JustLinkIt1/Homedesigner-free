@@ -693,4 +693,13 @@ export const NL: Record<string, string> = {
   'Gravel': 'Grind',
   'Asphalt': 'Asfalt',
   'Lawn': 'Gazon',
+  'Fence or railing': 'Hek of leuning',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'Maak hiervan een tuinhek, erfgrens of terrasleuning in plaats van een muur. Het krijgt geen dak en sluit nooit een kamer af.',
+  'Fence': 'Hek',
+  'Picket': 'Schuttinglat',
+  'Privacy': 'Privacy',
+  'Post and rail': 'Palen en liggers',
+  'Railing': 'Leuning',
+  'Draw fence': 'Hek tekenen',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'Klik om een heklijn te trekken — kies stijl en hoogte in Eigenschappen zodra het getekend is',
 };

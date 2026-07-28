@@ -28,6 +28,7 @@ import FurnitureSymbol from './FurnitureSymbol';
 import { buildSnapElements, nearestSnap, lockToAngle, type SnapKind, type GuideLine } from '../../lib/snapping';
 import { kitchenRunUnits, RUN_UNIT } from '../../lib/kitchenRun';
 import { computeWallPolygons } from '../../lib/wallGeometry';
+import { isFence } from '../../lib/fence';
 import { formatLength, formatArea, type Units } from '../../lib/units';
 import { selectionTick, tapMedium } from '../../lib/haptics';
 import { useTheme, canvasColors } from '../../lib/theme';
@@ -282,7 +283,7 @@ export default function Canvas2D() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-      const chaining = (tool === 'wall' || tool === 'room') && draft.length > 0;
+      const chaining = (tool === 'wall' || tool === 'fence' || tool === 'room') && draft.length > 0;
       if (e.key === 'Escape') {
         if (lengthInput) {
           setLengthInput('');
@@ -408,7 +409,7 @@ export default function Canvas2D() {
   const applySnaps = (p: Point): Point => {
     // Wider catch radius on touch so a fingertip reliably grabs endpoints/guides.
     const radius = (IS_COARSE ? 22 : 14) / zoom;
-    if (tool === 'wall' || tool === 'room' || tool === 'kitchen') {
+    if (tool === 'wall' || tool === 'fence' || tool === 'room' || tool === 'kitchen') {
       const prev = draft.length > 0 ? draft[draft.length - 1] : null;
       const els = buildSnapElements({ walls, draft, prev, radius, guides: true });
       const snap = nearestSnap(els, p);
@@ -430,7 +431,7 @@ export default function Canvas2D() {
       // Square-to-grid angle lock (identical to the 3D drawing): when drawing
       // a chain, pull near-45° segments exactly onto the axis so beginners get
       // straight walls without hunting for the guide line.
-      if ((tool === 'wall' || tool === 'room') && draft.length > 0) {
+      if ((tool === 'wall' || tool === 'fence' || tool === 'room') && draft.length > 0) {
         const locked = lockToAngle(draft[draft.length - 1], p, (pt) => snapToGrid(pt, gridSize));
         snapKindRef.current = 'grid';
         return locked;
@@ -525,7 +526,7 @@ export default function Canvas2D() {
   // Core place/draw/select action at a world point — shared by mouse & touch.
   const actAt = (p: Point) => {
     const snapped = applySnaps(p);
-    if (tool === 'wall') {
+    if (tool === 'wall' || tool === 'fence') {
       setDraft((d) => [...d, snapped]);
     } else if (tool === 'room') {
       if (draft.length >= 3 && dist(snapped, draft[0]) < (IS_COARSE ? 38 : 25) / zoom) {
@@ -860,8 +861,9 @@ export default function Canvas2D() {
   }, [isPanning]);
 
   const finishDraft = () => {
-    if (tool === 'wall' && draft.length >= 2) {
-      for (let i = 0; i < draft.length - 1; i++) s.addWall(draft[i], draft[i + 1]);
+    if ((tool === 'wall' || tool === 'fence') && draft.length >= 2) {
+      const kind = tool === 'fence' ? 'fence' : 'wall';
+      for (let i = 0; i < draft.length - 1; i++) s.addWall(draft[i], draft[i + 1], kind);
     } else if (tool === 'room' && draft.length >= 3) {
       s.addRoom(draft);
     } else if (tool === 'kitchen' && draft.length >= 1 && cursor) {
@@ -876,7 +878,7 @@ export default function Canvas2D() {
     drawBridge.cancel = () => setDraft([]);
     const active =
       tool === 'room' ? draft.length >= 3
-      : tool === 'wall' ? draft.length >= 2
+      : tool === 'wall' || tool === 'fence' ? draft.length >= 2
       : tool === 'kitchen' ? draft.length >= 1
       : false;
     useDraw.getState().setActive(active);
@@ -1100,7 +1102,7 @@ export default function Canvas2D() {
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        onDblClick={() => (tool === 'wall' || tool === 'room') && finishDraft()}
+        onDblClick={() => (tool === 'wall' || tool === 'fence' || tool === 'room') && finishDraft()}
         onContextMenu={(e) => {
           e.evt.preventDefault();
           const p = worldPointer();
@@ -1270,21 +1272,38 @@ export default function Canvas2D() {
             const hr = HANDLE_R / zoom; // handle radius (cm)
             return (
               <Group key={w.id}>
-                {/* Mitered visual body: a filled polygon whose corners are
-                    true-mitered against whatever wall shares that endpoint,
-                    so skewed/non-orthogonal corners read cleanly instead of
-                    the round-cap blobs a stroked line leaves. */}
-                <Line
-                  points={(wallPolys.get(w.id) ?? [start, end, end, start]).flatMap((p) => [p.x, p.y])}
-                  closed
-                  fill={sel ? C.selection : C.wallBody}
-                  stroke={sel ? C.selection : C.wallEdge}
-                  strokeWidth={1 / zoom}
-                  lineJoin="round"
-                  perfectDrawEnabled={false}
-                  shadowForStrokeEnabled={false}
-                  listening={false}
-                />
+                {isFence(w) ? (
+                  /* A fence is a line on the ground, not a piece of building.
+                     Drawing it dashed and thin (rather than as a mitered solid
+                     body) is how plans distinguish a boundary from a wall, and
+                     it stops a garden edge reading as a room divider. */
+                  <Line
+                    points={[start.x, start.y, end.x, end.y]}
+                    stroke={sel ? C.selection : C.wallEdge}
+                    strokeWidth={Math.max(3, w.thickness * 0.6)}
+                    dash={[18, 12]}
+                    lineCap="butt"
+                    perfectDrawEnabled={false}
+                    shadowForStrokeEnabled={false}
+                    listening={false}
+                  />
+                ) : (
+                  /* Mitered visual body: a filled polygon whose corners are
+                     true-mitered against whatever wall shares that endpoint,
+                     so skewed/non-orthogonal corners read cleanly instead of
+                     the round-cap blobs a stroked line leaves. */
+                  <Line
+                    points={(wallPolys.get(w.id) ?? [start, end, end, start]).flatMap((p) => [p.x, p.y])}
+                    closed
+                    fill={sel ? C.selection : C.wallBody}
+                    stroke={sel ? C.selection : C.wallEdge}
+                    strokeWidth={1 / zoom}
+                    lineJoin="round"
+                    perfectDrawEnabled={false}
+                    shadowForStrokeEnabled={false}
+                    listening={false}
+                  />
+                )}
                 {/* Invisible hit/drag target — unchanged interaction, just no
                     longer responsible for the visible wall body. */}
                 <Line
@@ -1716,7 +1735,7 @@ export default function Canvas2D() {
           )}
 
           {/* Inference guide line (axis / extension / parallel / perpendicular). */}
-          {(tool === 'wall' || tool === 'room') && snapKind === 'guide' && snapGuide && (
+          {(tool === 'wall' || tool === 'fence' || tool === 'room') && snapKind === 'guide' && snapGuide && (
             <Line
               points={[
                 snapGuide.x0 - snapGuide.dx * 100000,
@@ -1734,7 +1753,7 @@ export default function Canvas2D() {
 
           {/* Snap indicator while drawing: a point/midpoint lock (magenta), or a
               guide/segment inference (green/blue). */}
-          {(tool === 'wall' || tool === 'room') && cursor && snapKind !== 'free' && snapKind !== 'grid' && (
+          {(tool === 'wall' || tool === 'fence' || tool === 'room') && cursor && snapKind !== 'free' && snapKind !== 'grid' && (
             <SnapIndicator at={cursor} kind={snapKind} zoom={zoom} />
           )}
 
@@ -2093,7 +2112,7 @@ function DraftView({
         points={flat}
         closed={tool === 'room'}
         stroke={C.selection}
-        strokeWidth={(tool === 'wall' ? 8 : 2) / zoom}
+        strokeWidth={(tool === 'wall' ? 8 : tool === 'fence' ? 4 : 2) / zoom}
         lineCap="round"
         opacity={0.7}
         dash={tool === 'room' ? [10 / zoom, 6 / zoom] : undefined}

@@ -20,7 +20,8 @@ import { finishForFace, withFaceFinish } from '../lib/wallFaces';
 import { useI18n } from '../lib/i18n';
 import { roofOf } from '../lib/roof';
 import { roofFootprint, roofNeedsFallback } from '../lib/roofGeometry';
-import type { CustomTexture, OpeningStyle, RoofType, Room } from '../types';
+import { structuralWalls, isFence, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE } from '../lib/fence';
+import type { CustomTexture, FenceStyle, OpeningStyle, RoofType, Room, Wall } from '../types';
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 
@@ -92,6 +93,72 @@ function OutdoorCard({ room }: { room: Room }) {
               onClick={() => updateRoom(room.id, { floorMaterial: m.id, color: m.color, texture: undefined })}
             >
               <span className="sw-name">{t(m.name)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const FENCE_STYLES: { id: FenceStyle; name: string }[] = [
+  { id: 'picket', name: 'Picket' },
+  { id: 'privacy', name: 'Privacy' },
+  { id: 'rail', name: 'Post and rail' },
+  { id: 'railing', name: 'Railing' },
+];
+
+/**
+ * Turn a wall into a boundary run — a garden fence or a deck railing.
+ *
+ * This is a flag on the wall rather than a new object type, so everything that
+ * already works on walls (drawing, snapping, dragging corners, gates as
+ * openings) works on a fence for free. What the flag changes is that a fence
+ * never encloses a room, never carries a roof and is never clad.
+ */
+function FenceCard({ wall }: { wall: Wall }) {
+  const t = useI18n();
+  const updateWall = useDesign((st) => st.updateWall);
+  const fence = isFence(wall);
+
+  const setFence = (on: boolean) => {
+    if (!on) {
+      updateWall(wall.id, { kind: undefined, fenceStyle: undefined, height: 270, thickness: 10 });
+      return;
+    }
+    const style = wall.fenceStyle ?? DEFAULT_FENCE_STYLE;
+    // A 270cm picket fence looks absurd, so adopt the height the chosen style is
+    // actually built at rather than keeping the wall's.
+    updateWall(wall.id, { kind: 'fence', fenceStyle: style, height: FENCE_HEIGHTS[style] });
+  };
+
+  const setStyle = (style: FenceStyle) => {
+    // Only follow the style's height while the wall is still at the previous
+    // style's default — once someone has set their own height, keep it.
+    const prev = FENCE_HEIGHTS[wall.fenceStyle ?? DEFAULT_FENCE_STYLE];
+    const keep = Math.abs(wall.height - prev) > 0.5;
+    updateWall(wall.id, { fenceStyle: style, height: keep ? wall.height : FENCE_HEIGHTS[style] });
+  };
+
+  return (
+    <div className="prop-card">
+      <div className="prop-title">{t('Fence or railing')}</div>
+      <p className="prop-hint">
+        {t('Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.')}
+      </p>
+      <label className="toggle-row">
+        <input type="checkbox" checked={fence} onChange={(e) => setFence(e.target.checked)} />
+        <span>{t('Fence')}</span>
+      </label>
+      {fence && (
+        <div className="seg" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+          {FENCE_STYLES.map((f) => (
+            <button
+              key={f.id}
+              className={(wall.fenceStyle ?? DEFAULT_FENCE_STYLE) === f.id ? 'active' : ''}
+              onClick={() => setStyle(f.id)}
+            >
+              {t(f.name)}
             </button>
           ))}
         </div>
@@ -216,7 +283,7 @@ function RoofCard() {
   // Warn before the render silently disagrees with the picker: a markedly
   // non-rectangular plan can only take a flat roof in this version.
   const nonRect = useMemo(() => {
-    const outline = roofFootprint(walls, roof?.overhang ?? 0);
+    const outline = roofFootprint(structuralWalls(walls), roof?.overhang ?? 0);
     return !!outline && roofNeedsFallback(outline);
   }, [walls, roof?.overhang]);
 
@@ -447,9 +514,12 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               </div>
               <NumberRow label={t('Thickness (cm)')} value={wall.thickness} min={4} max={50}
                 onChange={(v) => s.updateWall(wall.id, { thickness: v })} />
-              <NumberRow label={t('Height (cm)')} value={wall.height} min={100} max={400}
+              {/* A fence can legitimately be knee-high (a railing) or head-high
+                  (a privacy screen), so it does not share the wall's 100cm floor. */}
+              <NumberRow label={t('Height (cm)')} value={wall.height} min={isFence(wall) ? 40 : 100} max={400}
                 onChange={(v) => s.updateWall(wall.id, { height: v })} />
             </div>
+            <FenceCard wall={wall} />
             <div className="prop-card">
               <div className="prop-label">{selectedWallFace ? t('Wall section paint') : t('Wall paint')}</div>
               <div className="paint-row">

@@ -693,4 +693,13 @@ export const PT: Record<string, string> = {
   'Gravel': 'Cascalho',
   'Asphalt': 'Asfalto',
   'Lawn': 'Gramado',
+  'Fence or railing': 'Cerca ou guarda-corpo',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'Transforme isto em uma cerca de jardim, divisa ou guarda-corpo de deck em vez de uma parede. Não recebe telhado e nunca fecha um cômodo.',
+  'Fence': 'Cerca',
+  'Picket': 'Estacas',
+  'Privacy': 'Privacidade',
+  'Post and rail': 'Mourões e travessas',
+  'Railing': 'Guarda-corpo',
+  'Draw fence': 'Desenhar cerca',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'Clique para traçar uma linha de cerca — escolha o estilo e a altura em Propriedades depois de desenhada',
 };

@@ -73,7 +73,7 @@ export default function Furniture3D({
   // handlers hold stale closures).
   const buildToolArmed = () => {
     const st = useDesign.getState();
-    return !st.walkMode && (st.tool === 'wall' || st.tool === 'room' || st.tool === 'kitchen');
+    return !st.walkMode && (st.tool === 'wall' || st.tool === 'fence' || st.tool === 'room' || st.tool === 'kitchen');
   };
 
   const beginDrag = (e: ThreeEvent<PointerEvent>) => {

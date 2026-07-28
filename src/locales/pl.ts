@@ -693,4 +693,13 @@ export const PL: Record<string, string> = {
   'Gravel': 'Żwir',
   'Asphalt': 'Asfalt',
   'Lawn': 'Trawnik',
+  'Fence or railing': 'Ogrodzenie lub balustrada',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'Zamień to w ogrodzenie ogrodowe, granicę działki lub balustradę tarasu zamiast ściany. Nie dostaje dachu i nigdy nie zamyka pomieszczenia.',
+  'Fence': 'Ogrodzenie',
+  'Picket': 'Sztachety',
+  'Privacy': 'Pełne',
+  'Post and rail': 'Słupki i żerdzie',
+  'Railing': 'Balustrada',
+  'Draw fence': 'Rysuj ogrodzenie',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'Kliknij, aby poprowadzić linię ogrodzenia — styl i wysokość wybierzesz we Właściwościach po narysowaniu',
 };

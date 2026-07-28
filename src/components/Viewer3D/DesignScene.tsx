@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { useDesign } from '../../store/designStore';
 import { FLOOR_BY_ID } from '../../data/furnitureCatalog';
 import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
 import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry, derivedNormalTexture, getRoofTexture, getGroundTexture, GROUND_DEFAULTS } from '../../lib/textures';
-
-/** Real-world size one outdoor surface tile covers, in metres. Bigger than an
- *  indoor pattern so paving and decking read at garden scale, not doll scale. */
-const OUTDOOR_PATCH_M = 2;
 import { activeTier, tierCaps } from '../../lib/perfTier';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
 import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
 import { exteriorFaces } from '../../lib/exteriorFaces';
+import { isFence, structuralWalls, fenceRunBoxes } from '../../lib/fence';
 import { buildRoofGeometry, roofOutlines } from '../../lib/roofGeometry';
 import { roofOf } from '../../lib/roof';
 import { useRemoteCatalog } from '../../lib/remoteCatalog';
@@ -21,6 +19,9 @@ import Furniture3D from './Furniture3D';
 import type { CustomTexture, FloorGeom, FurnitureItem, Opening, Point, Roof, Room, Wall, WallFaceFinish, WallFaceRange } from '../../types';
 
 export const M = 0.01; // cm -> m
+/** Real-world size one outdoor surface tile covers, in metres. Bigger than an
+ *  indoor pattern so paving and decking read at garden scale, not doll scale. */
+const OUTDOOR_PATCH_M = 2;
 /** Whether to synthesise normal maps — resolved once, not per material. */
 const RELIEF = tierCaps(activeTier()).derivedNormals;
 const NO_FACE_FINISHES: WallFaceFinish[] = [];
@@ -335,6 +336,114 @@ function WallMesh({
   );
 }
 
+/**
+ * A boundary run — garden fence or deck railing — in place of a solid wall.
+ *
+ * Every box of the fence is merged into ONE geometry. A 10m picket fence is
+ * ~90 posts, rails and slats; left as individual meshes that is 90 draw calls
+ * for a single garden edge, which a phone GPU feels immediately. Merged, it is
+ * one. The frame (posts and rails) is merged separately from the infill so the
+ * two can be shaded differently without a second material on the same buffer.
+ *
+ * Openings reuse the same span splitter as walls, so a gate is simply a run
+ * that stops and starts again — and because every run posts both its ends, a
+ * gate always gets a post on each side instead of a slat floating in mid-air.
+ */
+function FenceMesh({
+  wall,
+  openings,
+  onTap,
+}: {
+  wall: Wall;
+  openings: Opening[];
+  onTap?: (tap: SurfaceTap) => void;
+}) {
+  const dxCm = wall.end.x - wall.start.x;
+  const dzCm = wall.end.y - wall.start.y;
+  const angleY = -Math.atan2(dzCm, dxCm);
+  const len = dist(wall.start, wall.end);
+  const mx = ((wall.start.x + wall.end.x) / 2) * M;
+  const mz = ((wall.start.y + wall.end.y) / 2) * M;
+
+  const geos = useMemo(() => {
+    const runs = wallSpans(wall, openings)
+      // Fences have no lintels or sills: only full-height runs are real fence.
+      .filter((s) => s.y0 <= 0.01 && s.y1 >= wall.height - 0.01)
+      // wallSpans overhangs the ends by half a thickness to keep wall corners
+      // solid; a fence post sticking out past its own corner just looks wrong.
+      .map((s) => ({ a: Math.max(0, s.a), b: Math.min(len, s.b) }));
+
+    const frame: THREE.BufferGeometry[] = [];
+    const infill: THREE.BufferGeometry[] = [];
+    for (const r of runs) {
+      for (const b of fenceRunBoxes(r.a, r.b, wall.height, wall.fenceStyle)) {
+        const g = new THREE.BoxGeometry(b.w * M, b.h * M, b.d * M);
+        // Boxes come back in wall-local cm measured from the wall start; the
+        // group below is centred on the wall, so shift by half its length.
+        g.translate((b.x - len / 2) * M, b.y * M, b.z * M);
+        (b.part === 'slat' ? infill : frame).push(g);
+      }
+    }
+    const join = (list: THREE.BufferGeometry[]) => {
+      if (!list.length) return null;
+      const merged = mergeGeometries(list, false);
+      for (const g of list) g.dispose();
+      return merged;
+    };
+    return { frame: join(frame), infill: join(infill) };
+  }, [wall, openings, len]);
+
+  useEffect(
+    () => () => {
+      geos.frame?.dispose();
+      geos.infill?.dispose();
+    },
+    [geos],
+  );
+
+  // The infill sits a shade darker than the frame so posts and rails read as
+  // structure. Both derive from the wall colour, so painting a fence works
+  // exactly like painting a wall.
+  const mats = useMemo(() => {
+    const base = new THREE.Color(wall.color);
+    const railing = (wall.fenceStyle ?? 'picket') === 'railing';
+    const frame = new THREE.MeshStandardMaterial({
+      color: base,
+      roughness: railing ? 0.45 : 0.85,
+      metalness: railing ? 0.6 : 0,
+    });
+    const infill = new THREE.MeshStandardMaterial({
+      color: base.clone().multiplyScalar(0.88),
+      roughness: railing ? 0.45 : 0.88,
+      metalness: railing ? 0.6 : 0,
+    });
+    return { frame, infill };
+  }, [wall.color, wall.fenceStyle]);
+
+  useEffect(
+    () => () => {
+      mats.frame.dispose();
+      mats.infill.dispose();
+    },
+    [mats],
+  );
+
+  return (
+    <group
+      position={[mx, 0, mz]}
+      rotation={[0, angleY, 0]}
+      onClick={(e) => {
+        if (!onTap) return;
+        e.stopPropagation();
+        onTap({ kind: 'wall', id: wall.id, x: e.clientX ?? 0, y: e.clientY ?? 0 });
+      }}
+    >
+      {geos.frame && <mesh geometry={geos.frame} material={mats.frame} castShadow receiveShadow />}
+      {geos.infill && <mesh geometry={geos.infill} material={mats.infill} castShadow receiveShadow />}
+    </group>
+  );
+}
+
 // Unit quarter-fillet (radius 1, depth 1) shared by every archway; scaled per
 // instance so arch corners cost no per-opening geometry.
 const ARCH_FILLET_GEO = (() => {
@@ -620,7 +729,9 @@ function CeilingMesh({ room, height }: { room: Room; height: number }) {
  */
 function RoofMesh({ walls, rooms, roof, eaveY }: { walls: Wall[]; rooms: Room[]; roof: Roof; eaveY: number }) {
   const built = useMemo(() => {
-    const o = roofOutlines(walls, roof.overhang);
+    // Fences carry no roof, and a fence running off the plot would otherwise
+    // drag the eave outline out with it.
+    const o = roofOutlines(structuralWalls(walls), roof.overhang);
     if (!o) return null;
     return buildRoofGeometry(o.eave, o.wall, roof, eaveY);
   }, [walls, roof, eaveY]);
@@ -639,7 +750,7 @@ function RoofMesh({ walls, rooms, roof, eaveY }: { walls: Wall[]; rooms: Room[];
       else tally.set(key, { n: 1, color, texture });
     };
     const byId = new Map(walls.map((w) => [w.id, w]));
-    for (const { wallId, face } of exteriorFaces(walls, rooms)) {
+    for (const { wallId, face } of exteriorFaces(structuralWalls(walls), rooms)) {
       const w = byId.get(wallId);
       if (!w) continue;
       const f = finishForFace(w, face);
@@ -926,16 +1037,22 @@ function FloorContent({
         <FloorMesh key={r.id} room={r} stairsBelow={stairsBelow} onTap={onTap} />
       ))}
       {geom.walls.map((w) => (
-        <WallMesh
-          key={w.id}
-          wall={w}
-          rooms={geom.rooms}
-          openings={openingsByWall.get(w.id) ?? []}
-          center={center}
-          register={register}
-          unregister={unregister}
-          onTap={onTap}
-        />
+        isFence(w) ? (
+          // Fences take no part in the dollhouse fade — they are already open,
+          // so there is no near-side face to dissolve to see past.
+          <FenceMesh key={w.id} wall={w} openings={openingsByWall.get(w.id) ?? []} onTap={onTap} />
+        ) : (
+          <WallMesh
+            key={w.id}
+            wall={w}
+            rooms={geom.rooms}
+            openings={openingsByWall.get(w.id) ?? []}
+            center={center}
+            register={register}
+            unregister={unregister}
+            onTap={onTap}
+          />
+        )
       ))}
       {geom.furniture.map((f) => (
         <Furniture3D

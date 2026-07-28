@@ -693,4 +693,13 @@ export const FR: Record<string, string> = {
   'Gravel': 'Gravier',
   'Asphalt': 'Enrobé',
   'Lawn': 'Pelouse',
+  'Fence or railing': 'Clôture ou garde-corps',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'Transformez ce mur en clôture de jardin, limite de terrain ou garde-corps de terrasse. Il ne reçoit pas de toit et ne délimite jamais une pièce.',
+  'Fence': 'Clôture',
+  'Picket': 'Palissade',
+  'Privacy': 'Occultante',
+  'Post and rail': 'Poteaux et lisses',
+  'Railing': 'Garde-corps',
+  'Draw fence': 'Tracer une clôture',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'Cliquez pour tracer une ligne de clôture — choisissez son style et sa hauteur dans Propriétés une fois tracée',
 };

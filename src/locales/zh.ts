@@ -693,4 +693,13 @@ export const ZH: Record<string, string> = {
   'Gravel': '碎石',
   'Asphalt': '沥青',
   'Lawn': '草坪',
+  'Fence or railing': '围栏或栏杆',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': '把这段变成花园围栏、地界或露台栏杆，而不是墙。它不会有屋顶，也永远不会围成房间。',
+  'Fence': '围栏',
+  'Picket': '尖桩',
+  'Privacy': '隐私',
+  'Post and rail': '横栏',
+  'Railing': '栏杆',
+  'Draw fence': '绘制围栏',
+  'Click to run a fence line — pick its style and height in Properties once drawn': '点击拉出围栏线——画好后在“属性”中选择样式和高度',
 };

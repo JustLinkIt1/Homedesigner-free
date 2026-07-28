@@ -693,4 +693,13 @@ export const ES: Record<string, string> = {
   'Gravel': 'Grava',
   'Asphalt': 'Asfalto',
   'Lawn': 'Césped',
+  'Fence or railing': 'Valla o barandilla',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'Convierte esto en una valla de jardín, un lindero o una barandilla de terraza en lugar de un muro. No lleva tejado y nunca encierra una habitación.',
+  'Fence': 'Valla',
+  'Picket': 'Estacas',
+  'Privacy': 'Opaca',
+  'Post and rail': 'Postes y travesaños',
+  'Railing': 'Barandilla',
+  'Draw fence': 'Dibujar valla',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'Haz clic para trazar una línea de valla; elige su estilo y altura en Propiedades cuando esté dibujada',
 };

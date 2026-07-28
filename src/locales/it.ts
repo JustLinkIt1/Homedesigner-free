@@ -693,4 +693,13 @@ export const IT: Record<string, string> = {
   'Gravel': 'Ghiaia',
   'Asphalt': 'Asfalto',
   'Lawn': 'Prato',
+  'Fence or railing': 'Recinzione o ringhiera',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'Trasforma questo muro in una recinzione da giardino, un confine o una ringhiera per terrazza. Non riceve tetto e non delimita mai una stanza.',
+  'Fence': 'Recinzione',
+  'Picket': 'Steccato',
+  'Privacy': 'Frangivista',
+  'Post and rail': 'Pali e traverse',
+  'Railing': 'Ringhiera',
+  'Draw fence': 'Disegna recinzione',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'Fai clic per tracciare una linea di recinzione: scegli stile e altezza in Proprietà una volta disegnata',
 };

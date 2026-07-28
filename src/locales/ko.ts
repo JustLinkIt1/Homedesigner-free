@@ -693,4 +693,13 @@ export const KO: Record<string, string> = {
   'Gravel': '자갈',
   'Asphalt': '아스팔트',
   'Lawn': '잔디',
+  'Fence or railing': '울타리 또는 난간',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': '이것을 벽이 아니라 정원 울타리, 경계 또는 데크 난간으로 만듭니다. 지붕이 생기지 않고 방을 둘러싸지도 않습니다.',
+  'Fence': '울타리',
+  'Picket': '피켓',
+  'Privacy': '프라이버시',
+  'Post and rail': '기둥과 가로대',
+  'Railing': '난간',
+  'Draw fence': '울타리 그리기',
+  'Click to run a fence line — pick its style and height in Properties once drawn': '클릭해서 울타리 선을 그으세요. 그린 뒤 속성에서 스타일과 높이를 고를 수 있습니다',
 };

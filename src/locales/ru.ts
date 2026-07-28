@@ -693,4 +693,13 @@ export const RU: Record<string, string> = {
   'Gravel': 'Гравий',
   'Asphalt': 'Асфальт',
   'Lawn': 'Газон',
+  'Fence or railing': 'Забор или ограждение',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'Сделайте это садовым забором, границей участка или ограждением террасы вместо стены. Крыши не получает и никогда не образует комнату.',
+  'Fence': 'Забор',
+  'Picket': 'Штакетник',
+  'Privacy': 'Глухой',
+  'Post and rail': 'Столбы и жерди',
+  'Railing': 'Ограждение',
+  'Draw fence': 'Нарисовать забор',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'Щёлкайте, чтобы провести линию забора — стиль и высоту выберите в «Свойствах» после отрисовки',
 };

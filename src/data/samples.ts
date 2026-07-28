@@ -7,6 +7,7 @@ import type { CustomTexture, FurnitureItem, Opening, OpeningStyle, Roof, Wall, R
 import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from './furnitureCatalog';
 import { MATERIAL_BY_ID, materialUrl } from './materials';
 import { exteriorFaces } from '../lib/exteriorFaces';
+import { structuralWalls } from '../lib/fence';
 import { withFaceFinish } from '../lib/wallFaces';
 import { uid } from '../lib/geometry';
 
@@ -520,7 +521,7 @@ function dressed(
         }
       : undefined;
     const byId = new Map(walls.map((w) => [w.id, w]));
-    for (const { wallId, face } of exteriorFaces(walls, rooms)) {
+    for (const { wallId, face } of exteriorFaces(structuralWalls(walls), rooms)) {
       const w = byId.get(wallId);
       if (!w) continue;
       byId.set(wallId, {

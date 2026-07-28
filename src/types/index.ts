@@ -33,6 +33,9 @@ export interface WallFaceFinish extends WallFaceRange {
   texture?: CustomTexture;
 }
 
+/** How a fence run is built. Ignored unless the wall's `kind` is 'fence'. */
+export type FenceStyle = 'picket' | 'privacy' | 'rail' | 'railing';
+
 export interface Wall {
   id: string;
   start: Point;
@@ -47,6 +50,13 @@ export interface Wall {
   /** Per-room/per-side finishes. Older projects omit this and keep using the
    * whole-wall color/texture above. */
   faceFinishes?: WallFaceFinish[];
+  /** A boundary run (garden fence, deck railing) rather than a building wall.
+   * Absent means 'wall', so every existing project is unchanged. A fence never
+   * encloses a room, never carries a roof and is never clad as an exterior
+   * face — it renders as posts with slats or rails instead of a solid slab. */
+  kind?: 'wall' | 'fence';
+  /** Fence appearance. Ignored unless `kind` is 'fence'. */
+  fenceStyle?: FenceStyle;
 }
 
 export interface Room {
@@ -144,6 +154,7 @@ export interface BackgroundPlan {
 export type ToolMode =
   | 'select'
   | 'wall'
+  | 'fence'
   | 'room'
   | 'furniture'
   | 'kitchen'

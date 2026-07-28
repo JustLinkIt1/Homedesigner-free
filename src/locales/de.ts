@@ -693,4 +693,13 @@ export const DE: Record<string, string> = {
   'Gravel': 'Kies',
   'Asphalt': 'Asphalt',
   'Lawn': 'Rasen',
+  'Fence or railing': 'Zaun oder Geländer',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'Mach daraus statt einer Wand einen Gartenzaun, eine Grundstücksgrenze oder ein Terrassengeländer. Es bekommt kein Dach und umschließt nie einen Raum.',
+  'Fence': 'Zaun',
+  'Picket': 'Lattenzaun',
+  'Privacy': 'Sichtschutz',
+  'Post and rail': 'Pfosten und Riegel',
+  'Railing': 'Geländer',
+  'Draw fence': 'Zaun zeichnen',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'Klicke, um eine Zaunlinie zu ziehen — Stil und Höhe wählst du danach in den Eigenschaften',
 };

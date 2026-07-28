@@ -693,4 +693,13 @@ export const TR: Record<string, string> = {
   'Gravel': 'Çakıl',
   'Asphalt': 'Asfalt',
   'Lawn': 'Çim',
+  'Fence or railing': 'Çit veya korkuluk',
+  'Make this a garden fence, boundary or deck railing instead of a wall. It gets no roof and never encloses a room.': 'Bunu duvar yerine bahçe çiti, sınır veya teras korkuluğu yapın. Çatı almaz ve asla bir oda çevrelemez.',
+  'Fence': 'Çit',
+  'Picket': 'Ahşap parmaklık',
+  'Privacy': 'Gizlilik',
+  'Post and rail': 'Direk ve kuşak',
+  'Railing': 'Korkuluk',
+  'Draw fence': 'Çit çiz',
+  'Click to run a fence line — pick its style and height in Properties once drawn': 'Çit hattını çizmek için tıklayın — çizdikten sonra stilini ve yüksekliğini Özellikler’den seçin',
 };

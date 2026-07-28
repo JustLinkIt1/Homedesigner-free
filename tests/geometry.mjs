@@ -25,6 +25,7 @@ export { importDxf } from '${process.cwd()}/src/lib/dxfImport.ts';
 export { isNewer } from '${process.cwd()}/src/lib/appUpdate.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${process.cwd()}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${process.cwd()}/src/lib/roof.ts';
+export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, FENCE_HEIGHTS } from '${process.cwd()}/src/lib/fence.ts';
 `);
 const out = join(dir, 'bundle.mjs');
 execFileSync(join(process.cwd(), 'node_modules/.bin/esbuild'), [
@@ -40,6 +41,7 @@ const {
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
   buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
+  fenceRunBoxes, fenceProfile, structuralWalls, isFence, FENCE_HEIGHTS,
 } = await import(out);
 
 let fails = 0;
@@ -649,6 +651,60 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
 
   // 360° and 0° are no-ops the store short-circuits on.
   check('rotate: 360° is the identity', JSON.stringify(rotatePoint(a, 360, piv)) === JSON.stringify(a));
+}
+
+// ---- fences (Phase C3) ------------------------------------------------------
+// A fence is generated, not drawn, so its geometry is exactly the kind of thing
+// that must not be validated by eyeball.
+{
+  const H = 110;
+  const boxes = fenceRunBoxes(0, 600, H, 'picket');
+  const posts = boxes.filter((b) => b.part === 'post');
+  const slats = boxes.filter((b) => b.part === 'slat');
+  const rails = boxes.filter((b) => b.part === 'rail');
+
+  check('fence: a run posts both of its ends', posts.length >= 2
+    && near(Math.min(...posts.map((p) => p.x)), 0)
+    && near(Math.max(...posts.map((p) => p.x)), 600));
+
+  // No bay may exceed the profile's spacing, or the fence sags visibly.
+  const xs = posts.map((p) => p.x).sort((a, b) => a - b);
+  let widest = 0;
+  for (let i = 1; i < xs.length; i++) widest = Math.max(widest, xs[i] - xs[i - 1]);
+  check('fence: no bay exceeds the profile spacing', widest <= fenceProfile('picket').postEvery + 0.01, `widest ${widest}`);
+
+  check('fence: picket has infill, rails and posts', slats.length > 0 && rails.length > 0 && posts.length > 0);
+
+  // Infill is centred in the run: the gap before the first slat matches the gap
+  // after the last. An off-centre fence reads as a bug even when it is "correct".
+  const first = Math.min(...slats.map((b) => b.x - b.w / 2));
+  const last = Math.max(...slats.map((b) => b.x + b.w / 2));
+  check('fence: infill is centred in the run', near(first - 0, 600 - last, 0.01), `${first} vs ${600 - last}`);
+
+  // Nothing may poke through the ground or overshoot the fence height.
+  check('fence: nothing sits below ground', boxes.every((b) => b.y - b.h / 2 >= -0.01));
+  check('fence: infill stays within the fence height', slats.every((b) => b.y + b.h / 2 <= H + 0.01));
+
+  // Post-and-rail is defined by having no infill at all.
+  const ranch = fenceRunBoxes(0, 400, 120, 'rail');
+  check('fence: post-and-rail has no infill', ranch.every((b) => b.part !== 'slat') && ranch.some((b) => b.part === 'rail'));
+
+  // A railing is the low style, a privacy screen the tall one — the defaults
+  // exist so converting a 270cm wall does not leave an absurd picket fence.
+  check('fence: railing is lower than a privacy screen', FENCE_HEIGHTS.railing < FENCE_HEIGHTS.privacy);
+
+  // Degenerate runs must produce nothing rather than NaN boxes.
+  check('fence: a zero-length run builds nothing', fenceRunBoxes(100, 100, H, 'picket').length === 0);
+  check('fence: a reversed run builds nothing', fenceRunBoxes(200, 100, H, 'picket').length === 0);
+  check('fence: every box is finite', boxes.every((b) => [b.x, b.y, b.z, b.w, b.h, b.d].every(Number.isFinite)));
+
+  // The whole point of the discriminator: fences are not part of the building.
+  const walls = [
+    { id: 'a', start: { x: 0, y: 0 }, end: { x: 100, y: 0 }, thickness: 10, height: 270, color: '#fff' },
+    { id: 'b', start: { x: 0, y: 0 }, end: { x: 0, y: 100 }, thickness: 10, height: 110, color: '#fff', kind: 'fence' },
+  ];
+  check('fence: structuralWalls drops fences', structuralWalls(walls).length === 1 && structuralWalls(walls)[0].id === 'a');
+  check('fence: isFence only matches the flag', !isFence(walls[0]) && isFence(walls[1]));
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

@@ -678,12 +678,12 @@ export default function Scene3D() {
   // Build-in-3D: when a floor-drawing tool is armed (from the Build sheet),
   // floor taps place draft points instead of opening the paint palette.
   const tool = useDesign((s) => s.tool);
-  const buildArmed = !walkMode && (tool === 'wall' || tool === 'room' || tool === 'kitchen');
+  const buildArmed = !walkMode && (tool === 'wall' || tool === 'fence' || tool === 'room' || tool === 'kitchen');
   // In-canvas pointer handlers can hold stale closures (R3F doesn't reliably
   // refresh an object's handler set), so they re-read the store at event time.
   const armedTool = (): string | null => {
     const st = useDesign.getState();
-    return !st.walkMode && (st.tool === 'wall' || st.tool === 'room' || st.tool === 'kitchen') ? st.tool : null;
+    return !st.walkMode && (st.tool === 'wall' || st.tool === 'fence' || st.tool === 'room' || st.tool === 'kitchen') ? st.tool : null;
   };
   const [draft, setDraftState] = useState<Point[]>([]);
   // Handlers fire from stale R3F closures, so the live draft also lives in a
@@ -717,7 +717,7 @@ export default function Scene3D() {
   // from outside — the building floated and cast shadows onto nothing. Procedural
   // (see textures.ts) so this costs no APK bytes.
   // Grid is a drawing aid, not scenery: show it only when a build tool is armed.
-  const gridVisible = !walkMode && (tool === 'wall' || tool === 'room' || tool === 'kitchen');
+  const gridVisible = !walkMode && (tool === 'wall' || tool === 'fence' || tool === 'room' || tool === 'kitchen');
 
   const groundKind: GroundKind = 'grass';
   const groundDef = GROUND_DEFAULTS[groundKind];
@@ -772,8 +772,9 @@ export default function Scene3D() {
     const st = useDesign.getState();
     const d = draftRef.current;
     setDraft([]);
-    if (st.tool === 'wall' && d.length >= 2) {
-      for (let i = 0; i < d.length - 1; i++) st.addWall(d[i], d[i + 1]);
+    if ((st.tool === 'wall' || st.tool === 'fence') && d.length >= 2) {
+      const kind = st.tool === 'fence' ? 'fence' : 'wall';
+      for (let i = 0; i < d.length - 1; i++) st.addWall(d[i], d[i + 1], kind);
     } else if (st.tool === 'room' && d.length >= 3) {
       st.addRoom(d);
     }
@@ -798,7 +799,7 @@ export default function Scene3D() {
       const nb = { x: a.x + ((b.x - a.x) / len) * cm, y: a.y + ((b.y - a.y) / len) * cm };
       setDraft([...d.slice(0, -1), nb]);
     };
-    const min = tool === 'room' ? 3 : tool === 'wall' ? 2 : 1;
+    const min = tool === 'room' ? 3 : tool === 'wall' || tool === 'fence' ? 2 : 1;
     useDraw.getState().setActive(draft.length >= min);
     return () => {
       drawBridge.finish = null;

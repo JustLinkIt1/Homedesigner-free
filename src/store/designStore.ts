@@ -23,6 +23,7 @@ import { kitchenRunUnits, kitchenUpperUnits } from '../lib/kitchenRun';
 import { splitPolygonBySegment } from '../lib/roomSplit';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
+import { structuralWalls, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE } from '../lib/fence';
 import { DEFAULT_ROOF, normalizeRoofs, roofFloorId, roofOf } from '../lib/roof';
 import { SAMPLE_BY_ID, SAMPLES } from '../data/samples';
 import { toast } from '../lib/ui';
@@ -129,7 +130,7 @@ interface DesignState extends DesignSnapshot {
   clearSelection: () => void;
   setPendingFurniture: (type: string | null) => void;
 
-  addWall: (start: Point, end: Point) => string;
+  addWall: (start: Point, end: Point, kind?: 'wall' | 'fence') => string;
   updateWall: (id: string, patch: Partial<Wall>) => void;
   addRoom: (points: Point[]) => string;
   updateRoom: (id: string, patch: Partial<Room>) => void;
@@ -460,18 +461,23 @@ export const useDesign = create<DesignState>((set, get) => {
       set({ pendingFurnitureType: type, tool: type ? 'furniture' : get().tool });
     },
 
-    addWall: (start, end) => {
+    addWall: (start, end, kind) => {
       const id = uid();
       const { defaultWallHeight, defaultWallThickness } = get();
+      const fence = kind === 'fence';
       commit((d) => {
         d.walls.push({
           id,
           start,
           end,
-          thickness: defaultWallThickness,
-          height: defaultWallHeight,
-          color: '#ece6db',
+          thickness: fence ? 10 : defaultWallThickness,
+          height: fence ? FENCE_HEIGHTS[DEFAULT_FENCE_STYLE] : defaultWallHeight,
+          color: fence ? '#b98d5f' : '#ece6db',
+          ...(fence ? { kind: 'fence' as const, fenceStyle: DEFAULT_FENCE_STYLE } : {}),
         });
+        // A fence dropped across a lawn does not divide it into two rooms, so
+        // only structural walls subdivide.
+        if (fence) return;
         // A wall drawn across a room subdivides it: split the polygon so the
         // flooring stays bounded by the walls the user sees (each half keeps
         // the original finish; the smaller half becomes its own room).
@@ -1002,7 +1008,8 @@ export const useDesign = create<DesignState>((set, get) => {
 
     applyExteriorFinish: (color, texture) => {
       const { walls, rooms } = get();
-      const faces = exteriorFaces(walls, rooms);
+      // Fences are not part of the building envelope, so cladding skips them.
+      const faces = exteriorFaces(structuralWalls(walls), rooms);
       if (!faces.length) return 0;
       // Group by wall so a wall exterior on both sides is finished in one pass
       // (withFaceFinish returns a new list each call, so it must be chained).
@@ -1133,7 +1140,8 @@ export const useDesign = create<DesignState>((set, get) => {
       }),
 
     detectRoomsFromWalls: () => {
-      const polys = detectRooms(get().walls);
+      // A fenced garden is not a room, so boundary runs never close a polygon.
+      const polys = detectRooms(structuralWalls(get().walls));
       let added = 0;
       commit((d) => {
         // Drop previously auto-generated rooms, keep manually drawn ones.

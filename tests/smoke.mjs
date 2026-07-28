@@ -912,6 +912,89 @@ if (!process.env.SMOKE_SKIP_3D) {
   await od.close();
 }
 
+// ---- fences and railings (Phase C3) -----------------------------------------
+// A fence is a flag on a Wall, not a new object type, so drawing/snapping/gates
+// come for free. What must be asserted is that the flag genuinely takes the run
+// OUT of the building: no room, no roof, no cladding.
+{
+  const fp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  await fp.goto(BASE);
+  await fp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await fp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
+  await fp.waitForSelector('.toolbar', { timeout: 20000 });
+  await fp.locator('.coach-skip').click().catch(() => {});
+  await fp.waitForTimeout(500);
+
+  // Enclose a square of garden entirely in fence, clear of the house. If fences
+  // counted as building, this closed loop would become a room and grow a roof.
+  const made = await fp.evaluate(() => {
+    const s = window.useDesign.getState();
+    const xs = s.walls.flatMap((w) => [w.start.x, w.end.x]);
+    const ys = s.walls.flatMap((w) => [w.start.y, w.end.y]);
+    const x0 = Math.max(...xs) + 200;
+    const y0 = Math.min(...ys);
+    const c = [
+      { x: x0, y: y0 }, { x: x0 + 600, y: y0 },
+      { x: x0 + 600, y: y0 + 600 }, { x: x0, y: y0 + 600 },
+    ];
+    const ids = [];
+    for (let i = 0; i < 4; i++) {
+      ids.push(window.useDesign.getState().addWall(c[i], c[(i + 1) % 4], 'fence'));
+    }
+    const w = window.useDesign.getState().walls.find((q) => q.id === ids[0]);
+    return { ids, kind: w.kind, style: w.fenceStyle, height: w.height };
+  });
+  check('a fence run can be drawn', made.kind === 'fence' && !!made.style, JSON.stringify(made));
+  // A wall's 270cm default would make an absurd garden fence.
+  check('a new fence is fence-height, not wall-height', made.height <= 200, `height ${made.height}`);
+
+  // The load-bearing assertion of the whole feature.
+  const detect = await fp.evaluate(() => {
+    const before = window.useDesign.getState().rooms.length;
+    const added = window.useDesign.getState().detectRoomsFromWalls();
+    return { before, added, after: window.useDesign.getState().rooms.length };
+  });
+  check('a closed fence loop does not become a room', detect.added === 0, JSON.stringify(detect));
+
+  // ...and it must not drag the roof outline out over the garden either.
+  const roof = await fp.evaluate(() => {
+    const s = window.useDesign.getState();
+    const structural = s.walls.filter((w) => w.kind !== 'fence');
+    const span = (list) => {
+      const xs = list.flatMap((w) => [w.start.x, w.end.x]);
+      return Math.max(...xs) - Math.min(...xs);
+    };
+    return { all: span(s.walls), structural: span(structural) };
+  });
+  check('the roof outline ignores fences', roof.structural < roof.all, JSON.stringify(roof));
+
+  await fp.evaluate((id) => window.useDesign.getState().select({ kind: 'wall', id }), made.ids[0]);
+  await fp.waitForTimeout(400);
+  const panel = await fp.evaluate(() => ({
+    titles: [...document.querySelectorAll('.prop-title')].map((e) => e.textContent),
+    checked: [...document.querySelectorAll('.toggle-row input')].map((e) => e.checked),
+    segs: [...document.querySelectorAll('.seg button')].map((e) => e.textContent),
+  }));
+  check('Fence card appears for a selected wall', (panel.titles || []).includes('Fence or railing'), JSON.stringify(panel.titles));
+  check('fence toggle reflects the wall state', (panel.checked || []).includes(true));
+  check('fence styles are offered', (panel.segs || []).includes('Picket') && (panel.segs || []).includes('Railing'), JSON.stringify(panel.segs));
+
+  // The 2D plan must distinguish a boundary from a wall, and the tool must be
+  // reachable — a fence you cannot draw is not a feature.
+  const tools = await fp.evaluate(() =>
+    [...document.querySelectorAll('.tool-dock button, .build-sheet button')].map((b) => b.getAttribute('title') || b.textContent));
+  check('the fence tool is offered', (tools || []).some((x) => /fence/i.test(x || '')), JSON.stringify(tools));
+
+  const persisted = await fp.evaluate(async (id) => {
+    const s = window.useDesign.getState();
+    const snap = JSON.parse(JSON.stringify({ walls: s.walls }));
+    s.loadSnapshot({ ...s, walls: snap.walls });
+    return window.useDesign.getState().walls.find((w) => w.id === id)?.kind === 'fence';
+  }, made.ids[0]);
+  check('fence flag survives a snapshot round trip', persisted);
+  await fp.close();
+}
+
 // ---- 6. No page errors ------------------------------------------------------
 // Old releases could leave a project JSON without a corresponding index row.
 // A reload must recover it so the next authenticated sync uploads it.

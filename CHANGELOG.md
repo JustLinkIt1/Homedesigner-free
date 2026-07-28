@@ -5,6 +5,53 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.8.0 - 2026-07-28 (versionCode 10800)
+
+### Added — fences, boundaries and deck railings
+A new **Fence** tool draws boundary runs, and any existing wall can be turned
+into one from Properties. Four styles ship: **Picket**, **Privacy**,
+**Post and rail** and **Railing**.
+
+A fence is a flag on a wall rather than a new object type. That is the whole
+design: drawing, snapping, dragging corners, exact lengths and gates-as-openings
+all work on a fence immediately, because they already worked on walls. What the
+flag changes is that a fence leaves the *building*:
+
+- a closed loop of fence **does not become a room** — a fenced garden is not a
+  room, and before this it would have been detected as one
+- a fence **carries no roof**, and no longer drags the eave outline out over the
+  garden with it
+- a fence is **never clad** as an exterior face
+
+Each style is built to its own real profile — post spacing, rail heights, slat
+width and gap — and adopts a sensible height when you convert a wall, because a
+270cm picket fence is absurd. Set your own height and the style stops overriding
+it. In the 2D plan a fence draws as a dashed line rather than a solid mitered
+body, which is how plans distinguish a boundary from a wall.
+
+Gates come for free: an opening in a fence is simply a gap, and because every
+run posts both of its ends, a gate always gets a post on each side instead of a
+slat floating in mid-air.
+
+Nine new strings, translated into all 12 locales.
+
+### Performance
+Every post, rail and slat of one fence is merged into a single geometry. A 10m
+picket fence is ~90 boxes; left as individual meshes that would be 90 draw calls
+for one garden edge, which a phone GPU feels immediately. Merged, it is one —
+two, counting the infill, which is kept separate so it can be shaded apart from
+the frame without a second material on the same buffer.
+
+### Testing
+**92 browser checks and 13 new geometry checks.** Fence geometry is generated
+rather than drawn, so it is asserted numerically rather than by eyeball: posts
+land at both ends of every run, no bay exceeds its profile spacing, the infill
+is centred (an off-centre fence reads as a bug even when it is "correct"),
+nothing pokes below ground or above the fence height, degenerate runs build
+nothing instead of NaN boxes, and post-and-rail has no infill at all. The
+browser checks cover the part that matters most: a closed fence loop adds zero
+rooms, and the roof outline ignores fences entirely.
+
 ## 1.7.0 - 2026-07-27 (versionCode 10700)
 
 ### Added — patios, decks, driveways and paths
