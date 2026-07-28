@@ -16,7 +16,7 @@ import type { ToolMode } from '../types';
 const SHEET_TOOLS = TOOLS.filter((t) => t.id !== 'pan'); // two-finger drag pans on touch
 // 3D build mode supports the floor-drawing tools (walls / rooms / kitchen runs)
 // plus select; measure/erase and wall openings stay 2D-only for now.
-const SHEET_TOOLS_3D = TOOLS.filter((t) => ['select', 'wall', 'fence', 'room', 'kitchen'].includes(t.id));
+const SHEET_TOOLS_3D = TOOLS.filter((t) => ['select', 'wall', 'halfWall', 'fence', 'room', 'kitchen'].includes(t.id));
 
 export default function BuildSheet({ open, onClose, limited = false }: { open: boolean; onClose: () => void; limited?: boolean }) {
   const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign(useShallow((s) => ({

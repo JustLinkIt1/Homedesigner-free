@@ -725,4 +725,11 @@ export const DE: Record<string, string> = {
   'Patio Slider': 'Schiebetür',
   'Deck': 'Holzterrasse',
   'Lawn area': 'Rasenfläche',
+  'Draw half wall': 'Halbhohe Wand zeichnen',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': 'Klicke, um Punkte für eine niedrige Trennwand zu setzen — ideal für Küchen, Treppen und offene Räume',
+  'Half wall / pony wall': 'Halbhohe Wand / Brüstungswand',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': 'Verwende eine niedrige tragende Wand für Küchentrenner, Treppenschutz und offene Raumteiler.',
+  'Half wall': 'Halbhohe Wand',
+  'Remove doors or windows before changing this wall.': 'Entferne Türen oder Fenster, bevor du diese Wand änderst.',
+  'Openings need a full-height wall.': 'Öffnungen benötigen eine raumhohe Wand.',
 };

@@ -5,6 +5,51 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.12.0 - 2026-07-28 (versionCode 11200)
+
+### Added — half walls / pony walls
+
+Half walls are now a first-class structural wall rather than a hidden use of
+the height field. A dedicated **Draw half wall** tool works in both 2D and 3D,
+and any selected solid wall can be converted from Properties. New runs adopt a
+105cm worktop/guard height, remain freely height-adjustable, and save in normal
+project snapshots without changing existing projects.
+
+They deliberately reuse the real wall pipeline: snapping, exact lengths,
+corner editing, room splitting, paint and textures, undo/redo, roof reasoning
+and walkthrough collision all continue to work. A dashed centre line identifies
+a half wall in the 2D plan, while the existing dark top cap makes its cut top
+read correctly in 3D.
+
+Half walls stay visible in dollhouse mode because they are already below the
+sight line; fading them removed the very divider the user was trying to inspect.
+Doors and windows are rejected on half walls instead of creating floating leaf,
+glass or lintel geometry. Switching between full wall, half wall and fence is
+mutually exclusive and preserves the existing fence/building rules.
+
+### Fixed — thumbnail export can no longer block 3D navigation
+
+The project-thumbnail capture performed just before switching from 2D to 3D
+could throw synchronously when the browser considered any decoded plan image
+cross-origin. Because thumbnail generation is only a preview, that exception
+must never stop the requested navigation. Capture now fails safely, so entering
+3D or returning to the projects screen always continues even if a thumbnail
+cannot be generated.
+
+### Localisation and testing
+
+The complete drawing, conversion and validation copy is translated in all 12
+non-English locales. Geometry coverage proves half walls remain structural and
+do not distort the roof footprint; browser coverage verifies direct creation,
+the 105cm default, walkthrough collision, conversion back to a full wall,
+snapshot persistence and tool discoverability.
+
+Final release validation is green: TypeScript, lint, production build,
+geometry, sample-home, all 47 tracing checks and all 111 browser checks passed.
+The signed Android App Bundle is 29,535,577 bytes with SHA-256
+`71C23EFC33EB0B21DE4A8A884C6EDEA814808DAA4C5D1CAEB20AB552FFAFFB40` and
+was verified against the expected Nathan Joppich upload certificate.
+
 ## 1.11.0 - 2026-07-28 (versionCode 11100)
 
 ### Added — a faster, more useful furniture catalogue

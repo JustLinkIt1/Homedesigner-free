@@ -725,4 +725,11 @@ export const NL: Record<string, string> = {
   'Patio Slider': 'Schuifpui',
   'Deck': 'Vlonderterras',
   'Lawn area': 'Gazon',
+  'Draw half wall': 'Halfhoge muur tekenen',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': 'Klik om punten voor een lage scheidingswand toe te voegen — ideaal voor keukens, trappen en open ruimtes',
+  'Half wall / pony wall': 'Halfhoge muur / lage wand',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': 'Gebruik een lage constructieve muur voor keukenafscheidingen, trapbeveiliging en open ruimtes.',
+  'Half wall': 'Halfhoge muur',
+  'Remove doors or windows before changing this wall.': 'Verwijder deuren of ramen voordat je deze muur wijzigt.',
+  'Openings need a full-height wall.': 'Openingen hebben een muur op volle hoogte nodig.',
 };

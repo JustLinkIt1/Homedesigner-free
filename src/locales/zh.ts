@@ -725,4 +725,11 @@ export const ZH: Record<string, string> = {
   'Patio Slider': '推拉门',
   'Deck': '木平台',
   'Lawn area': '草坪区',
+  'Draw half wall': '绘制半高墙',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': '点击添加矮隔墙节点 — 适用于厨房、楼梯和开放式空间',
+  'Half wall / pony wall': '半高墙 / 矮墙',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': '使用矮结构墙分隔厨房、保护楼梯并划分开放式空间。',
+  'Half wall': '半高墙',
+  'Remove doors or windows before changing this wall.': '更改此墙之前，请先移除门或窗。',
+  'Openings need a full-height wall.': '门窗洞口需要完整高度的墙。',
 };

@@ -1,7 +1,7 @@
 # WIP handoff — HomeDesigner exteriors
 
-Written at **1.11.0 (versionCode 11100)**, branch
-`agent/catalog-performance-1.11.0`. Everything described as shipped is
+Written at **1.12.0 (versionCode 11200)**, branch
+`agent/half-walls-1.12.0`. Everything described as shipped is
 committed and pushed. Read this before touching exteriors.
 
 ---
@@ -44,6 +44,24 @@ worth more than an hour of unpushed work.
 | 1.10.0 | Gardens in all four samples; `tests/samples.mjs` clash suite; Patio Slider |
 | 1.10.1 | Sliding doors rebuilt (they rendered as an opaque grey slab) |
 | 1.11.0 | Lazy photoreal catalogue cards, favourites, and on-demand 3D previews |
+| 1.12.0 | First-class half/pony walls: direct drawing, conversion, plan notation and stable 3D semantics |
+
+### Half-wall architecture at 1.12.0
+
+- `Wall.halfWall?: boolean` is a semantic flag on the existing wall primitive.
+  It is not a new object type and is mutually exclusive with `kind: 'fence'`.
+- `addWall(..., 'half')` creates a 105cm run. The `halfWall` drawing tool uses
+  the same draft, snapping, exact-length, corner and undo pipeline as walls.
+- Half walls remain in `structuralWalls()`: they still divide rooms, participate
+  in roof/building reasoning and block walkthrough movement.
+- `WallMesh` skips dollhouse fade registration only for deliberate half walls.
+  Their materials and top cap remain visible; ordinary full walls are unchanged.
+- 2D renders a dashed centre mark over the normal mitered body. Doors/windows
+  are blocked because their openings exceed the low wall and would create
+  floating geometry.
+- Properties converts full/half/fence states without allowing contradictory
+  flags. Tests cover creation, conversion, collision, roof invariants and
+  snapshot persistence.
 
 ### Catalogue state at 1.11.0
 
@@ -165,7 +183,7 @@ node tests/geometry.mjs                    # pure Node, fast
 CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome node tests/smoke.mjs
 ```
 
-Current: **98 browser checks + geometry green.**
+Current: **111 browser checks + geometry, sample-home and 47 tracing checks green.**
 
 Hard-won testing notes:
 
@@ -213,42 +231,25 @@ new version has.
 so AABs are built locally, not by the workflow.
 
 AABs delivered so far: 1.8.0 (10800), 1.9.0 (10900), 1.10.1 (11001),
-**1.11.0 (11100)**. The 1.11.0 bundle is 29,512,085 bytes, SHA-256
-`D539D0561140CFE4F8CED78689500531846A9E9ADC9E5DA9453B64B059480E6D`, and
-was verified against the expected Nathan Joppich upload certificate.
+1.11.0 (11100), **1.12.0 (11200)**. The 1.12.0 bundle is 29,535,577 bytes,
+SHA-256
+`71C23EFC33EB0B21DE4A8A884C6EDEA814808DAA4C5D1CAEB20AB552FFAFFB40`, and
+was verified against the expected Nathan Joppich upload certificate. Its local
+release copy is `outputs/HomeDesigner-1.12.0-11200.aab` (gitignored).
 
 ---
 
 ## 6. Next up (owner's queue)
 
-Three features, in the order the owner asked for them.
+Two remaining features, in the order the owner asked for them. Half walls are
+complete and retained here so nobody rebuilds them as furniture.
 
-### 6.1 Half walls / pony walls
+### 6.1 Half walls / pony walls — shipped in 1.12.0
 
-A wall that stops below ceiling height: room dividers, kitchen islands, stair
-balustrades, bath surrounds.
-
-Do it the way `Room.outdoor` and `Wall.kind` were done — **a flag on Wall, not a
-new type**. `Wall.height` already exists and is per-wall, so a half wall is
-largely "a wall with a lower height plus a capped top". What actually needs
-work:
-
-- **A visible cap.** `WallMesh` already draws a planner-style top cap; check it
-  reads correctly at 90–110cm rather than only at 275cm.
-- **Openings.** `wallSpans` extends the outermost spans by half a thickness for
-  corner solidity; at low heights that overhang is proportionally larger. Verify
-  a half wall meeting a full wall does not produce a visible nib.
-- **Roofs and rooms.** A half wall still encloses a room (unlike a fence), so it
-  must stay in `structuralWalls()`. But confirm `detectBuildingOutline` does not
-  let an internal half wall distort the eave outline.
-- **Dollhouse fade.** Half walls should probably never fade — they are already
-  below sightline. `WallMesh` registers every wall with the fade loop; add an
-  opt-out.
-- **Walk collision** must still block at half height (`buildWalkWallSegments`).
-
-Suggested shape: `Wall.half?: boolean` (or reuse `kind: 'half'`) plus a default
-height around 105cm, with the same "adopt a sensible height on conversion, but
-keep a height the user set themselves" rule `FenceCard` already implements.
+Implemented as `Wall.halfWall?: boolean` with a 105cm default. It is directly
+drawable in 2D/3D and convertible in Properties, has dashed plan notation,
+keeps the existing 3D cap, remains structural/collidable and opts out of
+dollhouse fading. Do not replace it with furniture or a new wall collection.
 
 ### 6.2 Niches / recesses
 

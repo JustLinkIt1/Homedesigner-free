@@ -11,7 +11,7 @@ import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
 import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
 import { exteriorFaces } from '../../lib/exteriorFaces';
-import { isFence, structuralWalls, fenceRunBoxes } from '../../lib/fence';
+import { isFence, isHalfWall, structuralWalls, fenceRunBoxes } from '../../lib/fence';
 import { buildRoofGeometry, roofOutlines } from '../../lib/roofGeometry';
 import { roofOf } from '../../lib/roof';
 import { useRemoteCatalog } from '../../lib/remoteCatalog';
@@ -178,6 +178,7 @@ function WallMesh({
   center,
   register,
   unregister,
+  fadeable = true,
   onTap,
 }: {
   wall: Wall;
@@ -186,6 +187,9 @@ function WallMesh({
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
   unregister: (id: string) => void;
+  /** Half walls are already below the sight line and stay visible so their
+   * capped top and room-divider role remain legible in dollhouse mode. */
+  fadeable?: boolean;
   onTap?: (tap: SurfaceTap) => void;
 }) {
   const dxCm = wall.end.x - wall.start.x;
@@ -235,22 +239,26 @@ function WallMesh({
 
   // Register fade data with the parent's single loop; dispose material on unmount.
   useEffect(() => {
-    register(wall.id, { mat, nx: normal.nx, nz: normal.nz, mx, mz });
-    register(`${wall.id}:cap`, { mat: capMat, nx: normal.nx, nz: normal.nz, mx, mz });
-    faceMats.forEach((finishMat, i) => {
-      register(`${wall.id}:face:${i}`, { mat: finishMat, nx: normal.nx, nz: normal.nz, mx, mz });
-    });
-    return () => {
-      unregister(wall.id);
-      unregister(`${wall.id}:cap`);
+    if (fadeable) {
+      register(wall.id, { mat, nx: normal.nx, nz: normal.nz, mx, mz });
+      register(`${wall.id}:cap`, { mat: capMat, nx: normal.nx, nz: normal.nz, mx, mz });
       faceMats.forEach((finishMat, i) => {
-        unregister(`${wall.id}:face:${i}`);
+        register(`${wall.id}:face:${i}`, { mat: finishMat, nx: normal.nx, nz: normal.nz, mx, mz });
+      });
+    }
+    return () => {
+      if (fadeable) {
+        unregister(wall.id);
+        unregister(`${wall.id}:cap`);
+      }
+      faceMats.forEach((finishMat, i) => {
+        if (fadeable) unregister(`${wall.id}:face:${i}`);
         finishMat.dispose();
       });
       mat.dispose();
       capMat.dispose();
     };
-  }, [wall.id, mat, capMat, faceMats, normal, mx, mz, register, unregister]);
+  }, [wall.id, mat, capMat, faceMats, normal, mx, mz, fadeable, register, unregister]);
 
   return (
     <group
@@ -1101,6 +1109,7 @@ function FloorContent({
             center={center}
             register={register}
             unregister={unregister}
+            fadeable={!isHalfWall(w)}
             onTap={onTap}
           />
         )

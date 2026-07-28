@@ -57,6 +57,11 @@ export interface Wall {
   kind?: 'wall' | 'fence';
   /** Fence appearance. Ignored unless `kind` is 'fence'. */
   fenceStyle?: FenceStyle;
+  /** A low structural wall (pony wall / half wall). It still participates in
+   * room detection, roofs and walkthrough collision; the flag only changes
+   * its editing/rendering behaviour. Older projects omit it and remain full
+   * height walls. Mutually exclusive with `kind: 'fence'`. */
+  halfWall?: boolean;
 }
 
 export interface Room {
@@ -154,6 +159,7 @@ export interface BackgroundPlan {
 export type ToolMode =
   | 'select'
   | 'wall'
+  | 'halfWall'
   | 'fence'
   | 'room'
   | 'furniture'

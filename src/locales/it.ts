@@ -725,4 +725,11 @@ export const IT: Record<string, string> = {
   'Patio Slider': 'Vetrata scorrevole',
   'Deck': 'Pedana',
   'Lawn area': 'Prato',
+  'Draw half wall': 'Disegna muretto',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': 'Fai clic per aggiungere i punti di un divisorio basso — ideale per cucine, scale e spazi aperti',
+  'Half wall / pony wall': 'Muretto / parete bassa',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': 'Usa una parete strutturale bassa per separare cucine, proteggere scale e dividere spazi aperti.',
+  'Half wall': 'Muretto',
+  'Remove doors or windows before changing this wall.': 'Rimuovi porte o finestre prima di modificare questa parete.',
+  'Openings need a full-height wall.': 'Le aperture richiedono una parete a tutta altezza.',
 };

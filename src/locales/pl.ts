@@ -725,4 +725,11 @@ export const PL: Record<string, string> = {
   'Patio Slider': 'Drzwi przesuwne',
   'Deck': 'Taras drewniany',
   'Lawn area': 'Trawnik',
+  'Draw half wall': 'Rysuj półściankę',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': 'Klikaj, aby dodać punkty niskiej przegrody — idealnej do kuchni, schodów i otwartych przestrzeni',
+  'Half wall / pony wall': 'Półścianka / niska ściana',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': 'Użyj niskiej ściany konstrukcyjnej do oddzielenia kuchni, zabezpieczenia schodów i podziału otwartych przestrzeni.',
+  'Half wall': 'Półścianka',
+  'Remove doors or windows before changing this wall.': 'Usuń drzwi lub okna przed zmianą tej ściany.',
+  'Openings need a full-height wall.': 'Otwory wymagają ściany o pełnej wysokości.',
 };

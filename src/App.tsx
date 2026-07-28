@@ -358,6 +358,8 @@ export default function App() {
     ? null // the Finish affordance takes over while actively drawing
     : tool === 'wall'
     ? t('Click to add wall points — or type a length (e.g. 4.5) and press Enter for exact walls')
+    : tool === 'halfWall'
+    ? t('Click to add low divider points — ideal for kitchens, stairs and open-plan spaces')
     : tool === 'fence'
     ? t('Click to run a fence line — pick its style and height in Properties once drawn')
     : tool === 'room'
@@ -501,7 +503,7 @@ export default function App() {
               {/* Exact dimensions in 3D ("beginner to architect"): retype the
                   just-drawn segment to a precise length. 2D keeps its inline
                   keyboard flow. */}
-              {view === '3d' && (tool === 'wall' || tool === 'fence' || tool === 'room') && (
+              {view === '3d' && (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room') && (
                 <span className="draw-length">
                   <input
                     type="number"
@@ -859,7 +861,7 @@ export default function App() {
               armed-tool tip bubble renders top-centre and collided with the
               top-left floor pills on phones (tester screenshot, v1.0.53). */}
           {!walkMode && !drawing &&
-            !(view === '2d' && (tool === 'wall' || tool === 'fence' || tool === 'room' || tool === 'kitchen') && !tipsDismissed) && (
+            !(view === '2d' && (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room' || tool === 'kitchen') && !tipsDismissed) && (
             <FloorSwitcher />
           )}
         </div>

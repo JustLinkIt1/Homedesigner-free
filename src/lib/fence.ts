@@ -8,6 +8,15 @@ export function isFence(w: Wall): boolean {
   return w.kind === 'fence';
 }
 
+/** Default worktop/guard height for a new pony wall. */
+export const HALF_WALL_HEIGHT = 105;
+
+/** A low wall is still part of the building; unlike a fence it encloses rooms,
+ * carries finishes and blocks walkthrough movement. */
+export function isHalfWall(w: Wall): boolean {
+  return !isFence(w) && w.halfWall === true;
+}
+
 /** Walls that actually build the house. */
 export function structuralWalls(walls: Wall[]): Wall[] {
   return walls.filter((w) => !isFence(w));

@@ -725,4 +725,11 @@ export const RU: Record<string, string> = {
   'Patio Slider': 'Раздвижная дверь',
   'Deck': 'Настил',
   'Lawn area': 'Газон',
+  'Draw half wall': 'Нарисовать низкую стену',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': 'Нажимайте, чтобы добавить точки низкой перегородки — для кухни, лестницы или открытого пространства',
+  'Half wall / pony wall': 'Низкая стена / полустена',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': 'Используйте низкую капитальную стену для кухонных разделителей, ограждений лестниц и открытых пространств.',
+  'Half wall': 'Низкая стена',
+  'Remove doors or windows before changing this wall.': 'Удалите двери или окна перед изменением этой стены.',
+  'Openings need a full-height wall.': 'Для проёмов нужна стена полной высоты.',
 };

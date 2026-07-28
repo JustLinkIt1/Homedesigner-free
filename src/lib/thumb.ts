@@ -11,7 +11,16 @@ import * as projects from './projects';
  */
 export function capturePlanThumbnail(): void {
   const id = projects.getActiveId();
-  const full = planCapture.current?.()?.url;
+  // Canvas export is cosmetic and must never block the action that requested
+  // it (switching to 3D or returning home). A browser can reject toDataURL
+  // synchronously when any decoded image has tainted the canvas; the async
+  // decode catch below cannot see that exception.
+  let full: string | undefined;
+  try {
+    full = planCapture.current?.()?.url;
+  } catch {
+    return;
+  }
   if (!id || !full) return;
   const img = new Image();
   img.src = full;
