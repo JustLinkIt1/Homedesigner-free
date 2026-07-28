@@ -236,7 +236,7 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'bbq', pro: true, name: 'Barbecue', category: 'Outdoor', width: 70, depth: 60, height: 110, color: '#3f4247', shape: 'bbq', icon: '🔥' },
   { type: 'fire_pit', pro: true, name: 'Fire Pit', category: 'Outdoor', width: 140, depth: 140, height: 40, color: '#6b6660', shape: 'box', icon: '🔥' },
   { type: 'tree_stump', pro: true, name: 'Tree Stump Seat', category: 'Outdoor', width: 60, depth: 60, height: 45, color: '#6f5233', shape: 'box', icon: '🪵' },
-  { type: 'garden_lamp', pro: true, name: 'Garden Lamp', category: 'Outdoor', width: 30, depth: 30, height: 240, color: '#4a4a4a', shape: 'lamp', icon: '💡' },
+  { type: 'garden_lamp', pro: true, name: 'Garden Lamp', category: 'Outdoor', width: 38, depth: 38, height: 190, color: '#4a4a4a', shape: 'lamp', icon: '💡' },
   { type: 'outdoor_bin', pro: true, name: 'Outdoor Bin', category: 'Outdoor', width: 45, depth: 45, height: 70, color: '#6e6e72', shape: 'box', icon: '🗑️' },
   { type: 'watering_can', pro: true, name: 'Watering Can', category: 'Outdoor', width: 30, depth: 20, height: 30, color: '#9aa0a6', shape: 'box', icon: '🪣' },
   { type: 'garden_gnome', pro: true, name: 'Garden Gnome', category: 'Outdoor', width: 25, depth: 25, height: 40, color: '#a8603f', shape: 'box', icon: '🧙' },

@@ -61,8 +61,13 @@ function OutdoorCard({ room }: { room: Room }) {
   const updateRoom = useDesign((st) => st.updateRoom);
 
   const setOutdoor = (on: boolean) => {
+    // A patio labelled "Room 4" on the plan reads as a mistake. Rename only
+    // while the room still carries its auto-generated name — anything the user
+    // has actually named is theirs and must survive the toggle.
+    const auto = /^Room(\s+\d+)?$/.test(room.name.trim());
     updateRoom(room.id, {
       outdoor: on || undefined,
+      ...(auto ? { name: on ? t('Terrace') : 'Room' } : {}),
       // Moving in or out of doors makes the old material meaningless, so swap to
       // a sensible default for the new mode rather than leaving oak decking or
       // asphalt carpet behind.

@@ -995,6 +995,70 @@ if (!process.env.SMOKE_SKIP_3D) {
   await fp.close();
 }
 
+// ---- the garden set (Phase C4) ----------------------------------------------
+// A deck you cannot furnish is a dead end, so the value here is breadth AND the
+// free/paid split: an outdoor category that is nearly empty and mostly locked
+// reads as bait, not as an upsell.
+{
+  const gp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  await gp.goto(BASE);
+  await gp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await gp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
+  await gp.waitForSelector('.toolbar', { timeout: 20000 });
+  await gp.locator('.coach-skip').click().catch(() => {});
+  await gp.waitForTimeout(500);
+
+  // Every garden piece must actually place and keep its own footprint — a type
+  // missing from the catalog silently falls back to a 1x1 box.
+  const placed = await gp.evaluate(() => {
+    const types = ['tree', 'tree_small', 'hedge', 'parasol', 'sun_lounger', 'bbq',
+      'fire_pit', 'patio_table', 'patio_chair', 'planter_box', 'garden_lamp', 'tree_stump'];
+    const out = [];
+    let x = 4000;
+    for (const t of types) {
+      const id = window.useDesign.getState().addFurniture(t, { x, y: 4000 });
+      const it = window.useDesign.getState().furniture.find((f) => f.id === id);
+      out.push({ t, ok: !!it, w: it?.width ?? 0, h: it?.height ?? 0 });
+      x += 400;
+    }
+    return out;
+  });
+  check('every garden piece places', placed.every((p) => p.ok), JSON.stringify(placed.filter((p) => !p.ok)));
+  check('garden pieces carry real dimensions', placed.every((p) => p.w > 1 && p.h > 1),
+    JSON.stringify(placed.filter((p) => !(p.w > 1 && p.h > 1))));
+  // A tree that is chair-sized is the classic catalog-entry slip.
+  const tree = placed.find((p) => p.t === 'tree');
+  check('a tree is tree-sized', tree.h >= 300, `height ${tree.h}`);
+
+  // The free tier has to be able to build a recognisable garden on its own.
+  const catalogSource = await readFile(join(root, 'src', 'data', 'furnitureCatalog.ts'), 'utf8');
+  const outdoorRows = catalogSource.split('\n').filter((l) => l.includes("category: 'Outdoor'"));
+  const tiers = {
+    total: outdoorRows.length,
+    freeTypes: outdoorRows.filter((l) => !l.includes('pro: true'))
+      .map((l) => (l.match(/type: '([^']+)'/) ?? [])[1])
+      .filter(Boolean),
+  };
+  check('the outdoor category is no longer a stub', tiers.total >= 15, JSON.stringify(tiers.total));
+  check('a free user can plant and furnish a garden',
+    ['tree', 'hedge', 'patio_chair'].every((t) => tiers.freeTypes.includes(t)),
+    JSON.stringify(tiers.freeTypes));
+
+  // Marking an area outdoor should not leave it labelled "Room 4" on the plan.
+  const named = await gp.evaluate(async () => {
+    const s = window.useDesign.getState();
+    const id = s.addRoom([{ x: 6000, y: 6000 }, { x: 6400, y: 6000 }, { x: 6400, y: 6400 }, { x: 6000, y: 6400 }]);
+    window.useDesign.getState().select({ kind: 'room', id });
+    await new Promise((r) => setTimeout(r, 400));
+    const box = document.querySelector('.toggle-row input');
+    if (box && !box.checked) box.click();
+    await new Promise((r) => setTimeout(r, 400));
+    return window.useDesign.getState().rooms.find((r) => r.id === id)?.name ?? '';
+  });
+  check('an outdoor area is not left named "Room N"', !/^Room(\s+\d+)?$/.test(named.trim()), `named "${named}"`);
+  await gp.close();
+}
+
 // ---- 6. No page errors ------------------------------------------------------
 // Old releases could leave a project JSON without a corresponding index row.
 // A reload must recover it so the next authenticated sync uploads it.

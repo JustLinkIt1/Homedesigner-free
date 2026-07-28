@@ -5,6 +5,63 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.9.0 - 2026-07-28 (versionCode 10900)
+
+### Added — the garden set
+The Outdoor category goes from **5 entries to 19**. 1.7.0 let you lay a patio and
+1.8.0 let you fence it, but there was nothing to put on it — a deck you cannot
+furnish is a dead end.
+
+New: **Tree, Small Tree, Hedge, Parasol, Sun Lounger, Barbecue, Fire Pit,
+Planter Box, Long Planter, Bistro Set, Garden Chair, Tree Stump Seat, Garden
+Lamp, Outdoor Bin, Watering Can, Garden Gnome.**
+
+**Patio Table and Patio Chair were quietly broken and are now fixed.** Neither
+had a 3D model at all — they rendered as the generic *indoor* table and chair
+primitives, tinted grey-green. They now point at a real bistro set and a real
+garden chair.
+
+### Free vs Pro, rebalanced
+The free tier now includes **tree, small tree, hedge, planter box, garden chair,
+bench and stairs** — enough to plant and furnish a recognisable garden without
+paying. Previously Outdoor held five items of which three were locked, so a free
+user who laid a deck could place a bench and a staircase. An almost-empty
+category that is mostly locked reads as bait, not as an upsell; you only want
+the paid set when you can see what you are missing.
+
+### Why the foliage is generated rather than modelled
+Photoreal scanned trees cannot ship. The smallest tree on Poly Haven is a 63MB
+download that **still weighs 36MB** after the identical quantize + webp pass
+every other model goes through — 28x over the per-model budget — because the
+cost is leaf *geometry* and no texture setting touches it. Low-poly game trees
+fit trivially but render as flat-shaded cartoons beside photoreal furniture.
+
+So trees, hedges, parasols, loungers and barbecues are built in code, with a
+procedural leaf and bark texture, at **zero APK cost** — the same approach the
+ground surfaces, roofs and fences already use. Canopies are three offset lobes
+rather than one sphere, because a single ball reads as a lollipop from every
+angle.
+
+The ten remaining pieces are CC0 Poly Haven models fetched by the existing
+`fetch-models.mjs` pipeline (~3.8MB total, every one inside the 1.3MB per-model
+budget).
+
+### Also
+- Both views are covered: 2D gets plan symbols for the five procedural shapes
+  and rendered top-down sprites for the ten new models, so nothing falls back to
+  a generic box.
+- Marking an area outdoor no longer leaves it labelled **"Room 4"** on the plan —
+  it becomes "Terrace", unless you have given it a name of your own.
+- The garden lamp is built at garden scale (190cm) rather than street scale.
+- 17 new strings across all 12 locales.
+
+### Testing
+**98 browser checks** (up from 92) and the geometry suite green. The new checks
+assert every garden piece places with real dimensions (a type missing from the
+catalog silently degrades to a 1x1 box), that a tree is tree-sized, that the
+outdoor category is no longer a stub, that a free user can plant and furnish a
+garden, and that an outdoor area is never left named "Room N".
+
 ## 1.8.0 - 2026-07-28 (versionCode 10800)
 
 ### Added — fences, boundaries and deck railings

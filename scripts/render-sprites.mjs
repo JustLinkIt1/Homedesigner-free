@@ -20,6 +20,9 @@ const basenames = fs
   .map((f) => f.replace(/\.glb$/, ''));
 
 const b = await chromium.launch({
+  // Honour a preinstalled browser: CI images pin a chromium build that does not
+  // match this Playwright's default headless-shell path.
+  executablePath: process.env.CHROMIUM_PATH || undefined,
   args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
 });
 const page = await b.newPage({ viewport: { width: 800, height: 800 } });

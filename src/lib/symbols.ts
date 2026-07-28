@@ -58,6 +58,34 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: rect(3, 3, 94, 94) },
     { d: rect(13, 13, 74, 74), sw: 2 },
   ],
+  // Garden shapes. Plans draw planting as an outline broken up by lobes rather
+  // than a clean circle, which is how a canopy is distinguished from a table.
+  tree: [
+    { d: 'M50,4 Q74,8 82,28 Q96,42 88,62 Q80,84 58,90 Q50,96 42,90 Q20,84 12,62 Q4,42 18,28 Q26,8 50,4 Z' },
+    { d: circle(50, 50, 9), sw: 2 },
+  ],
+  hedge: [
+    { d: rect(3, 3, 94, 94) },
+    // Scalloped clipping along the run reads as foliage, not a crate.
+    { d: 'M3,26 Q18,12 33,26 Q48,12 63,26 Q78,12 94,26', sw: 2 },
+    { d: 'M3,74 Q18,60 33,74 Q48,60 63,74 Q78,60 94,74', sw: 2 },
+  ],
+  parasol: [
+    { d: circle(50, 50, 46) },
+    // Canopy ribs — the giveaway that this is a parasol and not a round table.
+    { d: 'M50,4 V96 M4,50 H96 M18,18 L82,82 M82,18 L18,82', sw: 2 },
+    { d: circle(50, 50, 6) },
+  ],
+  lounger: [
+    { d: rect(16, 4, 68, 92, 8) },
+    { d: 'M16,34 H84', sw: 2 }, // backrest hinge
+    { d: 'M24,12 H76 M24,22 H76', sw: 2 }, // raised back slats
+  ],
+  bbq: [
+    { d: circle(50, 46, 40) },
+    { d: circle(50, 46, 26), sw: 2 },
+    { d: rect(38, 86, 24, 10, 3), sw: 2 }, // side shelf / handle
+  ],
   tv: [
     { d: rect(4, 20, 92, 60, 4) },
     { d: rect(12, 30, 76, 40), sw: 2 },
