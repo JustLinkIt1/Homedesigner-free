@@ -4,6 +4,7 @@ import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { CATALOG_BY_TYPE, type Shape3D } from '../../data/furnitureCatalog';
 import { ResilientGltfFurniture } from './GltfFurniture';
 import { useDesign } from '../../store/designStore';
+import { getFoliageTexture, getBarkTexture } from '../../lib/textures';
 import type { FurnitureItem } from '../../types';
 
 const M = 0.01; // cm -> m
@@ -349,6 +350,129 @@ export function ShapeMesh({
           <meshStandardMaterial color={color} roughness={1} />
         </mesh>
       );
+    // ---- garden shapes ------------------------------------------------------
+    // Generated rather than modelled: see getFoliageTexture for why scanned
+    // trees cannot ship (36MB each after full compression) and low-poly ones
+    // clash with the photoreal furniture.
+    case 'tree': {
+      const canopy = getFoliageTexture(color);
+      const bark = getBarkTexture('#6b5136');
+      const trunkH = h * 0.42;
+      const r = Math.max(w, d) / 2;
+      // Three offset lobes, not one sphere: a single ball reads as a lollipop
+      // from every angle, and the whole trick to a believable tree at this
+      // distance is an irregular silhouette.
+      const lobes: [number, number, number, number][] = [
+        [0, trunkH + r * 0.62, 0, r * 0.78],
+        [r * 0.40, trunkH + r * 0.30, r * 0.16, r * 0.56],
+        [-r * 0.34, trunkH + r * 0.44, -r * 0.24, r * 0.50],
+      ];
+      return (
+        <group>
+          <mesh position={[0, trunkH / 2, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[w * 0.07, w * 0.11, trunkH, 10]} />
+            <meshStandardMaterial map={bark} roughness={0.95} />
+          </mesh>
+          {lobes.map(([lx, ly, lz, lr], i) => (
+            <mesh key={i} position={[lx, ly, lz]} castShadow receiveShadow>
+              <sphereGeometry args={[lr, 14, 12]} />
+              <meshStandardMaterial map={canopy} roughness={1} />
+            </mesh>
+          ))}
+        </group>
+      );
+    }
+    case 'hedge': {
+      const leaf = getFoliageTexture(color);
+      return (
+        <group>
+          <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, h, d]} />
+            <meshStandardMaterial map={leaf} roughness={1} />
+          </mesh>
+          {/* A slightly proud, slightly narrower cap reads as a clipped top and
+              stops the hedge looking like a painted crate. */}
+          <mesh position={[0, h * 1.02, 0]} castShadow>
+            <boxGeometry args={[w * 0.94, h * 0.06, d * 0.9]} />
+            <meshStandardMaterial map={leaf} roughness={1} />
+          </mesh>
+        </group>
+      );
+    }
+    case 'parasol': {
+      const r = Math.max(w, d) / 2;
+      return (
+        <group>
+          <mesh position={[0, h * 0.02, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[r * 0.34, r * 0.38, h * 0.04, 16]} />
+            <meshStandardMaterial color="#5a5a5e" roughness={0.7} metalness={0.3} />
+          </mesh>
+          <mesh position={[0, h * 0.5, 0]} castShadow>
+            <cylinderGeometry args={[w * 0.02, w * 0.02, h, 10]} />
+            <meshStandardMaterial color="#8a7a62" roughness={0.6} metalness={0.2} />
+          </mesh>
+          <mesh position={[0, h * 0.86, 0]} castShadow receiveShadow>
+            <coneGeometry args={[r, h * 0.22, 10, 1, true]} />
+            <meshStandardMaterial color={color} roughness={0.85} side={THREE.DoubleSide} />
+          </mesh>
+        </group>
+      );
+    }
+    case 'lounger': {
+      // Head end raised: a flat slab is a bed, the incline is what makes it read
+      // as a sun lounger from across the garden.
+      const legH = h * 0.32;
+      const deck = h * 0.10;
+      return (
+        <group>
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * w * 0.36, legH / 2, 0]} castShadow>
+              <boxGeometry args={[w * 0.06, legH, d * 0.86]} />
+              <meshStandardMaterial color="#6f6f74" roughness={0.6} metalness={0.35} />
+            </mesh>
+          ))}
+          <mesh position={[0, legH + deck / 2, d * 0.12]} castShadow receiveShadow>
+            <boxGeometry args={[w, deck, d * 0.72]} />
+            <meshStandardMaterial color={color} roughness={0.9} />
+          </mesh>
+          <mesh
+            position={[0, legH + h * 0.26, -d * 0.30]}
+            rotation={[-Math.PI / 3.1, 0, 0]}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[w, deck, d * 0.44]} />
+            <meshStandardMaterial color={color} roughness={0.9} />
+          </mesh>
+        </group>
+      );
+    }
+    case 'bbq': {
+      const legH = h * 0.42;
+      return (
+        <group>
+          {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz], i) => (
+            <mesh key={i} position={[sx * w * 0.32, legH / 2, sz * d * 0.28]} castShadow>
+              <cylinderGeometry args={[w * 0.035, w * 0.035, legH, 8]} />
+              <meshStandardMaterial color="#3f3f43" roughness={0.5} metalness={0.5} />
+            </mesh>
+          ))}
+          <mesh position={[0, legH + h * 0.12, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, h * 0.24, d]} />
+            <meshStandardMaterial color={color} roughness={0.45} metalness={0.55} />
+          </mesh>
+          {/* Domed lid — the single feature that says "barbecue" and not "cart". */}
+          <mesh position={[0, legH + h * 0.24, 0]} castShadow>
+            <sphereGeometry args={[Math.max(w, d) * 0.5, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color={color} roughness={0.35} metalness={0.6} />
+          </mesh>
+          <mesh position={[0, legH + h * 0.24 + Math.max(w, d) * 0.5, 0]} castShadow>
+            <sphereGeometry args={[w * 0.05, 8, 6]} />
+            <meshStandardMaterial color="#2a2a2e" roughness={0.6} />
+          </mesh>
+        </group>
+      );
+    }
     case 'tv': {
       // Flat panel on a slim central stand (reads as a modern TV rather than a
       // floating slab). Panel occupies the upper ~60% of the height.

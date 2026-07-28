@@ -65,6 +65,19 @@ export const MODEL_FILE: Record<string, string> = {
   throw_pillows: 'throw_pillows',
   clay_planter: 'clay_planter',
   picnic_table: 'picnic_table',
+  // Outdoor (Phase C4). patio_table/patio_chair previously had NO model and
+  // rendered as the generic indoor table/chair primitives tinted grey-green;
+  // they now point at real outdoor pieces.
+  patio_table: 'patio_set',
+  patio_chair: 'garden_chair',
+  fire_pit: 'fire_pit',
+  planter_box: 'planter_box',
+  planter_box_long: 'planter_box_long',
+  tree_stump: 'tree_stump',
+  garden_gnome: 'garden_gnome',
+  garden_lamp: 'garden_lamp',
+  outdoor_bin: 'outdoor_bin',
+  watering_can: 'watering_can',
 };
 
 /** Optional yaw correction (radians) for models whose "front" isn't +Z. */

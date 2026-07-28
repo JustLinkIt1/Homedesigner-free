@@ -42,6 +42,12 @@ export type Shape3D =
   | 'desk_lamp'
   | 'wall_art'
   | 'stool'
+  // garden shapes (procedural — see getFoliageTexture)
+  | 'tree'
+  | 'hedge'
+  | 'parasol'
+  | 'lounger'
+  | 'bbq'
   // opening variants (sidebar icons / ghosts only — they place wall openings)
   | 'door_double'
   | 'door_sliding'
@@ -214,10 +220,26 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'round_rug', pro: true, name: 'Round Rug', category: 'Decor', width: 160, depth: 160, height: 1, color: '#c0738f', shape: 'rug', icon: '🟣' },
 
   // Outdoor
-  { type: 'patio_table', pro: true, name: 'Patio Table', category: 'Outdoor', width: 90, depth: 90, height: 72, color: '#6f7d6a', shape: 'table', icon: '🪑' },
-  { type: 'patio_chair', pro: true, name: 'Patio Chair', category: 'Outdoor', width: 55, depth: 55, height: 85, color: '#6f7d6a', shape: 'chair', icon: '🪑' },
+  { type: 'patio_table', pro: true, name: 'Bistro Set', category: 'Outdoor', width: 110, depth: 180, height: 90, color: '#8a6f4f', shape: 'table', icon: '🪑' },
+  { type: 'patio_chair', name: 'Garden Chair', category: 'Outdoor', width: 55, depth: 55, height: 85, color: '#d8d4c8', shape: 'chair', icon: '🪑' },
   { type: 'bench', name: 'Garden Bench', category: 'Outdoor', width: 150, depth: 50, height: 80, color: '#6e5236', shape: 'sofa', icon: '🪑' },
   { type: 'stairs', name: 'Stairs', category: 'Outdoor', width: 100, depth: 250, height: 280, color: '#9aa0a6', shape: 'stairs', icon: '🪜' },
+  // --- Garden set. Procedural shapes (tree/hedge/parasol/lounger/bbq) cost no
+  // APK bytes; the rest are CC0 Poly Haven models fetched by fetch-models.mjs.
+  { type: 'tree', name: 'Tree', category: 'Outdoor', width: 320, depth: 320, height: 480, color: '#4a7c46', shape: 'tree', icon: '🌳' },
+  { type: 'tree_small', name: 'Small Tree', category: 'Outdoor', width: 180, depth: 180, height: 260, color: '#57874f', shape: 'tree', icon: '🌳' },
+  { type: 'hedge', name: 'Hedge', category: 'Outdoor', width: 200, depth: 60, height: 120, color: '#3f6b3a', shape: 'hedge', icon: '🌿' },
+  { type: 'planter_box', name: 'Planter Box', category: 'Outdoor', width: 90, depth: 40, height: 40, color: '#7a5e40', shape: 'plant', icon: '🪴' },
+  { type: 'planter_box_long', pro: true, name: 'Long Planter', category: 'Outdoor', width: 120, depth: 40, height: 40, color: '#7a5e40', shape: 'plant', icon: '🪴' },
+  { type: 'parasol', pro: true, name: 'Parasol', category: 'Outdoor', width: 250, depth: 250, height: 240, color: '#c4553f', shape: 'parasol', icon: '⛱️' },
+  { type: 'sun_lounger', pro: true, name: 'Sun Lounger', category: 'Outdoor', width: 70, depth: 195, height: 65, color: '#d8d2c4', shape: 'lounger', icon: '🛋️' },
+  { type: 'bbq', pro: true, name: 'Barbecue', category: 'Outdoor', width: 70, depth: 60, height: 110, color: '#3f4247', shape: 'bbq', icon: '🔥' },
+  { type: 'fire_pit', pro: true, name: 'Fire Pit', category: 'Outdoor', width: 140, depth: 140, height: 40, color: '#6b6660', shape: 'box', icon: '🔥' },
+  { type: 'tree_stump', pro: true, name: 'Tree Stump Seat', category: 'Outdoor', width: 60, depth: 60, height: 45, color: '#6f5233', shape: 'box', icon: '🪵' },
+  { type: 'garden_lamp', pro: true, name: 'Garden Lamp', category: 'Outdoor', width: 30, depth: 30, height: 240, color: '#4a4a4a', shape: 'lamp', icon: '💡' },
+  { type: 'outdoor_bin', pro: true, name: 'Outdoor Bin', category: 'Outdoor', width: 45, depth: 45, height: 70, color: '#6e6e72', shape: 'box', icon: '🗑️' },
+  { type: 'watering_can', pro: true, name: 'Watering Can', category: 'Outdoor', width: 30, depth: 20, height: 30, color: '#9aa0a6', shape: 'box', icon: '🪣' },
+  { type: 'garden_gnome', pro: true, name: 'Garden Gnome', category: 'Outdoor', width: 25, depth: 25, height: 40, color: '#a8603f', shape: 'box', icon: '🧙' },
 
   // Realistic CC0 model pack (Poly Haven) — extra furnishings across rooms.
   { type: 'accent_chair', pro: true, name: 'Accent Chair', category: 'Living', width: 70, depth: 72, height: 80, color: '#7f8a72', shape: 'chair', icon: '🪑' },

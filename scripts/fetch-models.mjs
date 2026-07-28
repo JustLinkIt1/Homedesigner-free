@@ -40,6 +40,20 @@ const LIST = [
   ['throw_pillows', 'throw_pillows_01', 'Throw Pillows', 'Decor', 55, 45, 22, 'box', '#cbb89a'],
   ['clay_planter', 'planter_pot_clay', 'Clay Planter', 'Decor', 40, 40, 45, 'plant', '#a5673f'],
   ['picnic_table', 'wooden_picnic_table', 'Picnic Table', 'Outdoor', 150, 140, 75, 'table', '#9c7a4f'],
+  // --- Garden set (Phase C4). A deck or patio you cannot furnish is a dead end,
+  // and the Outdoor category was five items deep. Poly Haven has no BBQ,
+  // parasol, lounger or usable tree (their trees are 200-465MB scans that
+  // survive no amount of compression) — those are built procedurally instead.
+  ['patio_set', 'outdoor_table_chair_set_01', 'Bistro Set', 'Outdoor', 110, 180, 90, 'table', '#8a6f4f'],
+  ['garden_chair', 'plastic_monobloc_chair_01', 'Garden Chair', 'Outdoor', 55, 55, 85, 'chair', '#d8d4c8'],
+  ['fire_pit', 'stone_fire_pit', 'Fire Pit', 'Outdoor', 140, 140, 40, 'box', '#6b6660'],
+  ['planter_box', 'planter_box_01', 'Planter Box', 'Outdoor', 90, 40, 40, 'plant', '#7a5e40'],
+  ['planter_box_long', 'planter_box_02', 'Long Planter', 'Outdoor', 120, 40, 40, 'plant', '#7a5e40'],
+  ['tree_stump', 'tree_stump_01', 'Tree Stump Seat', 'Outdoor', 60, 60, 45, 'box', '#6f5233'],
+  ['garden_gnome', 'garden_gnome', 'Garden Gnome', 'Outdoor', 25, 25, 40, 'box', '#a8603f'],
+  ['garden_lamp', 'street_lamp_01', 'Garden Lamp', 'Outdoor', 30, 30, 240, 'lamp', '#4a4a4a'],
+  ['outdoor_bin', 'metal_trash_can', 'Outdoor Bin', 'Outdoor', 45, 45, 70, 'box', '#6e6e72'],
+  ['watering_can', 'watering_can_metal_01', 'Watering Can', 'Outdoor', 30, 20, 30, 'box', '#9aa0a6'],
 ];
 
 const download = async (url, dest) => {

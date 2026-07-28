@@ -250,6 +250,133 @@ export const GROUND_DEFAULTS: Record<GroundKind, { color: string; roughness: num
 };
 
 /**
+ * Leaf canopy for procedural trees and hedges.
+ *
+ * This exists because photoreal scanned trees are unusable here: the smallest
+ * one on Poly Haven is a 63MB download that still weighs 36MB after the same
+ * quantize+webp pass every other model goes through — 28x over the per-model
+ * budget, because the cost is leaf GEOMETRY and no texture setting touches it.
+ * Low-poly game trees fit trivially but read as flat-shaded cartoons next to
+ * photoreal furniture. So foliage is generated, like the ground and the roofs.
+ *
+ * A smooth green sphere reads as a balloon, so the whole job is breaking up the
+ * silhouette and the shading: overlapping leaf clusters in varied greens, plus
+ * dark gaps that suggest depth inside the canopy.
+ */
+function foliageTexture(ctx: CanvasRenderingContext2D, color: string) {
+  const rand = rng(29);
+  ctx.fillStyle = shade(color, -22);
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Clumps first (broad tonal masses), then individual leaves on top. Painting
+  // leaves alone gives an even stipple that reads as noise, not foliage.
+  for (let i = 0; i < 160; i++) {
+    const x = rand() * SIZE;
+    const y = rand() * SIZE;
+    const r = 18 + rand() * 46;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    const tone = shade(color, (rand() - 0.4) * 40);
+    g.addColorStop(0, tone);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Leaves: short ellipses at random angles, in a wide tonal spread so the
+  // canopy has both sunlit and shaded faces baked in.
+  for (let i = 0; i < 2600; i++) {
+    const x = rand() * SIZE;
+    const y = rand() * SIZE;
+    const a = rand() * Math.PI;
+    const rx = 3 + rand() * 5;
+    const ry = 1.6 + rand() * 2.6;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a);
+    ctx.fillStyle = shade(color, (rand() - 0.42) * 60);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // A few deep gaps: without these the canopy looks like a solid painted shell.
+  for (let i = 0; i < 40; i++) {
+    const x = rand() * SIZE;
+    const y = rand() * SIZE;
+    const r = 5 + rand() * 14;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(0,0,0,${0.3 + rand() * 0.28})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** Bark for procedural tree trunks — vertical fissures, not a brown cylinder. */
+function barkTexture(ctx: CanvasRenderingContext2D, color: string) {
+  const rand = rng(41);
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  for (let i = 0; i < 260; i++) {
+    const x = rand() * SIZE;
+    const w = 1 + rand() * 5;
+    ctx.fillStyle = shade(color, (rand() - 0.5) * 46);
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    // Wander down the trunk so the fissures are not perfectly straight.
+    let cx = x;
+    for (let y = 0; y <= SIZE; y += 32) {
+      cx += (rand() - 0.5) * 7;
+      ctx.lineTo(cx, y);
+    }
+    for (let y = SIZE; y >= 0; y -= 32) {
+      cx += (rand() - 0.5) * 3;
+      ctx.lineTo(cx + w, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/** Cached foliage/bark maps for the procedural garden shapes. */
+export function getFoliageTexture(color: string): THREE.CanvasTexture {
+  const key = `foliage:${color}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  foliageTexture(canvas.getContext('2d')!, color);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  cache.set(key, tex);
+  return tex;
+}
+
+export function getBarkTexture(color: string): THREE.CanvasTexture {
+  const key = `bark:${color}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  barkTexture(canvas.getContext('2d')!, color);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  cache.set(key, tex);
+  return tex;
+}
+
+/**
  * Texture for the big outdoor ground plane. `patchM` is the real-world size one
  * tile covers; the caller sets `repeat` from the plane size so it tiles at scale.
  */
