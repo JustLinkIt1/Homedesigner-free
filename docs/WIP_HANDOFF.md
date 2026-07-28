@@ -1,6 +1,6 @@
 # WIP handoff — HomeDesigner exteriors
 
-Written at **1.9.0 (versionCode 10900)**, branch
+Written at **1.10.1 (versionCode 11001)**, branch
 `claude/home-design-app-2d-plans-12y5u5`. Everything described as shipped is
 committed and pushed. Read this before touching exteriors.
 
@@ -41,6 +41,8 @@ worth more than an hour of unpushed work.
 | 1.7.0 | Outdoor surfaces: `Room.outdoor` flag + paving/decking/gravel/asphalt/lawn |
 | 1.8.0 | Fences: `Wall.kind` discriminator, 4 styles, merged geometry |
 | 1.9.0 | The garden set: Outdoor 5 → 19 entries, procedural foliage |
+| 1.10.0 | Gardens in all four samples; `tests/samples.mjs` clash suite; Patio Slider |
+| 1.10.1 | Sliding doors rebuilt (they rendered as an opaque grey slab) |
 
 ### Phase C status
 
@@ -195,31 +197,75 @@ new version has.
 **must stay gitignored**. `mcp__github__actions_run_trigger` returns 403 here,
 so AABs are built locally, not by the workflow.
 
-**1.9.0 has not had an AAB built yet.** The last one delivered was 1.8.0
-(versionCode 10800).
+AABs delivered so far: 1.8.0 (10800), 1.9.0 (10900), **1.10.1 (11001)**.
 
 ---
 
-## 6. Where I would go next
+## 6. Next up (owner's queue)
 
-Ranked by what should move conversion at the $6.99 price point:
+Three features, in the order the owner asked for them.
 
-1. **Look at the free/Pro split across the whole catalog.** I rebalanced only
-   Outdoor. Decor is 83% locked and Openings 72% — worth checking whether the
-   free tier can still produce something a user is proud of, since that is what
-   makes them hit a limit worth paying for.
-2. **Phase D, exterior render mode.** Now genuinely worth it: there is finally
-   something in the garden to render. Before 1.9.0 it would have been a better
-   photograph of an empty lawn.
-3. **A garden in the sample projects.** The samples still show bare lawns. The
-   new set is invisible to anyone who does not go looking in the catalog — this
-   is the cheapest way to make the work discoverable.
-4. **Bundle size.** The main `index` chunk is ~210 KB gzipped, up from 187 KB at
-   1.5.0 (accumulated features + 12 locales). `public/models` is now 18 MB.
-   Neither is alarming, but install size affects install rate.
-5. **`motion-vendor` is 45 kB gzipped**, ~17.7 kB of which is `domMax` over
-   `domAnimation`, bought purely for smooth toast reflow. One line in
-   `src/main.tsx` reverts it.
+### 6.1 Half walls / pony walls
+
+A wall that stops below ceiling height: room dividers, kitchen islands, stair
+balustrades, bath surrounds.
+
+Do it the way `Room.outdoor` and `Wall.kind` were done — **a flag on Wall, not a
+new type**. `Wall.height` already exists and is per-wall, so a half wall is
+largely "a wall with a lower height plus a capped top". What actually needs
+work:
+
+- **A visible cap.** `WallMesh` already draws a planner-style top cap; check it
+  reads correctly at 90–110cm rather than only at 275cm.
+- **Openings.** `wallSpans` extends the outermost spans by half a thickness for
+  corner solidity; at low heights that overhang is proportionally larger. Verify
+  a half wall meeting a full wall does not produce a visible nib.
+- **Roofs and rooms.** A half wall still encloses a room (unlike a fence), so it
+  must stay in `structuralWalls()`. But confirm `detectBuildingOutline` does not
+  let an internal half wall distort the eave outline.
+- **Dollhouse fade.** Half walls should probably never fade — they are already
+  below sightline. `WallMesh` registers every wall with the fade loop; add an
+  opt-out.
+- **Walk collision** must still block at half height (`buildWalkWallSegments`).
+
+Suggested shape: `Wall.half?: boolean` (or reuse `kind: 'half'`) plus a default
+height around 105cm, with the same "adopt a sensible height on conversion, but
+keep a height the user set themselves" rule `FenceCard` already implements.
+
+### 6.2 Niches / recesses
+
+An inset box in a wall — shower niche, display recess, alcove.
+
+Two plausible models, and the choice matters:
+
+1. **As an opening variant** (`OpeningStyle: 'niche'`) — reuses `wallSpans`,
+   which already cuts the wall correctly, and gets 2D symbol + Properties for
+   free. The niche then needs a **back panel** so you do not see straight
+   through the wall: that is the whole implementation.
+2. As furniture — simpler, but it will not cut the wall, so it can only ever be
+   a box stuck on the surface. Not recommended.
+
+Go with (1). `wallSpans` already produces sill and lintel pieces for windows, so
+a niche is a window whose opening is capped at the back and has no glazing.
+Watch the `sill`/`height` semantics — a niche is defined by sill, height and
+**depth**, and depth has no field yet on `Opening`.
+
+### 6.3 LED strip lighting
+
+**Partly shipped already.** `led_strip` and `cove_light` exist as catalog
+entries and shapes (`Furniture3D.tsx`, `case 'led_strip'`), each an emissive bar
+plus a `LampLight`. Both are Pro. What is missing is that they are **single
+120cm objects**, so lighting a run means placing eight of them by hand.
+
+The real feature is a **run**, like `addKitchenRun` already does for cabinets:
+drag along a wall or a cabinet line and get a continuous strip. Look at
+`kitchenRunUnits` in `src/lib/kitchenRun.ts` for the established pattern — it
+tiles units along an a→b segment in one undo step.
+
+Also worth checking before building: `LampLight` per strip segment means N real
+lights in the scene. A long run must **not** add N point lights — tile the
+emissive geometry but cap the actual light count (one every ~2m, or one per
+run), or the 3D view will crawl on a phone. Measure it.
 
 ## 7. Known cosmetic debt
 
