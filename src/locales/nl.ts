@@ -13,6 +13,10 @@ export const NL: Record<string, string> = {
   Outdoor: 'Buiten',
   Openings: 'Openingen',
   Recent: 'Recent',
+  Favourites: 'Favorieten',
+  'Add to favourites': 'Toevoegen aan favorieten',
+  'Remove from favourites': 'Verwijderen uit favorieten',
+  'View in 3D': 'Bekijken in 3D',
 
   /* ---------- Catalog: items ---------- */
   Sofa: 'Bank',

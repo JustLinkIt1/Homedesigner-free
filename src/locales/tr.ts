@@ -13,6 +13,10 @@ export const TR: Record<string, string> = {
   Outdoor: 'Dış Mekan',
   Openings: 'Açıklıklar',
   Recent: 'Son kullanılan',
+  Favourites: 'Favoriler',
+  'Add to favourites': 'Favorilere ekle',
+  'Remove from favourites': 'Favorilerden çıkar',
+  'View in 3D': '3D görüntüle',
 
   /* ---------- Catalog: items ---------- */
   Sofa: 'Kanepe',

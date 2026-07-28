@@ -1,28 +1,34 @@
 // Sample-home sanity: every shipped template is the first thing a new user
 // sees, so furniture must not sit inside walls, block a doorway, or overlap
 // another piece. These are pure geometry checks over the sample definitions.
-import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { build } from 'esbuild';
 
 const dir = mkdtempSync(join(tmpdir(), 'hdsamples-'));
+const sourceRoot = process.cwd().replaceAll('\\', '/');
 const entry = join(process.cwd(), '.samples-entry.tmp.ts');
 writeFileSync(entry, `
-export { SAMPLES } from '${process.cwd()}/src/data/samples.ts';
-export { CATALOG_BY_TYPE } from '${process.cwd()}/src/data/furnitureCatalog.ts';
-export { isFence } from '${process.cwd()}/src/lib/fence.ts';
+export { SAMPLES } from '${sourceRoot}/src/data/samples.ts';
+export { CATALOG_BY_TYPE } from '${sourceRoot}/src/data/furnitureCatalog.ts';
+export { isFence } from '${sourceRoot}/src/lib/fence.ts';
 `);
 const out = join(dir, 'bundle.mjs');
-execFileSync(join(process.cwd(), 'node_modules/.bin/esbuild'), [
-  // `import.meta.env` is Vite-only; the sample dressing calls materialUrl(),
-  // so define a stand-in rather than stubbing the module.
-  entry, '--bundle', '--format=esm', '--platform=node',
-  '--define:import.meta.env.BASE_URL="/"', `--outfile=${out}`,
-], { stdio: 'pipe' });
+// `import.meta.env` is Vite-only; the sample dressing calls materialUrl(), so
+// define a stand-in rather than stubbing the module.
+await build({
+  entryPoints: [entry],
+  bundle: true,
+  format: 'esm',
+  platform: 'node',
+  define: { 'import.meta.env.BASE_URL': '"/"' },
+  outfile: out,
+});
 rmSync(entry, { force: true });
 
-const { SAMPLES, CATALOG_BY_TYPE, isFence } = await import(out);
+const { SAMPLES, CATALOG_BY_TYPE, isFence } = await import(pathToFileURL(out).href);
 
 let fails = 0;
 const check = (name, ok, detail = '') => {

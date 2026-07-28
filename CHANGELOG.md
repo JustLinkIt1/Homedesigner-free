@@ -5,6 +5,41 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.11.0 - 2026-07-28 (versionCode 11100)
+
+### Added — a faster, more useful furniture catalogue
+
+Catalogue cards now use the app's existing top-down WebP furniture renders
+where available, with the lightweight plan symbol retained as a fallback for
+procedural and cloud-only objects. Images use native lazy loading and async
+decoding, while off-screen catalogue groups keep their existing
+`content-visibility` containment. The result is a more recognisable catalogue
+without putting a WebGL canvas in every card.
+
+Users can star objects into a persistent **Favourites** row. Favourites stay on
+the device, do not enter project JSON or undo history, and work with bundled and
+cloud-delivered entries. The new controls and labels are translated in all 12
+non-English locales.
+
+### Performance — 3D preview is now genuinely on demand
+
+Selecting an object first opens an instant sprite/symbol preview with its real
+dimensions and placement action. Three.js and the interactive preview canvas
+are loaded only after **View in 3D** is pressed. This matters most while the main
+3D scene is already open: ordinary catalogue browsing no longer creates a
+second WebGL context beside the house, avoiding shader/model work and GPU-memory
+contention on phones while preserving the rotatable preview when it is wanted.
+
+### Testing
+
+- Browser coverage proves selection creates no catalogue canvas, photoreal
+  sprites render, favourites persist and appear as a shortcut row, and the
+  interactive preview still opens on request. **102 browser checks** pass with
+  zero page errors.
+- Geometry, sample-home and 47 plan-tracing checks remain green.
+- The three esbuild-backed geometry/trace harnesses now use esbuild's JavaScript
+  API and valid file URLs, so the full suite runs on Windows as well as Linux.
+
 ## 1.10.1 - 2026-07-28 (versionCode 11001)
 
 ### Fixed — sliding doors rendered as a grey slab

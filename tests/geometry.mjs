@@ -1,38 +1,39 @@
 // Pure-Node geometry checks for the roof pipeline. These functions decide real
 // building geometry and are exactly the kind of thing that must not be validated
 // by eyeball, so they get deterministic assertions instead.
-import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { build } from 'esbuild';
 
 // Compile the two TS modules under test to a temp ESM bundle via esbuild (already
 // a Vite dependency), so this runs with plain `node` and no browser.
 const dir = mkdtempSync(join(tmpdir(), 'hdgeo-'));
+const sourceRoot = process.cwd().replaceAll('\\', '/');
 // The entry has to live inside the project: esbuild resolves bare imports
 // (dxf-parser, three) relative to the entry file, not the working directory.
 const entry = join(process.cwd(), '.geometry-entry.tmp.ts');
 writeFileSync(entry, `
-export { offsetPolygon, orientedBox, boxFillRatio } from '${process.cwd()}/src/lib/polygonOffset.ts';
-export { detectBuildingOutline, detectRooms } from '${process.cwd()}/src/lib/roomDetection.ts';
-export { polygonArea, rotatePoint, boundsOf } from '${process.cwd()}/src/lib/geometry.ts';
-export { buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines } from '${process.cwd()}/src/lib/roofGeometry.ts';
-export { wallCentrelines } from '${process.cwd()}/src/lib/wallCentrelines.ts';
-export { classifyOpening } from '${process.cwd()}/src/lib/dxfOpenings.ts';
-export { buildDxf, LAYERS } from '${process.cwd()}/src/lib/dxfExport.ts';
-export { flattenPath } from '${process.cwd()}/src/lib/svgPath.ts';
-export { importDxf } from '${process.cwd()}/src/lib/dxfImport.ts';
-export { isNewer } from '${process.cwd()}/src/lib/appUpdate.ts';
-export { classifyLayer, storeyOf, isDemolished } from '${process.cwd()}/src/lib/dxfLayers.ts';
-export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${process.cwd()}/src/lib/roof.ts';
-export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, FENCE_HEIGHTS } from '${process.cwd()}/src/lib/fence.ts';
+export { offsetPolygon, orientedBox, boxFillRatio } from '${sourceRoot}/src/lib/polygonOffset.ts';
+export { detectBuildingOutline, detectRooms } from '${sourceRoot}/src/lib/roomDetection.ts';
+export { polygonArea, rotatePoint, boundsOf } from '${sourceRoot}/src/lib/geometry.ts';
+export { buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines } from '${sourceRoot}/src/lib/roofGeometry.ts';
+export { wallCentrelines } from '${sourceRoot}/src/lib/wallCentrelines.ts';
+export { classifyOpening } from '${sourceRoot}/src/lib/dxfOpenings.ts';
+export { buildDxf, LAYERS } from '${sourceRoot}/src/lib/dxfExport.ts';
+export { flattenPath } from '${sourceRoot}/src/lib/svgPath.ts';
+export { importDxf } from '${sourceRoot}/src/lib/dxfImport.ts';
+export { isNewer } from '${sourceRoot}/src/lib/appUpdate.ts';
+export { classifyLayer, storeyOf, isDemolished } from '${sourceRoot}/src/lib/dxfLayers.ts';
+export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${sourceRoot}/src/lib/roof.ts';
+export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, FENCE_HEIGHTS } from '${sourceRoot}/src/lib/fence.ts';
 `);
 const out = join(dir, 'bundle.mjs');
-execFileSync(join(process.cwd(), 'node_modules/.bin/esbuild'), [
-  // platform=node so CommonJS-only deps (dxf-parser) resolve via "main";
-  // platform=neutral leaves mainFields empty and cannot find them.
-  entry, '--bundle', '--format=esm', '--platform=node', `--outfile=${out}`,
-], { stdio: 'pipe' });
+// platform=node so CommonJS-only deps (dxf-parser) resolve via "main";
+// platform=neutral leaves mainFields empty and cannot find them. The JS API is
+// used instead of the Unix-only .bin shim so this suite also runs on Windows.
+await build({ entryPoints: [entry], bundle: true, format: 'esm', platform: 'node', outfile: out });
 rmSync(entry, { force: true });
 
 const {
@@ -42,7 +43,7 @@ const {
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
   buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
   fenceRunBoxes, fenceProfile, structuralWalls, isFence, FENCE_HEIGHTS,
-} = await import(out);
+} = await import(pathToFileURL(out).href);
 
 let fails = 0;
 const check = (name, ok, detail = '') => {

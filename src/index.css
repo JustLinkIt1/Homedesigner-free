@@ -693,6 +693,45 @@ button.brand:hover .brand-name {
   width: 100%;
   height: 100%;
 }
+.catalog-preview-static {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+.catalog-preview-image.ci-sprite {
+  width: min(74%, 190px);
+  height: 104px;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--text) 22%, transparent));
+}
+.catalog-preview-image.ci-symbol {
+  width: 78px;
+  height: 78px;
+  color: var(--brand);
+}
+.catalog-preview-3d {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
+  border-radius: 999px;
+  color: var(--brand);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: var(--shadow-sm);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+.catalog-preview-3d .icon {
+  width: 12px;
+  height: 12px;
+}
 .catalog-preview-loading {
   display: grid;
   place-items: center;
@@ -812,16 +851,24 @@ button.brand:hover .brand-name {
   gap: 8px;
 }
 .cat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-  padding: 14px 8px 10px;
+  position: relative;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   text-align: center;
   transition: transform 0.12s ease, border-color 0.12s, box-shadow 0.12s, background 0.12s;
+}
+.cat-item-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 92px;
+  padding: 12px 8px 9px;
+  color: inherit;
+  background: transparent;
 }
 .cat-item:hover {
   border-color: var(--border-strong);
@@ -833,22 +880,63 @@ button.brand:hover .brand-name {
   background: var(--brand-soft);
   box-shadow: 0 0 0 3px var(--brand-soft);
 }
-.cat-item .ci-symbol {
+.cat-item .ci-visual {
   width: 34px;
   height: 34px;
+}
+.cat-item .ci-symbol {
   color: var(--text-2);
+}
+.cat-item .ci-sprite {
+  width: 58px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--text) 18%, transparent));
 }
 .cat-item:hover .ci-symbol,
 .cat-item.active .ci-symbol {
   color: var(--brand);
 }
-.cat-item {
-  position: relative;
+.cat-item .ci-favorite {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  color: var(--text-3);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.cat-item:hover .ci-favorite,
+.cat-item:focus-within .ci-favorite,
+.cat-item .ci-favorite.active {
+  opacity: 1;
+}
+.cat-item .ci-favorite.active {
+  color: #e5a800;
+}
+.cat-item .ci-favorite.active .icon {
+  fill: currentColor;
+}
+.cat-item .ci-favorite .icon {
+  width: 13px;
+  height: 13px;
+}
+@media (hover: none) {
+  .cat-item .ci-favorite {
+    opacity: 1;
+  }
 }
 .cat-item .ci-lock {
   position: absolute;
   top: 6px;
   right: 6px;
+  z-index: 1;
   display: grid;
   place-items: center;
   width: 18px;
@@ -861,7 +949,7 @@ button.brand:hover .brand-name {
   width: 10px;
   height: 10px;
 }
-.cat-item.locked .ci-symbol {
+.cat-item.locked .ci-visual {
   opacity: 0.55;
 }
 

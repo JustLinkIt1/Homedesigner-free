@@ -13,6 +13,10 @@ export const ZH: Record<string, string> = {
   Outdoor: '户外',
   Openings: '门窗洞口',
   Recent: '最近',
+  Favourites: '收藏',
+  'Add to favourites': '添加到收藏',
+  'Remove from favourites': '从收藏中移除',
+  'View in 3D': '以 3D 查看',
 
   /* ---------- Catalog: items ---------- */
   Sofa: '沙发',

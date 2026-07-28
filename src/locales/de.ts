@@ -13,6 +13,10 @@ export const DE: Record<string, string> = {
   Outdoor: 'Außenbereich',
   Openings: 'Öffnungen',
   Recent: 'Zuletzt',
+  Favourites: 'Favoriten',
+  'Add to favourites': 'Zu Favoriten hinzufügen',
+  'Remove from favourites': 'Aus Favoriten entfernen',
+  'View in 3D': 'In 3D ansehen',
 
   /* ---------- Catalog: items ---------- */
   Sofa: 'Sofa',

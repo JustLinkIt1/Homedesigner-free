@@ -477,13 +477,27 @@ if (process.env.SMOKE_SKIP_3D) {
     !!dockRect && dockRect.left >= 0 && dockRect.width > 100,
     JSON.stringify(dockRect),
   );
-  await page.locator('.catalog.docked .cat-item[title="Side Table"]').click();
+  const sideTableCard = page.locator('.catalog.docked .cat-item[title="Side Table"]');
+  await sideTableCard.locator('.cat-item-select').click();
   check(
-    'catalog opens 3D model preview',
-    // 30s, not 15s: the preview spins up a SECOND WebGL context alongside the
-    // live 3D scene. That is genuinely slow under swiftshader — and it only
-    // started happening once the docked panel was fixed to actually be on
-    // screen, because an off-screen panel never rendered its preview at all.
+    'catalog selection stays GPU-light until 3D preview is requested',
+    await page.locator('.catalog.docked .catalog-preview-static').isVisible().catch(() => false)
+      && await page.locator('.catalog.docked .catalog-preview-canvas').count() === 0,
+  );
+  check(
+    'catalog card uses a lazy photoreal sprite when one exists',
+    await sideTableCard.locator('.ci-sprite').isVisible().catch(() => false),
+  );
+  await sideTableCard.locator('.ci-favorite').click();
+  const savedFavorites = await page.evaluate(() => JSON.parse(localStorage.getItem('homedesigner.favorites.v1') ?? '[]'));
+  check(
+    'catalog favourites persist and appear as a shortcut row',
+    savedFavorites.includes('side_table')
+      && await page.locator('.catalog.docked .cat-section', { hasText: 'Favourites' }).isVisible().catch(() => false),
+  );
+  await page.locator('.catalog.docked .catalog-preview-3d').click();
+  check(
+    'on-demand catalog 3D preview opens',
     await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: 30000 }).then(() => true).catch(() => false),
   );
   await page.locator('.catalog.docked .catalog-place').click({ timeout: 30000 });

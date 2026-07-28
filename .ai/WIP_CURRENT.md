@@ -1,6 +1,26 @@
 # WIP — current handoff
 
-_Last updated: 2026-07-23. Working branch: `agent/stripe-web-checkout`._
+> **Current as of 2026-07-28:** release source is **1.11.0** (versionCode
+> **11100**) on `agent/catalog-performance-1.11.0`. The active architectural and
+> release handoff is `docs/WIP_HANDOFF.md`; the older authentication notes below
+> are preserved as historical operational context.
+
+## Latest release — 1.11.0
+
+- Furniture cards now show lazy-decoded photoreal WebP sprites where available,
+  with SVG plan-symbol fallbacks for procedural/cloud-only objects.
+- Users can persist catalogue **Favourites** locally.
+- Selecting an object remains GPU-light; the single rotatable WebGL preview is
+  created only after **View in 3D**, preventing ordinary browsing beside the
+  main 3D scene from eagerly starting a second context.
+- All 102 browser checks, geometry/sample validation, and 47 tracing checks are
+  green. The esbuild-backed pure test harnesses now run on Windows and Linux.
+- Signed AAB: `outputs/HomeDesigner-1.11.0-11100.aab` (29,512,085 bytes),
+  SHA-256 `D539D0561140CFE4F8CED78689500531846A9E9ADC9E5DA9453B64B059480E6D`;
+  signer fingerprint matches the expected upload key.
+
+_Historical authentication handoff last updated: 2026-07-23. Working branch at
+that time: `agent/stripe-web-checkout`._
 
 ## Current state
 

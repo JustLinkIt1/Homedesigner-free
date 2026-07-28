@@ -13,6 +13,10 @@ export const RU: Record<string, string> = {
   Outdoor: 'Улица',
   Openings: 'Проёмы',
   Recent: 'Недавние',
+  Favourites: 'Избранное',
+  'Add to favourites': 'Добавить в избранное',
+  'Remove from favourites': 'Удалить из избранного',
+  'View in 3D': 'Смотреть в 3D',
 
   /* ---------- Catalog: items ---------- */
   Sofa: 'Диван',
