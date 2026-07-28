@@ -718,4 +718,7 @@ export const KO: Record<string, string> = {
   'Outdoor Bin': '실외 쓰레기통',
   'Watering Can': '물뿌리개',
   'Garden Gnome': '정원 요정',
+  'Patio Slider': '파티오 슬라이딩 도어',
+  'Deck': '데크',
+  'Lawn area': '잔디 구역',
 };

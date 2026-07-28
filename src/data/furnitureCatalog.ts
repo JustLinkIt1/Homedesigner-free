@@ -267,6 +267,9 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'door', name: 'Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#a9744f', shape: 'door', icon: '🚪', opening: { kind: 'door', style: 'single', sill: 0 } },
   { type: 'double_door', pro: true, name: 'Double Door', category: 'Openings', width: 160, depth: 12, height: 205, color: '#a9744f', shape: 'door_double', icon: '🚪', opening: { kind: 'door', style: 'double', sill: 0 } },
   { type: 'sliding_door', pro: true, name: 'Sliding Door', category: 'Openings', width: 180, depth: 12, height: 210, color: '#9db4c4', shape: 'door_sliding', icon: '🚪', opening: { kind: 'door', style: 'sliding', sill: 0 } },
+  // The door onto a patio/deck. Free on purpose: the outdoor areas and the
+  // garden set are free, so the way OUT to them must not be paywalled.
+  { type: 'patio_slider', name: 'Patio Slider', category: 'Openings', width: 300, depth: 12, height: 220, color: '#bfe3f2', shape: 'door_sliding', icon: '🚪', opening: { kind: 'door', style: 'sliding', sill: 0 } },
   { type: 'passage', name: 'Open Passage', category: 'Openings', width: 100, depth: 12, height: 205, color: '#e8e2d5', shape: 'door_passage', icon: '⬜', opening: { kind: 'door', style: 'passage', sill: 0 } },
   { type: 'archway', pro: true, name: 'Archway', category: 'Openings', width: 120, depth: 12, height: 215, color: '#e8e2d5', shape: 'door_arch', icon: '⛩️', opening: { kind: 'door', style: 'arch', sill: 0 } },
   { type: 'pocket_door', pro: true, name: 'Pocket Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#b9a58c', shape: 'door_pocket', icon: '🚪', opening: { kind: 'door', style: 'pocket', sill: 0 } },

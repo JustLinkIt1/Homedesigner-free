@@ -718,4 +718,7 @@ export const NL: Record<string, string> = {
   'Outdoor Bin': 'Buitenprullenbak',
   'Watering Can': 'Gieter',
   'Garden Gnome': 'Tuinkabouter',
+  'Patio Slider': 'Schuifpui',
+  'Deck': 'Vlonderterras',
+  'Lawn area': 'Gazon',
 };

@@ -5,6 +5,51 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.10.0 - 2026-07-28 (versionCode 11000)
+
+### Added — every sample home now has a garden
+All four templates gained real outdoor space, so the 1.7.0-1.9.0 work is visible
+the moment someone opens a sample instead of being buried in the catalog.
+
+- **Sunlit open-plan** — rear deck with a bistro set, parasol, barbecue, tree,
+  hedging and a picket boundary.
+- **Maple family house** — paved terrace plus a lawn: fire pit, sun lounger,
+  barbecue, two trees.
+- **City studio** — the terrace this plan always needed: a compact deck with
+  railings, bistro set, planter and a small tree.
+- **Terraced townhouse** — its rear "terrace" was an indoor room all along, with
+  a floor slab and a ceiling over it. It is now a real outdoor surface.
+
+### Added — Patio Slider
+A 300cm glazed sliding door, and it is **free**. The outdoor areas and most of
+the garden set are free, so the way out to them must not be paywalled. Three
+samples now open onto their garden through one.
+
+### Fixed — the sample homes had real plan defects
+A new pure-geometry suite (`tests/samples.mjs`, wired into `npm test`) checks
+every template for things a designer would flag. It found and we fixed:
+
+- **eight blocked doorways** — a sofa across the open-plan threshold, a chest of
+  drawers and a vanity clipping bedroom and bathroom doors, a plant in the studio
+  entry, a bed and table across the terrace house's rear opening, a wardrobe in
+  the dining door, a sideboard in the hall door
+- **a WC pan directly behind its own door**
+- **a staircase 5cm off a wall** in the family house — you stepped off the bottom
+  tread straight into brickwork
+
+### Stair landings
+Stairs now must have **1.5m clear at both ends**, asserted for every sample. The
+terraced townhouse cannot satisfy this anywhere — its deepest bay is 4.4m and a
+2.5m run needs 5.5m to land clear at both ends — so its decorative staircase
+(the sample is single-storey; it led nowhere) has been removed rather than
+shipped as an unusable stair.
+
+The suite also asserts nothing is buried in a wall, no two solid pieces
+interpenetrate, every piece resolves to a catalog entry, and every sample has
+both an outdoor area and garden furniture. Legitimate overlaps — chairs tucked
+under tables, a lamp on a desk, pillows on a sofa, a stair meeting the door it
+serves — are exempt by rule rather than by tolerance fudging.
+
 ## 1.9.0 - 2026-07-28 (versionCode 10900)
 
 ### Added — the garden set

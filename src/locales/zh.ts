@@ -718,4 +718,7 @@ export const ZH: Record<string, string> = {
   'Outdoor Bin': '户外垃圾桶',
   'Watering Can': '洒水壶',
   'Garden Gnome': '花园小矮人',
+  'Patio Slider': '推拉门',
+  'Deck': '木平台',
+  'Lawn area': '草坪区',
 };

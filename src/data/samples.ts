@@ -3,11 +3,11 @@
 // fresh snapshot — single-floor samples return a GeomSnapshot and the store's
 // withFloors() wraps them; the two-storey house returns full floor data.
 import type { MaybeFloored } from '../store/designStore';
-import type { CustomTexture, FurnitureItem, Opening, OpeningStyle, Roof, Wall, Room, FloorGeom } from '../types';
-import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from './furnitureCatalog';
+import type { CustomTexture, FenceStyle, FurnitureItem, Opening, OpeningStyle, Roof, Wall, Room, FloorGeom } from '../types';
+import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS, OUTDOOR_BY_ID } from './furnitureCatalog';
 import { MATERIAL_BY_ID, materialUrl } from './materials';
 import { exteriorFaces } from '../lib/exteriorFaces';
-import { structuralWalls } from '../lib/fence';
+import { structuralWalls, FENCE_HEIGHTS } from '../lib/fence';
 import { withFaceFinish } from '../lib/wallFaces';
 import { uid } from '../lib/geometry';
 
@@ -57,6 +57,34 @@ const room = (name: string, pts: [number, number][], floorMaterial: string, colo
   auto: false,
 });
 
+/** A patio/deck/lawn: same Room primitive, drawn on the ground with no slab
+ *  beneath and no ceiling above (see Room.outdoor). */
+const outdoor = (name: string, pts: [number, number][], material: string): Room => ({
+  id: id('r'),
+  name,
+  points: pts.map(([x, y]) => ({ x, y })),
+  floorMaterial: material,
+  color: OUTDOOR_BY_ID[material]?.color ?? '#b9b3a7',
+  auto: false,
+  outdoor: true,
+});
+
+/** A boundary run rather than a building wall — no roof, no room, no cladding. */
+const fence = (
+  a: [number, number],
+  b: [number, number],
+  style: FenceStyle = 'picket',
+): Wall => ({
+  id: id('w'),
+  start: { x: a[0], y: a[1] },
+  end: { x: b[0], y: b[1] },
+  thickness: 10,
+  height: FENCE_HEIGHTS[style],
+  color: '#b98d5f',
+  kind: 'fence',
+  fenceStyle: style,
+});
+
 const rect = (x0: number, y0: number, x1: number, y1: number): [number, number][] => [
   [x0, y0],
   [x1, y0],
@@ -96,7 +124,7 @@ function openPlan(): MaybeFloored {
     opening(w2.id, 'window', offE(200), 140, 130, 100),
     opening(w2.id, 'window', offE(650), 60, 80, 130, 'casement'),
     opening(w3.id, 'window', offS(220), 140, 130, 100),
-    opening(w3.id, 'window', offS(500), 220, 220, 0, 'french'),
+    opening(w3.id, 'door', offS(500), 300, 220, 0, 'sliding'), // patio slider onto the deck
     opening(w3.id, 'door', offS(900), 100, 210, 0),
     opening(w4.id, 'window', offW(150), 140, 130, 100),
     opening(w4.id, 'window', offW(430), 140, 130, 100),
@@ -106,6 +134,7 @@ function openPlan(): MaybeFloored {
   ];
 
   const rooms = [
+    outdoor('Deck', rect(350, HEIGHT, 900, HEIGHT + 420), 'out_deck'),
     room('Great Room', rect(0, 0, 750, HEIGHT), 'oak', '#f6f1e5'),
     room('Master Bedroom', rect(750, 0, WIDTH, 500), 'carpet_beige', '#efe6d7'),
     room('Bathroom', rect(750, 500, WIDTH, HEIGHT), 'marble', '#eaf0f0'),
@@ -134,8 +163,8 @@ function openPlan(): MaybeFloored {
     fur('pendant', 550, 430),
     fur('large_plant', 700, 380),
     fur('rug', 340, 700),
-    fur('modern_sofa', 340, 785, 180),
-    fur('throw_pillows', 340, 748, 180),
+    fur('modern_sofa', 350, 785, 180),
+    fur('throw_pillows', 350, 748, 180),
     fur('round_coffee_table', 340, 685),
     fur('tv_stand', 340, 560, 0),
     fur('accent_chair', 150, 720, 260),
@@ -143,7 +172,7 @@ function openPlan(): MaybeFloored {
     fur('floor_lamp', 90, 610),
     fur('display_cabinet', 25, 500, 90),
     fur('clay_planter', 675, 690),
-    fur('large_plant', 690, 780),
+    fur('large_plant', 660, 640),
     fur('wall_art', 742, 640, 90),
     fur('ceiling_light', 340, 700),
     fur('bed_double', 925, 155),
@@ -160,7 +189,18 @@ function openPlan(): MaybeFloored {
     fur('toilet', 795, 805, 180),
     fur('shower', 1045, 800, 0),
     fur('ceiling_light', 925, 675),
+    // Deck, straight out of the slider.
+    fur('patio_table', 520, 1060, 0),
+    fur('parasol', 720, 1050, 0),
+    fur('patio_chair', 660, 1230, 200),
+    fur('bbq', 840, 1180, 180),
+    fur('planter_box', 380, 1210, 0),
+    fur('tree', 1120, 1050, 0),
+    fur('hedge', 500, 1310, 0),
+    fur('hedge', 700, 1310, 0),
   ];
+
+  walls.push(fence([250, 1290], [1000, 1290]));
 
   return { walls, rooms, furniture, openings, background: null, projectName: 'Sunlit open-plan home' };
 }
@@ -196,13 +236,15 @@ function familyHouse(): MaybeFloored {
       opening(g2.id, 'window', gE(250), 150, 140, 95),
       opening(g3.id, 'door', gS(500), 110, 210, 0), // front door, centre south
       opening(g3.id, 'window', gS(160), 60, 80, 130, 'casement'), // WC
-      opening(g4.id, 'window', gW(250), 180, 220, 0, 'french'), // garden doors
+      opening(g4.id, 'door', gW(250), 260, 220, 0, 'sliding'), // slider onto the garden terrace
       opening(g5.id, 'door', at([600, 0], [600, 500], 250), 100, 210, 0, 'passage'),
       opening(g6.id, 'door', gHall(300), 100, 210, 0, 'passage'), // living → hall
       opening(g6.id, 'door', gHall(760), 90, 210, 0), // kitchen → hall
       opening(g7.id, 'door', at([850, 500], [850, H], 150), 80, 210, 0),
     ],
     rooms: [
+      outdoor('Terrace', rect(-430, 380, 0, 780), 'out_paving'),
+      outdoor('Lawn', rect(-880, 100, -430, 900), 'out_lawn'),
       room('Living Room', rect(0, 0, 600, 500), 'oak', '#f3ecdf'),
       room('Kitchen & Dining', rect(600, 0, W, 500), 'tile_white', '#eef0ea'),
       room('Hallway', rect(0, 500, 850, H), 'oak', '#f0eadc'),
@@ -218,8 +260,18 @@ function familyHouse(): MaybeFloored {
       fur('lounge_chair', 300, 80, 25),
       fur('display_cabinet', 450, 25, 0),
       fur('floor_lamp', 545, 80),
-      fur('large_plant', 60, 440),
+      fur('large_plant', 60, 330),
       fur('ceiling_light', 300, 250),
+      // Terrace + lawn, out through the slider on the west wall.
+      fur('patio_table', -180, 500, 90),
+      fur('patio_chair', -330, 640, 90),
+      fur('bbq', -110, 720, 90),
+      fur('planter_box', -390, 420, 0),
+      fur('fire_pit', -640, 620, 0),
+      fur('sun_lounger', -640, 300, 90),
+      fur('tree', -740, 830, 0),
+      fur('tree_small', -520, 160, 0),
+      fur('hedge', -880, 500, 90),
       // Kitchen & dining
       fur('fridge', 650, 45),
       fur('cabinets', 760, 30),
@@ -233,7 +285,7 @@ function familyHouse(): MaybeFloored {
       fur('pendant', 800, 330),
       // Hall — stairs rise along the south wall.
       // Low end at the west, high end opening safely onto the upper landing.
-      fur('stairs', 130, 660, 270),
+      fur('stairs', 285, 660, 270),
       fur('sideboard', 420, 530, 0),
       fur('wall_art', 550, 512, 0),
       fur('ceiling_light', 450, 650),
@@ -286,7 +338,7 @@ function familyHouse(): MaybeFloored {
       fur('nightstand', 120, 60),
       fur('nightstand', 380, 60),
       fur('wardrobe', 80, 420, 180),
-      fur('chest_of_drawers', 430, 330, 270),
+      fur('chest_of_drawers', 430, 380, 270),
       fur('rug', 250, 320),
       fur('ceiling_light', 250, 250),
       // Kids room
@@ -304,7 +356,7 @@ function familyHouse(): MaybeFloored {
       fur('sideboard', 400, 530, 0),
       // Bathroom
       fur('bathtub', 950, 560, 90),
-      fur('vanity', 620, 535, 0),
+      fur('vanity', 580, 535, 0),
       fur('toilet', 600, 770, 180),
       fur('shower', 950, 760, 0),
       fur('ceiling_light', 775, 650),
@@ -352,12 +404,13 @@ function cityStudio(): MaybeFloored {
   const openings: Opening[] = [
     opening(s1.id, 'window', sN(220), 260, 150, 90), // big city window
     opening(s3.id, 'door', sS(560), 100, 210, 0), // entry
-    opening(s3.id, 'window', sS(250), 200, 220, 0, 'french'), // balcony doors
+    opening(s3.id, 'door', sS(250), 240, 220, 0, 'sliding'), // slider onto the terrace
     opening(s4.id, 'window', sW(260), 160, 130, 95),
     opening(s6.id, 'door', at([440, 210], [W, 210], 100), 80, 210, 0, 'pocket'),
   ];
 
   const rooms = [
+    outdoor('Terrace', rect(230, H, 560, H + 300), 'out_deck'),
     room('Studio', rect(0, 0, W, H), 'walnut', '#f1e7da'),
     room('Bathroom', rect(440, 0, W, 210), 'tile_white', '#eaf0f0'),
   ];
@@ -376,9 +429,9 @@ function cityStudio(): MaybeFloored {
     fur('modern_sofa', 280, 300, 0),
     fur('throw_pillows', 280, 325, 0),
     fur('accent_table', 280, 400),
-    fur('tv_stand', 280, 495, 180),
+    fur('tv_stand', 210, 495, 180),
     fur('floor_lamp', 420, 300),
-    fur('large_plant', 55, 470),
+    fur('large_plant', 170, 470),
     // Dining nook (east of sofa)
     fur('dining_table', 530, 330),
     fur('wooden_dining_chair', 480, 280, 45),
@@ -391,7 +444,17 @@ function cityStudio(): MaybeFloored {
     fur('ceiling_light', 545, 110),
     // Overhead
     fur('ceiling_light', 280, 300),
+    // Terrace — small, but a real outdoor room for a studio.
+    fur('patio_table', 300, 700, 90),
+    fur('patio_chair', 480, 640, 200),
+    fur('planter_box', 520, 780, 0),
+    fur('tree_small', 640, 730, 0),
+    fur('hedge', 300, 800, 0),
   ];
+
+  walls.push(fence([210, 820], [580, 820], 'railing'));
+  walls.push(fence([210, 520], [210, 820], 'railing'));
+  walls.push(fence([580, 520], [580, 820], 'railing'));
 
   return { walls, rooms, furniture, openings, background: null, projectName: 'City studio' };
 }
@@ -445,7 +508,7 @@ function terraceHouse(): MaybeFloored {
   ];
 
   const rooms = [
-    room('Terrace', [[0, 0], [240, 0], [240, 440], [lx(440), 440]], 'tile_grey', '#e7e9ea'),
+    outdoor('Terrace', [[0, 0], [240, 0], [240, 440], [lx(440), 440]], 'out_paving'),
     room('Bedroom', rect(240, 0, RX, 440), 'carpet_beige', '#efe6d7'),
     room('Dining Room', [[lx(440), 440], [RX, 440], [RX, 820], [lx(820), 820]], 'oak', '#f3ecdf'),
     room('WC', [[lx(820), 820], [185, 820], [185, 1080], [lx(1080), 1080]], 'tile_white', '#eef0ea'),
@@ -466,11 +529,13 @@ function terraceHouse(): MaybeFloored {
     fur('large_plant', 95, 1200),
     fur('ceiling_light', 290, 1360),
     // Hall + stairs.
-    fur('stairs', 330, 980, 0),
-    fur('sideboard', 430, 870, 0),
+    fur('sideboard', 430, 915, 0),
     fur('ceiling_light', 330, 990),
     // WC.
-    fur('toilet', 150, 1030, 180),
+    fur('toilet', 100, 1030, 180),
+    fur('planter_box', 60, 120, 0),
+    fur('patio_chair', 60, 240, 180),
+    fur('hedge', 60, 30, 0),
     fur('sink', 60, 860, 0),
     // Dining room: 6-seat table with a plant in the corner.
     fur('dining_table', 250, 630),
@@ -483,13 +548,13 @@ function terraceHouse(): MaybeFloored {
     fur('pendant', 250, 630),
     fur('large_plant', 95, 500),
     // Rear bedroom.
-    fur('bed_double', 370, 175),
+    fur('bed_double', 385, 175),
     fur('nightstand', 275, 60),
-    fur('wardrobe', 455, 340, 90),
+    fur('wardrobe', 455, 300, 90),
     fur('ceiling_light', 360, 200),
     // Terrace (tiled, out back).
-    fur('picnic_table', 120, 250),
-    fur('large_plant', 60, 60),
+    fur('picnic_table', 100, 250),
+    fur('large_plant', 195, 80),
   ];
 
   return { walls, rooms, furniture, openings, background: null, projectName: 'Terraced townhouse' };

@@ -718,4 +718,7 @@ export const TR: Record<string, string> = {
   'Outdoor Bin': 'Dış mekân çöp kovası',
   'Watering Can': 'Sulama kabı',
   'Garden Gnome': 'Bahçe cücesi',
+  'Patio Slider': 'Sürme kapı',
+  'Deck': 'Ahşap teras',
+  'Lawn area': 'Çim alan',
 };

@@ -718,4 +718,7 @@ export const IT: Record<string, string> = {
   'Outdoor Bin': 'Cestino da esterno',
   'Watering Can': 'Annaffiatoio',
   'Garden Gnome': 'Nano da giardino',
+  'Patio Slider': 'Vetrata scorrevole',
+  'Deck': 'Pedana',
+  'Lawn area': 'Prato',
 };

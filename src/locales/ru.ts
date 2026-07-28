@@ -718,4 +718,7 @@ export const RU: Record<string, string> = {
   'Outdoor Bin': 'Уличная урна',
   'Watering Can': 'Лейка',
   'Garden Gnome': 'Садовый гном',
+  'Patio Slider': 'Раздвижная дверь',
+  'Deck': 'Настил',
+  'Lawn area': 'Газон',
 };

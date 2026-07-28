@@ -718,4 +718,7 @@ export const JA: Record<string, string> = {
   'Outdoor Bin': '屋外ゴミ箱',
   'Watering Can': 'じょうろ',
   'Garden Gnome': 'ガーデンノーム',
+  'Patio Slider': '掃き出し窓',
+  'Deck': 'ウッドデッキ',
+  'Lawn area': '芝生エリア',
 };
