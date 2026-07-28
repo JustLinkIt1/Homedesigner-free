@@ -725,4 +725,11 @@ export const TR: Record<string, string> = {
   'Patio Slider': 'Sürme kapı',
   'Deck': 'Ahşap teras',
   'Lawn area': 'Çim alan',
+  'Draw half wall': 'Yarım duvar çiz',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': 'Alçak bölme noktaları eklemek için tıklayın — mutfaklar, merdivenler ve açık alanlar için ideal',
+  'Half wall / pony wall': 'Yarım duvar / alçak duvar',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': 'Mutfak bölmeleri, merdiven korumaları ve açık alanlar için alçak bir yapısal duvar kullanın.',
+  'Half wall': 'Yarım duvar',
+  'Remove doors or windows before changing this wall.': 'Bu duvarı değiştirmeden önce kapı veya pencereleri kaldırın.',
+  'Openings need a full-height wall.': 'Açıklıklar tam yükseklikte bir duvar gerektirir.',
 };

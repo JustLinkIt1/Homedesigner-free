@@ -725,4 +725,11 @@ export const JA: Record<string, string> = {
   'Patio Slider': '掃き出し窓',
   'Deck': 'ウッドデッキ',
   'Lawn area': '芝生エリア',
+  'Draw half wall': '腰壁を描く',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': 'クリックして低い仕切り壁の点を追加 — キッチン、階段、オープンスペースに最適です',
+  'Half wall / pony wall': '腰壁・ハーフウォール',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': 'キッチンの仕切り、階段のガード、オープンスペースの区切りに低い構造壁を使います。',
+  'Half wall': '腰壁',
+  'Remove doors or windows before changing this wall.': 'この壁を変更する前にドアまたは窓を削除してください。',
+  'Openings need a full-height wall.': '開口部には天井までの壁が必要です。',
 };

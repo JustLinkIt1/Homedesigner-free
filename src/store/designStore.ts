@@ -23,7 +23,7 @@ import { kitchenRunUnits, kitchenUpperUnits } from '../lib/kitchenRun';
 import { splitPolygonBySegment } from '../lib/roomSplit';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
-import { structuralWalls, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE } from '../lib/fence';
+import { structuralWalls, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE, HALF_WALL_HEIGHT } from '../lib/fence';
 import { DEFAULT_ROOF, normalizeRoofs, roofFloorId, roofOf } from '../lib/roof';
 import { SAMPLE_BY_ID, SAMPLES } from '../data/samples';
 import { toast } from '../lib/ui';
@@ -130,7 +130,7 @@ interface DesignState extends DesignSnapshot {
   clearSelection: () => void;
   setPendingFurniture: (type: string | null) => void;
 
-  addWall: (start: Point, end: Point, kind?: 'wall' | 'fence') => string;
+  addWall: (start: Point, end: Point, kind?: 'wall' | 'half' | 'fence') => string;
   updateWall: (id: string, patch: Partial<Wall>) => void;
   addRoom: (points: Point[]) => string;
   updateRoom: (id: string, patch: Partial<Room>) => void;
@@ -465,15 +465,17 @@ export const useDesign = create<DesignState>((set, get) => {
       const id = uid();
       const { defaultWallHeight, defaultWallThickness } = get();
       const fence = kind === 'fence';
+      const halfWall = kind === 'half';
       commit((d) => {
         d.walls.push({
           id,
           start,
           end,
           thickness: fence ? 10 : defaultWallThickness,
-          height: fence ? FENCE_HEIGHTS[DEFAULT_FENCE_STYLE] : defaultWallHeight,
+          height: fence ? FENCE_HEIGHTS[DEFAULT_FENCE_STYLE] : halfWall ? HALF_WALL_HEIGHT : defaultWallHeight,
           color: fence ? '#b98d5f' : '#ece6db',
           ...(fence ? { kind: 'fence' as const, fenceStyle: DEFAULT_FENCE_STYLE } : {}),
+          ...(halfWall ? { halfWall: true } : {}),
         });
         // A fence dropped across a lawn does not divide it into two rooms, so
         // only structural walls subdivide.

@@ -27,7 +27,7 @@ export { importDxf } from '${sourceRoot}/src/lib/dxfImport.ts';
 export { isNewer } from '${sourceRoot}/src/lib/appUpdate.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${sourceRoot}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${sourceRoot}/src/lib/roof.ts';
-export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, FENCE_HEIGHTS } from '${sourceRoot}/src/lib/fence.ts';
+export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT } from '${sourceRoot}/src/lib/fence.ts';
 `);
 const out = join(dir, 'bundle.mjs');
 // platform=node so CommonJS-only deps (dxf-parser) resolve via "main";
@@ -42,7 +42,7 @@ const {
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
   buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
-  fenceRunBoxes, fenceProfile, structuralWalls, isFence, FENCE_HEIGHTS,
+  fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT,
 } = await import(pathToFileURL(out).href);
 
 let fails = 0;
@@ -706,6 +706,26 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   ];
   check('fence: structuralWalls drops fences', structuralWalls(walls).length === 1 && structuralWalls(walls)[0].id === 'a');
   check('fence: isFence only matches the flag', !isFence(walls[0]) && isFence(walls[1]));
+
+  // A pony wall is deliberately NOT a fence: it still divides rooms, carries
+  // finishes/roofs and blocks walkthrough movement. Its flag supplies the UI
+  // and dollhouse semantics that raw height alone cannot.
+  const pony = {
+    id: 'pony', start: { x: 0, y: 200 }, end: { x: 500, y: 200 },
+    thickness: 10, height: HALF_WALL_HEIGHT, color: '#fff', halfWall: true,
+  };
+  check('half wall: default height is worktop/guard height', HALF_WALL_HEIGHT === 105);
+  check('half wall: semantic flag is recognised', isHalfWall(pony) && !isFence(pony));
+  check('half wall: remains structural', structuralWalls([...walls, pony]).some((w) => w.id === pony.id));
+
+  // An internal half wall must not grow or distort the building eaves.
+  const outer = wallsOf(rect(500, 400));
+  const baseRoof = roofFootprint(outer, 45);
+  const ponyRoof = roofFootprint([...outer, pony], 45);
+  check(
+    'half wall: internal run does not distort roof footprint',
+    !!baseRoof && !!ponyRoof && near(Math.abs(polygonArea(baseRoof)), Math.abs(polygonArea(ponyRoof)), 0.01),
+  );
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

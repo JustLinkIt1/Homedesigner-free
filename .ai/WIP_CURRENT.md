@@ -1,23 +1,27 @@
 # WIP — current handoff
 
-> **Current as of 2026-07-28:** release source is **1.11.0** (versionCode
-> **11100**) on `agent/catalog-performance-1.11.0`. The active architectural and
+> **Current as of 2026-07-28:** release source is **1.12.0** (versionCode
+> **11200**) on `agent/half-walls-1.12.0`. The active architectural and
 > release handoff is `docs/WIP_HANDOFF.md`; the older authentication notes below
 > are preserved as historical operational context.
 
-## Latest release — 1.11.0
+## Latest release — 1.12.0
 
-- Furniture cards now show lazy-decoded photoreal WebP sprites where available,
-  with SVG plan-symbol fallbacks for procedural/cloud-only objects.
-- Users can persist catalogue **Favourites** locally.
-- Selecting an object remains GPU-light; the single rotatable WebGL preview is
-  created only after **View in 3D**, preventing ordinary browsing beside the
-  main 3D scene from eagerly starting a second context.
-- All 102 browser checks, geometry/sample validation, and 47 tracing checks are
-  green. The esbuild-backed pure test harnesses now run on Windows and Linux.
-- Signed AAB: `outputs/HomeDesigner-1.11.0-11100.aab` (29,512,085 bytes),
-  SHA-256 `D539D0561140CFE4F8CED78689500531846A9E9ADC9E5DA9453B64B059480E6D`;
-  signer fingerprint matches the expected upload key.
+- Half/pony walls are first-class structural walls through
+  `Wall.halfWall?: boolean`; existing projects remain full-height by default.
+- A dedicated tool draws them in both 2D and 3D, while Properties converts a
+  selected wall. Both paths reuse normal snapping, dimensions, editing and undo.
+- They default to 105cm, keep room/roof/walk collision semantics, show a dashed
+  2D centre mark and stay visible during dollhouse fading.
+- Doors/windows are blocked on half walls instead of producing invalid floating
+  opening geometry. Full wall, half wall and fence states are mutually exclusive.
+- All new copy is translated across the 12 non-English locale dictionaries.
+- Final validation is green: typecheck, lint, production build, geometry,
+  samples, all 47 trace checks and all 111 browser checks, including 3D and the
+  catalogue. The signed 1.12.0 AAB is 29,535,577 bytes with SHA-256
+  `71C23EFC33EB0B21DE4A8A884C6EDEA814808DAA4C5D1CAEB20AB552FFAFFB40` and
+  the expected Nathan Joppich upload certificate. The local delivery copy is
+  `outputs/HomeDesigner-1.12.0-11200.aab` (gitignored).
 
 _Historical authentication handoff last updated: 2026-07-23. Working branch at
 that time: `agent/stripe-web-checkout`._

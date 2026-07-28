@@ -40,7 +40,7 @@ export default function ToolDock() {
 
   return (
     <div className="tool-dock">
-      {TOOLS.map((t, i) => {
+      {TOOLS.map((t) => {
         const Icon = t.icon;
         return (
           <div key={t.id} style={{ display: 'contents' }}>
@@ -58,7 +58,7 @@ export default function ToolDock() {
               <Icon className="icon" />
               <span className="dock-label">{tr(t.label)}</span>
             </button>
-            {i === 2 && <div className="dock-sep" />}
+            {t.id === 'fence' && <div className="dock-sep" />}
           </div>
         );
       })}

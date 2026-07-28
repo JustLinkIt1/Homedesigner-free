@@ -725,4 +725,11 @@ export const ES: Record<string, string> = {
   'Patio Slider': 'Puerta corredera',
   'Deck': 'Tarima',
   'Lawn area': 'Zona de césped',
+  'Draw half wall': 'Dibujar medio muro',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': 'Haz clic para añadir puntos de un divisor bajo — ideal para cocinas, escaleras y espacios abiertos',
+  'Half wall / pony wall': 'Medio muro / muro bajo',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': 'Usa un muro estructural bajo para separar cocinas, proteger escaleras y dividir espacios abiertos.',
+  'Half wall': 'Medio muro',
+  'Remove doors or windows before changing this wall.': 'Quita las puertas o ventanas antes de cambiar este muro.',
+  'Openings need a full-height wall.': 'Las aberturas necesitan un muro de altura completa.',
 };

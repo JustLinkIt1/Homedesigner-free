@@ -20,7 +20,9 @@ import { finishForFace, withFaceFinish } from '../lib/wallFaces';
 import { useI18n } from '../lib/i18n';
 import { roofOf } from '../lib/roof';
 import { roofFootprint, roofNeedsFallback } from '../lib/roofGeometry';
-import { structuralWalls, isFence, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE } from '../lib/fence';
+import {
+  structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE, HALF_WALL_HEIGHT,
+} from '../lib/fence';
 import type { CustomTexture, FenceStyle, OpeningStyle, RoofType, Room, Wall } from '../types';
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
@@ -113,6 +115,54 @@ const FENCE_STYLES: { id: FenceStyle; name: string }[] = [
   { id: 'railing', name: 'Railing' },
 ];
 
+/** Make a selected structural wall low without inventing a second geometry
+ * system. The optional flag gives rendering/UI the one semantic distinction
+ * that raw height cannot: a deliberate pony wall should not dollhouse-fade. */
+function HalfWallCard({ wall }: { wall: Wall }) {
+  const t = useI18n();
+  const updateWall = useDesign((st) => st.updateWall);
+  const defaultWallHeight = useDesign((st) => st.defaultWallHeight);
+  const openingCount = useDesign((st) => st.openings.filter((o) => o.wallId === wall.id).length);
+  const half = isHalfWall(wall);
+  const blocked = openingCount > 0 && !half;
+
+  const setHalf = (on: boolean) => {
+    if (!on) {
+      updateWall(wall.id, { halfWall: undefined, height: defaultWallHeight });
+      return;
+    }
+    if (openingCount > 0) {
+      toast.info(t('Remove doors or windows before changing this wall.'));
+      return;
+    }
+    updateWall(wall.id, {
+      halfWall: true,
+      kind: undefined,
+      fenceStyle: undefined,
+      height: HALF_WALL_HEIGHT,
+    });
+  };
+
+  return (
+    <div className="prop-card">
+      <div className="prop-title">{t('Half wall / pony wall')}</div>
+      <p className="prop-hint">
+        {t('Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.')}
+      </p>
+      <label className={`toggle-row${blocked ? ' disabled' : ''}`}>
+        <input
+          type="checkbox"
+          checked={half}
+          disabled={blocked}
+          onChange={(e) => setHalf(e.target.checked)}
+        />
+        <span>{t('Half wall')}</span>
+      </label>
+      {blocked && <p className="prop-hint">{t('Remove doors or windows before changing this wall.')}</p>}
+    </div>
+  );
+}
+
 /**
  * Turn a wall into a boundary run — a garden fence or a deck railing.
  *
@@ -128,13 +178,13 @@ function FenceCard({ wall }: { wall: Wall }) {
 
   const setFence = (on: boolean) => {
     if (!on) {
-      updateWall(wall.id, { kind: undefined, fenceStyle: undefined, height: 270, thickness: 10 });
+      updateWall(wall.id, { kind: undefined, fenceStyle: undefined, halfWall: undefined, height: 270, thickness: 10 });
       return;
     }
     const style = wall.fenceStyle ?? DEFAULT_FENCE_STYLE;
     // A 270cm picket fence looks absurd, so adopt the height the chosen style is
     // actually built at rather than keeping the wall's.
-    updateWall(wall.id, { kind: 'fence', fenceStyle: style, height: FENCE_HEIGHTS[style] });
+    updateWall(wall.id, { kind: 'fence', fenceStyle: style, halfWall: undefined, height: FENCE_HEIGHTS[style] });
   };
 
   const setStyle = (style: FenceStyle) => {
@@ -521,9 +571,10 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 onChange={(v) => s.updateWall(wall.id, { thickness: v })} />
               {/* A fence can legitimately be knee-high (a railing) or head-high
                   (a privacy screen), so it does not share the wall's 100cm floor. */}
-              <NumberRow label={t('Height (cm)')} value={wall.height} min={isFence(wall) ? 40 : 100} max={400}
+              <NumberRow label={t('Height (cm)')} value={wall.height} min={isFence(wall) ? 40 : isHalfWall(wall) ? 60 : 100} max={isHalfWall(wall) ? 200 : 400}
                 onChange={(v) => s.updateWall(wall.id, { height: v })} />
             </div>
+            <HalfWallCard wall={wall} />
             <FenceCard wall={wall} />
             <div className="prop-card">
               <div className="prop-label">{selectedWallFace ? t('Wall section paint') : t('Wall paint')}</div>

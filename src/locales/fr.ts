@@ -725,4 +725,11 @@ export const FR: Record<string, string> = {
   'Patio Slider': 'Baie coulissante',
   'Deck': 'Terrasse bois',
   'Lawn area': 'Pelouse',
+  'Draw half wall': 'Tracer un muret',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': 'Cliquez pour ajouter les points d’un muret — idéal pour les cuisines, escaliers et espaces ouverts',
+  'Half wall / pony wall': 'Muret / demi-cloison',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': 'Utilisez un mur structurel bas pour séparer une cuisine, sécuriser un escalier ou diviser un espace ouvert.',
+  'Half wall': 'Muret',
+  'Remove doors or windows before changing this wall.': 'Retirez les portes ou fenêtres avant de modifier ce mur.',
+  'Openings need a full-height wall.': 'Les ouvertures nécessitent un mur de pleine hauteur.',
 };

@@ -434,7 +434,18 @@ await page.click('.modal-foot .btn.primary');
 if (process.env.SMOKE_SKIP_3D) {
   console.log('SKIP  3D view (SMOKE_SKIP_3D)');
 } else {
+  // Thumbnail generation is best-effort. A tainted canvas can throw before
+  // returning a data URL; navigation must still enter 3D instead of leaving
+  // the user tapping an apparently dead view switch.
+  await page.evaluate(async () => {
+    const { planCapture } = await import('/src/lib/renderBridge.ts');
+    planCapture.current = () => { throw new Error('synthetic tainted canvas'); };
+  });
   await page.click('.view-toggle button:nth-child(2)');
+  check(
+    'thumbnail capture failure does not block 3D navigation',
+    await page.locator('.view-toggle button:nth-child(2).active').waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false),
+  );
   await page.waitForTimeout(15000);
   const webglMissing = await page.locator('.webgl-missing').isVisible().catch(() => false);
   check('3D mounts (no webgl-missing)', !webglMissing);
@@ -1007,6 +1018,67 @@ if (!process.env.SMOKE_SKIP_3D) {
   }, made.ids[0]);
   check('fence flag survives a snapshot round trip', persisted);
   await fp.close();
+}
+
+// ---- half / pony walls ----------------------------------------------------
+// Low structural walls reuse the real wall model, but need a first-class draw
+// tool and semantic flag so they stay visible in dollhouse mode and remain
+// distinguishable from non-structural fences.
+{
+  const hp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  await hp.goto(BASE);
+  await hp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await hp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
+  await hp.waitForSelector('.toolbar', { timeout: 20000 });
+  await hp.locator('.coach-skip').click().catch(() => {});
+  await hp.waitForTimeout(500);
+
+  const made = await hp.evaluate(async () => {
+    const s = window.useDesign.getState();
+    const id = s.addWall({ x: 120, y: 120 }, { x: 420, y: 120 }, 'half');
+    const wall = window.useDesign.getState().walls.find((w) => w.id === id);
+    const { buildWalkWallSegments } = await import('/src/lib/walkNavigation.ts');
+    return {
+      id,
+      halfWall: wall?.halfWall,
+      height: wall?.height,
+      kind: wall?.kind,
+      collisionSegments: wall ? buildWalkWallSegments([wall], []).length : 0,
+    };
+  });
+  check('a half wall can be created directly', made.halfWall === true && made.kind !== 'fence', JSON.stringify(made));
+  check('new half wall adopts guard/worktop height', made.height === 105, JSON.stringify(made));
+  check('half wall remains a walkthrough barrier', made.collisionSegments === 1, JSON.stringify(made));
+
+  await hp.evaluate((id) => window.useDesign.getState().select({ kind: 'wall', id }), made.id);
+  await hp.waitForTimeout(400);
+  const halfCard = hp.locator('.prop-card').filter({ hasText: 'Half wall / pony wall' });
+  check('Half wall card appears for a selected wall', await halfCard.count() === 1);
+  const toggle = halfCard.locator('input[type="checkbox"]');
+  check('half wall toggle reflects the wall state', await toggle.isChecked());
+
+  await toggle.uncheck();
+  const restored = await hp.evaluate((id) => {
+    const wall = window.useDesign.getState().walls.find((w) => w.id === id);
+    return { halfWall: wall?.halfWall, height: wall?.height };
+  }, made.id);
+  check('turning off half wall restores full wall height', !restored.halfWall && restored.height >= 240, JSON.stringify(restored));
+
+  await toggle.check();
+  const persisted = await hp.evaluate((id) => {
+    const s = window.useDesign.getState();
+    const snap = JSON.parse(JSON.stringify({ walls: s.walls }));
+    s.loadSnapshot({ ...s, walls: snap.walls });
+    const wall = window.useDesign.getState().walls.find((w) => w.id === id);
+    return wall?.halfWall === true && wall?.height === 105;
+  }, made.id);
+  check('half wall flag survives a snapshot round trip', persisted);
+
+  const tools = await hp.evaluate(() =>
+    [...document.querySelectorAll('.tool-dock button, .build-sheet button')].map((b) => b.getAttribute('title') || b.textContent));
+  check('the half wall draw tool is offered', (tools || []).some((x) => /half wall/i.test(x || '')), JSON.stringify(tools));
+
+  await hp.close();
 }
 
 // ---- the garden set (Phase C4) ----------------------------------------------

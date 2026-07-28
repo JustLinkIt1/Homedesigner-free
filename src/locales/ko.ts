@@ -725,4 +725,11 @@ export const KO: Record<string, string> = {
   'Patio Slider': '파티오 슬라이딩 도어',
   'Deck': '데크',
   'Lawn area': '잔디 구역',
+  'Draw half wall': '반높이 벽 그리기',
+  'Click to add low divider points — ideal for kitchens, stairs and open-plan spaces': '낮은 칸막이 점을 추가하려면 클릭하세요 — 주방, 계단, 오픈 공간에 적합합니다',
+  'Half wall / pony wall': '반높이 벽 / 낮은 벽',
+  'Use a low structural wall for kitchen dividers, stair guards and open-plan partitions.': '주방 구분, 계단 보호, 오픈 공간 분할에 낮은 구조 벽을 사용합니다.',
+  'Half wall': '반높이 벽',
+  'Remove doors or windows before changing this wall.': '이 벽을 변경하기 전에 문이나 창문을 제거하세요.',
+  'Openings need a full-height wall.': '개구부에는 천장 높이의 벽이 필요합니다.',
 };
