@@ -541,23 +541,74 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
     }
 
     if (o.style === 'sliding') {
-      // Two glazed panels in the wall plane; one slid half-open.
+      // Two glazed leaves in a track, one slid open.
+      //
+      // The previous version drew a SOLID panel and then a smaller glass box
+      // inside it, so the opaque panel hid the glazing completely and the door
+      // read as a flat grey slab. A real slider is a slim frame around a pane,
+      // so build the frame as four bars and let the glass be the whole leaf.
       const pw = w * 0.55;
+      const ph = h * 0.98;
+      const bar = Math.min(0.05, pw * 0.07); // stile/rail thickness
+      const dz = thickness * 0.16;           // track offset per leaf
+      const frameMat = (
+        <meshStandardMaterial color="#8d949b" roughness={0.35} metalness={0.75} />
+      );
+      const leaf = (i: number) => {
+        const lx = cx + (i === 0 ? -w * 0.22 : w * 0.1);
+        const z = (i === 0 ? -1 : 1) * dz;
+        const half = pw / 2;
+        return (
+          <group key={i} position={[lx, 0, z]}>
+            {/* glazing — the leaf itself, not a panel with a hole in it */}
+            <mesh position={[0, ph / 2, 0]}>
+              <boxGeometry args={[pw - bar * 2, ph - bar * 2, 0.012]} />
+              <meshPhysicalMaterial
+                color="#dff1f8"
+                transparent
+                opacity={0.28}
+                roughness={0.04}
+                metalness={0}
+                transmission={0.9}
+                thickness={0.01}
+              />
+            </mesh>
+            {/* stiles */}
+            <mesh position={[-half + bar / 2, ph / 2, 0]} castShadow>
+              <boxGeometry args={[bar, ph, 0.045]} />{frameMat}
+            </mesh>
+            <mesh position={[half - bar / 2, ph / 2, 0]} castShadow>
+              <boxGeometry args={[bar, ph, 0.045]} />{frameMat}
+            </mesh>
+            {/* rails */}
+            <mesh position={[0, bar / 2, 0]} castShadow>
+              <boxGeometry args={[pw, bar, 0.045]} />{frameMat}
+            </mesh>
+            <mesh position={[0, ph - bar / 2, 0]} castShadow>
+              <boxGeometry args={[pw, bar, 0.045]} />{frameMat}
+            </mesh>
+            {/* pull handle on the leading stile — the detail that reads as a
+                slider rather than a fixed pane */}
+            <mesh position={[(i === 0 ? half - bar : -half + bar), h * 0.45, 0.035]} castShadow>
+              <boxGeometry args={[0.025, h * 0.16, 0.025]} />
+              <meshStandardMaterial color="#3f4348" roughness={0.35} metalness={0.8} />
+            </mesh>
+          </group>
+        );
+      };
       return (
         <group>
           {jambs}
-          {[0, 1].map((i) => (
-            <group key={i}>
-              <mesh position={[cx + (i === 0 ? -w * 0.22 : w * 0.1), h / 2, (i === 0 ? -1 : 1) * thickness * 0.18]} castShadow>
-                <boxGeometry args={[pw, h * 0.98, 0.035]} />
-                <meshStandardMaterial color="#c9d6de" roughness={0.4} metalness={0.15} />
-              </mesh>
-              <mesh position={[cx + (i === 0 ? -w * 0.22 : w * 0.1), h / 2, (i === 0 ? -1 : 1) * thickness * 0.18]}>
-                <boxGeometry args={[pw * 0.86, h * 0.86, 0.02]} />
-                <meshStandardMaterial color="#bfe3f2" transparent opacity={0.35} roughness={0.05} metalness={0.1} />
-              </mesh>
-            </group>
-          ))}
+          {/* head track + sill track, so the leaves read as running in something */}
+          <mesh position={[cx, ph + bar * 0.4, 0]} castShadow>
+            <boxGeometry args={[w, bar * 0.8, thickness * 0.6]} />
+            <meshStandardMaterial color="#7d848b" roughness={0.4} metalness={0.7} />
+          </mesh>
+          <mesh position={[cx, 0.012, 0]} receiveShadow>
+            <boxGeometry args={[w, 0.024, thickness * 0.6]} />
+            <meshStandardMaterial color="#7d848b" roughness={0.5} metalness={0.6} />
+          </mesh>
+          {[0, 1].map(leaf)}
         </group>
       );
     }

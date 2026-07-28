@@ -5,6 +5,18 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.10.1 - 2026-07-28 (versionCode 11001)
+
+### Fixed — sliding doors rendered as a grey slab
+Every sliding door and patio slider drew a **solid opaque panel** with the glass
+pane nested *inside* it, so the panel hid the glazing completely and the door
+read as a flat grey board across the opening.
+
+Rebuilt as an actual slider: a slim metal frame (two stiles, two rails) around
+real transmissive glass, two leaves offset in a head-and-sill track, and a pull
+handle on each leading stile. You can now see through it to the garden, which is
+the entire point of a patio door.
+
 ## 1.10.0 - 2026-07-28 (versionCode 11000)
 
 ### Added — every sample home now has a garden
