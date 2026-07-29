@@ -87,6 +87,35 @@ function suggestedMetadata(prompt: string): PublishMetadata {
   };
 }
 
+/** Use the intended physical width as the anchor, then derive depth/height
+ * from the GLB's real bounding box. This prevents metadata guesses from
+ * stretching generated furniture and also catches Z-forward models that need
+ * a quarter-turn before their long side is the catalogue width. */
+function matchModelProportions(
+  current: PublishMetadata,
+  dimensions?: [number, number, number],
+): PublishMetadata {
+  if (!dimensions || dimensions.some((value) => !Number.isFinite(value) || value <= 0)) return current;
+  const [x, y, z] = dimensions;
+  let yaw = current.yaw;
+  const targetLandscape = current.width >= current.depth;
+  const modelLandscape = x >= z;
+  if (targetLandscape !== modelLandscape && Math.abs(x - z) / Math.max(x, z) > 0.08) {
+    yaw = ((Math.round(yaw / 90) * 90 + 90) % 360 + 360) % 360;
+  }
+  const quarterTurn = Math.abs(Math.sin((yaw * Math.PI) / 180)) > Math.abs(Math.cos((yaw * Math.PI) / 180));
+  const worldWidth = quarterTurn ? z : x;
+  const worldDepth = quarterTurn ? x : z;
+  const scale = current.width / worldWidth;
+  return {
+    ...current,
+    depth: Math.max(1, Math.round(worldDepth * scale)),
+    height: Math.max(1, Math.round(y * scale)),
+    yaw,
+    fit: 'stretch',
+  };
+}
+
 function LoadedModel({ url }: { url: string }) {
   const gltf = useGLTF(url);
   const scene = useMemo(() => {
@@ -308,6 +337,7 @@ export default function ModelStudio() {
       setOptimized(result.mobile.blob);
       setRenderOptimized(result.render.blob);
       setStats({ before: result.before, mobile: result.mobile.stats, render: result.render.stats });
+      setMetadata((current) => matchModelProportions(current, result.before.dimensions));
       setPreviewTier('mobile');
       setWorking('');
     } catch (reason) {
@@ -514,6 +544,7 @@ export default function ModelStudio() {
                   <span>Raw <strong>{bytes(stats.before.bytes)}</strong> · {stats.before.triangles.toLocaleString()} triangles</span>
                   <span>Interactive <strong>{bytes(stats.mobile.bytes)}</strong> · {stats.mobile.triangles.toLocaleString()} · {stats.mobile.maxTextureSize ?? 1024}px</span>
                   <span>Render <strong>{bytes(stats.render.bytes)}</strong> · {stats.render.triangles.toLocaleString()} · {stats.render.maxTextureSize ?? 2048}px</span>
+                  {stats.before.dimensions && <span>Dimensions matched to model proportions · verify width, orientation and placement below</span>}
                 </div>
               )}
             </div>

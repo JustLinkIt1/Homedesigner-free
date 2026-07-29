@@ -1,5 +1,16 @@
 # WIP — current handoff
 
+> **Published Studio model proportion audit live 2026-07-29:** all seven unique
+> generated GLBs were measured from their optimized world-space AABBs. Four
+> standalone entries and four overrides now use dimensions/yaw matching the
+> real assets; exact legacy defaults migrate while user-customized dimensions
+> remain untouched. Model Studio's optimizer now measures each future GLB and
+> derives depth, height and any required quarter-turn from the intended width,
+> preventing guessed metadata from stretching models in-app. Pages deployment
+> `https://19a97ba4.homedesignerapp.pages.dev`; asset namespace
+> `20260729210522397`. Root typecheck/lint/build, Worker check and sample-home
+> collision validation are green.
+
 > **Placement, scaling and desktop account fixes live 2026-07-29:** generated
 > Fal models now obey exact width/depth/height in the app, with yaw-aware axis
 > mapping; the first wall-TV save format auto-migrates its swapped footprint.

@@ -1,6 +1,6 @@
 import { WebIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { dedup, meshopt, prune, quantize, simplify, weld } from '@gltf-transform/functions';
+import { dedup, getBounds, meshopt, prune, quantize, simplify, weld } from '@gltf-transform/functions';
 import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 
 export interface GlbStats {
@@ -9,6 +9,9 @@ export interface GlbStats {
   vertices: number;
   textures: number;
   maxTextureSize?: number;
+  /** Source-space AABB size. Ratios are used to keep catalogue dimensions
+   * proportional; generated model units themselves are arbitrary. */
+  dimensions?: [number, number, number];
 }
 
 export interface OptimizedGlb {
@@ -27,7 +30,12 @@ function geometryStats(document: Awaited<ReturnType<WebIO['readBinary']>>): Omit
       triangles += Math.floor(indexCount / 3);
     }
   }
-  return { triangles, vertices, textures: document.getRoot().listTextures().length };
+  const scene = document.getRoot().listScenes()[0];
+  const bounds = scene ? getBounds(scene) : null;
+  const dimensions = bounds
+    ? [bounds.max[0] - bounds.min[0], bounds.max[1] - bounds.min[1], bounds.max[2] - bounds.min[2]] as [number, number, number]
+    : undefined;
+  return { triangles, vertices, textures: document.getRoot().listTextures().length, dimensions };
 }
 
 async function imageBlobToWebp(image: Uint8Array, mime: string, maxSize: number): Promise<{

@@ -9,6 +9,21 @@ changes and add an entry when you ship one.
 
 ### Private Model Studio and render-quality models
 
+- Audited all seven unique published Model Studio GLBs against their actual
+  world-space bounding boxes. Corrected the TV/media unit (`210×58×148`), wall
+  TV (`200×17×97`), six-seat dining set (`185×140×84`) and Japandi table
+  (`185×152×69`, 90° yaw), plus the dining-chair, TV and barbecue overrides.
+  Exact old defaults migrate to the corrected sizes without changing objects a
+  user has already resized manually.
+- Model Studio optimization now measures the source GLB, detects when its long
+  side is authored on Z, and automatically matches depth, height and yaw to the
+  model's real proportions while keeping the intended catalogue width. Future
+  publishes therefore arrive in-app at the reviewed shape instead of being
+  stretched from guessed metadata.
+- Deployed Pages `https://19a97ba4.homedesignerapp.pages.dev` with asset
+  namespace `20260729210522397`; the live manifest reports four generated
+  entries and four generated overrides using proportion-matched exact fitting.
+
 - Fixed generated-model sizing so AI GLBs honor the catalogue width, depth and
   height exactly, including quarter-turn yaw axis mapping. Existing wall-TV
   saves with the original swapped footprint migrate automatically.

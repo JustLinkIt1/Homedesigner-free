@@ -76,7 +76,7 @@ export default function GltfFurniture({ item, preferRender = false }: { item: Fu
     const sx = (localWidth * M) / (size.x || 1);
     const sy = (item.height * M) / (size.y || 1);
     const sz = (localDepth * M) / (size.z || 1);
-    if (def.fit === 'stretch' || def.source?.license === 'AI-generated') {
+    if (def.fit === 'stretch') {
       // Fill width×depth×height independently — for boxy cabinetry whose model
       // is authored at the wrong size, so it reaches true counter/upper height.
       clone.scale.set(sx, sy, sz);
@@ -105,7 +105,7 @@ export default function GltfFurniture({ item, preferRender = false }: { item: Fu
       }
     });
     return clone;
-  }, [scene, item.width, item.depth, item.height, def.fit, def.offsetY, def.source?.license, def.yaw]);
+  }, [scene, item.width, item.depth, item.height, def.fit, def.offsetY, def.yaw]);
 
   return (
     <group rotation={[0, def.yaw ?? 0, 0]}>

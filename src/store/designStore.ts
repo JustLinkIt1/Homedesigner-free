@@ -277,16 +277,32 @@ const fixOpenings = (g: FloorGeom): FloorGeom => {
   };
 };
 
-/** Correct the first wall-TV publication, whose thin X axis was accidentally
- * saved as width and long Z axis as depth. Restrict the migration to that type
- * and unmistakable portrait footprint so intentional user sizes survive. */
+/** Migrate only the exact original defaults of the first Studio publications.
+ * User-resized objects are deliberately left alone. The corrected dimensions
+ * preserve each audited GLB's bounding-box proportions in world axes. */
 const fixFurnitureAxes = (g: FloorGeom): FloorGeom => {
-  if (!g.furniture.some((item) => item.type === 'wallmounttv' && item.width < item.depth)) return g;
+  const replacement = (item: FurnitureItem): Pick<FurnitureItem, 'width' | 'depth' | 'height'> | null => {
+    const is = (width: number, depth: number, height: number) =>
+      item.width === width && item.depth === depth && item.height === height;
+    if (item.type === 'wallmounttv' && (is(10, 210, 150) || is(210, 10, 150) || is(200, 10, 100))) {
+      return { width: 200, depth: 17, height: 97 };
+    }
+    if (item.type === 'tv_media_unit' && is(210, 48, 145)) return { width: 210, depth: 58, height: 148 };
+    if (item.type === 'dining6seatchairs' && is(185, 100, 90)) return { width: 185, depth: 140, height: 84 };
+    if (item.type === 'diningtable' && is(185, 120, 90)) return { width: 185, depth: 152, height: 69 };
+    if (item.type === 'dining_chair' && is(45, 50, 90)) return { width: 58, depth: 58, height: 90 };
+    if (item.type === 'wooden_dining_chair' && is(45, 50, 95)) return { width: 61, depth: 62, height: 95 };
+    if (item.type === 'tv_stand' && is(130, 12, 75)) return { width: 130, depth: 18, height: 91 };
+    if (item.type === 'bbq' && is(70, 60, 110)) return { width: 120, depth: 56, height: 110 };
+    return null;
+  };
+  if (!g.furniture.some((item) => replacement(item))) return g;
   return {
     ...g,
-    furniture: g.furniture.map((item) => item.type === 'wallmounttv' && item.width < item.depth
-      ? { ...item, width: item.depth, depth: item.width }
-      : item),
+    furniture: g.furniture.map((item) => {
+      const next = replacement(item);
+      return next ? { ...item, ...next } : item;
+    }),
   };
 };
 
