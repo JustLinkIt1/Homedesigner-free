@@ -9,6 +9,13 @@
 > private. `homedesignerapp-preview` remains available only as a direct-upload
 > fallback and has no production custom domains.
 
+> **DNS propagation note:** GoDaddy shows the correct Cloudflare nameservers,
+> and the public Cloudflare/Google resolvers return the Cloudflare edge. The
+> current home-router resolver still caches the former GoDaddy delegation and
+> therefore reaches retired GitHub Pages (404). This is not a Cloudflare build
+> failure; use `https://homedesignerapp.pages.dev` until that resolver cache
+> expires. Do not make the source repository public again to mask stale DNS.
+
 > **Security sweep:** production web no longer accepts the `?pro=1` test seam
 > or browser localStorage as entitlement authority. The Worker version
 > `7a48fba0-5e89-44bd-a340-a789d89f74e4` enforces exact `Pro` entitlements and
@@ -18,6 +25,12 @@
 > Studio JDK 21. Production and Worker npm audits are clean; the remaining 9
 > high and 1 moderate root audit entries are development/build tooling
 > major-upgrade work.
+
+> **Outstanding credential operation:** rotate the Google service-account key
+> that was pasted into the prior support chat, update the matching RevenueCat
+> integration, verify Play purchase validation, and then revoke the old key.
+> No private key or server secret was found in the current repository or its
+> reachable Git history.
 
 > **Current as of 2026-07-28:** release source is **1.12.0** (versionCode
 > **11200**) on `agent/half-walls-1.12.0`. The active architectural and
