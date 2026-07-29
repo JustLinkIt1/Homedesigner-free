@@ -1,5 +1,16 @@
 # WIP — current handoff
 
+> **Emergency furniture-scale regression corrected live 2026-07-29:** restored
+> footprint-based proportional fitting for catalogue replacements, fixing the
+> tiny beds and baths, and restored the established dining-chair, wooden-chair,
+> TV and barbecue catalogue slots. Exact short-lived oversized defaults are
+> reverse-migrated on load while user-resized objects are preserved. Model
+> Studio now forces existing-item overrides to proportional `contain`; only the
+> four standalone generated models keep their audited exact dimensions/yaw.
+> Pages deployment `https://35f8c6ac.homedesignerapp.pages.dev`; asset namespace
+> `20260729211531965`. The corrected R2 manifest is live. Typecheck, lint,
+> production build and all sample-home layout checks pass.
+
 > **Published Studio model proportion audit live 2026-07-29:** all seven unique
 > generated GLBs were measured from their optimized world-space AABBs. Four
 > standalone entries and four overrides now use dimensions/yaw matching the

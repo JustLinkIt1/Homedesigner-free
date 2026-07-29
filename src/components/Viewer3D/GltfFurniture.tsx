@@ -87,7 +87,11 @@ export default function GltfFurniture({ item, preferRender = false }: { item: Fu
       );
     } else {
       // Uniform scale fitting both footprint dimensions (keeps proportions).
-      const scale = def.fit === 'width' ? sx : def.fit === 'depth' ? sz : Math.min(sx, sy, sz);
+      // Contain is a footprint policy: furniture must fill its plan width/depth
+      // while retaining the model's proportions. Including catalogue height in
+      // this minimum made beds and baths shrink to toy size when a source GLB
+      // used a different vertical unit/proportion.
+      const scale = def.fit === 'width' ? sx : def.fit === 'depth' ? sz : Math.min(sx, sz);
       clone.scale.setScalar(scale);
       // Recentre horizontally and rest the base on y = 0.
       clone.position.set(

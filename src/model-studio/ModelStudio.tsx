@@ -364,7 +364,14 @@ export default function ModelStudio() {
     setWorking('Publishing model and catalogue manifest…');
     setError('');
     try {
-      const outgoing = { ...metadata, yaw: metadata.yaw * Math.PI / 180 };
+      // An override inherits the established item's slot dimensions. Preserve
+      // the replacement GLB's proportions inside that footprint instead of
+      // stretching it to metadata that the override manifest does not replace.
+      const outgoing = {
+        ...metadata,
+        fit: metadata.mode === 'override' ? 'contain' as const : metadata.fit,
+        yaw: metadata.yaw * Math.PI / 180,
+      };
       replaceJob(await publishStudioModel(selected.id, outgoing));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Publication failed.');
@@ -389,6 +396,7 @@ export default function ModelStudio() {
       color: entry.color,
       icon: entry.icon,
       pro: !!entry.pro,
+      fit: 'contain',
     });
   };
 

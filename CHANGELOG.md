@@ -9,6 +9,18 @@ changes and add an entry when you ship one.
 
 ### Private Model Studio and render-quality models
 
+- Corrected the proportion-audit regression that made chairs oversized and
+  beds/baths undersized. Proportional `contain` fitting again uses the plan
+  footprint rather than catalogue height, and generated overrides retain the
+  established catalogue dimensions instead of stretching to replacement-GLB
+  bounds. Saves that briefly received the bad chair/TV/barbecue defaults are
+  repaired on load without touching manually resized furniture.
+- Existing-item publishing in Model Studio now always uses proportional
+  `contain` fitting. The four standalone generated models retain their audited
+  axis, yaw and exact-dimension corrections. Deployed Pages
+  `https://35f8c6ac.homedesignerapp.pages.dev` with asset namespace
+  `20260729211531965` and republished the corrected no-cache R2 manifest.
+
 - Audited all seven unique published Model Studio GLBs against their actual
   world-space bounding boxes. Corrected the TV/media unit (`210×58×148`), wall
   TV (`200×17×97`), six-seat dining set (`185×140×84`) and Japandi table
