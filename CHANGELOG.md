@@ -22,6 +22,11 @@ changes and add an entry when you ship one.
 - Limited the Cloudflare GitHub app to this repository, verified it can build
   the production artifact, and then changed the GitHub repository to private.
   The direct-upload preview remains only as a no-domain recovery path.
+- Temporarily returned the repository to public and recreated the GitHub Pages
+  custom-domain deployment after a mobile carrier retained the former GoDaddy
+  delegation. This preserves a working 200 response on both the stale GitHub
+  route and the authoritative Cloudflare route during DNS propagation; privacy
+  should be re-enabled after the old delegation TTL has safely expired.
 
 ### Security hardening
 

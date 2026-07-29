@@ -5,16 +5,19 @@
 > Pages project `homedesignerapp` builds the merged default branch with
 > `npm run build:web`; both `homedesignerapp.com` and
 > `www.homedesignerapp.com` are Active with SSL on that project. The Cloudflare
-> GitHub app is limited to this repository, and the GitHub repository is now
-> private. `homedesignerapp-preview` remains available only as a direct-upload
-> fallback and has no production custom domains.
+> GitHub app is limited to this repository. The source repository was verified
+> private with successful Cloudflare auto-deploys, but is temporarily public
+> again until the former GoDaddy delegation has expired from carrier caches.
+> `homedesignerapp-preview` remains available only as a direct-upload fallback
+> and has no production custom domains.
 
 > **DNS propagation note:** GoDaddy shows the correct Cloudflare nameservers,
-> and the public Cloudflare/Google resolvers return the Cloudflare edge. The
-> current home-router resolver still caches the former GoDaddy delegation and
-> therefore reaches retired GitHub Pages (404). This is not a Cloudflare build
-> failure; use `https://homedesignerapp.pages.dev` until that resolver cache
-> expires. Do not make the source repository public again to mask stale DNS.
+> and major public resolvers return the Cloudflare edge. At least one mobile
+> carrier still caches the former GoDaddy delegation and therefore reached the
+> old GitHub Pages IPs. GitHub Pages has been explicitly recreated and deployed
+> with the custom domain, so both the stale GitHub route and the new Cloudflare
+> route now return 200. Keep the repository public through at least 2026-07-31;
+> then verify propagation before making it private again.
 
 > **Security sweep:** production web no longer accepts the `?pro=1` test seam
 > or browser localStorage as entitlement authority. The Worker version
