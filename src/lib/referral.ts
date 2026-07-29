@@ -7,6 +7,7 @@ const REFERRAL_KEY = 'homedesigner.referral.v1';
 // to run a new campaign, add codes here and restore the entry UI in
 // ProUpsellModal (see git history).
 const VALID_CODES: Record<string, boolean> = {};
+const GRANDFATHERED_CODES = new Set(['HOMEDESIGN50']);
 
 function normalize(code: string): string {
   return code.trim().toUpperCase().replace(/[\s-]/g, '');
@@ -29,7 +30,11 @@ export function redeemedReferralCode(): string | null {
 }
 
 export function isReferralRedeemed(): boolean {
-  return redeemedReferralCode() !== null;
+  // Referral grants were an Android testing campaign. Browser localStorage is
+  // editable and must never become a Pro entitlement source.
+  if (!Capacitor.isNativePlatform()) return false;
+  const code = redeemedReferralCode();
+  return code !== null && GRANDFATHERED_CODES.has(normalize(code));
 }
 
 export function markReferralRedeemed(raw: string): void {

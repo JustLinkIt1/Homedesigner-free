@@ -2,8 +2,7 @@
 // happen; everything else consumes useProStore / requirePro(). On Android the
 // provider is RevenueCat (Google Play Billing, one non-consumable
 // `pro_unlock`); on the web it is RevenueCat Web Billing backed by Stripe.
-// Builds without a Web Billing key retain the old Play Store link, and
-// Playwright can still flip ?pro=1 to exercise both sides of every gate.
+// Builds without a Web Billing key retain the old Play Store link.
 import { Capacitor } from '@capacitor/core';
 import { useProStore } from '../store/proStore';
 import { PLAY_STORE_URL } from './appInfo';
@@ -52,12 +51,11 @@ const REVENUECAT_WEB_KEY = (import.meta.env.VITE_REVENUECAT_WEB_KEY ?? '').trim(
  *  entitlement counts as Pro, so a dashboard rename can't lock buyers out. */
 const ENTITLEMENT_ID = 'Pro';
 
-/** True if the customer holds Pro. Checks the named entitlement first, then
- *  falls back to "any active entitlement" — this app only sells one thing, so
- *  a case/name mismatch in the RevenueCat dashboard must never deny access. */
+/** True only when the customer holds the product's configured Pro entitlement.
+ * Other RevenueCat entitlements must not silently unlock this app. */
 function hasProEntitlement(customerInfo: any): boolean {
   const active = customerInfo?.entitlements?.active ?? {};
-  return active[ENTITLEMENT_ID] !== undefined || Object.keys(active).length > 0;
+  return active[ENTITLEMENT_ID] !== undefined;
 }
 
 /** First purchasable package across ALL offerings, preferring the current one.
@@ -239,26 +237,9 @@ class WebRevenueCatProvider implements ProProvider {
     return this.purchases;
   }
 
-  private mockEntitled(): boolean {
-    try {
-      return localStorage.getItem('homedesigner.pro.mock') === '1';
-    } catch {
-      return false;
-    }
-  }
-
-  async init(): Promise<void> {
-    try {
-      if (new URLSearchParams(window.location.search).get('pro') === '1') {
-        localStorage.setItem('homedesigner.pro.mock', '1');
-      }
-    } catch {
-      /* no URL access (tests) */
-    }
-  }
+  async init(): Promise<void> {}
 
   async isEntitled(): Promise<boolean> {
-    if (this.mockEntitled()) return true;
     if (!this.appUserID || !isWebBillingConfigured()) return false;
     const customerInfo = await (await this.sdk()).getCustomerInfo();
     return hasProEntitlement(customerInfo);
@@ -311,7 +292,6 @@ class WebRevenueCatProvider implements ProProvider {
   async identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean> {
     this.appUserID = appUserID;
     this.email = email;
-    if (this.mockEntitled()) return true;
     if (!isWebBillingConfigured()) return getCloudProEntitlement();
 
     const purchases = await this.sdk(appUserID);
@@ -324,13 +304,12 @@ class WebRevenueCatProvider implements ProProvider {
   }
 
   async disconnect(): Promise<boolean> {
-    // A real Google-linked entitlement belongs to the account that is being
-    // disconnected. Only retain the explicit local test entitlement.
+    // A Google-linked entitlement belongs to the account being disconnected.
     this.appUserID = null;
     this.email = null;
     // Retain the SDK instance so a later account can switch with changeUser(),
     // but signed-out code can no longer query or buy as the previous customer.
-    return this.mockEntitled();
+    return false;
   }
 }
 
