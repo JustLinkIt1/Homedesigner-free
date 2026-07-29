@@ -5,6 +5,8 @@ interface Env {
   GOOGLE_WEB_CLIENT_ID: string;
   REVENUECAT_PROJECT_ID: string;
   REVENUECAT_SECRET_KEY: string;
+  USER_READ_LIMITER: RateLimit;
+  USER_WRITE_LIMITER: RateLimit;
 }
 
 interface ProjectRecord {
@@ -31,17 +33,22 @@ const allowedOrigins = new Set([
 
 function cors(request: Request): HeadersInit {
   const origin = request.headers.get('Origin') ?? '';
-  return {
-    'Access-Control-Allow-Origin': allowedOrigins.has(origin) ? origin : 'https://homedesignerapp.com',
+  const headers: Record<string, string> = {
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
     Vary: 'Origin',
   };
+  if (allowedOrigins.has(origin)) headers['Access-Control-Allow-Origin'] = origin;
+  return headers;
 }
 
-function json(request: Request, body: unknown, status = 200): Response {
-  return Response.json(body, { status, headers: cors(request) });
+function json(request: Request, body: unknown, status = 200, extraHeaders: HeadersInit = {}): Response {
+  const headers = new Headers(cors(request));
+  new Headers(extraHeaders).forEach((value, name) => headers.set(name, value));
+  return Response.json(body, { status, headers });
 }
 
 async function authenticate(request: Request, env: Env): Promise<string> {
@@ -165,7 +172,8 @@ async function entitlement(request: Request, env: Env, subject: string): Promise
   const result = await response.json() as RevenueCatActiveEntitlements;
   const now = Date.now();
   const isPro = (result.items ?? []).some((item) =>
-    item.expires_at === null || (typeof item.expires_at === 'number' && item.expires_at > now));
+    item.entitlement_id === 'Pro' &&
+    (item.expires_at === null || (typeof item.expires_at === 'number' && item.expires_at > now)));
   return json(request, { isPro });
 }
 
@@ -175,6 +183,11 @@ export default {
     const url = new URL(request.url);
     try {
       const subject = await authenticate(request, env);
+      const limiter = request.method === 'GET' ? env.USER_READ_LIMITER : env.USER_WRITE_LIMITER;
+      const { success } = await limiter.limit({ key: `${subject}:${request.method}:${url.pathname}` });
+      if (!success) {
+        return json(request, { error: 'Too many requests' }, 429, { 'Retry-After': '60' });
+      }
       if (request.method === 'GET' && url.pathname === '/v1/entitlement') {
         return await entitlement(request, env, subject);
       }

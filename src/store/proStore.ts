@@ -14,6 +14,9 @@ import { toast } from '../lib/ui';
 const PRO_CACHE_KEY = 'homedesigner.pro.v1';
 
 const readCache = (): boolean => {
+  // Browser storage is user-editable and must never be an entitlement source.
+  // Android keeps this offline fallback for previously verified Play purchases.
+  if (!Capacitor.isNativePlatform()) return false;
   try {
     return localStorage.getItem(PRO_CACHE_KEY) === '1';
   } catch {
@@ -22,17 +25,19 @@ const readCache = (): boolean => {
 };
 
 const writeCache = (isPro: boolean) => {
+  if (!Capacitor.isNativePlatform()) {
+    try { localStorage.removeItem(PRO_CACHE_KEY); } catch { /* cache cleanup only */ }
+    return;
+  }
   try {
     localStorage.setItem(PRO_CACHE_KEY, isPro ? '1' : '0');
   } catch {
     /* cache only */
   }
   // Mirror to native Preferences: it survives WebView storage clears.
-  if (Capacitor.isNativePlatform()) {
-    import('@capacitor/preferences')
-      .then(({ Preferences }) => Preferences.set({ key: PRO_CACHE_KEY, value: isPro ? '1' : '0' }))
-      .catch(() => {});
-  }
+  import('@capacitor/preferences')
+    .then(({ Preferences }) => Preferences.set({ key: PRO_CACHE_KEY, value: isPro ? '1' : '0' }))
+    .catch(() => {});
 };
 
 interface ProState {

@@ -132,8 +132,11 @@ const mainSource = await readFile(join(root, 'src', 'main.tsx'), 'utf8');
 const authStoreSource = await readFile(join(root, 'src', 'store', 'authStore.ts'), 'utf8');
 const proStoreSource = await readFile(join(root, 'src', 'store', 'proStore.ts'), 'utf8');
 const proSource = await readFile(join(root, 'src', 'lib', 'pro.ts'), 'utf8');
+const referralSource = await readFile(join(root, 'src', 'lib', 'referral.ts'), 'utf8');
 const workerSource = await readFile(join(root, 'workers', 'design-sync', 'src', 'index.ts'), 'utf8');
 const workerConfig = await readFile(join(root, 'workers', 'design-sync', 'wrangler.jsonc'), 'utf8');
+const pagesHeaders = await readFile(join(root, 'site', '_headers'), 'utf8');
+const androidManifest = await readFile(join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'), 'utf8');
 check(
   'Google login does not trigger the Android custom-scope guard',
   !/SocialLogin\.login\(\{[\s\S]{0,300}?scopes\s*:/.test(googleAuthSource),
@@ -177,6 +180,33 @@ check(
   workerSource.includes('/active_entitlements') &&
     workerSource.includes('env.REVENUECAT_SECRET_KEY') &&
     !workerConfig.includes('REVENUECAT_API_KEY'),
+);
+check(
+  'production web has no URL or localStorage Pro test bypass',
+  !proSource.includes('homedesigner.pro.mock') &&
+    !proSource.includes("get('pro') === '1'") &&
+    proStoreSource.includes('if (!Capacitor.isNativePlatform()) return false'),
+);
+check(
+  'retired referral grants are Android-only and restricted to the grandfathered campaign',
+  referralSource.includes("new Set(['HOMEDESIGN50'])") &&
+    referralSource.includes('if (!Capacitor.isNativePlatform()) return false'),
+);
+check(
+  'sync API rate-limits verified users and requires the exact Pro entitlement',
+  workerSource.includes('USER_READ_LIMITER') &&
+    workerSource.includes('USER_WRITE_LIMITER') &&
+    workerSource.includes("item.entitlement_id === 'Pro'") &&
+    workerSource.includes("{ error: 'Too many requests' }, 429") &&
+    workerConfig.includes('"ratelimits"'),
+);
+check(
+  'Cloudflare Pages and Android ship baseline data protections',
+  pagesHeaders.includes('Strict-Transport-Security:') &&
+    pagesHeaders.includes('X-Frame-Options: DENY') &&
+    pagesHeaders.includes('X-Content-Type-Options: nosniff') &&
+    androidManifest.includes('android:allowBackup="false"') &&
+    androidManifest.includes('android:usesCleartextTraffic="false"'),
 );
 check(
   'desktop checkout exposes monthly, yearly, and lifetime RevenueCat packages',

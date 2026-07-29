@@ -20,6 +20,32 @@ changes and add an entry when you ship one.
   repository will be made private only after the Cloudflare production domain
   and private-repository deployment have both been verified.
 
+### Security hardening
+
+- Removed the production web `?pro=1`/localStorage test entitlement and stopped
+  trusting browser storage as a source of Pro access. Retired referral grants
+  are now Android-only and limited to the known grandfathered campaign code.
+- Tightened RevenueCat checks to the exact `Pro` entitlement. The authenticated
+  sync Worker now rate-limits reads and writes per verified Google subject,
+  omits CORS permission for unknown origins, disables response caching and adds
+  `nosniff` protection.
+- Added Cloudflare Pages transport, clickjacking, MIME-sniffing, referrer and
+  browser-permission headers, immutable caching for fingerprinted app assets,
+  and `noindex` on Pages preview hostnames.
+- Disabled Android cleartext traffic and automatic app-data backup, explicitly
+  excluded local plans/tokens/preferences from cloud and device-transfer backup,
+  and limited the app FileProvider to exported Documents and its cache instead
+  of all shared external storage.
+- Safe patch updates for DOMPurify, PostCSS, tar, Wrangler and Cloudflare types
+  leave both production dependencies and the Worker audit clean. The remaining
+  root audit findings (9 high, 1 moderate) are confined to build/development
+  tooling and require separate major-version upgrades rather than unsafe
+  automated downgrades.
+
+Validation is green for TypeScript, lint, the Cloudflare artifact build, Worker
+typechecking, all geometry/sample/tracing/browser tests (3D intentionally
+skipped in the security run), Capacitor sync and an Android debug build.
+
 ## 1.12.0 - 2026-07-28 (versionCode 11200)
 
 ### Added — half walls / pony walls
