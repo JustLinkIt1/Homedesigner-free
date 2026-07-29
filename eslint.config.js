@@ -6,7 +6,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'android/**', 'node_modules/**', 'tools/**', 'scripts/**', 'tests/**', '*.config.*'],
+    ignores: ['dist/**', 'site-dist/**', 'android/**', 'node_modules/**', 'tools/**', 'scripts/**', 'tests/**', '*.config.*'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
