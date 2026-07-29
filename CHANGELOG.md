@@ -7,6 +7,15 @@ changes and add an entry when you ship one.
 
 ## Unreleased - 2026-07-29
 
+### Tester onboarding
+
+- Replaced the embedded Google access-request form with a direct three-step
+  Android beta path: join the tester Google Group, opt in on Google Play, then
+  install the app from its Play Store listing.
+- Kept the landing-page **Request access** buttons as smooth-scroll links to
+  those instructions and made it clear that the same Google account must be
+  used for all three steps.
+
 ### Infrastructure - Cloudflare Pages migration
 
 - Added `npm run build:web` and `scripts/assemble-web.mjs` to produce one

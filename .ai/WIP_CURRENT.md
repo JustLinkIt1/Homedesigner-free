@@ -1,5 +1,11 @@
 # WIP — current handoff
 
+> **Tester onboarding updated 2026-07-29:** the landing page no longer embeds
+> the unreliable Google Form. Its **Request access** buttons scroll to three
+> direct instructions: join `groups.google.com/g/homedesignertest`, opt in at
+> the Google Play testing URL, and install from the public Play listing. All
+> three steps tell testers to use the same Google account.
+
 > **Infrastructure migration completed 2026-07-29:** Cloudflare is authoritative
 > through `amit.ns.cloudflare.com` and `laila.ns.cloudflare.com`. The Git-backed
 > Pages project `homedesignerapp` builds the merged default branch with
