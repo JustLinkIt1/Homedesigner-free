@@ -5,7 +5,7 @@ import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postproce
 import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
-import { snapToGrid } from '../../lib/geometry';
+import { angleDeg, snapToGrid } from '../../lib/geometry';
 import { activeTier, tierCaps } from '../../lib/perfTier';
 import { getGroundTexture, GROUND_DEFAULTS, type GroundKind } from '../../lib/textures';
 import { buildSnapElements, nearestSnap, lockToAngle } from '../../lib/snapping';
@@ -25,6 +25,7 @@ import { finishForFace, withFaceFinish } from '../../lib/wallFaces';
 import { CATALOG_BY_TYPE, FLOOR_MATERIALS } from '../../data/furnitureCatalog';
 import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl } from '../../data/materials';
 import { useI18n } from '../../lib/i18n';
+import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
 
 export { sunModel };
 
@@ -823,9 +824,29 @@ export default function Scene3D() {
     const pending = st.pendingFurnitureType;
     if (pending) {
       const entry = CATALOG_BY_TYPE[pending];
-      if (!entry?.opening && tap.kind === 'room' && tap.position) {
-        const id = st.addFurniture(pending, tap.position);
+      if (!entry?.opening && tap.position && tap.kind === 'wall' && isWallPlaceable(entry)) {
+        const wall = st.walls.find((candidate) => candidate.id === tap.id);
+        if (wall) {
+          const preferredBase = tap.elevation != null
+            ? tap.elevation - entry.height / 2
+            : entry.mountY ?? 110;
+          const maxBase = Math.max(0, wall.height - entry.height);
+          const id = st.addFurniture(pending, tap.position, {
+            rotation: angleDeg(wall.start, wall.end),
+            elevation: Math.max(0, Math.min(maxBase, preferredBase)),
+          });
+          st.select({ kind: 'furniture', id });
+          st.setPendingFurniture(null);
+          st.setTool('select');
+        }
+      } else if (!entry?.opening && tap.kind === 'room' && tap.position && !isWallPlaceable(entry)) {
+        const elevation = isSurfacePlaceable(entry)
+          ? supportElevationAt(tap.position, st.furniture)
+          : 0;
+        const id = st.addFurniture(pending, tap.position, { elevation });
         st.select({ kind: 'furniture', id });
+        st.setPendingFurniture(null);
+        st.setTool('select');
       }
       // Placement mode owns surface taps; never open the paint palette while
       // the user is trying to add an object.

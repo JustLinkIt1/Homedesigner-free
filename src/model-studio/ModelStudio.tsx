@@ -57,24 +57,25 @@ function slug(value: string): string {
 function suggestedMetadata(prompt: string): PublishMetadata {
   const lower = prompt.toLowerCase();
   if (/\btv\b|television|media (unit|cabinet|console)/.test(lower)) {
+    const wallMounted = /wall[ -]?mount|mounted on (a |the )?wall/.test(lower);
     return {
-      mode: 'entry', type: 'tv_media_unit', name: 'TV & Media Unit', category: 'Living',
-      shape: 'tv', width: 200, depth: 55, height: 140, color: '#26262b', icon: '📺',
-      pro: true, fit: 'contain', yaw: 0, rightsConfirmed: false,
+      mode: 'entry', type: wallMounted ? 'wall_mount_tv' : 'tv_media_unit', name: wallMounted ? 'Wall-mounted TV' : 'TV & Media Unit', category: 'Living',
+      shape: 'tv', width: wallMounted ? 160 : 200, depth: wallMounted ? 10 : 55, height: wallMounted ? 95 : 140, color: '#26262b', icon: '📺',
+      pro: true, fit: 'stretch', yaw: 0, placement: wallMounted ? 'wall' : 'floor', mountY: wallMounted ? 90 : 0, rightsConfirmed: false,
     };
   }
   if (/sofa|couch/.test(lower)) {
     return {
       mode: 'entry', type: 'ai_sofa', name: 'Designer Sofa', category: 'Living',
       shape: 'sofa', width: 210, depth: 95, height: 85, color: '#7b8491', icon: '🛋️',
-      pro: true, fit: 'contain', yaw: 0, rightsConfirmed: false,
+      pro: true, fit: 'stretch', yaw: 0, placement: 'floor', mountY: 0, rightsConfirmed: false,
     };
   }
   if (/chair|armchair/.test(lower)) {
     return {
       mode: 'entry', type: 'ai_armchair', name: 'Designer Armchair', category: 'Living',
       shape: 'chair', width: 85, depth: 85, height: 90, color: '#8a7868', icon: '🪑',
-      pro: true, fit: 'contain', yaw: 0, rightsConfirmed: false,
+      pro: true, fit: 'stretch', yaw: 0, placement: 'floor', mountY: 0, rightsConfirmed: false,
     };
   }
   const first = prompt.split(/[,.]/)[0].replace(/^(a|an|the)\s+/i, '').trim() || 'Generated furniture';
@@ -82,7 +83,7 @@ function suggestedMetadata(prompt: string): PublishMetadata {
   return {
     mode: 'entry', type: slug(name) || 'generated_furniture', name, category: 'Living',
     shape: 'box', width: 100, depth: 60, height: 90, color: '#8b7b6b', icon: '▣',
-    pro: true, fit: 'contain', yaw: 0, rightsConfirmed: false,
+    pro: true, fit: 'stretch', yaw: 0, placement: 'floor', mountY: 0, rightsConfirmed: false,
   };
 }
 
@@ -540,6 +541,8 @@ export default function ModelStudio() {
                 <label>Colour<input type="color" value={metadata.color} onChange={(event) => setMetadata({ ...metadata, color: event.target.value })} /></label>
                 <label>Fit<select value={metadata.fit} onChange={(event) => setMetadata({ ...metadata, fit: event.target.value as PublishMetadata['fit'] })}><option value="contain">Contain</option><option value="width">Width</option><option value="depth">Depth</option><option value="stretch">Stretch</option></select></label>
                 <label>Yaw (degrees)<input type="number" value={metadata.yaw} onChange={(event) => setMetadata({ ...metadata, yaw: Number(event.target.value) })} /></label>
+                <label>Placement<select value={metadata.placement} onChange={(event) => setMetadata({ ...metadata, placement: event.target.value as PublishMetadata['placement'] })}><option value="floor">Floor</option><option value="surface">On furniture / surface</option><option value="wall">Wall mounted</option></select></label>
+                {metadata.placement === 'wall' && <label>Base above floor (cm)<input type="number" min="0" value={metadata.mountY} onChange={(event) => setMetadata({ ...metadata, mountY: Number(event.target.value) })} /></label>}
               </div>
               <div className="studio-row wrap">
                 <label className="studio-check"><input type="checkbox" checked={metadata.pro} onChange={(event) => setMetadata({ ...metadata, pro: event.target.checked })} /> Pro catalogue item</label>

@@ -134,7 +134,11 @@ interface DesignState extends DesignSnapshot {
   updateWall: (id: string, patch: Partial<Wall>) => void;
   addRoom: (points: Point[]) => string;
   updateRoom: (id: string, patch: Partial<Room>) => void;
-  addFurniture: (type: string, position: Point) => string;
+  addFurniture: (
+    type: string,
+    position: Point,
+    placement?: Partial<Pick<FurnitureItem, 'rotation' | 'elevation'>>,
+  ) => string;
   /** Whether the kitchen-run tool also tiles wall cabinets above the base run. */
   kitchenUppers: boolean;
   setKitchenUppers: (v: boolean) => void;
@@ -273,6 +277,19 @@ const fixOpenings = (g: FloorGeom): FloorGeom => {
   };
 };
 
+/** Correct the first wall-TV publication, whose thin X axis was accidentally
+ * saved as width and long Z axis as depth. Restrict the migration to that type
+ * and unmistakable portrait footprint so intentional user sizes survive. */
+const fixFurnitureAxes = (g: FloorGeom): FloorGeom => {
+  if (!g.furniture.some((item) => item.type === 'wallmounttv' && item.width < item.depth)) return g;
+  return {
+    ...g,
+    furniture: g.furniture.map((item) => item.type === 'wallmounttv' && item.width < item.depth
+      ? { ...item, width: item.depth, depth: item.width }
+      : item),
+  };
+};
+
 /** Fill in multi-floor fields for saves that predate storeys + fix openings. */
 const withFloors = (snap: MaybeFloored): DesignSnapshot => {
   let result: DesignSnapshot;
@@ -297,13 +314,14 @@ const withFloors = (snap: MaybeFloored): DesignSnapshot => {
     };
   }
   const floorGeom: Record<string, FloorGeom> = {};
-  for (const fid in result.floorGeom) floorGeom[fid] = fixOpenings(result.floorGeom[fid]);
+  for (const fid in result.floorGeom) floorGeom[fid] = fixFurnitureAxes(fixOpenings(result.floorGeom[fid]));
   const active = floorGeom[result.activeFloorId];
   return {
     ...result,
     floors: normalizeRoofs(result.floors),
     floorGeom,
     openings: active ? active.openings : result.openings,
+    furniture: active ? active.furniture : result.furniture,
   };
 };
 
@@ -522,7 +540,7 @@ export const useDesign = create<DesignState>((set, get) => {
         if (i >= 0) d.rooms[i] = { ...d.rooms[i], ...patch };
       }),
 
-    addFurniture: (type, position) => {
+    addFurniture: (type, position, placement) => {
       const id = uid();
       const entry = CATALOG_BY_TYPE[type];
       if (!entry) return id;
@@ -532,10 +550,11 @@ export const useDesign = create<DesignState>((set, get) => {
           type,
           name: entry.name,
           position,
-          rotation: 0,
+          rotation: placement?.rotation ?? 0,
           width: entry.width,
           depth: entry.depth,
           height: entry.height,
+          ...(placement?.elevation != null ? { elevation: Math.max(0, placement.elevation) } : {}),
           color: entry.color,
         });
       });

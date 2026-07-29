@@ -137,6 +137,9 @@ export interface FurnitureItem {
   depth: number;
   /** Height in cm (for 3D). */
   height: number;
+  /** Base height above the current floor in cm. Used by wall-mounted and
+   * surface-snapped objects; omitted/zero keeps normal floor placement. */
+  elevation?: number;
   color: string;
 }
 

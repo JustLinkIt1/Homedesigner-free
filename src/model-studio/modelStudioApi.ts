@@ -77,6 +77,8 @@ export interface PublishMetadata {
   pro: boolean;
   fit: 'contain' | 'width' | 'depth' | 'stretch';
   yaw: number;
+  placement: 'floor' | 'surface' | 'wall';
+  mountY: number;
   rightsConfirmed: boolean;
 }
 

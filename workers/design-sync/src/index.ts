@@ -669,6 +669,10 @@ async function publishModel(request: Request, env: Env, job: ModelStudioJob): Pr
   const depth = cleanPositive(body.depth);
   const height = cleanPositive(body.height);
   const mode = body.mode === 'override' ? 'override' : 'entry';
+  const placement = body.placement === 'surface' || body.placement === 'wall' ? body.placement : 'floor';
+  const mountY = typeof body.mountY === 'number' && Number.isFinite(body.mountY) && body.mountY >= 0 && body.mountY <= 2_000
+    ? body.mountY
+    : 0;
   if (
     !type || !/^[a-z0-9][a-z0-9_-]*$/.test(type) || !name || !category ||
     (mode === 'entry' && !allowedCatalogCategories.has(category)) ||
@@ -749,6 +753,8 @@ async function publishModel(request: Request, env: Env, job: ModelStudioJob): Pr
       type, name, category, width, depth, height, color, shape,
       icon: cleanString(body.icon, 12) ?? '▣',
       pro: body.pro !== false,
+      placement,
+      ...(placement === 'wall' ? { mountY } : {}),
       model,
     });
   }

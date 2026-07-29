@@ -9,6 +9,25 @@ changes and add an entry when you ship one.
 
 ### Private Model Studio and render-quality models
 
+- Fixed generated-model sizing so AI GLBs honor the catalogue width, depth and
+  height exactly, including quarter-turn yaw axis mapping. Existing wall-TV
+  saves with the original swapped footprint migrate automatically.
+- Model Studio now defaults generated models to exact-dimension fitting,
+  recognizes wall-mounted TV prompts, and publishes explicit floor, surface or
+  wall placement metadata plus wall mounting height.
+- Wall-mounted objects now snap to the tapped wall and its direction in 2D and
+  3D. Small décor, cushions, lamps and monitors snap onto the highest furniture
+  surface beneath the placement point.
+- Furniture/opening placement is one-shot: after a successful placement the
+  object is selected and the editor returns to Select, preventing accidental
+  duplicate items. Mobile selection now has a prominent floating delete button.
+- Restored the Google account/avatar menu in the desktop editor toolbar.
+- Corrected the live wall-mounted TV catalogue entry to `200 × 10 × 100 cm`,
+  exact fit and a 90° model-axis correction. Deployed Cloudflare Worker version
+  `b18278b5-c0df-4b99-8154-b29e2a797c3f` and Pages deployment
+  `https://d6280e3e.homedesignerapp.pages.dev` (asset namespace
+  `20260729202820875`).
+
 - Added the owner-only Model Studio at `/app/model-studio/`, authenticated with
   the existing Google account and backed by private Cloudflare Worker routes.
   It supports text-first Hunyuan Pro generation, local GLB inspection, dual

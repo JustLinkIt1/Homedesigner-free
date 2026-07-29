@@ -32,6 +32,7 @@ import { isFence, isHalfWall } from '../../lib/fence';
 import { formatLength, formatArea, type Units } from '../../lib/units';
 import { selectionTick, tapMedium } from '../../lib/haptics';
 import { useTheme, canvasColors } from '../../lib/theme';
+import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
 import type { Point, Selection } from '../../types';
 import {
   resizeBox,
@@ -558,10 +559,31 @@ export default function Canvas2D() {
           const frac = Math.max(half / len, Math.min(1 - half / len, hit.t));
           const id = s.addOpening(hit.wall.id, frac, type);
           s.select({ kind: 'opening', id });
+          s.setPendingFurniture(null);
+          s.setTool('select');
         }
       } else {
-        const id = s.addFurniture(type, snapped);
+        let position = snapped;
+        let rotation = 0;
+        let elevation: number | undefined;
+        if (isWallPlaceable(catalogEntry)) {
+          const hit = nearestWall(p);
+          if (!hit || hit.dist >= Math.max(hit.wall.thickness * 2, 55 / zoom)) {
+            toast.info(tr('Tap a wall to place this object.'));
+            return;
+          }
+          position = lerp(hit.wall.start, hit.wall.end, hit.t);
+          rotation = angleDeg(hit.wall.start, hit.wall.end);
+          elevation = catalogEntry.mountY ?? 110;
+        } else if (isSurfacePlaceable(catalogEntry)) {
+          elevation = supportElevationAt(position, s.furniture);
+        }
+        const id = s.addFurniture(type, position, { rotation, elevation });
         s.select({ kind: 'furniture', id });
+        // Object placement is deliberately one-shot. The new item stays
+        // selected for moving/scaling instead of the next tap duplicating it.
+        s.setPendingFurniture(null);
+        s.setTool('select');
       }
     } else if (tool === 'measure') {
       if (!measureA) {

@@ -66,12 +66,19 @@ export default function GltfFurniture({ item, preferRender = false }: { item: Fu
     box.getSize(size);
     box.getCenter(center);
 
-    const sx = (item.width * M) / (size.x || 1);
-    const sz = (item.depth * M) / (size.z || 1);
-    if (def.fit === 'stretch') {
+    // Dimensions are expressed in world-facing axes. A quarter-turn yaw swaps
+    // the model's local X/Z targets; accounting for that here prevents a thin
+    // TV from treating its 200 cm screen width as its 10 cm depth.
+    const yaw = def.yaw ?? 0;
+    const quarterTurn = Math.abs(Math.sin(yaw)) > Math.abs(Math.cos(yaw));
+    const localWidth = quarterTurn ? item.depth : item.width;
+    const localDepth = quarterTurn ? item.width : item.depth;
+    const sx = (localWidth * M) / (size.x || 1);
+    const sy = (item.height * M) / (size.y || 1);
+    const sz = (localDepth * M) / (size.z || 1);
+    if (def.fit === 'stretch' || def.source?.license === 'AI-generated') {
       // Fill width×depth×height independently — for boxy cabinetry whose model
       // is authored at the wrong size, so it reaches true counter/upper height.
-      const sy = (item.height * M) / (size.y || 1);
       clone.scale.set(sx, sy, sz);
       clone.position.set(
         -center.x * sx,
@@ -80,7 +87,7 @@ export default function GltfFurniture({ item, preferRender = false }: { item: Fu
       );
     } else {
       // Uniform scale fitting both footprint dimensions (keeps proportions).
-      const scale = def.fit === 'width' ? sx : def.fit === 'depth' ? sz : Math.min(sx, sz);
+      const scale = def.fit === 'width' ? sx : def.fit === 'depth' ? sz : Math.min(sx, sy, sz);
       clone.scale.setScalar(scale);
       // Recentre horizontally and rest the base on y = 0.
       clone.position.set(
@@ -98,7 +105,7 @@ export default function GltfFurniture({ item, preferRender = false }: { item: Fu
       }
     });
     return clone;
-  }, [scene, item.width, item.depth, item.height, def.fit, def.offsetY]);
+  }, [scene, item.width, item.depth, item.height, def.fit, def.offsetY, def.source?.license, def.yaw]);
 
   return (
     <group rotation={[0, def.yaw ?? 0, 0]}>

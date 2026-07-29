@@ -240,6 +240,10 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
     shape,
     icon,
     pro: value.pro === false ? undefined : true,
+    placement: value.placement === 'surface' || value.placement === 'wall' ? value.placement : undefined,
+    mountY: typeof value.mountY === 'number' && Number.isFinite(value.mountY) && value.mountY >= 0 && value.mountY <= 2_000
+      ? value.mountY
+      : undefined,
     cloud: true,
     model: {
       url: modelUrl,

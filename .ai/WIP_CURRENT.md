@@ -1,5 +1,17 @@
 # WIP — current handoff
 
+> **Placement, scaling and desktop account fixes live 2026-07-29:** generated
+> Fal models now obey exact width/depth/height in the app, with yaw-aware axis
+> mapping; the first wall-TV save format auto-migrates its swapped footprint.
+> Model Studio defaults to exact sizing and publishes floor/surface/wall
+> placement metadata. Wall objects snap to walls, small décor snaps onto other
+> furniture, placement disarms after one item, and mobile selection has a
+> floating delete action. The account/avatar menu is restored in the desktop
+> editor toolbar. The live wall TV is corrected to 200×10×100 cm with 90° yaw.
+> Worker version `b18278b5-c0df-4b99-8154-b29e2a797c3f`; Pages deployment
+> `https://d6280e3e.homedesignerapp.pages.dev`; asset namespace
+> `20260729202820875`.
+
 > **Release 1.12.1 built 2026-07-29:** Android versionCode **11201** includes
 > the owner-only Account-menu entry for Model Studio. Signed delivery artifact:
 > `outputs/HomeDesigner-1.12.1-11201.aab`, 29,638,941 bytes, SHA-256

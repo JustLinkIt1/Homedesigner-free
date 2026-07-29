@@ -82,6 +82,8 @@ export type SurfaceTap = {
   y: number;
   /** Plan-space position for direct placement on a room floor. */
   position?: Point;
+  /** Exact height of the tapped point above this storey's floor, in cm. */
+  elevation?: number;
   /** Exact room-facing stretch when a wall face was tapped. */
   wallFace?: WallFaceRange;
 };
@@ -279,6 +281,7 @@ function WallMesh({
                 x: e.nativeEvent.clientX,
                 y: e.nativeEvent.clientY,
                 position,
+                elevation: e.point.y / M,
                 wallFace: wallFaceAt(wall, rooms, position),
               });
             }
@@ -970,6 +973,7 @@ function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: Furn
                 x: e.nativeEvent.clientX,
                 y: e.nativeEvent.clientY,
                 position: { x: e.point.x / M, y: e.point.z / M },
+                elevation: 0,
               });
             }
           : undefined
@@ -1080,8 +1084,9 @@ function FloorContent({
   // its height, thickness, paint or delete it — wall editing right in 3D) AND
   // opens the quick paint popover at the tap point.
   const tapSurface = (tap: SurfaceTap) => {
-    select({ kind: tap.kind, id: tap.id, wallFace: tap.kind === 'wall' ? tap.wallFace : undefined });
-    onSurfaceTap?.(tap);
+    const localTap = tap.elevation == null ? tap : { ...tap, elevation: Math.max(0, tap.elevation - elevation) };
+    select({ kind: localTap.kind, id: localTap.id, wallFace: localTap.kind === 'wall' ? localTap.wallFace : undefined });
+    onSurfaceTap?.(localTap);
   };
   const onTap = interactive ? tapSurface : undefined;
 

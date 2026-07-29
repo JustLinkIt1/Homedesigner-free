@@ -79,6 +79,9 @@ export interface CatalogEntry {
    *  on it (e.g. upper kitchen cabinets at 140). Ceiling fixtures use their own
    *  logic and ignore this. */
   mountY?: number;
+  /** Preferred placement target. Surface items may rest on furniture; wall
+   * items snap to a wall face and use mountY (or the tapped height). */
+  placement?: 'floor' | 'surface' | 'wall';
   /** Optional real model. Remote catalog entries use an absolute R2 URL while
    *  bundled entries continue to resolve through GltfFurniture's local map. */
   model?: {

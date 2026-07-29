@@ -28,6 +28,7 @@ import { requirePro } from '../lib/pro';
 import { useProStore } from '../store/proStore';
 import { useI18n } from '../lib/i18n';
 import { capturePlanThumbnail } from '../lib/thumb';
+import AccountButton from './AccountButton';
 
 function SavedBadge({ tick }: { tick: number }) {
   const [saving, setSaving] = useState(false);
@@ -283,6 +284,10 @@ export default function Toolbar({
       </div>
 
       <div className="spacer" />
+
+      <div className="toolbar-account">
+        <AccountButton />
+      </div>
 
       <div className="view-toggle">
         <button className={s.view === '2d' ? 'active' : ''} onClick={() => s.setView('2d')}>
