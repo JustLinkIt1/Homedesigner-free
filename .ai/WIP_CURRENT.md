@@ -8,6 +8,19 @@
 > Studio history has no R2 TTL; the UI lists the newest 40 jobs while older
 > records remain stored.
 
+> **Catalogue safety + free TV media unit live 2026-07-29:** Model Studio now
+> derives category and object-type dropdowns from the shipped catalogue, and
+> existing-model replacement uses a canonical bundled-item selector. The remote
+> catalogue reader and Worker both reject unknown room categories. Worker
+> version `43dd5a75-5040-4094-b031-618bb3405d6b`; Pages deployment
+> `https://0aa0528a.homedesignerapp.pages.dev` uses asset namespace
+> `20260729174223912`. The supplied Hunyuan Pro TV/media cabinet is published as
+> free `tv_media_unit` under Living/Storage with validated immutable mobile
+> (886,564 bytes, SHA-256 `d5eaf65a8cf6d8183c3222ce703af1cd8dadf52d97fa07327170561225dbffde`)
+> and render (2,277,128 bytes, SHA-256
+> `22d0082f9ab4e1bfe28623c84bdd9716af0b58b78002b67ebdd2bf8ac65f63f8`)
+> Cloudflare tiers. It is cloud-delivered and does not increase the Android AAB.
+
 > **Web cache failure permanently hardened 2026-07-29:** Vite now emits every
 > generated asset under a unique per-deployment namespace, including otherwise
 > unchanged vendor chunks. A top-level `404.html` disables Cloudflare Pages'

@@ -60,6 +60,18 @@ changes and add an entry when you ship one.
   a missing JavaScript URL returns an uncached HTTP 404 instead of landing-page
   HTML, and an already affected Chrome profile loaded the apex app successfully
   without clearing its cache.
+- Replaced Model Studio's free-text category and renderer-shape fields with
+  dropdowns derived from the categories and shapes already shipped by the app.
+  Existing-model replacement also uses a bundled-item dropdown and copies its
+  canonical metadata, reducing the chance of publishing an unusable override.
+- Enforced the same room-category allowlist in the Cloudflare Worker and remote
+  catalogue reader so an outdated or malformed client cannot introduce a new
+  top-level catalogue category. Deployed Worker version
+  `43dd5a75-5040-4094-b031-618bb3405d6b`.
+- Published the supplied generated **Modern TV & Media Unit** as a free Living
+  item. Its validated Cloudflare delivery tiers are 886,564 bytes for normal
+  editing and 2,277,128 bytes for HD renders; the item also appears in the
+  existing Storage type grouping without adding a new UI category.
 
 ### Internal model production
 

@@ -35,9 +35,15 @@ import {
   type StudioJob,
 } from './modelStudioApi';
 import type { GlbStats } from './optimizeGlb';
+import {
+  FURNITURE_CATALOG,
+  PUBLISHABLE_CATALOG_CATEGORIES,
+  PUBLISHABLE_CATALOG_SHAPES,
+} from '../data/furnitureCatalog';
 import './modelStudio.css';
 
 const STARTER_PROMPT = 'A modern TV on a stylish media cabinet, with a small stack of books on the left and a decorative vase on the right. Clean product design, realistic materials, isolated object.';
+const OVERRIDABLE_ITEMS = FURNITURE_CATALOG.filter((entry) => !entry.opening);
 
 function bytes(value: number): string {
   if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
@@ -332,6 +338,36 @@ export default function ModelStudio() {
     }
   };
 
+  const selectOverride = (type: string) => {
+    const entry = OVERRIDABLE_ITEMS.find((item) => item.type === type);
+    if (!entry) return;
+    setMetadata({
+      ...metadata,
+      mode: 'override',
+      type: entry.type,
+      name: entry.name,
+      category: entry.category,
+      shape: entry.shape,
+      width: entry.width,
+      depth: entry.depth,
+      height: entry.height,
+      color: entry.color,
+      icon: entry.icon,
+      pro: !!entry.pro,
+    });
+  };
+
+  const selectPublishMode = (mode: PublishMetadata['mode']) => {
+    if (mode === 'override') {
+      const matching = OVERRIDABLE_ITEMS.find((entry) => entry.type === metadata.type)
+        ?? OVERRIDABLE_ITEMS.find((entry) => entry.shape === metadata.shape)
+        ?? OVERRIDABLE_ITEMS[0];
+      if (matching) selectOverride(matching.type);
+      return;
+    }
+    setMetadata({ ...metadata, mode });
+  };
+
   if (!ready) {
     return <main className="model-studio centered"><LoaderCircle className="spin" /> Checking Google session…</main>;
   }
@@ -475,11 +511,15 @@ export default function ModelStudio() {
               <h2>Catalogue details</h2>
               <p>These fields are the exact data HomeDesigner reads. Publishing uploads the immutable GLB first and the catalogue manifest last.</p>
               <div className="studio-fields">
-                <label>Publish as<select value={metadata.mode} onChange={(event) => setMetadata({ ...metadata, mode: event.target.value as PublishMetadata['mode'] })}><option value="entry">New item</option><option value="override">Replace existing model</option></select></label>
-                <label>Type / slug<input value={metadata.type} onChange={(event) => setMetadata({ ...metadata, type: slug(event.target.value) })} /></label>
+                <label>Publish as<select value={metadata.mode} onChange={(event) => selectPublishMode(event.target.value as PublishMetadata['mode'])}><option value="entry">New item</option><option value="override">Replace existing model</option></select></label>
+                {metadata.mode === 'override' ? (
+                  <label>Existing item<select value={metadata.type} onChange={(event) => selectOverride(event.target.value)}>{OVERRIDABLE_ITEMS.map((entry) => <option key={entry.type} value={entry.type}>{entry.name}</option>)}</select></label>
+                ) : (
+                  <label>Type / slug<input value={metadata.type} onChange={(event) => setMetadata({ ...metadata, type: slug(event.target.value) })} /></label>
+                )}
                 <label>Name<input value={metadata.name} onChange={(event) => setMetadata({ ...metadata, name: event.target.value })} /></label>
-                <label>Category<input value={metadata.category} onChange={(event) => setMetadata({ ...metadata, category: event.target.value })} /></label>
-                <label>Shape<input value={metadata.shape} onChange={(event) => setMetadata({ ...metadata, shape: event.target.value })} /></label>
+                <label>Category<select value={metadata.category} onChange={(event) => setMetadata({ ...metadata, category: event.target.value })}>{PUBLISHABLE_CATALOG_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+                <label>Object type<select value={metadata.shape} onChange={(event) => setMetadata({ ...metadata, shape: event.target.value })}>{PUBLISHABLE_CATALOG_SHAPES.map((shape) => <option key={shape} value={shape}>{shape.replace(/_/g, ' ')}</option>)}</select></label>
                 <label>Icon<input value={metadata.icon} onChange={(event) => setMetadata({ ...metadata, icon: event.target.value })} /></label>
                 <label>Width (cm)<input type="number" value={metadata.width} onChange={(event) => setMetadata({ ...metadata, width: Number(event.target.value) })} /></label>
                 <label>Depth (cm)<input type="number" value={metadata.depth} onChange={(event) => setMetadata({ ...metadata, depth: Number(event.target.value) })} /></label>

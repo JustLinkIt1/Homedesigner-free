@@ -144,7 +144,8 @@ export function catalogGroupFor(entry: CatalogEntry): CatalogGroup {
   if (entry.shape === 'table' || entry.shape === 'side_table') return 'Tables';
   if (
     entry.shape === 'bookshelf' ||
-    ['nightstand', 'wardrobe', 'dresser', 'display_cabinet', 'sideboard', 'chest_of_drawers'].includes(entry.type)
+    ['nightstand', 'wardrobe', 'dresser', 'display_cabinet', 'sideboard', 'chest_of_drawers',
+      'low_media_console', 'tv_media_unit'].includes(entry.type)
   ) return 'Storage';
   if (DECOR_TYPES.has(entry.type) || entry.category === 'Decor') return 'Decor';
   return 'Other';
@@ -285,6 +286,17 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'sliding_window', pro: true, name: 'Sliding Window', category: 'Openings', width: 150, depth: 12, height: 120, color: '#bfe3f2', shape: 'window_sliding', icon: '🪟', opening: { kind: 'window', style: 'sliding', sill: 90 } },
   { type: 'casement_window', pro: true, name: 'Casement Window', category: 'Openings', width: 60, depth: 12, height: 120, color: '#bfe3f2', shape: 'window_casement', icon: '🪟', opening: { kind: 'window', style: 'casement', sill: 90 } },
 ];
+
+/** Values accepted by the private Model Studio for new furniture. Derive these
+ * from the shipped catalogue so the production tool cannot drift into a room
+ * category or renderer shape that the app does not already understand. */
+export const PUBLISHABLE_CATALOG_CATEGORIES = [
+  ...new Set(FURNITURE_CATALOG.filter((entry) => !entry.opening).map((entry) => entry.category)),
+] as readonly string[];
+
+export const PUBLISHABLE_CATALOG_SHAPES = [
+  ...new Set(FURNITURE_CATALOG.filter((entry) => !entry.opening).map((entry) => entry.shape)),
+] as readonly Shape3D[];
 
 /** Default wall thickness (cm) — single source for the store default and the
  *  bundled samples, so a future change can't make them diverge. */

@@ -49,6 +49,9 @@ const bundledByType: Record<string, CatalogEntry> = Object.fromEntries(
   FURNITURE_CATALOG.map((entry) => [entry.type, entry]),
 );
 const allowedShapes = new Set<Shape3D>(FURNITURE_CATALOG.map((entry) => entry.shape));
+const allowedCategories = new Set(
+  FURNITURE_CATALOG.filter((entry) => !entry.opening).map((entry) => entry.category),
+);
 let snapshot: CatalogSnapshot = {
   entries: FURNITURE_CATALOG,
   status: 'idle',
@@ -170,7 +173,7 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
   const depth = cleanDimension(value.depth);
   const height = cleanDimension(value.height);
   const shape = value.shape as Shape3D;
-  if (!type || !/^[a-z0-9][a-z0-9_-]*$/.test(type) || !name || !category || !color) return null;
+  if (!type || !/^[a-z0-9][a-z0-9_-]*$/.test(type) || !name || !category || !allowedCategories.has(category) || !color) return null;
   if (!width || !depth || !height || !allowedShapes.has(shape)) return null;
   // New cloud entries may never shadow an object bundled with the app. Check
   // the immutable baseline rather than CATALOG_BY_TYPE, which also contains

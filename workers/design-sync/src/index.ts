@@ -604,6 +604,11 @@ interface CatalogManifest {
   overrides?: Record<string, unknown>[];
 }
 
+const allowedCatalogCategories = new Set([
+  'Living', 'Bedroom', 'Dining', 'Kitchen', 'Bathroom', 'Office',
+  'Lighting', 'Decor', 'Outdoor',
+]);
+
 function cleanString(value: unknown, max: number): string | null {
   if (typeof value !== 'string') return null;
   const clean = value.trim();
@@ -634,6 +639,7 @@ async function publishModel(request: Request, env: Env, job: ModelStudioJob): Pr
   const mode = body.mode === 'override' ? 'override' : 'entry';
   if (
     !type || !/^[a-z0-9][a-z0-9_-]*$/.test(type) || !name || !category ||
+    (mode === 'entry' && !allowedCatalogCategories.has(category)) ||
     !shape || !allowedShapes.has(shape) || !color || !/^#[a-f0-9]{6}$/i.test(color) ||
     !width || !depth || !height || body.rightsConfirmed !== true
   ) {
