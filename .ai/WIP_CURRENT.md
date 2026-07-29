@@ -21,6 +21,20 @@
 > `22d0082f9ab4e1bfe28623c84bdd9716af0b58b78002b67ebdd2bf8ac65f63f8`)
 > Cloudflare tiers. It is cloud-delivered and does not increase the Android AAB.
 
+> **Catalogue previews, filters and samples refreshed 2026-07-29:** generated
+> TV/media-unit and dining-chair catalogue tiles now use immutable 512px renders
+> of their actual optimized GLBs. The manifest schema and client accept only
+> same-origin PNG/JPEG/WebP thumbnails; missing thumbnails fall back to current
+> symbols rather than stale bundled sprites. Future Fal thumbnails are copied
+> to R2 automatically by Worker version
+> `6207dc27-c0ee-4703-8f5f-0d857b059e06`. Model Studio's existing-item dropdown
+> is category-scoped, and selected catalogue chips use brand styling in dark
+> mode. The sample homes retain stable built-in types but now receive cloud
+> overrides for TV, dining chairs, sofa, armchair, bed, plants, bathtub,
+> dresser and nightstands, preserving offline fallbacks. Pages deployment
+> `https://810ba9a4.homedesignerapp.pages.dev` uses asset namespace
+> `20260729182459292`.
+
 > **Web cache failure permanently hardened 2026-07-29:** Vite now emits every
 > generated asset under a unique per-deployment namespace, including otherwise
 > unchanged vendor chunks. A top-level `404.html` disables Cloudflare Pages'

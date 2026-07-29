@@ -828,8 +828,8 @@ button.brand:hover .brand-name {
   border-color: var(--border-strong);
 }
 .chip.active {
-  background: var(--text);
-  border-color: var(--text);
+  background: var(--brand);
+  border-color: var(--brand);
   color: #fff;
 }
 .cat-section {
@@ -892,6 +892,19 @@ button.brand:hover .brand-name {
   height: 42px;
   object-fit: contain;
   filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--text) 18%, transparent));
+}
+.cat-item .ci-thumbnail {
+  width: 68px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 8px;
+  filter: drop-shadow(0 5px 6px color-mix(in srgb, var(--text) 20%, transparent));
+}
+.catalog-preview-image.ci-thumbnail {
+  width: min(82%, 220px);
+  height: 112px;
+  object-fit: contain;
+  border-radius: 11px;
 }
 .cat-item:hover .ci-symbol,
 .cat-item.active .ci-symbol {

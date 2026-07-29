@@ -72,6 +72,23 @@ changes and add an entry when you ship one.
   item. Its validated Cloudflare delivery tiers are 886,564 bytes for normal
   editing and 2,277,128 bytes for HD renders; the item also appears in the
   existing Storage type grouping without adding a new UI category.
+- Added real model-rendered catalogue thumbnails for the generated TV/media
+  unit and dining chair, replacing the stale legacy sprite and generic line
+  preview. Cloud entries without an approved thumbnail now use their current
+  shape symbol instead of showing a potentially unrelated bundled sprite.
+- Extended Model Studio publishing so Fal's generated thumbnail is copied into
+  immutable Cloudflare storage and written to future catalogue entries and
+  overrides. Deployed Worker version
+  `6207dc27-c0ee-4703-8f5f-0d857b059e06`.
+- Fixed selected catalogue category chips using a light foreground in dark mode;
+  active Room/Type filters now consistently use the app's brand colour.
+- Scoped Model Studio's **Existing item** selector to the chosen room category.
+  Changing category while replacing a model selects the first valid item in
+  that category, preventing mismatched category/item metadata.
+- Upgraded all four sample homes through stable cloud overrides for the TV,
+  dining chairs, sofa, armchair, double bed, plants, bathtub, dresser and
+  nightstands. Stable built-in item IDs remain in the templates, preserving
+  offline procedural fallbacks while the online homes use the newer models.
 
 ### Internal model production
 

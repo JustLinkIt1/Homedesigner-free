@@ -150,6 +150,7 @@ function validateModel(value: unknown, manifestUrl: URL): NonNullable<CatalogEnt
   const renderSha256 = renderShaText && /^[a-f0-9]{64}$/i.test(renderShaText)
     ? renderShaText.toLowerCase()
     : undefined;
+  const thumbnailUrl = sameOriginUrl(value.thumbnailUrl, manifestUrl);
   return {
     url: modelUrl,
     yaw,
@@ -158,6 +159,7 @@ function validateModel(value: unknown, manifestUrl: URL): NonNullable<CatalogEnt
     bytes,
     sha256,
     ...(renderUrl?.toLowerCase().endsWith('.glb') ? { renderUrl, renderBytes, renderSha256 } : {}),
+    ...((thumbnailUrl && /\.(?:png|jpe?g|webp)$/i.test(new URL(thumbnailUrl).pathname)) ? { thumbnailUrl } : {}),
     source,
   };
 }
@@ -252,6 +254,12 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
         const text = cleanText(value.model.renderSha256, 64);
         const renderSha256 = text && /^[a-f0-9]{64}$/i.test(text) ? text.toLowerCase() : undefined;
         return renderUrl?.toLowerCase().endsWith('.glb') ? { renderUrl, renderBytes, renderSha256 } : {};
+      })(),
+      ...(() => {
+        const thumbnailUrl = sameOriginUrl(value.model.thumbnailUrl, manifestUrl);
+        return thumbnailUrl && /\.(?:png|jpe?g|webp)$/i.test(new URL(thumbnailUrl).pathname)
+          ? { thumbnailUrl }
+          : {};
       })(),
       source,
     },

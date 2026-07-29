@@ -215,6 +215,9 @@ interface StagedModel {
   sha256: string;
   optimized: boolean;
   sourceRequestId?: string;
+  thumbnailKey?: string;
+  thumbnailMime?: string;
+  /** Legacy jobs may still hold Fal's temporary URL. New jobs copy it to R2. */
   thumbnailUrl?: string;
 }
 
@@ -250,6 +253,7 @@ const SOURCE_PREFIX = 'admin/model-studio/sources/';
 const STAGING_PREFIX = 'staging/generated/';
 const MAX_REFERENCE_BYTES = 8 * 1024 * 1024;
 const MAX_MODEL_BYTES = 75 * 1024 * 1024;
+const MAX_THUMBNAIL_BYTES = 4 * 1024 * 1024;
 const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const allowedShapes = new Set([
   'box', 'sofa', 'bed', 'chair', 'table', 'lamp', 'led_strip', 'cove_light',
@@ -306,7 +310,9 @@ function clientModelJob(request: Request, env: Env, job: ModelStudioJob) {
       bytes: activeModel.bytes,
       sha256: activeModel.sha256,
       optimized: activeModel.optimized,
-      thumbnailUrl: activeModel.thumbnailUrl,
+      thumbnailUrl: activeModel.thumbnailKey
+        ? publicAssetUrl(env, activeModel.thumbnailKey)
+        : activeModel.thumbnailUrl,
     } : undefined,
     renderModel: job.renderModel ? {
       url: publicAssetUrl(env, job.renderModel.key),
@@ -387,13 +393,35 @@ async function downloadGeneratedModel(
       cacheControl: 'public, max-age=300',
     },
   });
+  let thumbnail: { key: string; mime: string } | undefined;
+  if (thumbnailUrl?.startsWith('https://')) {
+    try {
+      const response = await fetch(thumbnailUrl, { redirect: 'follow' });
+      const mime = response.headers.get('Content-Type')?.split(';')[0] ?? '';
+      const declared = Number(response.headers.get('Content-Length') ?? 0);
+      if (response.ok && allowedImageTypes.has(mime) && declared <= MAX_THUMBNAIL_BYTES) {
+        const thumbnailBytes = await response.arrayBuffer();
+        if (thumbnailBytes.byteLength > 0 && thumbnailBytes.byteLength <= MAX_THUMBNAIL_BYTES) {
+          const extension = mime === 'image/png' ? 'png' : mime === 'image/jpeg' ? 'jpg' : 'webp';
+          const thumbnailKey = `${STAGING_PREFIX}${job.id}/generated-thumbnail.${extension}`;
+          await env.MODEL_ASSETS.put(thumbnailKey, thumbnailBytes, {
+            httpMetadata: { contentType: mime, cacheControl: 'public, max-age=300' },
+          });
+          thumbnail = { key: thumbnailKey, mime };
+        }
+      }
+    } catch {
+      // A missing Fal preview must not discard an otherwise valid GLB.
+    }
+  }
   return {
     key,
     bytes: bytes.byteLength,
     sha256: hash,
     optimized: false,
     sourceRequestId: job.generationTask?.requestId,
-    thumbnailUrl,
+    thumbnailKey: thumbnail?.key,
+    thumbnailMime: thumbnail?.mime,
   };
 }
 
@@ -584,6 +612,8 @@ async function uploadOptimizedModel(request: Request, env: Env, job: ModelStudio
     sha256: hash,
     optimized: true,
     sourceRequestId: job.generationTask?.requestId,
+    thumbnailKey: job.generatedModel?.thumbnailKey,
+    thumbnailMime: job.generatedModel?.thumbnailMime,
     thumbnailUrl: job.generatedModel?.thumbnailUrl,
   };
   job.renderModel = {
@@ -592,6 +622,8 @@ async function uploadOptimizedModel(request: Request, env: Env, job: ModelStudio
     sha256: renderHash,
     optimized: true,
     sourceRequestId: job.generationTask?.requestId,
+    thumbnailKey: job.generatedModel?.thumbnailKey,
+    thumbnailMime: job.generatedModel?.thumbnailMime,
     thumbnailUrl: job.generatedModel?.thumbnailUrl,
   };
   await writeModelJob(env, job);
@@ -646,13 +678,19 @@ async function publishModel(request: Request, env: Env, job: ModelStudioJob): Pr
     return json(request, { error: 'Complete valid metadata and confirm reference rights' }, 400);
   }
 
-  const [staged, stagedRender] = await Promise.all([
+  const [staged, stagedRender, stagedThumbnail] = await Promise.all([
     env.MODEL_ASSETS.get(job.stagedModel.key),
     env.MODEL_ASSETS.get(job.renderModel.key),
+    job.stagedModel.thumbnailKey ? env.MODEL_ASSETS.get(job.stagedModel.thumbnailKey) : null,
   ]);
   if (!staged || !stagedRender) return json(request, { error: 'Staged model package is unavailable' }, 409);
   const finalKey = `models/generated/${type}/${job.stagedModel.sha256.slice(0, 16)}.glb`;
   const finalRenderKey = `models/generated/${type}/${job.renderModel.sha256.slice(0, 16)}.render.glb`;
+  const thumbnailMime = job.stagedModel.thumbnailMime;
+  const thumbnailExtension = thumbnailMime === 'image/png' ? 'png' : thumbnailMime === 'image/jpeg' ? 'jpg' : 'webp';
+  const finalThumbnailKey = stagedThumbnail && thumbnailMime && allowedImageTypes.has(thumbnailMime)
+    ? `models/generated/${type}/${job.stagedModel.sha256.slice(0, 16)}.thumbnail.${thumbnailExtension}`
+    : null;
   await Promise.all([
     env.MODEL_ASSETS.put(finalKey, staged.body, {
       httpMetadata: {
@@ -666,6 +704,14 @@ async function publishModel(request: Request, env: Env, job: ModelStudioJob): Pr
         cacheControl: 'public, max-age=31536000, immutable',
       },
     }),
+    ...(finalThumbnailKey && stagedThumbnail && thumbnailMime ? [
+      env.MODEL_ASSETS.put(finalThumbnailKey, stagedThumbnail.body, {
+        httpMetadata: {
+          contentType: thumbnailMime,
+          cacheControl: 'public, max-age=31536000, immutable',
+        },
+      }),
+    ] : []),
   ]);
 
   const manifestObject = await env.MODEL_ASSETS.get('catalog/v1/catalog.json');
@@ -686,6 +732,7 @@ async function publishModel(request: Request, env: Env, job: ModelStudioJob): Pr
     renderUrl: publicAssetUrl(env, finalRenderKey),
     renderBytes: job.renderModel.bytes,
     renderSha256: job.renderModel.sha256,
+    ...(finalThumbnailKey ? { thumbnailUrl: publicAssetUrl(env, finalThumbnailKey) } : {}),
     source: {
       name: 'HomeDesigner AI-generated asset',
       url: `https://fal.ai/models/${generationEndpoint}`,

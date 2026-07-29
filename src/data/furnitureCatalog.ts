@@ -96,6 +96,8 @@ export interface CatalogEntry {
     renderUrl?: string;
     renderBytes?: number;
     renderSha256?: string;
+    /** Lightweight catalogue tile rendered from the real cloud model. */
+    thumbnailUrl?: string;
     source?: {
       name: string;
       url: string;

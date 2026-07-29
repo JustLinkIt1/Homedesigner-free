@@ -165,6 +165,10 @@ export default function ModelStudio() {
   const selectedCaption = selected?.caption;
   const selectedGenerator = STUDIO_GENERATORS.find((item) => item.id === generator) ?? STUDIO_GENERATORS[0];
   const promptLimit = generator === 'hunyuan-v3.1-rapid' ? 200 : 1024;
+  const categoryOverrideItems = useMemo(
+    () => OVERRIDABLE_ITEMS.filter((entry) => entry.category === metadata.category),
+    [metadata.category],
+  );
 
   const replaceJob = (next: StudioJob) => {
     setJobs((current) => [next, ...current.filter((job) => job.id !== next.id)]);
@@ -359,13 +363,22 @@ export default function ModelStudio() {
 
   const selectPublishMode = (mode: PublishMetadata['mode']) => {
     if (mode === 'override') {
-      const matching = OVERRIDABLE_ITEMS.find((entry) => entry.type === metadata.type)
-        ?? OVERRIDABLE_ITEMS.find((entry) => entry.shape === metadata.shape)
-        ?? OVERRIDABLE_ITEMS[0];
+      const matching = categoryOverrideItems.find((entry) => entry.type === metadata.type)
+        ?? categoryOverrideItems.find((entry) => entry.shape === metadata.shape)
+        ?? categoryOverrideItems[0];
       if (matching) selectOverride(matching.type);
       return;
     }
     setMetadata({ ...metadata, mode });
+  };
+
+  const selectCategory = (category: string) => {
+    if (metadata.mode === 'override') {
+      const first = OVERRIDABLE_ITEMS.find((entry) => entry.category === category);
+      if (first) selectOverride(first.type);
+      return;
+    }
+    setMetadata({ ...metadata, category });
   };
 
   if (!ready) {
@@ -513,12 +526,12 @@ export default function ModelStudio() {
               <div className="studio-fields">
                 <label>Publish as<select value={metadata.mode} onChange={(event) => selectPublishMode(event.target.value as PublishMetadata['mode'])}><option value="entry">New item</option><option value="override">Replace existing model</option></select></label>
                 {metadata.mode === 'override' ? (
-                  <label>Existing item<select value={metadata.type} onChange={(event) => selectOverride(event.target.value)}>{OVERRIDABLE_ITEMS.map((entry) => <option key={entry.type} value={entry.type}>{entry.name}</option>)}</select></label>
+                  <label>Existing item<select value={metadata.type} onChange={(event) => selectOverride(event.target.value)}>{categoryOverrideItems.map((entry) => <option key={entry.type} value={entry.type}>{entry.name}</option>)}</select></label>
                 ) : (
                   <label>Type / slug<input value={metadata.type} onChange={(event) => setMetadata({ ...metadata, type: slug(event.target.value) })} /></label>
                 )}
                 <label>Name<input value={metadata.name} onChange={(event) => setMetadata({ ...metadata, name: event.target.value })} /></label>
-                <label>Category<select value={metadata.category} onChange={(event) => setMetadata({ ...metadata, category: event.target.value })}>{PUBLISHABLE_CATALOG_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+                <label>Category<select value={metadata.category} onChange={(event) => selectCategory(event.target.value)}>{PUBLISHABLE_CATALOG_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
                 <label>Object type<select value={metadata.shape} onChange={(event) => setMetadata({ ...metadata, shape: event.target.value })}>{PUBLISHABLE_CATALOG_SHAPES.map((shape) => <option key={shape} value={shape}>{shape.replace(/_/g, ' ')}</option>)}</select></label>
                 <label>Icon<input value={metadata.icon} onChange={(event) => setMetadata({ ...metadata, icon: event.target.value })} /></label>
                 <label>Width (cm)<input type="number" value={metadata.width} onChange={(event) => setMetadata({ ...metadata, width: Number(event.target.value) })} /></label>
