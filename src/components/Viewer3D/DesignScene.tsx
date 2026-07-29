@@ -1041,6 +1041,7 @@ function FloorContent({
   register,
   unregister,
   onSurfaceTap,
+  useRenderModels,
 }: {
   geom: FloorGeom;
   stairsBelow: FurnitureItem[];
@@ -1056,6 +1057,7 @@ function FloorContent({
   register: (id: string, f: WallFade) => void;
   unregister: (id: string) => void;
   onSurfaceTap?: (tap: SurfaceTap) => void;
+  useRenderModels: boolean;
 }) {
   const selection = useDesign((s) => s.selection);
   const select = useDesign((s) => s.select);
@@ -1123,6 +1125,7 @@ function FloorContent({
           interactive={interactive}
           draggable={interactive}
           ceilingHeight={ceilingHeight}
+          preferRenderModel={useRenderModels}
         />
       ))}
     </group>
@@ -1139,6 +1142,7 @@ export default function DesignScene({
   dollhouse = false,
   dollhouseInstant = false,
   onSurfaceTap,
+  useRenderModels = false,
 }: {
   interactive?: boolean;
   dollhouse?: boolean;
@@ -1146,6 +1150,8 @@ export default function DesignScene({
    *  mode) where the fade must be settled the moment the camera stops. */
   dollhouseInstant?: boolean;
   onSurfaceTap?: (tap: SurfaceTap) => void;
+  /** Load optional higher-detail catalogue tiers only for explicit renders. */
+  useRenderModels?: boolean;
 }) {
   // Subscribe once for the entire scene so a cached/fetched cloud manifest can
   // replace procedural fallbacks even if 3D opened before the request finished.
@@ -1234,6 +1240,7 @@ export default function DesignScene({
             onSurfaceTap={onSurfaceTap}
             register={register}
             unregister={unregister}
+            useRenderModels={useRenderModels}
           />
         );
       })}

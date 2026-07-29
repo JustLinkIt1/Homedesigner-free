@@ -30,8 +30,19 @@ export const FURNITURE_MODELS: Record<
   ]),
 );
 
-export function modelDefinition(type: string): NonNullable<CatalogEntry['model']> | undefined {
-  return CATALOG_BY_TYPE[type]?.model ?? FURNITURE_MODELS[type];
+export function modelDefinition(
+  type: string,
+  preferRender = false,
+): NonNullable<CatalogEntry['model']> | undefined {
+  const definition: NonNullable<CatalogEntry['model']> | undefined =
+    CATALOG_BY_TYPE[type]?.model ?? FURNITURE_MODELS[type];
+  if (!definition || !preferRender || !definition.renderUrl) return definition;
+  return {
+    ...definition,
+    url: definition.renderUrl,
+    bytes: definition.renderBytes,
+    sha256: definition.renderSha256,
+  };
 }
 
 export function hasModel(type: string): boolean {
@@ -43,8 +54,8 @@ export function hasModel(type: string): boolean {
  * scaled to fit width×depth (aspect preserved), recentred, and dropped so its
  * base sits on the floor. The parent group owns world position + rotation.
  */
-export default function GltfFurniture({ item }: { item: FurnitureItem }) {
-  const def = modelDefinition(item.type)!;
+export default function GltfFurniture({ item, preferRender = false }: { item: FurnitureItem; preferRender?: boolean }) {
+  const def = modelDefinition(item.type, preferRender)!;
   const { scene } = useGLTF(def.url);
 
   const node = useMemo(() => {
@@ -120,16 +131,18 @@ class ModelBoundary extends Component<
 export function ResilientGltfFurniture({
   item,
   fallback,
+  preferRender = false,
 }: {
   item: FurnitureItem;
   fallback: ReactNode;
+  preferRender?: boolean;
 }) {
-  const definition = modelDefinition(item.type);
+  const definition = modelDefinition(item.type, preferRender);
   if (!definition) return fallback;
   return (
     <ModelBoundary resetKey={definition.url} fallback={fallback}>
       <Suspense fallback={fallback}>
-        <GltfFurniture item={item} />
+        <GltfFurniture item={item} preferRender={preferRender} />
       </Suspense>
     </ModelBoundary>
   );

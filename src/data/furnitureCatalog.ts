@@ -92,11 +92,17 @@ export interface CatalogEntry {
     offsetY?: number;
     bytes?: number;
     sha256?: string;
+    /** Optional higher-detail tier, fetched only by explicit render workflows. */
+    renderUrl?: string;
+    renderBytes?: number;
+    renderSha256?: string;
     source?: {
       name: string;
       url: string;
       author?: string;
-      license: 'CC0';
+      license: 'CC0' | 'AI-generated';
+      provider?: 'fal.ai';
+      model?: 'fal-ai/hunyuan-3d/v3.1/pro/text-to-3d' | 'fal-ai/hunyuan-3d/v3.1/rapid/text-to-3d';
     };
   };
   /** Set only for entries loaded from the signed-off cloud manifest. */

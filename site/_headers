@@ -9,7 +9,22 @@
 /app/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+/app/
+  Cache-Control: no-store
+
+/app/index.html
+  Cache-Control: no-store
+
+/app/model-studio/
+  Cache-Control: no-store
+
+/app/model-studio/index.html
+  Cache-Control: no-store
+
 /app/version.json
+  Cache-Control: no-store
+
+/404.html
   Cache-Control: no-store
 
 https://homedesignerapp-preview.pages.dev/*

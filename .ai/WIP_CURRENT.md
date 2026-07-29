@@ -1,5 +1,57 @@
 # WIP — current handoff
 
+> **Release 1.12.1 built 2026-07-29:** Android versionCode **11201** includes
+> the owner-only Account-menu entry for Model Studio. Signed delivery artifact:
+> `outputs/HomeDesigner-1.12.1-11201.aab`, 29,638,941 bytes, SHA-256
+> `949C5FC331436C3A94DAC31EDA68C9736165A98FE318A16E8B822EBB56758264`.
+> `jarsigner` verifies it and the certificate owner is Nathan Joppich. Model
+> Studio history has no R2 TTL; the UI lists the newest 40 jobs while older
+> records remain stored.
+
+> **Web cache failure permanently hardened 2026-07-29:** Vite now emits every
+> generated asset under a unique per-deployment namespace, including otherwise
+> unchanged vendor chunks. A top-level `404.html` disables Cloudflare Pages'
+> HTML fallback for missing modules, and `build:web` fails if either invariant
+> is lost. Deployment `https://e3230a98.homedesignerapp.pages.dev` uses asset
+> namespace `20260729171558068`. Live apex verification returned the entry
+> module as `application/javascript`, a random missing module as HTTP 404 with
+> `Cache-Control: no-store`, and the Chrome profile previously affected by the
+> year-long poisoned cache mounted the app without manual cache clearing.
+
+> **Private Model Studio live 2026-07-29:**
+> `https://homedesignerapp.com/app/model-studio/` is a dedicated, owner-only
+> entry page using the existing Google OAuth client. The Cloudflare sync Worker
+> version is `fd35b592-1c39-4405-b383-2dfef4be60cf`; `FAL_KEY` and
+> `MODEL_ADMIN_EMAIL` are Worker secrets and are not shipped to the browser or
+> repository. The studio offers only textured text-to-3D generators: Hunyuan
+> 3D Pro (detail-first, `$0.525`/`$0.675` with PBR) and Hunyuan 3D Rapid
+> (fast drafts, `$0.225`/`$0.375` with PBR). Untextured Pro `Geometry` and
+> Rapid `enable_geometry` modes are blocked in the Worker and arbitrary client
+> endpoints are rejected. It previews local
+> GLBs, creates mobile and HD render tiers, stages both to R2 and publishes the
+> manifest only after rights confirmation. Normal editing uses the mobile tier;
+> Photo Mode alone requests `renderUrl`. Live owner sign-in and normal `/app/`
+> account restoration were verified. App HTML is now `no-store` to prevent a
+> cached shell from referencing retired immutable chunks; asset files remain
+> immutable for one year.
+> The normal Account menu now exposes **Model Studio** only when the signed-in
+> email is `nathanjoppich@gmail.com`; the Worker remains the authority and
+> rejects every non-owner token regardless of UI visibility.
+> Production custom-domain verification returned the new hashed Model Studio
+> JavaScript with `application/javascript` and confirmed both model choices are
+> present; this check caught and replaced one stale HTML fallback cached under
+> an earlier asset path.
+
+> **Fal TRELLIS tooling added 2026-07-29:** `npm run models:trellis` now
+> generates review-only TRELLIS 2 GLBs from local or hosted images with safe
+> mobile defaults, automatic glTF optimization, inspection, hashing and a
+> reproducibility/approval record. The local command reads `FAL_KEY` only from
+> the ignored environment file and never logs it.
+> The tool deliberately cannot upload to R2 or edit the live catalogue because
+> the current runtime accepts only CC0 provenance. See
+> `docs/FAL_TRELLIS_PIPELINE.md`. TRELLIS remains review-only; Hunyuan Pro is
+> the preferred production generator after the texture-quality comparison.
+
 > **Tester onboarding updated 2026-07-29:** the landing page no longer embeds
 > the unreliable Google Form. Its **Request access** buttons scroll to three
 > direct instructions: join `groups.google.com/g/homedesignertest`, opt in at

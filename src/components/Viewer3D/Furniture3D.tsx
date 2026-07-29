@@ -33,6 +33,7 @@ export default function Furniture3D({
   interactive = true,
   draggable = false,
   ceilingHeight = 2.7,
+  preferRenderModel = false,
 }: {
   item: FurnitureItem;
   selected: boolean;
@@ -42,6 +43,8 @@ export default function Furniture3D({
   draggable?: boolean;
   /** Storey ceiling height in metres — ceiling fixtures mount against it. */
   ceilingHeight?: number;
+  /** Load the optional 150k/2048 cloud tier for explicit photo renders. */
+  preferRenderModel?: boolean;
 }) {
   const w = item.width * M;
   const d = item.depth * M;
@@ -172,6 +175,7 @@ export default function Furniture3D({
       )}
       <ResilientGltfFurniture
         item={item}
+        preferRender={preferRenderModel}
         fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} />}
       />
     </group>

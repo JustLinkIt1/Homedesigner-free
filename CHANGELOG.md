@@ -5,7 +5,74 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
-## Unreleased - 2026-07-29
+## 1.12.1 - 2026-07-29 (versionCode 11201)
+
+### Private Model Studio and render-quality models
+
+- Added the owner-only Model Studio at `/app/model-studio/`, authenticated with
+  the existing Google account and backed by private Cloudflare Worker routes.
+  It supports text-first Hunyuan Pro generation, local GLB inspection, dual
+  mobile/render optimization, catalogue metadata and approval-gated publishing.
+- Added separate interactive and render model URLs. Normal 3D editing keeps the
+  lightweight mobile asset while Photo Mode explicitly requests the HD render
+  asset from Cloudflare R2.
+- Deployed Worker version `9ab52457-f2c0-474c-88ee-e587184d6ef9` with private
+  Fal/admin secrets and verified unauthenticated model administration returns
+  `401 Unauthorized`.
+- Added a dedicated static Model Studio entry page and changed `/app/` HTML to
+  `Cache-Control: no-store`, while retaining one-year immutable caching only
+  for fingerprinted assets. This fixes the white screen and Google callback
+  failure caused by a cached HTML shell referencing retired JavaScript chunks.
+- Completed live owner Google sign-in in Model Studio and confirmed the normal
+  web app shows the linked owner account, Sync now and Sign out controls.
+- Added an owner-only **Model Studio** item to the signed-in Account menu. It is
+  visible only for `nathanjoppich@gmail.com`; Android opens the secure hosted
+  studio externally while desktop routes directly to its dedicated page.
+- Model Studio job records, reference images and copied generated GLBs have no
+  automatic expiry in R2. The current Recent drafts panel lists the newest 40;
+  older records remain stored until an explicit future cleanup policy.
+- Fixed Model Studio being clipped by the app shell's global `overflow: hidden`:
+  it now owns a full-height momentum-scrolling viewport, exposing optimization
+  and publishing controls below large 3D previews on desktop and mobile.
+- Replaced the ambiguous generation estimate with the actual expected totals:
+  `$0.525` for Hunyuan Pro plus the custom 40k mesh, or `$0.675` with PBR.
+- Added a curated textured-model selector with **Hunyuan 3D Pro** and
+  **Hunyuan 3D Rapid**. Rapid is labelled as the faster/lower-cost choice at
+  `$0.225`, or `$0.375` with PBR; Pro remains the detail-first choice. Both
+  routes hard-disable their untextured geometry modes in the Worker, validate
+  model IDs against a server allowlist and retain exact Fal provenance when a
+  reviewed model is published.
+- Deployed Worker version `fd35b592-1c39-4405-b383-2dfef4be60cf` and a fresh
+  Cloudflare Pages asset set. Verified the production custom domain serves the
+  new selector JavaScript as `application/javascript`, avoiding a stale Pages
+  fallback response that could otherwise cause another blank Studio screen.
+- Built and verified signed Android App Bundle
+  `HomeDesigner-1.12.1-11201.aab` (29,638,941 bytes), SHA-256
+  `949C5FC331436C3A94DAC31EDA68C9736165A98FE318A16E8B822EBB56758264`,
+  signed by the expected Nathan Joppich upload certificate.
+- Permanently hardened web deployments against the white-screen cache failure.
+  Every build now puts all JavaScript, CSS, WebAssembly and worker assets in a
+  unique deployment namespace, including unchanged vendor chunks, so a browser
+  with an older poisoned immutable response always receives new URLs.
+- Added a real top-level `404.html` to disable Cloudflare Pages' implicit SPA
+  fallback for missing assets, plus a build-time assertion that prevents either
+  protection from being removed accidentally. Production verification confirmed
+  a missing JavaScript URL returns an uncached HTTP 404 instead of landing-page
+  HTML, and an already affected Chrome profile loaded the apex app successfully
+  without clearing its cache.
+
+### Internal model production
+
+- Added a secure Fal TRELLIS 2 generation command for review-only furniture
+  assets. It accepts a local or hosted reference image, keeps `FAL_KEY` outside
+  Git, defaults to 30,000 vertices and a 1024px texture for mobile, and records
+  the Fal request ID and reproducibility settings.
+- Generated GLBs are automatically optimized with Meshopt and WebP, inspected,
+  hashed and placed in an untracked review package. The tool cannot publish to
+  R2 or modify the live catalogue, which continues to require reviewed CC0
+  provenance until a truthful generated-asset schema is released.
+- Added operator documentation for secure key entry, dry runs, paid generation,
+  approval checks and cleanup.
 
 ### Tester onboarding
 

@@ -108,7 +108,7 @@ function PathtracedContent({
 
   return (
     <>
-      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant />
+      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant useRenderModels />
       <OrbitControls
         makeDefault
         target={center}
@@ -199,7 +199,7 @@ function RasterContent({
         <meshStandardMaterial color="#e6e8eb" roughness={1} />
       </mesh>
 
-      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant />
+      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant useRenderModels />
 
       <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
         <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />

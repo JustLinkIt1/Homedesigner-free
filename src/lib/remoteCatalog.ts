@@ -12,6 +12,15 @@ const MANIFEST_URL = import.meta.env.VITE_MODEL_CATALOG_URL || DEFAULT_MANIFEST_
 const CACHE_KEY = 'homedesigner.remote-catalog.v1';
 const MAX_MANIFEST_BYTES = 2_000_000;
 const MAX_ENTRIES = 5_000;
+const GENERATED_MODEL_ENDPOINTS = [
+  'fal-ai/hunyuan-3d/v3.1/pro/text-to-3d',
+  'fal-ai/hunyuan-3d/v3.1/rapid/text-to-3d',
+] as const;
+type GeneratedModelEndpoint = typeof GENERATED_MODEL_ENDPOINTS[number];
+
+function generatedModelEndpoint(value: unknown): value is GeneratedModelEndpoint {
+  return typeof value === 'string' && (GENERATED_MODEL_ENDPOINTS as readonly string[]).includes(value);
+}
 
 type CatalogStatus = 'idle' | 'loading' | 'ready' | 'offline';
 
@@ -95,11 +104,25 @@ function validateModel(value: unknown, manifestUrl: URL): NonNullable<CatalogEnt
     const sourceName = cleanText(value.source.name, 100);
     const sourceUrl = cleanText(value.source.url, 500);
     const author = cleanText(value.source.author, 100) ?? undefined;
-    if (sourceName && sourceUrl && value.source.license === 'CC0') {
+    const cc0 = value.source.license === 'CC0';
+    const generatedModel = generatedModelEndpoint(value.source.model) ? value.source.model : null;
+    const generated = value.source.license === 'AI-generated' &&
+      value.source.provider === 'fal.ai' &&
+      !!generatedModel;
+    if (sourceName && sourceUrl && (cc0 || generated)) {
       try {
         const parsed = new URL(sourceUrl);
         if (parsed.protocol === 'https:') {
-          source = { name: sourceName, url: parsed.href, author, license: 'CC0' };
+          source = generated
+            ? {
+                name: sourceName,
+                url: parsed.href,
+                author,
+                license: 'AI-generated',
+                provider: 'fal.ai',
+                model: generatedModel!,
+              }
+            : { name: sourceName, url: parsed.href, author, license: 'CC0' };
         }
       } catch {
         // Provenance is mandatory; malformed source URLs reject the model.
@@ -112,13 +135,28 @@ function validateModel(value: unknown, manifestUrl: URL): NonNullable<CatalogEnt
   const shaText = cleanText(value.sha256, 64);
   const sha256 = shaText && /^[a-f0-9]{64}$/i.test(shaText) ? shaText.toLowerCase() : undefined;
   const yaw = typeof value.yaw === 'number' && Number.isFinite(value.yaw) ? value.yaw : undefined;
-  const fit = value.fit === 'width' || value.fit === 'depth' || value.fit === 'contain'
+  const fit = value.fit === 'width' || value.fit === 'depth' || value.fit === 'contain' || value.fit === 'stretch'
     ? value.fit
     : undefined;
   const offsetY = typeof value.offsetY === 'number' && Number.isFinite(value.offsetY) && Math.abs(value.offsetY) <= 2_000
     ? value.offsetY
     : undefined;
-  return { url: modelUrl, yaw, fit, offsetY, bytes, sha256, source };
+  const renderUrl = sameOriginUrl(value.renderUrl, manifestUrl);
+  const renderBytes = cleanBytes(value.renderBytes);
+  const renderShaText = cleanText(value.renderSha256, 64);
+  const renderSha256 = renderShaText && /^[a-f0-9]{64}$/i.test(renderShaText)
+    ? renderShaText.toLowerCase()
+    : undefined;
+  return {
+    url: modelUrl,
+    yaw,
+    fit,
+    offsetY,
+    bytes,
+    sha256,
+    ...(renderUrl?.toLowerCase().endsWith('.glb') ? { renderUrl, renderBytes, renderSha256 } : {}),
+    source,
+  };
 }
 
 function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
@@ -147,11 +185,25 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
     const sourceName = cleanText(value.model.source.name, 100);
     const sourceUrl = cleanText(value.model.source.url, 500);
     const author = cleanText(value.model.source.author, 100) ?? undefined;
-    if (sourceName && sourceUrl && value.model.source.license === 'CC0') {
+    const cc0 = value.model.source.license === 'CC0';
+    const generatedModel = generatedModelEndpoint(value.model.source.model) ? value.model.source.model : null;
+    const generated = value.model.source.license === 'AI-generated' &&
+      value.model.source.provider === 'fal.ai' &&
+      !!generatedModel;
+    if (sourceName && sourceUrl && (cc0 || generated)) {
       try {
         const parsed = new URL(sourceUrl);
         if (parsed.protocol === 'https:') {
-          source = { name: sourceName, url: parsed.href, author, license: 'CC0' };
+          source = generated
+            ? {
+                name: sourceName,
+                url: parsed.href,
+                author,
+                license: 'AI-generated',
+                provider: 'fal.ai',
+                model: generatedModel!,
+              }
+            : { name: sourceName, url: parsed.href, author, license: 'CC0' };
         }
       } catch {
         // Provenance is required below; malformed URLs reject the entry.
@@ -166,7 +218,7 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
   const yaw = typeof value.model.yaw === 'number' && Number.isFinite(value.model.yaw)
     ? value.model.yaw
     : undefined;
-  const fit = value.model.fit === 'width' || value.model.fit === 'depth' || value.model.fit === 'contain'
+  const fit = value.model.fit === 'width' || value.model.fit === 'depth' || value.model.fit === 'contain' || value.model.fit === 'stretch'
     ? value.model.fit
     : undefined;
   const offsetY = typeof value.model.offsetY === 'number' && Number.isFinite(value.model.offsetY) && Math.abs(value.model.offsetY) <= 2_000
@@ -184,7 +236,22 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
     icon,
     pro: value.pro === false ? undefined : true,
     cloud: true,
-    model: { url: modelUrl, yaw, fit, offsetY, bytes, sha256, source },
+    model: {
+      url: modelUrl,
+      yaw,
+      fit,
+      offsetY,
+      bytes,
+      sha256,
+      ...(() => {
+        const renderUrl = sameOriginUrl(value.model.renderUrl, manifestUrl);
+        const renderBytes = cleanBytes(value.model.renderBytes);
+        const text = cleanText(value.model.renderSha256, 64);
+        const renderSha256 = text && /^[a-f0-9]{64}$/i.test(text) ? text.toLowerCase() : undefined;
+        return renderUrl?.toLowerCase().endsWith('.glb') ? { renderUrl, renderBytes, renderSha256 } : {};
+      })(),
+      source,
+    },
   };
 }
 
