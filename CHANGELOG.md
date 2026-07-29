@@ -15,10 +15,13 @@ changes and add an entry when you ship one.
 - Verified the Cloudflare Pages preview serves the landing page, app bundle,
   version metadata and WebAssembly asset correctly before changing production
   DNS.
-- Started moving authoritative DNS from GoDaddy to Cloudflare while preserving
-  the existing website and DMARC records during propagation. The GitHub
-  repository will be made private only after the Cloudflare production domain
-  and private-repository deployment have both been verified.
+- Moved authoritative DNS from GoDaddy to Cloudflare while preserving the
+  existing site and DMARC records. The Git-backed `homedesignerapp` Pages
+  project now builds the merged default branch automatically, and both the apex
+  and `www` production hostnames are Active with SSL.
+- Limited the Cloudflare GitHub app to this repository, verified it can build
+  the production artifact, and then changed the GitHub repository to private.
+  The direct-upload preview remains only as a no-domain recovery path.
 
 ### Security hardening
 

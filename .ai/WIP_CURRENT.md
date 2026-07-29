@@ -1,26 +1,23 @@
 # WIP — current handoff
 
-> **Infrastructure migration in progress as of 2026-07-29:** branch
-> `agent/cloudflare-private` adds the repeatable `npm run build:web` Cloudflare
-> Pages artifact. Cloudflare is now authoritative through
-> `amit.ns.cloudflare.com` and `laila.ns.cloudflare.com`; both
-> `homedesignerapp.com` and `www.homedesignerapp.com` point to the verified
-> Pages project and the apex artifact is byte-identical to the tested preview.
-> The Cloudflare GitHub app is limited to this repository but its installation
-> is paused at GitHub's password-protected sudo confirmation. Until that one
-> user action is complete, deployments use the authenticated Wrangler direct
-> upload path. Do **not** make the repository private until the Git-integrated
-> project can read and deploy the private repository.
+> **Infrastructure migration completed 2026-07-29:** Cloudflare is authoritative
+> through `amit.ns.cloudflare.com` and `laila.ns.cloudflare.com`. The Git-backed
+> Pages project `homedesignerapp` builds the merged default branch with
+> `npm run build:web`; both `homedesignerapp.com` and
+> `www.homedesignerapp.com` are Active with SSL on that project. The Cloudflare
+> GitHub app is limited to this repository, and the GitHub repository is now
+> private. `homedesignerapp-preview` remains available only as a direct-upload
+> fallback and has no production custom domains.
 
 > **Security sweep:** production web no longer accepts the `?pro=1` test seam
 > or browser localStorage as entitlement authority. The Worker version
 > `7a48fba0-5e89-44bd-a340-a789d89f74e4` enforces exact `Pro` entitlements and
 > per-subject read/write rate limits. Pages security headers and Android backup,
-> cleartext and FileProvider restrictions are in source. Full non-3D tests and
-> an Android debug build are green with Android Studio JDK 21. Runtime npm audit
-> is 0 critical/high/moderate and 1 low (transitive DOMPurify); remaining high
-> audit is clean; the remaining 9 high and 1 moderate root audit entries are
-> development/build tooling major-upgrade work.
+> cleartext and FileProvider restrictions are in source. Local non-3D tests,
+> the full GitHub CI suite, and an Android debug build are green with Android
+> Studio JDK 21. Production and Worker npm audits are clean; the remaining 9
+> high and 1 moderate root audit entries are development/build tooling
+> major-upgrade work.
 
 > **Current as of 2026-07-28:** release source is **1.12.0** (versionCode
 > **11200**) on `agent/half-walls-1.12.0`. The active architectural and
