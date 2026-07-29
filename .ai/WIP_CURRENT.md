@@ -1,5 +1,17 @@
 # WIP — current handoff
 
+> **Infrastructure migration in progress as of 2026-07-29:** branch
+> `agent/cloudflare-private` adds the repeatable `npm run build:web` Cloudflare
+> Pages artifact. The full preview is green at
+> `https://homedesignerapp-preview.pages.dev/`. GoDaddy accepted the
+> authoritative nameserver change to `amit.ns.cloudflare.com` and
+> `laila.ns.cloudflare.com`; Cloudflare activation is waiting for DNS
+> propagation. The Cloudflare GitHub app is limited to this repository but its
+> installation is paused at GitHub's password-protected sudo confirmation.
+> Do **not** make the repository private or remove the existing GitHub Pages
+> records until the permanent Cloudflare Pages project and both production
+> hostnames have been verified.
+
 > **Current as of 2026-07-28:** release source is **1.12.0** (versionCode
 > **11200**) on `agent/half-walls-1.12.0`. The active architectural and
 > release handoff is `docs/WIP_HANDOFF.md`; the older authentication notes below

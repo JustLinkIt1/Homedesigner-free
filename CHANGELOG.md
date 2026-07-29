@@ -5,6 +5,21 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## Unreleased - 2026-07-29
+
+### Infrastructure - Cloudflare Pages migration
+
+- Added `npm run build:web` and `scripts/assemble-web.mjs` to produce one
+  `site-dist/` artifact containing the public landing page, the production app
+  under `/app/`, the privacy page and domain metadata.
+- Verified the Cloudflare Pages preview serves the landing page, app bundle,
+  version metadata and WebAssembly asset correctly before changing production
+  DNS.
+- Started moving authoritative DNS from GoDaddy to Cloudflare while preserving
+  the existing website and DMARC records during propagation. The GitHub
+  repository will be made private only after the Cloudflare production domain
+  and private-repository deployment have both been verified.
+
 ## 1.12.0 - 2026-07-28 (versionCode 11200)
 
 ### Added — half walls / pony walls
