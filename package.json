@@ -1,7 +1,7 @@
 {
   "name": "homedesigner-free",
   "private": true,
-  "version": "1.12.0",
+  "version": "1.12.2",
   "license": "UNLICENSED",
   "type": "module",
   "description": "HomeDesigner: draw floor plans in 2D, furnish every room, and walk through your home in 3D. Import PDF/DXF/image plans with automatic wall tracing.",
@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test": "node tests/geometry.mjs && node tests/samples.mjs && node tests/trace.mjs && node tests/smoke.mjs",
+    "models:trellis": "node scripts/model-catalog/generate-trellis.mjs",
     "sync-version": "node scripts/sync-version.mjs",
     "screenshots": "node tools/screenshots.mjs"
   },
@@ -28,6 +29,9 @@
     "@capacitor/status-bar": "^8.0.2",
     "@capawesome/capacitor-app-update": "^8.0.3",
     "@capgo/capacitor-social-login": "^8.3.38",
+    "@gltf-transform/core": "^4.4.2",
+    "@gltf-transform/extensions": "^4.4.2",
+    "@gltf-transform/functions": "^4.4.2",
     "@mlightcad/libredwg-web": "^0.7.8",
     "@react-three/drei": "^9.114.0",
     "@react-three/fiber": "^8.17.10",
@@ -40,6 +44,7 @@
     "jspdf": "^4.2.1",
     "konva": "^9.3.16",
     "lucide-react": "^1.21.0",
+    "meshoptimizer": "^0.24.0",
     "pdfjs-dist": "^4.7.76",
     "postprocessing": "6.37.8",
     "react": "^18.3.1",
@@ -51,6 +56,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.4.1",
     "@eslint/js": "^10.0.1",
+    "@fal-ai/client": "^1.10.1",
     "@gltf-transform/cli": "^4.4.1",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",

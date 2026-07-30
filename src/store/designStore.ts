@@ -134,7 +134,11 @@ interface DesignState extends DesignSnapshot {
   updateWall: (id: string, patch: Partial<Wall>) => void;
   addRoom: (points: Point[]) => string;
   updateRoom: (id: string, patch: Partial<Room>) => void;
-  addFurniture: (type: string, position: Point) => string;
+  addFurniture: (
+    type: string,
+    position: Point,
+    placement?: Partial<Pick<FurnitureItem, 'rotation' | 'elevation'>>,
+  ) => string;
   /** Whether the kitchen-run tool also tiles wall cabinets above the base run. */
   kitchenUppers: boolean;
   setKitchenUppers: (v: boolean) => void;
@@ -273,6 +277,37 @@ const fixOpenings = (g: FloorGeom): FloorGeom => {
   };
 };
 
+/** Migrate only the exact original defaults of the first Studio publications.
+ * User-resized objects are deliberately left alone. The corrected dimensions
+ * preserve each audited GLB's bounding-box proportions in world axes. */
+const fixFurnitureAxes = (g: FloorGeom): FloorGeom => {
+  const replacement = (item: FurnitureItem): Pick<FurnitureItem, 'width' | 'depth' | 'height'> | null => {
+    const is = (width: number, depth: number, height: number) =>
+      item.width === width && item.depth === depth && item.height === height;
+    if (item.type === 'wallmounttv' && (is(10, 210, 150) || is(210, 10, 150) || is(200, 10, 100))) {
+      return { width: 200, depth: 17, height: 97 };
+    }
+    if (item.type === 'tv_media_unit' && is(210, 48, 145)) return { width: 210, depth: 58, height: 148 };
+    if (item.type === 'dining6seatchairs' && is(185, 100, 90)) return { width: 185, depth: 140, height: 84 };
+    if (item.type === 'diningtable' && is(185, 120, 90)) return { width: 185, depth: 152, height: 69 };
+    // Repair the short-lived oversized override defaults from the proportion
+    // audit. Overrides must stay inside their long-established catalogue slots.
+    if (item.type === 'dining_chair' && is(58, 58, 90)) return { width: 45, depth: 50, height: 90 };
+    if (item.type === 'wooden_dining_chair' && is(61, 62, 95)) return { width: 45, depth: 50, height: 95 };
+    if (item.type === 'tv_stand' && is(130, 18, 91)) return { width: 130, depth: 12, height: 75 };
+    if (item.type === 'bbq' && is(120, 56, 110)) return { width: 70, depth: 60, height: 110 };
+    return null;
+  };
+  if (!g.furniture.some((item) => replacement(item))) return g;
+  return {
+    ...g,
+    furniture: g.furniture.map((item) => {
+      const next = replacement(item);
+      return next ? { ...item, ...next } : item;
+    }),
+  };
+};
+
 /** Fill in multi-floor fields for saves that predate storeys + fix openings. */
 const withFloors = (snap: MaybeFloored): DesignSnapshot => {
   let result: DesignSnapshot;
@@ -297,13 +332,14 @@ const withFloors = (snap: MaybeFloored): DesignSnapshot => {
     };
   }
   const floorGeom: Record<string, FloorGeom> = {};
-  for (const fid in result.floorGeom) floorGeom[fid] = fixOpenings(result.floorGeom[fid]);
+  for (const fid in result.floorGeom) floorGeom[fid] = fixFurnitureAxes(fixOpenings(result.floorGeom[fid]));
   const active = floorGeom[result.activeFloorId];
   return {
     ...result,
     floors: normalizeRoofs(result.floors),
     floorGeom,
     openings: active ? active.openings : result.openings,
+    furniture: active ? active.furniture : result.furniture,
   };
 };
 
@@ -522,7 +558,7 @@ export const useDesign = create<DesignState>((set, get) => {
         if (i >= 0) d.rooms[i] = { ...d.rooms[i], ...patch };
       }),
 
-    addFurniture: (type, position) => {
+    addFurniture: (type, position, placement) => {
       const id = uid();
       const entry = CATALOG_BY_TYPE[type];
       if (!entry) return id;
@@ -532,10 +568,11 @@ export const useDesign = create<DesignState>((set, get) => {
           type,
           name: entry.name,
           position,
-          rotation: 0,
+          rotation: placement?.rotation ?? 0,
           width: entry.width,
           depth: entry.depth,
           height: entry.height,
+          ...(placement?.elevation != null ? { elevation: Math.max(0, placement.elevation) } : {}),
           color: entry.color,
         });
       });

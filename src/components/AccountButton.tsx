@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { User, LogOut, Check, RefreshCw } from 'lucide-react';
+import { User, LogOut, Check, RefreshCw, WandSparkles } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '../store/authStore';
 import { useI18n } from '../lib/i18n';
 
@@ -13,6 +14,9 @@ function GoogleMark() {
     </svg>
   );
 }
+
+const MODEL_STUDIO_OWNER = 'nathanjoppich@gmail.com';
+const MODEL_STUDIO_URL = 'https://homedesignerapp.com/app/model-studio/';
 
 /**
  * Account entry point for the home screen header: a user avatar that opens a
@@ -44,6 +48,16 @@ export default function AccountButton() {
   if (!configured) return null;
 
   const initial = (account?.name || account?.email || '?').trim().charAt(0).toUpperCase();
+  const canOpenModelStudio = account?.email?.trim().toLowerCase() === MODEL_STUDIO_OWNER;
+
+  const openModelStudio = () => {
+    setOpen(false);
+    if (Capacitor.isNativePlatform()) {
+      window.open(MODEL_STUDIO_URL, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    window.location.assign('/app/model-studio/');
+  };
 
   return (
     <div className="account-wrap" ref={ref}>
@@ -90,6 +104,11 @@ export default function AccountButton() {
               >
                 <RefreshCw className={`icon ${busy ? 'spin' : ''}`} /> {t('Sync now')}
               </button>
+              {canOpenModelStudio ? (
+                <button className="account-menu-item" role="menuitem" onClick={openModelStudio}>
+                  <WandSparkles className="icon" /> Model Studio
+                </button>
+              ) : null}
               <button
                 className="account-menu-item"
                 role="menuitem"

@@ -8,10 +8,19 @@ import { initTheme } from './lib/theme';
 import { finishStrandedGooglePopup } from './lib/googleAuth';
 import './index.css';
 
+const ModelStudio = React.lazy(() => import('./model-studio/ModelStudio'));
+
 // Complete OAuth before mounting the full editor. This is normally handled by
 // the provider popup itself; the fallback covers browsers that turn the popup
 // into an opener-less tab.
 const completedGooglePopup = finishStrandedGooglePopup();
+const modelStudioRequested =
+  new URLSearchParams(window.location.search).get('studio') === 'models' ||
+  window.location.pathname.startsWith('/app/model-studio');
+
+// A lightweight shell marker makes production startup observable and ensures
+// each app-shell revision receives a fresh immutable asset fingerprint.
+document.documentElement.dataset.appShell = 'ready';
 
 // Apply the persisted (or OS) theme before first paint to avoid a flash.
 initTheme();
@@ -45,7 +54,9 @@ if (!completedGooglePopup) {
         */}
         <LazyMotion features={domMax} strict>
           <MotionConfig reducedMotion="user">
-            <App />
+            <React.Suspense fallback={null}>
+              {modelStudioRequested ? <ModelStudio /> : <App />}
+            </React.Suspense>
           </MotionConfig>
         </LazyMotion>
       </ErrorBoundary>

@@ -30,8 +30,19 @@ export const FURNITURE_MODELS: Record<
   ]),
 );
 
-export function modelDefinition(type: string): NonNullable<CatalogEntry['model']> | undefined {
-  return CATALOG_BY_TYPE[type]?.model ?? FURNITURE_MODELS[type];
+export function modelDefinition(
+  type: string,
+  preferRender = false,
+): NonNullable<CatalogEntry['model']> | undefined {
+  const definition: NonNullable<CatalogEntry['model']> | undefined =
+    CATALOG_BY_TYPE[type]?.model ?? FURNITURE_MODELS[type];
+  if (!definition || !preferRender || !definition.renderUrl) return definition;
+  return {
+    ...definition,
+    url: definition.renderUrl,
+    bytes: definition.renderBytes,
+    sha256: definition.renderSha256,
+  };
 }
 
 export function hasModel(type: string): boolean {
@@ -43,8 +54,8 @@ export function hasModel(type: string): boolean {
  * scaled to fit width×depth (aspect preserved), recentred, and dropped so its
  * base sits on the floor. The parent group owns world position + rotation.
  */
-export default function GltfFurniture({ item }: { item: FurnitureItem }) {
-  const def = modelDefinition(item.type)!;
+export default function GltfFurniture({ item, preferRender = false }: { item: FurnitureItem; preferRender?: boolean }) {
+  const def = modelDefinition(item.type, preferRender)!;
   const { scene } = useGLTF(def.url);
 
   const node = useMemo(() => {
@@ -55,12 +66,19 @@ export default function GltfFurniture({ item }: { item: FurnitureItem }) {
     box.getSize(size);
     box.getCenter(center);
 
-    const sx = (item.width * M) / (size.x || 1);
-    const sz = (item.depth * M) / (size.z || 1);
+    // Dimensions are expressed in world-facing axes. A quarter-turn yaw swaps
+    // the model's local X/Z targets; accounting for that here prevents a thin
+    // TV from treating its 200 cm screen width as its 10 cm depth.
+    const yaw = def.yaw ?? 0;
+    const quarterTurn = Math.abs(Math.sin(yaw)) > Math.abs(Math.cos(yaw));
+    const localWidth = quarterTurn ? item.depth : item.width;
+    const localDepth = quarterTurn ? item.width : item.depth;
+    const sx = (localWidth * M) / (size.x || 1);
+    const sy = (item.height * M) / (size.y || 1);
+    const sz = (localDepth * M) / (size.z || 1);
     if (def.fit === 'stretch') {
       // Fill width×depth×height independently — for boxy cabinetry whose model
       // is authored at the wrong size, so it reaches true counter/upper height.
-      const sy = (item.height * M) / (size.y || 1);
       clone.scale.set(sx, sy, sz);
       clone.position.set(
         -center.x * sx,
@@ -69,6 +87,10 @@ export default function GltfFurniture({ item }: { item: FurnitureItem }) {
       );
     } else {
       // Uniform scale fitting both footprint dimensions (keeps proportions).
+      // Contain is a footprint policy: furniture must fill its plan width/depth
+      // while retaining the model's proportions. Including catalogue height in
+      // this minimum made beds and baths shrink to toy size when a source GLB
+      // used a different vertical unit/proportion.
       const scale = def.fit === 'width' ? sx : def.fit === 'depth' ? sz : Math.min(sx, sz);
       clone.scale.setScalar(scale);
       // Recentre horizontally and rest the base on y = 0.
@@ -87,7 +109,7 @@ export default function GltfFurniture({ item }: { item: FurnitureItem }) {
       }
     });
     return clone;
-  }, [scene, item.width, item.depth, item.height, def.fit, def.offsetY]);
+  }, [scene, item.width, item.depth, item.height, def.fit, def.offsetY, def.yaw]);
 
   return (
     <group rotation={[0, def.yaw ?? 0, 0]}>
@@ -120,16 +142,18 @@ class ModelBoundary extends Component<
 export function ResilientGltfFurniture({
   item,
   fallback,
+  preferRender = false,
 }: {
   item: FurnitureItem;
   fallback: ReactNode;
+  preferRender?: boolean;
 }) {
-  const definition = modelDefinition(item.type);
+  const definition = modelDefinition(item.type, preferRender);
   if (!definition) return fallback;
   return (
     <ModelBoundary resetKey={definition.url} fallback={fallback}>
       <Suspense fallback={fallback}>
-        <GltfFurniture item={item} />
+        <GltfFurniture item={item} preferRender={preferRender} />
       </Suspense>
     </ModelBoundary>
   );

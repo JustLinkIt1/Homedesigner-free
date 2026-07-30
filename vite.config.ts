@@ -12,7 +12,7 @@ import pkg from './package.json';
  * service worker: that would add an install/activate lifecycle and a whole new
  * class of stale-cache bug to an app that currently has none.
  */
-function versionManifest(): Plugin {
+function versionManifest(assetBuildId: string): Plugin {
   return {
     name: 'homedesigner-version-manifest',
     apply: 'build',
@@ -20,11 +20,24 @@ function versionManifest(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'version.json',
-        source: JSON.stringify({ version: pkg.version, builtAt: new Date().toISOString() }, null, 2),
+        source: JSON.stringify(
+          { version: pkg.version, assetBuildId, builtAt: new Date().toISOString() },
+          null,
+          2,
+        ),
       });
     },
   };
 }
+
+// Content hashes alone are not enough to recover a browser after a hosting
+// fallback has accidentally cached HTML at an asset URL: unchanged vendor
+// chunks would keep the poisoned URL forever. Give every deployment a unique
+// namespace so even byte-identical chunks receive fresh URLs. CI can supply a
+// traceable ID; local builds use the UTC timestamp including milliseconds.
+const assetBuildId =
+  process.env.HOMEDESIGNER_ASSET_BUILD_ID?.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)
+  || new Date().toISOString().replace(/\D/g, '');
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -34,7 +47,7 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
-  plugins: [react(), versionManifest()],
+  plugins: [react(), versionManifest(assetBuildId)],
   resolve: {
     // A single three instance is essential — three-mesh-bvh / the path tracer
     // do instanceof + BVH checks that break if three is duplicated.
@@ -51,6 +64,11 @@ export default defineConfig({
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
+        // Put every asset in this deployment's namespace. This retains safe
+        // immutable caching while guaranteeing a new URL after every deploy.
+        entryFileNames: `assets/${assetBuildId}/[name]-[hash].js`,
+        chunkFileNames: `assets/${assetBuildId}/[name]-[hash].js`,
+        assetFileNames: `assets/${assetBuildId}/[name]-[hash][extname]`,
         // Split stable vendor groups into their own long-cached chunks.
         // `zustand` is intentionally left unsplit: it's shared by the app and
         // @react-three/fiber, and pinning it to react-vendor creates a circular

@@ -828,8 +828,8 @@ button.brand:hover .brand-name {
   border-color: var(--border-strong);
 }
 .chip.active {
-  background: var(--text);
-  border-color: var(--text);
+  background: var(--brand);
+  border-color: var(--brand);
   color: #fff;
 }
 .cat-section {
@@ -892,6 +892,19 @@ button.brand:hover .brand-name {
   height: 42px;
   object-fit: contain;
   filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--text) 18%, transparent));
+}
+.cat-item .ci-thumbnail {
+  width: 68px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 8px;
+  filter: drop-shadow(0 5px 6px color-mix(in srgb, var(--text) 20%, transparent));
+}
+.catalog-preview-image.ci-thumbnail {
+  width: min(82%, 220px);
+  height: 112px;
+  object-fit: contain;
+  border-radius: 11px;
 }
 .cat-item:hover .ci-symbol,
 .cat-item.active .ci-symbol {
@@ -4459,6 +4472,23 @@ button.brand:hover .brand-name {
   .mobile-tabs.two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .mobile-selection-delete {
+    position: fixed;
+    right: 18px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    z-index: 82;
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+    color: var(--danger);
+    box-shadow: var(--shadow-md);
+  }
+  .mobile-selection-delete .icon { width: 23px; height: 23px; }
+  .mobile-selection-delete:active { transform: scale(0.94); }
   .welcome-cards {
     grid-template-columns: 1fr;
   }
@@ -4969,6 +4999,8 @@ button:focus:not(:focus-visible) {
 
 /* ---------- Account button + menu (home header) ---------- */
 .account-wrap { position: relative; }
+.toolbar-account { margin-right: 10px; flex: none; }
+.toolbar-account .account-menu { right: 0; left: auto; }
 .account-btn {
   width: 38px; height: 38px; border-radius: 50%;
   display: grid; place-items: center;

@@ -21,6 +21,7 @@ import {
   Crown,
   RotateCcw,
   RotateCw,
+  Trash2,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
 import ToolDock from './components/ToolDock';
@@ -73,7 +74,7 @@ export default function App() {
     sunTime, setSunTime, lightsOn, setLightsOn,
     kitchenUppers, setKitchenUppers,
     moveLock, setMoveLock,
-    rotateDesign,
+    rotateDesign, deleteById,
   } = useDesign(useShallow((s) => ({
     view: s.view,
     setView: s.setView,
@@ -104,6 +105,7 @@ export default function App() {
     moveLock: s.moveLock,
     setMoveLock: s.setMoveLock,
     rotateDesign: s.rotateDesign,
+    deleteById: s.deleteById,
   })));
   const t = useI18n();
   const isPro = useProStore((st) => st.isPro);
@@ -917,6 +919,20 @@ export default function App() {
             <SlidersHorizontal className="icon" /> {t('Edit')}
           </button>
         </div>
+        {coarsePointer && !walkMode && selection.id && selection.kind && (
+          <button
+            className="mobile-selection-delete"
+            onClick={() => {
+              deleteById(selection.kind, selection.id);
+              autoOpenedRef.current = false;
+              setDrawer(null);
+            }}
+            aria-label={t('Delete object')}
+            title={t('Delete object')}
+          >
+            <Trash2 className="icon" />
+          </button>
+        )}
       </div>
 
       {showImport && (

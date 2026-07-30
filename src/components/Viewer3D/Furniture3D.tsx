@@ -6,6 +6,7 @@ import { ResilientGltfFurniture } from './GltfFurniture';
 import { useDesign } from '../../store/designStore';
 import { getFoliageTexture, getBarkTexture } from '../../lib/textures';
 import type { FurnitureItem } from '../../types';
+import { isSurfacePlaceable, supportElevationAt } from '../../lib/furniturePlacement';
 
 const M = 0.01; // cm -> m
 
@@ -33,6 +34,7 @@ export default function Furniture3D({
   interactive = true,
   draggable = false,
   ceilingHeight = 2.7,
+  preferRenderModel = false,
 }: {
   item: FurnitureItem;
   selected: boolean;
@@ -42,6 +44,8 @@ export default function Furniture3D({
   draggable?: boolean;
   /** Storey ceiling height in metres — ceiling fixtures mount against it. */
   ceilingHeight?: number;
+  /** Load the optional 150k/2048 cloud tier for explicit photo renders. */
+  preferRenderModel?: boolean;
 }) {
   const w = item.width * M;
   const d = item.depth * M;
@@ -53,7 +57,9 @@ export default function Furniture3D({
   // Ceiling fixtures hang/mount from the top of the storey. A pendant reaches
   // up ~1.9× its height (shade + cord), so its origin drops that far below the
   // ceiling; flush/recessed fixtures (ceiling light, downlight) sit right under.
-  const mountY = CEILING_SHAPES.has(shape)
+  const mountY = item.elevation != null
+    ? item.elevation * M
+    : CEILING_SHAPES.has(shape)
     ? shape === 'pendant'
       ? ceilingHeight - h * 1.9
       : ceilingHeight - h
@@ -83,6 +89,7 @@ export default function Furniture3D({
     // moveLock: objects stay put so the camera can be navigated freely.
     const st = useDesign.getState();
     if (buildToolArmed()) return; // let the tap fall through to the floor
+    if (st.pendingFurnitureType) return; // click may be placing décor on this object
     if (!draggable || !g || st.walkMode || st.moveLock) return;
     e.stopPropagation();
     onSelect();
@@ -143,6 +150,20 @@ export default function Furniture3D({
           position={[0, h / 2, 0]}
           onClick={(e) => {
             if (buildToolArmed()) return; // tap belongs to the floor beneath
+            const st = useDesign.getState();
+            const pending = st.pendingFurnitureType;
+            const pendingEntry = pending ? CATALOG_BY_TYPE[pending] : undefined;
+            if (pending && isSurfacePlaceable(pendingEntry)) {
+              e.stopPropagation();
+              const position = { x: e.point.x / M, y: e.point.z / M };
+              const id = st.addFurniture(pending, position, {
+                elevation: supportElevationAt(position, st.furniture),
+              });
+              st.select({ kind: 'furniture', id });
+              st.setPendingFurniture(null);
+              st.setTool('select');
+              return;
+            }
             e.stopPropagation();
             onSelect();
           }}
@@ -172,6 +193,7 @@ export default function Furniture3D({
       )}
       <ResilientGltfFurniture
         item={item}
+        preferRender={preferRenderModel}
         fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} />}
       />
     </group>

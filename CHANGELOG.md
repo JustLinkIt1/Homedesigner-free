@@ -5,7 +5,149 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
-## Unreleased - 2026-07-29
+## 1.12.1 - 2026-07-29 (versionCode 11201)
+
+### Private Model Studio and render-quality models
+
+- Corrected the proportion-audit regression that made chairs oversized and
+  beds/baths undersized. Proportional `contain` fitting again uses the plan
+  footprint rather than catalogue height, and generated overrides retain the
+  established catalogue dimensions instead of stretching to replacement-GLB
+  bounds. Saves that briefly received the bad chair/TV/barbecue defaults are
+  repaired on load without touching manually resized furniture.
+- Existing-item publishing in Model Studio now always uses proportional
+  `contain` fitting. The four standalone generated models retain their audited
+  axis, yaw and exact-dimension corrections. Deployed Pages
+  `https://35f8c6ac.homedesignerapp.pages.dev` with asset namespace
+  `20260729211531965` and republished the corrected no-cache R2 manifest.
+
+- Audited all seven unique published Model Studio GLBs against their actual
+  world-space bounding boxes. Corrected the TV/media unit (`210×58×148`), wall
+  TV (`200×17×97`), six-seat dining set (`185×140×84`) and Japandi table
+  (`185×152×69`, 90° yaw), plus the dining-chair, TV and barbecue overrides.
+  Exact old defaults migrate to the corrected sizes without changing objects a
+  user has already resized manually.
+- Model Studio optimization now measures the source GLB, detects when its long
+  side is authored on Z, and automatically matches depth, height and yaw to the
+  model's real proportions while keeping the intended catalogue width. Future
+  publishes therefore arrive in-app at the reviewed shape instead of being
+  stretched from guessed metadata.
+- Deployed Pages `https://19a97ba4.homedesignerapp.pages.dev` with asset
+  namespace `20260729210522397`; the live manifest reports four generated
+  entries and four generated overrides using proportion-matched exact fitting.
+
+- Fixed generated-model sizing so AI GLBs honor the catalogue width, depth and
+  height exactly, including quarter-turn yaw axis mapping. Existing wall-TV
+  saves with the original swapped footprint migrate automatically.
+- Model Studio now defaults generated models to exact-dimension fitting,
+  recognizes wall-mounted TV prompts, and publishes explicit floor, surface or
+  wall placement metadata plus wall mounting height.
+- Wall-mounted objects now snap to the tapped wall and its direction in 2D and
+  3D. Small décor, cushions, lamps and monitors snap onto the highest furniture
+  surface beneath the placement point.
+- Furniture/opening placement is one-shot: after a successful placement the
+  object is selected and the editor returns to Select, preventing accidental
+  duplicate items. Mobile selection now has a prominent floating delete button.
+- Restored the Google account/avatar menu in the desktop editor toolbar.
+- Corrected the live wall-mounted TV catalogue entry to `200 × 10 × 100 cm`,
+  exact fit and a 90° model-axis correction. Deployed Cloudflare Worker version
+  `b18278b5-c0df-4b99-8154-b29e2a797c3f` and Pages deployment
+  `https://d6280e3e.homedesignerapp.pages.dev` (asset namespace
+  `20260729202820875`).
+
+- Added the owner-only Model Studio at `/app/model-studio/`, authenticated with
+  the existing Google account and backed by private Cloudflare Worker routes.
+  It supports text-first Hunyuan Pro generation, local GLB inspection, dual
+  mobile/render optimization, catalogue metadata and approval-gated publishing.
+- Added separate interactive and render model URLs. Normal 3D editing keeps the
+  lightweight mobile asset while Photo Mode explicitly requests the HD render
+  asset from Cloudflare R2.
+- Deployed Worker version `9ab52457-f2c0-474c-88ee-e587184d6ef9` with private
+  Fal/admin secrets and verified unauthenticated model administration returns
+  `401 Unauthorized`.
+- Added a dedicated static Model Studio entry page and changed `/app/` HTML to
+  `Cache-Control: no-store`, while retaining one-year immutable caching only
+  for fingerprinted assets. This fixes the white screen and Google callback
+  failure caused by a cached HTML shell referencing retired JavaScript chunks.
+- Completed live owner Google sign-in in Model Studio and confirmed the normal
+  web app shows the linked owner account, Sync now and Sign out controls.
+- Added an owner-only **Model Studio** item to the signed-in Account menu. It is
+  visible only for `nathanjoppich@gmail.com`; Android opens the secure hosted
+  studio externally while desktop routes directly to its dedicated page.
+- Model Studio job records, reference images and copied generated GLBs have no
+  automatic expiry in R2. The current Recent drafts panel lists the newest 40;
+  older records remain stored until an explicit future cleanup policy.
+- Fixed Model Studio being clipped by the app shell's global `overflow: hidden`:
+  it now owns a full-height momentum-scrolling viewport, exposing optimization
+  and publishing controls below large 3D previews on desktop and mobile.
+- Replaced the ambiguous generation estimate with the actual expected totals:
+  `$0.525` for Hunyuan Pro plus the custom 40k mesh, or `$0.675` with PBR.
+- Added a curated textured-model selector with **Hunyuan 3D Pro** and
+  **Hunyuan 3D Rapid**. Rapid is labelled as the faster/lower-cost choice at
+  `$0.225`, or `$0.375` with PBR; Pro remains the detail-first choice. Both
+  routes hard-disable their untextured geometry modes in the Worker, validate
+  model IDs against a server allowlist and retain exact Fal provenance when a
+  reviewed model is published.
+- Deployed Worker version `fd35b592-1c39-4405-b383-2dfef4be60cf` and a fresh
+  Cloudflare Pages asset set. Verified the production custom domain serves the
+  new selector JavaScript as `application/javascript`, avoiding a stale Pages
+  fallback response that could otherwise cause another blank Studio screen.
+- Built and verified signed Android App Bundle
+  `HomeDesigner-1.12.1-11201.aab` (29,638,941 bytes), SHA-256
+  `949C5FC331436C3A94DAC31EDA68C9736165A98FE318A16E8B822EBB56758264`,
+  signed by the expected Nathan Joppich upload certificate.
+- Permanently hardened web deployments against the white-screen cache failure.
+  Every build now puts all JavaScript, CSS, WebAssembly and worker assets in a
+  unique deployment namespace, including unchanged vendor chunks, so a browser
+  with an older poisoned immutable response always receives new URLs.
+- Added a real top-level `404.html` to disable Cloudflare Pages' implicit SPA
+  fallback for missing assets, plus a build-time assertion that prevents either
+  protection from being removed accidentally. Production verification confirmed
+  a missing JavaScript URL returns an uncached HTTP 404 instead of landing-page
+  HTML, and an already affected Chrome profile loaded the apex app successfully
+  without clearing its cache.
+- Replaced Model Studio's free-text category and renderer-shape fields with
+  dropdowns derived from the categories and shapes already shipped by the app.
+  Existing-model replacement also uses a bundled-item dropdown and copies its
+  canonical metadata, reducing the chance of publishing an unusable override.
+- Enforced the same room-category allowlist in the Cloudflare Worker and remote
+  catalogue reader so an outdated or malformed client cannot introduce a new
+  top-level catalogue category. Deployed Worker version
+  `43dd5a75-5040-4094-b031-618bb3405d6b`.
+- Published the supplied generated **Modern TV & Media Unit** as a free Living
+  item. Its validated Cloudflare delivery tiers are 886,564 bytes for normal
+  editing and 2,277,128 bytes for HD renders; the item also appears in the
+  existing Storage type grouping without adding a new UI category.
+- Added real model-rendered catalogue thumbnails for the generated TV/media
+  unit and dining chair, replacing the stale legacy sprite and generic line
+  preview. Cloud entries without an approved thumbnail now use their current
+  shape symbol instead of showing a potentially unrelated bundled sprite.
+- Extended Model Studio publishing so Fal's generated thumbnail is copied into
+  immutable Cloudflare storage and written to future catalogue entries and
+  overrides. Deployed Worker version
+  `6207dc27-c0ee-4703-8f5f-0d857b059e06`.
+- Fixed selected catalogue category chips using a light foreground in dark mode;
+  active Room/Type filters now consistently use the app's brand colour.
+- Scoped Model Studio's **Existing item** selector to the chosen room category.
+  Changing category while replacing a model selects the first valid item in
+  that category, preventing mismatched category/item metadata.
+- Upgraded all four sample homes through stable cloud overrides for the TV,
+  dining chairs, sofa, armchair, double bed, plants, bathtub, dresser and
+  nightstands. Stable built-in item IDs remain in the templates, preserving
+  offline procedural fallbacks while the online homes use the newer models.
+
+### Internal model production
+
+- Added a secure Fal TRELLIS 2 generation command for review-only furniture
+  assets. It accepts a local or hosted reference image, keeps `FAL_KEY` outside
+  Git, defaults to 30,000 vertices and a 1024px texture for mobile, and records
+  the Fal request ID and reproducibility settings.
+- Generated GLBs are automatically optimized with Meshopt and WebP, inspected,
+  hashed and placed in an untracked review package. The tool cannot publish to
+  R2 or modify the live catalogue, which continues to require reviewed CC0
+  provenance until a truthful generated-asset schema is released.
+- Added operator documentation for secure key entry, dry runs, paid generation,
+  approval checks and cleanup.
 
 ### Tester onboarding
 

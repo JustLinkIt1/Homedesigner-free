@@ -72,7 +72,16 @@ function CatalogItem({
 }
 
 function CatalogVisual({ entry, className }: { entry: CatalogEntry; className: string }) {
-  return FURNITURE_SPRITES.has(entry.type) ? (
+  return entry.model?.thumbnailUrl ? (
+    <img
+      className={`${className} ci-thumbnail`}
+      src={entry.model.thumbnailUrl}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+    />
+  ) : FURNITURE_SPRITES.has(entry.type) && !entry.cloud ? (
     <img
       className={`${className} ci-sprite`}
       src={spriteUrl(entry.type)}

@@ -1,5 +1,118 @@
 # WIP — current handoff
 
+> **Emergency furniture-scale regression corrected live 2026-07-29:** restored
+> footprint-based proportional fitting for catalogue replacements, fixing the
+> tiny beds and baths, and restored the established dining-chair, wooden-chair,
+> TV and barbecue catalogue slots. Exact short-lived oversized defaults are
+> reverse-migrated on load while user-resized objects are preserved. Model
+> Studio now forces existing-item overrides to proportional `contain`; only the
+> four standalone generated models keep their audited exact dimensions/yaw.
+> Pages deployment `https://35f8c6ac.homedesignerapp.pages.dev`; asset namespace
+> `20260729211531965`. The corrected R2 manifest is live. Typecheck, lint,
+> production build and all sample-home layout checks pass.
+
+> **Published Studio model proportion audit live 2026-07-29:** all seven unique
+> generated GLBs were measured from their optimized world-space AABBs. Four
+> standalone entries and four overrides now use dimensions/yaw matching the
+> real assets; exact legacy defaults migrate while user-customized dimensions
+> remain untouched. Model Studio's optimizer now measures each future GLB and
+> derives depth, height and any required quarter-turn from the intended width,
+> preventing guessed metadata from stretching models in-app. Pages deployment
+> `https://19a97ba4.homedesignerapp.pages.dev`; asset namespace
+> `20260729210522397`. Root typecheck/lint/build, Worker check and sample-home
+> collision validation are green.
+
+> **Placement, scaling and desktop account fixes live 2026-07-29:** generated
+> Fal models now obey exact width/depth/height in the app, with yaw-aware axis
+> mapping; the first wall-TV save format auto-migrates its swapped footprint.
+> Model Studio defaults to exact sizing and publishes floor/surface/wall
+> placement metadata. Wall objects snap to walls, small décor snaps onto other
+> furniture, placement disarms after one item, and mobile selection has a
+> floating delete action. The account/avatar menu is restored in the desktop
+> editor toolbar. The live wall TV is corrected to 200×10×100 cm with 90° yaw.
+> Worker version `b18278b5-c0df-4b99-8154-b29e2a797c3f`; Pages deployment
+> `https://d6280e3e.homedesignerapp.pages.dev`; asset namespace
+> `20260729202820875`.
+
+> **Release 1.12.1 built 2026-07-29:** Android versionCode **11201** includes
+> the owner-only Account-menu entry for Model Studio. Signed delivery artifact:
+> `outputs/HomeDesigner-1.12.1-11201.aab`, 29,638,941 bytes, SHA-256
+> `949C5FC331436C3A94DAC31EDA68C9736165A98FE318A16E8B822EBB56758264`.
+> `jarsigner` verifies it and the certificate owner is Nathan Joppich. Model
+> Studio history has no R2 TTL; the UI lists the newest 40 jobs while older
+> records remain stored.
+
+> **Catalogue safety + free TV media unit live 2026-07-29:** Model Studio now
+> derives category and object-type dropdowns from the shipped catalogue, and
+> existing-model replacement uses a canonical bundled-item selector. The remote
+> catalogue reader and Worker both reject unknown room categories. Worker
+> version `43dd5a75-5040-4094-b031-618bb3405d6b`; Pages deployment
+> `https://0aa0528a.homedesignerapp.pages.dev` uses asset namespace
+> `20260729174223912`. The supplied Hunyuan Pro TV/media cabinet is published as
+> free `tv_media_unit` under Living/Storage with validated immutable mobile
+> (886,564 bytes, SHA-256 `d5eaf65a8cf6d8183c3222ce703af1cd8dadf52d97fa07327170561225dbffde`)
+> and render (2,277,128 bytes, SHA-256
+> `22d0082f9ab4e1bfe28623c84bdd9716af0b58b78002b67ebdd2bf8ac65f63f8`)
+> Cloudflare tiers. It is cloud-delivered and does not increase the Android AAB.
+
+> **Catalogue previews, filters and samples refreshed 2026-07-29:** generated
+> TV/media-unit and dining-chair catalogue tiles now use immutable 512px renders
+> of their actual optimized GLBs. The manifest schema and client accept only
+> same-origin PNG/JPEG/WebP thumbnails; missing thumbnails fall back to current
+> symbols rather than stale bundled sprites. Future Fal thumbnails are copied
+> to R2 automatically by Worker version
+> `6207dc27-c0ee-4703-8f5f-0d857b059e06`. Model Studio's existing-item dropdown
+> is category-scoped, and selected catalogue chips use brand styling in dark
+> mode. The sample homes retain stable built-in types but now receive cloud
+> overrides for TV, dining chairs, sofa, armchair, bed, plants, bathtub,
+> dresser and nightstands, preserving offline fallbacks. Pages deployment
+> `https://810ba9a4.homedesignerapp.pages.dev` uses asset namespace
+> `20260729182459292`.
+
+> **Web cache failure permanently hardened 2026-07-29:** Vite now emits every
+> generated asset under a unique per-deployment namespace, including otherwise
+> unchanged vendor chunks. A top-level `404.html` disables Cloudflare Pages'
+> HTML fallback for missing modules, and `build:web` fails if either invariant
+> is lost. Deployment `https://e3230a98.homedesignerapp.pages.dev` uses asset
+> namespace `20260729171558068`. Live apex verification returned the entry
+> module as `application/javascript`, a random missing module as HTTP 404 with
+> `Cache-Control: no-store`, and the Chrome profile previously affected by the
+> year-long poisoned cache mounted the app without manual cache clearing.
+
+> **Private Model Studio live 2026-07-29:**
+> `https://homedesignerapp.com/app/model-studio/` is a dedicated, owner-only
+> entry page using the existing Google OAuth client. The Cloudflare sync Worker
+> version is `fd35b592-1c39-4405-b383-2dfef4be60cf`; `FAL_KEY` and
+> `MODEL_ADMIN_EMAIL` are Worker secrets and are not shipped to the browser or
+> repository. The studio offers only textured text-to-3D generators: Hunyuan
+> 3D Pro (detail-first, `$0.525`/`$0.675` with PBR) and Hunyuan 3D Rapid
+> (fast drafts, `$0.225`/`$0.375` with PBR). Untextured Pro `Geometry` and
+> Rapid `enable_geometry` modes are blocked in the Worker and arbitrary client
+> endpoints are rejected. It previews local
+> GLBs, creates mobile and HD render tiers, stages both to R2 and publishes the
+> manifest only after rights confirmation. Normal editing uses the mobile tier;
+> Photo Mode alone requests `renderUrl`. Live owner sign-in and normal `/app/`
+> account restoration were verified. App HTML is now `no-store` to prevent a
+> cached shell from referencing retired immutable chunks; asset files remain
+> immutable for one year.
+> The normal Account menu now exposes **Model Studio** only when the signed-in
+> email is `nathanjoppich@gmail.com`; the Worker remains the authority and
+> rejects every non-owner token regardless of UI visibility.
+> Production custom-domain verification returned the new hashed Model Studio
+> JavaScript with `application/javascript` and confirmed both model choices are
+> present; this check caught and replaced one stale HTML fallback cached under
+> an earlier asset path.
+
+> **Fal TRELLIS tooling added 2026-07-29:** `npm run models:trellis` now
+> generates review-only TRELLIS 2 GLBs from local or hosted images with safe
+> mobile defaults, automatic glTF optimization, inspection, hashing and a
+> reproducibility/approval record. The local command reads `FAL_KEY` only from
+> the ignored environment file and never logs it.
+> The tool deliberately cannot upload to R2 or edit the live catalogue because
+> the current runtime accepts only CC0 provenance. See
+> `docs/FAL_TRELLIS_PIPELINE.md`. TRELLIS remains review-only; Hunyuan Pro is
+> the preferred production generator after the texture-quality comparison.
+
 > **Tester onboarding updated 2026-07-29:** the landing page no longer embeds
 > the unreliable Google Form. Its **Request access** buttons scroll to three
 > direct instructions: join `groups.google.com/g/homedesignertest`, opt in at

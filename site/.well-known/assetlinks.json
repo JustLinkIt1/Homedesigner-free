@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.homedesigner.app",
+      "sha256_cert_fingerprints": [
+        "56:3E:F0:84:E1:6D:2D:18:E4:D4:8E:5F:28:8F:A4:22:E5:03:92:17:93:5B:34:DB:C1:8B:05:61:90:59:6A:7F"
+      ]
+    }
+  }
+]
