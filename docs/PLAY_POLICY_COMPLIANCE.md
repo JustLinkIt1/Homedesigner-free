@@ -51,9 +51,11 @@ Everything that leaves the device:
 - **No analytics, no ads, no trackers** (verified: no Firebase, Crashlytics,
   Sentry, Mixpanel, Amplitude, AdMob, Meta SDKs).
 - Projects/designs persist in on-device `localStorage` only.
-- **Privacy policy** is live at
-  `https://justlinkit1.github.io/Homedesigner-free/privacy.html` (HTTP 200) and
-  mentions RevenueCat, purchases, and Google Play.
+- **Privacy policy** is live at `https://homedesignerapp.com/privacy`
+  (HTTP 200, served from Cloudflare Pages) and mentions RevenueCat, purchases,
+  and Google Play. The former `justlinkit1.github.io` address now only 301s
+  here and will stop resolving once the GitHub Pages fallback is retired, so the
+  Play listing must carry the `homedesignerapp.com` URL.
 
 ## Action items (Play Console — cannot be fixed from the repo)
 

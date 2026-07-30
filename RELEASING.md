@@ -52,7 +52,10 @@ only if App Signing was enabled from the first upload (it is by default).
      for ads, encrypted in transit, no deletion mechanism needed (anonymous
      ID). Everything else (designs, settings) stays on-device — declare "no
      other data collected".
-   - **Privacy policy URL**: `https://justlinkit1.github.io/Homedesigner-free/privacy.html`
+   - **Privacy policy URL**: `https://homedesignerapp.com/privacy`
+     (the canonical 200. `/privacy.html` also works but 308s to it, and the old
+     `justlinkit1.github.io` URL is now only a 301 redirect that disappears when
+     the GitHub Pages fallback is retired — do not give Play either of those.)
    - Content rating: everyone; no ads.
 4. Play Console → **Monetize → Products → In-app products** → Create:
    - Product ID `pro_unlock`, one-time (managed) product, price **$6.99**,
