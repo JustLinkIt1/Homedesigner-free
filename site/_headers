@@ -24,6 +24,10 @@
 /app/version.json
   Cache-Control: no-store
 
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: public, max-age=300
+
 /404.html
   Cache-Control: no-store
 
