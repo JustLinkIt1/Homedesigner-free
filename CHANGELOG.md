@@ -175,9 +175,22 @@ changes and add an entry when you ship one.
   The direct-upload preview remains only as a no-domain recovery path.
 - Temporarily returned the repository to public and recreated the GitHub Pages
   custom-domain deployment after a mobile carrier retained the former GoDaddy
-  delegation. This preserves a working 200 response on both the stale GitHub
-  route and the authoritative Cloudflare route during DNS propagation; privacy
-  should be re-enabled after the old delegation TTL has safely expired.
+  delegation. This preserved a working 200 response on both the stale GitHub
+  route and the authoritative Cloudflare route during DNS propagation.
+- **The repository is private again.** The former
+  `justlinkit1.github.io/Homedesigner-free/privacy.html` address now only
+  **301s** to `https://homedesignerapp.com/privacy`, which is itself the
+  canonical 200 (`/privacy.html` 308s to it). Verified live.
+- Corrected `RELEASING.md` and `docs/PLAY_POLICY_COMPLIANCE.md`, which still
+  told you to give the Play Console the `github.io` privacy URL. That URL now
+  survives only as a redirect and disappears with the GitHub Pages fallback, so
+  a listing carrying it would eventually point Play at nothing. `appInfo.ts`
+  already used the canonical address; only the runbooks were stale.
+- Documented the hosting move in `docs/WIP_HANDOFF.md` (new section 5b),
+  including that the web artifact must be built with `npm run build:web` rather
+  than `npm run build`, and flagging that the authenticated sync Worker still
+  lists `https://justlinkit1.github.io` in `allowedOrigins` — dead weight once
+  the fallback is retired, and left in place deliberately until then.
 
 ### Security hardening
 

@@ -239,6 +239,38 @@ release copy is `outputs/HomeDesigner-1.12.0-11200.aab` (gitignored).
 
 ---
 
+## 5b. Hosting: Cloudflare Pages, and the repo is private
+
+The web app **no longer ships from GitHub Pages**. Production is Cloudflare
+Pages, the GitHub repository is **private**, and the Cloudflare GitHub app is
+scoped to this repo only.
+
+- **Build the web artifact with `npm run build:web`**, not `npm run build`.
+  `scripts/assemble-web.mjs` assembles one `site-dist/` containing the landing
+  page, the app under `/app/`, the privacy page and domain metadata. `npm run
+  build` alone produces only the app bundle and is what the Android build
+  consumes — the two are not interchangeable.
+- **Canonical production host:** `https://homedesignerapp.com` (apex and `www`
+  both Active with SSL). The Pages project `homedesignerapp` builds the merged
+  default branch automatically; the direct-upload preview is a no-domain
+  recovery path only.
+- **Privacy policy for the Play listing is `https://homedesignerapp.com/privacy`.**
+  Verified live: `/privacy.html` 308s to it, and the old
+  `justlinkit1.github.io/...` address now only **301s** here. That redirect
+  exists solely because a mobile carrier held the stale GoDaddy delegation, and
+  it disappears when the GitHub Pages fallback is retired — so never hand Play
+  (or any store/consent surface) a `github.io` URL again. `src/lib/appInfo.ts`
+  already points at the canonical one.
+- **Loose end:** `workers/design-sync/src/index.ts` still lists
+  `https://justlinkit1.github.io` in `allowedOrigins`. It is dead weight once
+  the Pages fallback goes, and it widens the CORS surface of the authenticated
+  sync Worker in the meantime. Remove it as part of retiring the fallback —
+  deliberately not removed here, because it is live auth infrastructure and the
+  DNS propagation window may still need it.
+- **Private repo consequences:** anything that assumed public raw/Pages URLs is
+  gone. The R2 model/catalog bucket (`docs/CLOUDFLARE_R2.md`) is separate and
+  unaffected — it was already Cloudflare and is public by design.
+
 ## 6. Next up (owner's queue)
 
 Two remaining features, in the order the owner asked for them. Half walls are
