@@ -29,8 +29,10 @@ import {
   modelStudioConfigured,
   publishStudioModel,
   STUDIO_GENERATORS,
+  suggestStudioMetadata,
   uploadOptimizedStudioModel,
   type PublishMetadata,
+  type SuggestedCatalogMetadata,
   type StudioGeneratorId,
   type StudioJob,
 } from './modelStudioApi';
@@ -54,32 +56,12 @@ function slug(value: string): string {
   return value.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 70);
 }
 
-function suggestedMetadata(prompt: string): PublishMetadata {
-  const lower = prompt.toLowerCase();
-  if (/\btv\b|television|media (unit|cabinet|console)/.test(lower)) {
-    const wallMounted = /wall[ -]?mount|mounted on (a |the )?wall/.test(lower);
-    return {
-      mode: 'entry', type: wallMounted ? 'wall_mount_tv' : 'tv_media_unit', name: wallMounted ? 'Wall-mounted TV' : 'TV & Media Unit', category: 'Living',
-      shape: 'tv', width: wallMounted ? 160 : 200, depth: wallMounted ? 10 : 55, height: wallMounted ? 95 : 140, color: '#26262b', icon: '📺',
-      pro: true, fit: 'stretch', yaw: 0, placement: wallMounted ? 'wall' : 'floor', mountY: wallMounted ? 90 : 0, rightsConfirmed: false,
-    };
-  }
-  if (/sofa|couch/.test(lower)) {
-    return {
-      mode: 'entry', type: 'ai_sofa', name: 'Designer Sofa', category: 'Living',
-      shape: 'sofa', width: 210, depth: 95, height: 85, color: '#7b8491', icon: '🛋️',
-      pro: true, fit: 'stretch', yaw: 0, placement: 'floor', mountY: 0, rightsConfirmed: false,
-    };
-  }
-  if (/chair|armchair/.test(lower)) {
-    return {
-      mode: 'entry', type: 'ai_armchair', name: 'Designer Armchair', category: 'Living',
-      shape: 'chair', width: 85, depth: 85, height: 90, color: '#8a7868', icon: '🪑',
-      pro: true, fit: 'stretch', yaw: 0, placement: 'floor', mountY: 0, rightsConfirmed: false,
-    };
-  }
+/** Offline stand-in for the catalogue card, used only while the server-side
+ *  assistant is unreachable. It stays deliberately generic: hand-rolled
+ *  keyword guessing is what put a shower cubicle in Living at 100x60x90. */
+function fallbackMetadata(prompt: string): PublishMetadata {
   const first = prompt.split(/[,.]/)[0].replace(/^(a|an|the)\s+/i, '').trim() || 'Generated furniture';
-  const name = first.replace(/\b\w/g, (letter) => letter.toUpperCase()).slice(0, 80);
+  const name = first.replace(/\b\w/g, (letter) => letter.toUpperCase()).slice(0, 40);
   return {
     mode: 'entry', type: slug(name) || 'generated_furniture', name, category: 'Living',
     shape: 'box', width: 100, depth: 60, height: 90, color: '#8b7b6b', icon: '▣',
@@ -87,33 +69,61 @@ function suggestedMetadata(prompt: string): PublishMetadata {
   };
 }
 
-/** Use the intended physical width as the anchor, then derive depth/height
- * from the GLB's real bounding box. This prevents metadata guesses from
- * stretching generated furniture and also catches Z-forward models that need
- * a quarter-turn before their long side is the catalogue width. */
-function matchModelProportions(
-  current: PublishMetadata,
-  dimensions?: [number, number, number],
-): PublishMetadata {
-  if (!dimensions || dimensions.some((value) => !Number.isFinite(value) || value <= 0)) return current;
-  const [x, y, z] = dimensions;
-  let yaw = current.yaw;
-  const targetLandscape = current.width >= current.depth;
-  const modelLandscape = x >= z;
-  if (targetLandscape !== modelLandscape && Math.abs(x - z) / Math.max(x, z) > 0.08) {
-    yaw = ((Math.round(yaw / 90) * 90 + 90) % 360 + 360) % 360;
+const RADIANS = Math.PI / 180;
+const isQuarterTurn = (yawDegrees: number) =>
+  Math.abs(Math.sin(yawDegrees * RADIANS)) > Math.abs(Math.cos(yawDegrees * RADIANS));
+
+/** A model authored front-to-back needs a quarter turn before its long side
+ *  lines up with the catalogue width. */
+function alignedYaw(item: PublishMetadata, dimensions?: [number, number, number]): number {
+  if (!dimensions || dimensions.some((value) => !Number.isFinite(value) || value <= 0)) return item.yaw;
+  const [x, , z] = dimensions;
+  if ((item.width >= item.depth) !== (x >= z) && Math.abs(x - z) / Math.max(x, z) > 0.08) {
+    return (((Math.round(item.yaw / 90) * 90 + 90) % 360) + 360) % 360;
   }
-  const quarterTurn = Math.abs(Math.sin((yaw * Math.PI) / 180)) > Math.abs(Math.cos((yaw * Math.PI) / 180));
-  const worldWidth = quarterTurn ? z : x;
-  const worldDepth = quarterTurn ? x : z;
-  const scale = current.width / worldWidth;
-  return {
-    ...current,
-    depth: Math.max(1, Math.round(worldDepth * scale)),
-    height: Math.max(1, Math.round(y * scale)),
-    yaw,
-    fit: 'stretch',
-  };
+  return item.yaw;
+}
+
+/** Uniform scale GltfFurniture will apply, in cm per model unit. Mirrors its
+ *  arithmetic exactly, so a mismatch between mesh and catalogue box is visible
+ *  before publishing rather than after. `node tests/models.mjs` runs the same
+ *  check over the bundled models. */
+function fitScaleCm(item: PublishMetadata, dimensions: [number, number, number]): number {
+  const [x, y, z] = dimensions;
+  const quarterTurn = isQuarterTurn(item.yaw);
+  const sx = (quarterTurn ? item.depth : item.width) / x;
+  const sz = (quarterTurn ? item.width : item.depth) / z;
+  const sy = item.height / y;
+  return item.fit === 'width' ? sx : item.fit === 'depth' ? sz : item.fit === 'height' ? sy : Math.min(sx, sz);
+}
+
+/** Height the model will actually draw, in cm. */
+function renderedHeightCm(item: PublishMetadata, dimensions?: [number, number, number]): number | null {
+  if (!dimensions || dimensions.some((value) => !Number.isFinite(value) || value <= 0)) return null;
+  if (item.fit === 'stretch') return item.height;
+  return dimensions[1] * fitScaleCm(item, dimensions);
+}
+
+/** Choose the orientation and scaling policy that make the mesh match its
+ *  catalogue box.
+ *
+ *  The BOX ITSELF IS NOT DERIVED FROM THE MESH. A floor lamp occupies 35x35cm
+ *  of floor whatever its GLB measures, and the plan view, collision and
+ *  snapping all read those numbers — folding a stray cable into the footprint
+ *  would make the lamp unplaceable.
+ *
+ *  Only the FIT comes from the mesh. GltfFurniture's default 'contain' scales
+ *  by min(width/x, depth/z), so geometry that widens the bounding box without
+ *  belonging to the object's real footprint — a trailing cable, a base plate,
+ *  a stray ground plane — crushes the whole model: that lamp measures 0.75
+ *  wide against 0.19 deep and draws 44cm against a 160cm entry. When contain
+ *  would lose more than 15% of the height, scale by height instead and let the
+ *  extra geometry lie flat on the floor at the right size. */
+function fitToModel(item: PublishMetadata, dimensions?: [number, number, number]): PublishMetadata {
+  if (!dimensions || dimensions.some((value) => !Number.isFinite(value) || value <= 0)) return item;
+  const candidate: PublishMetadata = { ...item, yaw: alignedYaw(item, dimensions), fit: 'contain' };
+  const drawn = renderedHeightCm(candidate, dimensions);
+  return drawn !== null && drawn < item.height * 0.85 ? { ...candidate, fit: 'height' } : candidate;
 }
 
 function LoadedModel({ url }: { url: string }) {
@@ -186,7 +196,12 @@ export default function ModelStudio() {
   const [renderOptimizedUrl, setRenderOptimizedUrl] = useState<string | null>(null);
   const [previewTier, setPreviewTier] = useState<'mobile' | 'render'>('mobile');
   const [stats, setStats] = useState<{ before: GlbStats; mobile: GlbStats; render: GlbStats } | null>(null);
-  const [metadata, setMetadata] = useState<PublishMetadata>(() => suggestedMetadata(STARTER_PROMPT));
+  const [metadata, setMetadata] = useState<PublishMetadata>(() => fallbackMetadata(STARTER_PROMPT));
+  const [modelDimensions, setModelDimensions] = useState<[number, number, number] | undefined>();
+  const [suggestion, setSuggestion] = useState<SuggestedCatalogMetadata | null>(null);
+  const [assistantBusy, setAssistantBusy] = useState(false);
+  const [assistantNote, setAssistantNote] = useState('');
+  const [advanced, setAdvanced] = useState(false);
   const [enablePbr, setEnablePbr] = useState(false);
   const [generator, setGenerator] = useState<StudioGeneratorId>('hunyuan-v3.1-pro');
   const [working, setWorking] = useState('');
@@ -199,6 +214,23 @@ export default function ModelStudio() {
     () => OVERRIDABLE_ITEMS.filter((entry) => entry.category === metadata.category),
     [metadata.category],
   );
+  // The renderer's own arithmetic, run before publishing rather than after.
+  const drawnHeight = renderedHeightCm(metadata, modelDimensions);
+  const fitNote = (() => {
+    if (!modelDimensions) return null;
+    if (drawnHeight !== null && drawnHeight < metadata.height * 0.85) {
+      return `Fit “${metadata.fit}” draws this about ${Math.round(drawnHeight)}cm tall against ${metadata.height}cm. `
+        + 'Its bounding box is wider than the footprint allows, so the footprint fit shrinks it — use Height.';
+    }
+    if (metadata.fit !== 'height') return null;
+    const scale = fitScaleCm(metadata, modelDimensions);
+    const quarterTurn = isQuarterTurn(metadata.yaw);
+    const spreadX = Math.round((quarterTurn ? modelDimensions[2] : modelDimensions[0]) * scale);
+    const spreadZ = Math.round((quarterTurn ? modelDimensions[0] : modelDimensions[2]) * scale);
+    if (spreadX <= metadata.width * 1.15 && spreadZ <= metadata.depth * 1.15) return null;
+    return `Sized by height, the mesh spreads ${spreadX}×${spreadZ}cm across a ${metadata.width}×${metadata.depth}cm footprint. `
+      + 'That is right when the overhang is a cable or a base plate — check the preview if it is not.';
+  })();
 
   const replaceJob = (next: StudioJob) => {
     setJobs((current) => [next, ...current.filter((job) => job.id !== next.id)]);
@@ -222,10 +254,13 @@ export default function ModelStudio() {
   useEffect(() => {
     if (!selectedId) return;
     setPrompt(selectedPrompt || selectedCaption || '');
-    setMetadata(suggestedMetadata(selectedPrompt || selectedCaption || 'Generated furniture'));
+    setMetadata(fallbackMetadata(selectedPrompt || selectedCaption || 'Generated furniture'));
     setOptimized(null);
     setRenderOptimized(null);
     setStats(null);
+    setModelDimensions(undefined);
+    setSuggestion(null);
+    setAssistantNote('');
     const previousGenerator = STUDIO_GENERATORS.find((item) => item.endpoint === selected?.generationTask?.endpoint);
     if (previousGenerator) setGenerator(previousGenerator.id);
   }, [selectedId, selectedPrompt, selectedCaption, selected?.generationTask?.endpoint]);
@@ -307,7 +342,67 @@ export default function ModelStudio() {
     if (!selected?.caption) return;
     const clean = `${selected.caption.trim()} Isolated furniture product, complete object, realistic materials, no room, no wall, no floor.`.slice(0, 1024);
     setPrompt(clean);
-    setMetadata(suggestedMetadata(clean));
+  };
+
+  const bestOverrideMatch = (hint: SuggestedCatalogMetadata) =>
+    OVERRIDABLE_ITEMS.find((entry) => entry.type === hint.type)
+    ?? OVERRIDABLE_ITEMS.find((entry) => entry.shape === hint.shape && entry.category === hint.category)
+    ?? OVERRIDABLE_ITEMS.find((entry) => entry.shape === hint.shape)
+    ?? OVERRIDABLE_ITEMS.find((entry) => entry.category === hint.category)
+    ?? null;
+
+  const selectOverride = (type: string, dimensions = modelDimensions) => {
+    const entry = OVERRIDABLE_ITEMS.find((item) => item.type === type);
+    if (!entry) return;
+    setMetadata((current) => {
+      const next: PublishMetadata = {
+        ...current,
+        mode: 'override',
+        type: entry.type,
+        name: entry.name,
+        category: entry.category,
+        shape: entry.shape,
+        // An override only swaps the GLB — the manifest keeps the established
+        // item's box, so these are read-only facts here, not choices.
+        width: entry.width,
+        depth: entry.depth,
+        height: entry.height,
+        color: entry.color,
+        icon: entry.icon,
+        pro: !!entry.pro,
+        fit: 'contain',
+      };
+      return fitToModel(next, dimensions);
+    });
+  };
+
+  /** Fill the catalogue card from the description and the measured mesh. The
+   *  owner's only real decisions are new-item vs replacement, and which item a
+   *  replacement stands in for. */
+  const runAssistant = async (dimensions = modelDimensions) => {
+    if (!selected) return;
+    const description = (prompt.trim() || selected.caption || '').trim();
+    if (description.length < 3) return;
+    setAssistantBusy(true);
+    setAssistantNote('');
+    try {
+      const hint = await suggestStudioMetadata(selected.id, { description, dimensions });
+      setSuggestion(hint);
+      if (metadata.mode === 'override') {
+        const match = bestOverrideMatch(hint);
+        if (match) selectOverride(match.type, dimensions);
+      } else {
+        setMetadata((current) => fitToModel({ ...current, ...hint }, dimensions));
+      }
+      if (!dimensions) {
+        setAssistantNote('Sizes are the assistant’s real-world estimate. Make the mobile copy to match them to the mesh.');
+      }
+    } catch (reason) {
+      setAssistantNote(reason instanceof Error ? reason.message : 'The metadata assistant is unavailable — fill the fields in by hand.');
+      setAdvanced(true);
+    } finally {
+      setAssistantBusy(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -337,9 +432,14 @@ export default function ModelStudio() {
       setOptimized(result.mobile.blob);
       setRenderOptimized(result.render.blob);
       setStats({ before: result.before, mobile: result.mobile.stats, render: result.render.stats });
-      setMetadata((current) => matchModelProportions(current, result.before.dimensions));
+      const dimensions = result.before.dimensions;
+      setModelDimensions(dimensions);
+      setMetadata((current) => fitToModel(current, dimensions));
       setPreviewTier('mobile');
       setWorking('');
+      // The mesh has just been measured — this is the one moment the assistant
+      // can give both a real-world size and matching proportions.
+      void runAssistant(dimensions);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Model optimization failed.');
       setWorking('');
@@ -380,35 +480,19 @@ export default function ModelStudio() {
     }
   };
 
-  const selectOverride = (type: string) => {
-    const entry = OVERRIDABLE_ITEMS.find((item) => item.type === type);
-    if (!entry) return;
-    setMetadata({
-      ...metadata,
-      mode: 'override',
-      type: entry.type,
-      name: entry.name,
-      category: entry.category,
-      shape: entry.shape,
-      width: entry.width,
-      depth: entry.depth,
-      height: entry.height,
-      color: entry.color,
-      icon: entry.icon,
-      pro: !!entry.pro,
-      fit: 'contain',
-    });
-  };
-
   const selectPublishMode = (mode: PublishMetadata['mode']) => {
+    if (mode === metadata.mode) return;
     if (mode === 'override') {
       const matching = categoryOverrideItems.find((entry) => entry.type === metadata.type)
         ?? categoryOverrideItems.find((entry) => entry.shape === metadata.shape)
+        ?? OVERRIDABLE_ITEMS.find((entry) => entry.shape === metadata.shape)
         ?? categoryOverrideItems[0];
       if (matching) selectOverride(matching.type);
       return;
     }
-    setMetadata({ ...metadata, mode });
+    // Back to a new entry: the assistant's real-world description applies
+    // again instead of the replaced item's fixed catalogue slot.
+    setMetadata((current) => fitToModel({ ...current, ...(suggestion ?? {}), mode }, modelDimensions));
   };
 
   const selectCategory = (category: string) => {
@@ -562,27 +646,70 @@ export default function ModelStudio() {
             <div className="studio-step">3</div>
             <div className="studio-step-content">
               <h2>Catalogue details</h2>
-              <p>These fields are the exact data HomeDesigner reads. Publishing uploads the immutable GLB first and the catalogue manifest last.</p>
-              <div className="studio-fields">
-                <label>Publish as<select value={metadata.mode} onChange={(event) => selectPublishMode(event.target.value as PublishMetadata['mode'])}><option value="entry">New item</option><option value="override">Replace existing model</option></select></label>
-                {metadata.mode === 'override' ? (
-                  <label>Existing item<select value={metadata.type} onChange={(event) => selectOverride(event.target.value)}>{categoryOverrideItems.map((entry) => <option key={entry.type} value={entry.type}>{entry.name}</option>)}</select></label>
-                ) : (
-                  <label>Type / slug<input value={metadata.type} onChange={(event) => setMetadata({ ...metadata, type: slug(event.target.value) })} /></label>
-                )}
-                <label>Name<input value={metadata.name} onChange={(event) => setMetadata({ ...metadata, name: event.target.value })} /></label>
-                <label>Category<select value={metadata.category} onChange={(event) => selectCategory(event.target.value)}>{PUBLISHABLE_CATALOG_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
-                <label>Object type<select value={metadata.shape} onChange={(event) => setMetadata({ ...metadata, shape: event.target.value })}>{PUBLISHABLE_CATALOG_SHAPES.map((shape) => <option key={shape} value={shape}>{shape.replace(/_/g, ' ')}</option>)}</select></label>
-                <label>Icon<input value={metadata.icon} onChange={(event) => setMetadata({ ...metadata, icon: event.target.value })} /></label>
-                <label>Width (cm)<input type="number" value={metadata.width} onChange={(event) => setMetadata({ ...metadata, width: Number(event.target.value) })} /></label>
-                <label>Depth (cm)<input type="number" value={metadata.depth} onChange={(event) => setMetadata({ ...metadata, depth: Number(event.target.value) })} /></label>
-                <label>Height (cm)<input type="number" value={metadata.height} onChange={(event) => setMetadata({ ...metadata, height: Number(event.target.value) })} /></label>
-                <label>Colour<input type="color" value={metadata.color} onChange={(event) => setMetadata({ ...metadata, color: event.target.value })} /></label>
-                <label>Fit<select value={metadata.fit} onChange={(event) => setMetadata({ ...metadata, fit: event.target.value as PublishMetadata['fit'] })}><option value="contain">Contain</option><option value="width">Width</option><option value="depth">Depth</option><option value="stretch">Stretch</option></select></label>
-                <label>Yaw (degrees)<input type="number" value={metadata.yaw} onChange={(event) => setMetadata({ ...metadata, yaw: Number(event.target.value) })} /></label>
-                <label>Placement<select value={metadata.placement} onChange={(event) => setMetadata({ ...metadata, placement: event.target.value as PublishMetadata['placement'] })}><option value="floor">Floor</option><option value="surface">On furniture / surface</option><option value="wall">Wall mounted</option></select></label>
-                {metadata.placement === 'wall' && <label>Base above floor (cm)<input type="number" min="0" value={metadata.mountY} onChange={(event) => setMetadata({ ...metadata, mountY: Number(event.target.value) })} /></label>}
+              <p>Choose whether this is a new catalogue item or a better model for one that already ships. Everything else is filled in for you.</p>
+
+              <div className="studio-mode">
+                <button type="button" className={metadata.mode === 'entry' ? 'active' : ''} onClick={() => selectPublishMode('entry')}>
+                  <Sparkles size={16} />
+                  <strong>New item</strong>
+                  <small>Adds a new piece of furniture to the catalogue.</small>
+                </button>
+                <button type="button" className={metadata.mode === 'override' ? 'active' : ''} onClick={() => selectPublishMode('override')}>
+                  <RefreshCw size={16} />
+                  <strong>Replace an existing item</strong>
+                  <small>Swaps the model behind an item that already ships. Its name and size stay as they are.</small>
+                </button>
               </div>
+
+              {metadata.mode === 'override' && (
+                <div className="studio-fields">
+                  <label>Which category<select value={metadata.category} onChange={(event) => selectCategory(event.target.value)}>{PUBLISHABLE_CATALOG_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+                  <label>Which item<select value={metadata.type} onChange={(event) => selectOverride(event.target.value)}>{categoryOverrideItems.map((entry) => <option key={entry.type} value={entry.type}>{entry.icon} {entry.name} · {entry.width}×{entry.depth}×{entry.height}cm</option>)}</select></label>
+                </div>
+              )}
+
+              <div className="studio-summary">
+                <span className="studio-summary-icon">{metadata.icon}</span>
+                <div>
+                  <strong>{metadata.name}</strong>
+                  <small>
+                    {metadata.category} · {metadata.shape.replace(/_/g, ' ')} · {metadata.width}×{metadata.depth}×{metadata.height}cm
+                    {metadata.placement !== 'floor' ? ` · ${metadata.placement === 'wall' ? `wall, ${metadata.mountY}cm up` : 'on a surface'}` : ''}
+                    {metadata.mode === 'entry' ? ` · ${metadata.type}` : ''}
+                  </small>
+                </div>
+                <button type="button" className="studio-secondary" onClick={() => void runAssistant()} disabled={!selected || assistantBusy || !!working}>
+                  {assistantBusy ? <LoaderCircle size={15} className="spin" /> : <WandSparkles size={15} />}
+                  {assistantBusy ? 'Thinking…' : 'Fill in with AI'}
+                </button>
+              </div>
+              {assistantNote && <p className="studio-warn">{assistantNote}</p>}
+              {fitNote && <p className="studio-warn">{fitNote}</p>}
+
+              <details className="studio-advanced" open={advanced} onToggle={(event) => setAdvanced((event.target as HTMLDetailsElement).open)}>
+                <summary>Advanced — every field HomeDesigner reads</summary>
+                <div className="studio-fields">
+                  {metadata.mode === 'entry' && (
+                    <label>Type / slug<input value={metadata.type} onChange={(event) => setMetadata({ ...metadata, type: slug(event.target.value) })} /></label>
+                  )}
+                  <label>Name<input value={metadata.name} disabled={metadata.mode === 'override'} onChange={(event) => setMetadata({ ...metadata, name: event.target.value })} /></label>
+                  {metadata.mode === 'entry' && (
+                    <label>Category<select value={metadata.category} onChange={(event) => selectCategory(event.target.value)}>{PUBLISHABLE_CATALOG_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+                  )}
+                  <label>Object type<select value={metadata.shape} disabled={metadata.mode === 'override'} onChange={(event) => setMetadata({ ...metadata, shape: event.target.value })}>{PUBLISHABLE_CATALOG_SHAPES.map((shape) => <option key={shape} value={shape}>{shape.replace(/_/g, ' ')}</option>)}</select></label>
+                  <label>Icon<input value={metadata.icon} disabled={metadata.mode === 'override'} onChange={(event) => setMetadata({ ...metadata, icon: event.target.value })} /></label>
+                  <label>Width (cm)<input type="number" value={metadata.width} disabled={metadata.mode === 'override'} onChange={(event) => setMetadata({ ...metadata, width: Number(event.target.value) })} /></label>
+                  <label>Depth (cm)<input type="number" value={metadata.depth} disabled={metadata.mode === 'override'} onChange={(event) => setMetadata({ ...metadata, depth: Number(event.target.value) })} /></label>
+                  <label>Height (cm)<input type="number" value={metadata.height} disabled={metadata.mode === 'override'} onChange={(event) => setMetadata({ ...metadata, height: Number(event.target.value) })} /></label>
+                  <label>Colour<input type="color" value={metadata.color} disabled={metadata.mode === 'override'} onChange={(event) => setMetadata({ ...metadata, color: event.target.value })} /></label>
+                  <label>Fit<select value={metadata.fit} onChange={(event) => setMetadata({ ...metadata, fit: event.target.value as PublishMetadata['fit'] })}><option value="contain">Contain (footprint)</option><option value="height">Height</option><option value="width">Width</option><option value="depth">Depth</option><option value="stretch">Stretch</option></select></label>
+                  <label>Yaw (degrees)<input type="number" value={metadata.yaw} onChange={(event) => setMetadata({ ...metadata, yaw: Number(event.target.value) })} /></label>
+                  {metadata.mode === 'entry' && (
+                    <label>Placement<select value={metadata.placement} onChange={(event) => setMetadata({ ...metadata, placement: event.target.value as PublishMetadata['placement'] })}><option value="floor">Floor</option><option value="surface">On furniture / surface</option><option value="wall">Wall mounted</option></select></label>
+                  )}
+                  {metadata.mode === 'entry' && metadata.placement === 'wall' && <label>Base above floor (cm)<input type="number" min="0" value={metadata.mountY} onChange={(event) => setMetadata({ ...metadata, mountY: Number(event.target.value) })} /></label>}
+                </div>
+              </details>
               <div className="studio-row wrap">
                 <label className="studio-check"><input type="checkbox" checked={metadata.pro} onChange={(event) => setMetadata({ ...metadata, pro: event.target.checked })} /> Pro catalogue item</label>
                 <label className="studio-check rights"><input type="checkbox" checked={metadata.rightsConfirmed} onChange={(event) => setMetadata({ ...metadata, rightsConfirmed: event.target.checked })} /> I own or have permission to use the reference and approve this generated asset for the app.</label>

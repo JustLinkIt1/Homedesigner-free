@@ -90,7 +90,7 @@ export interface CatalogEntry {
     /** Scaling policy. 'contain'/'width'/'depth' scale uniformly (keep the
      *  model's proportions); 'stretch' fills width×depth×height independently —
      *  right for boxy cabinetry authored at the wrong size. */
-    fit?: 'contain' | 'width' | 'depth' | 'stretch';
+    fit?: 'contain' | 'width' | 'depth' | 'height' | 'stretch';
     /** Vertical correction in centimetres after grounding the model. */
     offsetY?: number;
     bytes?: number;

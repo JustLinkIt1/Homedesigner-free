@@ -75,11 +75,29 @@ export interface PublishMetadata {
   color: string;
   icon: string;
   pro: boolean;
-  fit: 'contain' | 'width' | 'depth' | 'stretch';
+  fit: 'contain' | 'width' | 'depth' | 'height' | 'stretch';
   yaw: number;
   placement: 'floor' | 'surface' | 'wall';
   mountY: number;
   rightsConfirmed: boolean;
+}
+
+/** What the server's metadata assistant fills in. It deliberately does NOT
+ *  cover `mode`, `pro` or `rightsConfirmed` — publishing decisions stay with
+ *  the owner. Dimensions are the assistant's real-world estimate for that kind
+ *  of object; the mesh only contributes proportions (see `fitToModel`). */
+export interface SuggestedCatalogMetadata {
+  type: string;
+  name: string;
+  category: string;
+  shape: string;
+  width: number;
+  depth: number;
+  height: number;
+  color: string;
+  icon: string;
+  placement: 'floor' | 'surface' | 'wall';
+  mountY: number;
 }
 
 async function authorizedFetch(path: string, init: RequestInit = {}): Promise<Response> {
@@ -146,6 +164,18 @@ export async function uploadOptimizedStudioModel(id: string, model: Blob, render
     body,
   });
   return ((await response.json()) as { job: StudioJob }).job;
+}
+
+export async function suggestStudioMetadata(
+  id: string,
+  input: { description: string; dimensions?: [number, number, number] },
+): Promise<SuggestedCatalogMetadata> {
+  const response = await authorizedFetch(`/v1/admin/models/jobs/${encodeURIComponent(id)}/metadata`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return ((await response.json()) as { metadata: SuggestedCatalogMetadata }).metadata;
 }
 
 export async function publishStudioModel(id: string, metadata: PublishMetadata): Promise<StudioJob> {

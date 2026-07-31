@@ -80,32 +80,19 @@ export const MODEL_FILE: Record<string, string> = {
   watering_can: 'watering_can',
 };
 
-/** Optional yaw correction (radians) for models whose "front" isn't +Z. */
-/** Optional yaw correction (radians) for models whose "front" isn't +Z.
- *
- *  This also fixes SIZE, not just facing. GltfFurniture scales a model to the
- *  catalogue footprint with `min(width/size.x, depth/size.z)`, so a model whose
- *  long axis runs along Z while the catalogue expects it along X gets squashed
- *  by whichever axis mismatches worst — and the height goes with it.
- *
- *  Measured: the cloud `bathtub` model is 1.607 x 1.260 x 3.900 (its length is
- *  on Z), against a catalogue box of 170x75x55. Untouched it draws **24cm tall
- *  against a 55cm entry**. A quarter turn swaps the axes and it draws 54.9cm.
- *
- *  Keyed by catalogue type, so this applies to whichever model is bound to that
- *  type — including a cloud override. If an override is ever repointed at a
- *  differently-oriented model, revisit the entry here.
- *  `node tests/models.mjs` measures this.
- */
-export const MODEL_YAW: Record<string, number> = {
-  bathtub: Math.PI / 2,
-};
+export type ModelFit = 'contain' | 'width' | 'depth' | 'height' | 'stretch';
+
+/** Optional yaw correction (radians) for BUNDLED models whose "front" isn't +Z.
+ *  Only read for types present in MODEL_FILE above — a type served by the cloud
+ *  catalogue takes its yaw from the manifest, so corrections for those belong
+ *  in MODEL_CORRECTIONS. */
+export const MODEL_YAW: Record<string, number> = {};
 
 /** Per-type 3D scaling policy for the bundled models. The Kenney kitchen
  *  cabinets are authored as ~45 cm cubes, so uniform fitting leaves them
  *  stubby and half-height; 'stretch' fills each cabinet's real footprint and
  *  counter/upper height instead (boxy cabinetry survives non-uniform scale). */
-export const MODEL_FIT: Record<string, 'contain' | 'width' | 'depth' | 'stretch'> = {
+export const MODEL_FIT: Record<string, ModelFit> = {
   kitchen_base_cabinet: 'stretch',
   kitchen_drawer_cabinet: 'stretch',
   kitchen_corner_cabinet: 'stretch',
@@ -115,6 +102,38 @@ export const MODEL_FIT: Record<string, 'contain' | 'width' | 'depth' | 'stretch'
   // the 90 cm cabinets instead of sitting half-height beside them.
   stove: 'stretch',
   kitchen_sink: 'stretch',
+  // Foliage and lamps: the catalogue box is the POT or the BASE, but the mesh
+  // spans the whole leaf spread / lamp arm, so the footprint fit shrinks the
+  // object to fit its own overhang inside the pot — this plant draws 36cm
+  // against a 120cm entry. Height is what the eye judges and an overhanging
+  // leaf is correct, so scale by height. `node tests/models.mjs` measures it.
+  plant: 'height',
+  large_plant: 'height',
+  clay_planter: 'height',
+  tree_stump: 'height',
+  desk_lamp: 'height',
+};
+
+/** Corrections that WIN over a cloud catalogue definition.
+ *
+ *  Published model metadata lives in the R2 manifest, so a mis-sized model
+ *  normally needs a Model Studio republish to fix. This map lets an app release
+ *  fix one from the client instead, which matters because the app is the thing
+ *  users actually update. Once the manifest carries the right values an entry
+ *  here is redundant but harmless.
+ *
+ *  MODEL_YAW/MODEL_FIT above cannot do this job: they are only consulted for
+ *  types that have a bundled GLB. */
+export const MODEL_CORRECTIONS: Record<string, { yaw?: number; fit?: ModelFit }> = {
+  // Measured 0.751 x 0.936 x 0.190 — four times wider than deep, because a
+  // trailing power cable lies across the floor. 'contain' scales by that
+  // footprint and draws a 160cm lamp at 44cm. The cable is a millimetre thick,
+  // so scale by height and let it lie flat at the right size.
+  floor_lamp: { fit: 'height' },
+  // Measured 1.607 x 1.260 x 3.900: its length runs along Z against a
+  // catalogue box that expects it on X, so it draws 24cm against a 55cm entry.
+  // A quarter turn swaps the axes and it draws 54.9cm.
+  bathtub: { yaw: Math.PI / 2 },
 };
 
 /** Flat rectangular tops whose 2D sprite should STRETCH to fill the whole

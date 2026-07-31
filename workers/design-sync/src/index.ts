@@ -8,6 +8,8 @@ interface Env {
   REVENUECAT_PROJECT_ID: string;
   REVENUECAT_SECRET_KEY: string;
   FAL_KEY: string;
+  /** Workers AI, used only by the Model Studio metadata assistant. */
+  AI: Ai;
   MODEL_ADMIN_EMAIL: string;
   MODEL_ADMIN_SUBJECT?: string;
   MODEL_CATALOG_PUBLIC_BASE: string;
@@ -651,6 +653,143 @@ function cleanPositive(value: unknown, max = 2000): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= max ? value : null;
 }
 
+// --- catalogue metadata assistant -------------------------------------------
+//
+// Filling the publish card by hand is where wrong data enters the catalogue: a
+// shower cubicle was landing as Living / box / 100x60x90 because the old
+// client-side guess only recognised sofas, chairs and TVs. An instruct model
+// knows what a shower cubicle is and how big one really is, so it fills the
+// card and the owner only picks new-item vs replace-existing.
+//
+// Runs on Workers AI (same Cloudflare account as R2 — no extra key to manage).
+// Everything it returns is re-validated here against the same allow-lists
+// publishModel enforces, so a hallucinated category or a 90-metre wardrobe can
+// never reach the manifest.
+const METADATA_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+
+function metadataJsonSchema(): Record<string, unknown> {
+  const str = { type: 'string' };
+  const num = { type: 'number' };
+  return {
+    type: 'object',
+    properties: {
+      name: str,
+      type: str,
+      category: { type: 'string', enum: [...allowedCatalogCategories] },
+      shape: { type: 'string', enum: [...allowedShapes] },
+      width: num,
+      depth: num,
+      height: num,
+      color: str,
+      icon: str,
+      placement: { type: 'string', enum: ['floor', 'surface', 'wall'] },
+      mountY: num,
+    },
+    required: ['name', 'type', 'category', 'shape', 'width', 'depth', 'height', 'color', 'icon', 'placement'],
+  };
+}
+
+/** JSON mode is best-effort on Workers AI, so accept an already-parsed object,
+ *  a bare JSON string, or JSON wrapped in prose/code fences. */
+function parseModelJson(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value !== 'string') return null;
+  const start = value.indexOf('{');
+  const end = value.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try {
+    const parsed = JSON.parse(value.slice(start, end + 1)) as unknown;
+    return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
+
+function slugType(value: unknown, fallback: string): string {
+  const raw = typeof value === 'string' ? value : '';
+  const clean = raw.toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^[^a-z0-9]+|_+$/g, '')
+    .slice(0, 60);
+  return /^[a-z0-9][a-z0-9_-]*$/.test(clean) ? clean : fallback;
+}
+
+async function suggestModelMetadata(request: Request, env: Env, job: ModelStudioJob): Promise<Response> {
+  if (!env.AI) return json(request, { error: 'The metadata assistant is not configured' }, 503);
+  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+  const description = cleanString(body.description, 2000) ?? job.prompt ?? job.caption ?? '';
+  if (description.trim().length < 3) return json(request, { error: 'Describe the model first' }, 400);
+
+  // The mesh is only ever a proportion hint. Real-world size has to come from
+  // the model's knowledge of the object — a generated GLB carries no units.
+  const raw = Array.isArray(body.dimensions) ? body.dimensions : [];
+  const dims = raw.length === 3 && raw.every((v) => typeof v === 'number' && Number.isFinite(v) && v > 0)
+    ? raw as number[]
+    : null;
+  const proportions = dims
+    ? `\n\nThe generated mesh measures ${(dims[0] / Math.max(...dims)).toFixed(2)} wide : ` +
+      `${(dims[1] / Math.max(...dims)).toFixed(2)} tall : ${(dims[2] / Math.max(...dims)).toFixed(2)} deep ` +
+      'relative to its longest side. Use this only to sanity-check which way up and which way round the object is; ' +
+      'the mesh has no real-world units, so do not scale your answer from it.'
+    : '';
+
+  const system = [
+    'You fill in catalogue metadata for one 3D furniture model in a home design app. Answer with JSON only.',
+    '',
+    '- width, depth and height are REAL-WORLD CENTIMETRES for this kind of object in a real home: the sizes a',
+    '  manufacturer would print on the box. width is left-right, depth is front-back, height is floor to top.',
+    '  A shower cubicle is about 90 x 90 x 200. A floor lamp is about 35 x 35 x 160. A double bed is about 150 x 200 x 50.',
+    `- category: exactly one of ${[...allowedCatalogCategories].join(', ')}.`,
+    `- shape: the closest renderer primitive, exactly one of ${[...allowedShapes].join(', ')}. Use "box" only when nothing fits.`,
+    '- type: lower_snake_case slug, at most 60 characters, specific to this object.',
+    '- name: a short Title Case label, at most 40 characters.',
+    '- color: the dominant colour as #rrggbb.',
+    '- icon: a single emoji.',
+    '- placement: "wall" only for things fixed to a wall (TVs, wall art, sconces, upper cabinets),',
+    '  "surface" for small things that sit on other furniture (table lamps, vases, books), otherwise "floor".',
+    '- mountY: centimetres above the floor when placement is "wall", otherwise 0.',
+  ].join('\n');
+
+  let parsed: Record<string, unknown> | null;
+  try {
+    const result = await env.AI.run(METADATA_MODEL, {
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: `Describe this model as catalogue metadata:\n\n${description.trim()}${proportions}` },
+      ],
+      max_tokens: 400,
+      response_format: { type: 'json_schema', json_schema: metadataJsonSchema() },
+    }) as { response?: unknown };
+    parsed = parseModelJson(result?.response);
+  } catch {
+    parsed = null;
+  }
+  if (!parsed) return json(request, { error: 'The metadata assistant could not read this model' }, 502);
+
+  const name = cleanString(parsed.name, 40) ?? 'Generated furniture';
+  const category = cleanString(parsed.category, 50);
+  const shape = cleanString(parsed.shape, 40);
+  const color = cleanString(parsed.color, 20);
+  const icon = cleanString(parsed.icon, 12);
+  const placement = parsed.placement === 'wall' || parsed.placement === 'surface' ? parsed.placement : 'floor';
+  return json(request, {
+    metadata: {
+      type: slugType(parsed.type, slugType(name, 'generated_furniture')),
+      name,
+      category: category && allowedCatalogCategories.has(category) ? category : 'Living',
+      shape: shape && allowedShapes.has(shape) ? shape : 'box',
+      width: cleanPositive(parsed.width) ?? 100,
+      depth: cleanPositive(parsed.depth) ?? 60,
+      height: cleanPositive(parsed.height) ?? 90,
+      color: color && /^#[a-f0-9]{6}$/i.test(color) ? color.toLowerCase() : '#8b7b6b',
+      icon: icon ?? '▣',
+      placement,
+      mountY: placement === 'wall' ? cleanPositive(parsed.mountY, 400) ?? 90 : 0,
+    },
+  });
+}
+
 async function publishModel(request: Request, env: Env, job: ModelStudioJob): Promise<Response> {
   if (!job.stagedModel?.optimized || !job.renderModel?.optimized) {
     return json(request, { error: 'Optimize and upload both delivery tiers before publishing' }, 409);
@@ -729,7 +868,9 @@ async function publishModel(request: Request, env: Env, job: ModelStudioJob): Pr
   manifest.overrides = manifest.overrides.filter((entry) => entry.type !== type);
   const model = {
     url: publicAssetUrl(env, finalKey),
-    fit: body.fit === 'width' || body.fit === 'depth' || body.fit === 'stretch' ? body.fit : 'contain',
+    fit: body.fit === 'width' || body.fit === 'depth' || body.fit === 'height' || body.fit === 'stretch'
+      ? body.fit
+      : 'contain',
     yaw: typeof body.yaw === 'number' && Number.isFinite(body.yaw) ? body.yaw : 0,
     bytes: job.stagedModel.bytes,
     sha256: job.stagedModel.sha256,
@@ -820,7 +961,7 @@ export default {
         if (request.method === 'POST' && url.pathname === '/v1/admin/models/jobs') {
           return await createModelJob(request, env, identity);
         }
-        const match = url.pathname.match(/^\/v1\/admin\/models\/jobs\/([a-f0-9-]{36})(?:\/(source|generate|optimized|publish))?$/);
+        const match = url.pathname.match(/^\/v1\/admin\/models\/jobs\/([a-f0-9-]{36})(?:\/(source|generate|optimized|metadata|publish))?$/);
         if (match) {
           const job = await readModelJob(env, match[1], identity.subject);
           if (!job) return json(request, { error: 'Model job not found' }, 404);
@@ -835,6 +976,9 @@ export default {
           }
           if (request.method === 'POST' && action === 'optimized') {
             return await uploadOptimizedModel(request, env, job);
+          }
+          if (request.method === 'POST' && action === 'metadata') {
+            return await suggestModelMetadata(request, env, job);
           }
           if (request.method === 'POST' && action === 'publish') {
             return await publishModel(request, env, job);

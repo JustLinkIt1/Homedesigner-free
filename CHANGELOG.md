@@ -5,6 +5,58 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.13.0 - 2026-07-31 (versionCode 11300)
+
+### Model Studio fills its own catalogue card
+
+- The publish card is written by an assistant on the sync Worker instead of a
+  client-side keyword guess. The old `suggestedMetadata` only recognised sofas,
+  chairs and TVs, so everything else fell through to `Living / box /
+  100x60x90` — a generated shower cubicle landed as a Living-room box at 100
+  wide and 90 tall. The new `POST /v1/admin/models/jobs/:id/metadata` endpoint
+  runs Workers AI (same Cloudflare account as R2 — no extra key) and returns a
+  name, slug, category, renderer shape, real-world size, colour, icon and
+  placement, all re-validated against the same allow-lists `publishModel`
+  enforces so a hallucinated category or a 90-metre wardrobe can never reach
+  the manifest. It runs automatically the moment the mesh is measured.
+- The Catalogue-details step is now the two decisions that are actually the
+  owner's: **New item** or **Replace an existing item**, and when replacing,
+  which item. Everything else shows as a one-line summary with every field
+  still editable under an Advanced disclosure. Replacing an item locks the
+  fields the manifest does not carry, so it is clear that an override inherits
+  the established item's name and box.
+
+### `height` model fit, and a client-side correction layer
+
+- New `'height'` fit scales a model by `height / size.y` instead of its
+  footprint. This is the fix for models whose bounding box is inflated by
+  geometry with no real footprint: the floor lamp measures 0.75 x 0.94 x 0.19
+  because a power cable lies across the floor, so `contain` drew a 160cm lamp
+  at **44cm**. Accepted by the renderer, the remote-catalogue validator, the
+  Worker and the Studio's Fit selector.
+- Added `MODEL_CORRECTIONS`, which wins over a cloud catalogue definition. A
+  published model with wrong yaw or fit previously needed a manifest republish;
+  it can now be fixed by an app release. `MODEL_YAW`/`MODEL_FIT` could not do
+  this — they are only consulted for types that have a bundled GLB, which is
+  why the 1.12.2 bathtub yaw entry never took effect. Corrects `floor_lamp`
+  (height fit) and `bathtub` (quarter turn, 24cm → 55cm).
+- Bundled `plant`, `large_plant`, `clay_planter`, `tree_stump` and `desk_lamp`
+  switched to height fit: their catalogue box is the pot or the base while the
+  mesh spans the whole leaf spread or lamp arm, so the footprint fit shrank
+  each object to fit its own overhang — the plant drew 36cm against 120cm.
+- Model Studio now predicts the height the renderer will draw and warns before
+  publishing, either that the footprint fit is crushing the model or that a
+  height fit spreads it past its footprint.
+
+### Testing
+
+- `tests/models.mjs` joined `npm test`. It measures every bundled GLB's
+  world-space bounding box straight from the glTF JSON chunk and reproduces the
+  renderer's fit arithmetic. Sixteen models still draw short and are recorded
+  in `KNOWN_UNDERSIZED` with the reason; the suite fails on any *new* one, and
+  also fails if a listed model starts drawing correctly, so the backlog cannot
+  rot in either direction.
+
 ## 1.12.1 - 2026-07-29 (versionCode 11201)
 
 ### Private Model Studio and render-quality models

@@ -138,7 +138,8 @@ function validateModel(value: unknown, manifestUrl: URL): NonNullable<CatalogEnt
   const shaText = cleanText(value.sha256, 64);
   const sha256 = shaText && /^[a-f0-9]{64}$/i.test(shaText) ? shaText.toLowerCase() : undefined;
   const yaw = typeof value.yaw === 'number' && Number.isFinite(value.yaw) ? value.yaw : undefined;
-  const fit = value.fit === 'width' || value.fit === 'depth' || value.fit === 'contain' || value.fit === 'stretch'
+  const fit = value.fit === 'width' || value.fit === 'depth' || value.fit === 'contain'
+    || value.fit === 'height' || value.fit === 'stretch'
     ? value.fit
     : undefined;
   const offsetY = typeof value.offsetY === 'number' && Number.isFinite(value.offsetY) && Math.abs(value.offsetY) <= 2_000
@@ -223,7 +224,8 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
   const yaw = typeof value.model.yaw === 'number' && Number.isFinite(value.model.yaw)
     ? value.model.yaw
     : undefined;
-  const fit = value.model.fit === 'width' || value.model.fit === 'depth' || value.model.fit === 'contain' || value.model.fit === 'stretch'
+  const fit = value.model.fit === 'width' || value.model.fit === 'depth' || value.model.fit === 'contain'
+    || value.model.fit === 'height' || value.model.fit === 'stretch'
     ? value.model.fit
     : undefined;
   const offsetY = typeof value.model.offsetY === 'number' && Number.isFinite(value.model.offsetY) && Math.abs(value.model.offsetY) <= 2_000

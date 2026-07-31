@@ -21,6 +21,9 @@
       "simple": { "limit": 20, "period": 60 }
     }
   ],
+  "ai": {
+    "binding": "AI"
+  },
   "r2_buckets": [
     {
       "binding": "USER_DATA",

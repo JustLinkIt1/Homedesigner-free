@@ -3,7 +3,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { FurnitureItem } from '../../types';
 import { CATALOG_BY_TYPE, type CatalogEntry } from '../../data/furnitureCatalog';
-import { MODEL_FILE, MODEL_YAW, MODEL_FIT } from '../../data/furnitureModels';
+import { MODEL_CORRECTIONS, MODEL_FILE, MODEL_YAW, MODEL_FIT } from '../../data/furnitureModels';
 
 const M = 0.01; // cm -> m
 
@@ -22,7 +22,7 @@ const U = (f: string) => `${import.meta.env.BASE_URL}models/${f}.glb`;
 // for hanging lights, and the procedural TV reads better than a flat panel.
 export const FURNITURE_MODELS: Record<
   string,
-  { url: string; yaw?: number; fit?: 'contain' | 'width' | 'depth' | 'stretch' }
+  { url: string; yaw?: number; fit?: 'contain' | 'width' | 'depth' | 'height' | 'stretch' }
 > = Object.fromEntries(
   Object.entries(MODEL_FILE).map(([type, file]) => [
     type,
@@ -34,8 +34,12 @@ export function modelDefinition(
   type: string,
   preferRender = false,
 ): NonNullable<CatalogEntry['model']> | undefined {
-  const definition: NonNullable<CatalogEntry['model']> | undefined =
+  const base: NonNullable<CatalogEntry['model']> | undefined =
     CATALOG_BY_TYPE[type]?.model ?? FURNITURE_MODELS[type];
+  // A client-side correction beats the manifest: a published model with wrong
+  // yaw/fit can then be fixed by an app release instead of a republish.
+  const correction = MODEL_CORRECTIONS[type];
+  const definition = base && correction ? { ...base, ...correction } : base;
   if (!definition || !preferRender || !definition.renderUrl) return definition;
   return {
     ...definition,
@@ -91,7 +95,16 @@ export default function GltfFurniture({ item, preferRender = false }: { item: Fu
       // while retaining the model's proportions. Including catalogue height in
       // this minimum made beds and baths shrink to toy size when a source GLB
       // used a different vertical unit/proportion.
-      const scale = def.fit === 'width' ? sx : def.fit === 'depth' ? sz : Math.min(sx, sz);
+      //
+      // 'height' is the escape hatch for models whose bounding box is inflated
+      // by something that carries no real footprint — a floor lamp's trailing
+      // cable makes the box four times wider than the shade, and 'contain'
+      // then draws a 160cm lamp at 44cm. Height is what the eye judges and is
+      // immune to anything lying on the floor, so scale by it instead.
+      const scale = def.fit === 'width' ? sx
+        : def.fit === 'depth' ? sz
+          : def.fit === 'height' ? sy
+            : Math.min(sx, sz);
       clone.scale.setScalar(scale);
       // Recentre horizontally and rest the base on y = 0.
       clone.position.set(
