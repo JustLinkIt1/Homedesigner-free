@@ -81,7 +81,25 @@ export const MODEL_FILE: Record<string, string> = {
 };
 
 /** Optional yaw correction (radians) for models whose "front" isn't +Z. */
-export const MODEL_YAW: Record<string, number> = {};
+/** Optional yaw correction (radians) for models whose "front" isn't +Z.
+ *
+ *  This also fixes SIZE, not just facing. GltfFurniture scales a model to the
+ *  catalogue footprint with `min(width/size.x, depth/size.z)`, so a model whose
+ *  long axis runs along Z while the catalogue expects it along X gets squashed
+ *  by whichever axis mismatches worst — and the height goes with it.
+ *
+ *  Measured: the cloud `bathtub` model is 1.607 x 1.260 x 3.900 (its length is
+ *  on Z), against a catalogue box of 170x75x55. Untouched it draws **24cm tall
+ *  against a 55cm entry**. A quarter turn swaps the axes and it draws 54.9cm.
+ *
+ *  Keyed by catalogue type, so this applies to whichever model is bound to that
+ *  type — including a cloud override. If an override is ever repointed at a
+ *  differently-oriented model, revisit the entry here.
+ *  `node tests/models.mjs` measures this.
+ */
+export const MODEL_YAW: Record<string, number> = {
+  bathtub: Math.PI / 2,
+};
 
 /** Per-type 3D scaling policy for the bundled models. The Kenney kitchen
  *  cabinets are authored as ~45 cm cubes, so uniform fitting leaves them
