@@ -6,6 +6,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { FURNITURE_CATALOG } from './src/data/furnitureCatalog.ts';
 import { MODEL_FILE } from './src/data/furnitureModels.ts';
 
@@ -16,6 +17,13 @@ window.__modelFile = MODEL_FILE;
 
 const M = 0.01; // cm -> m
 const loader = new GLTFLoader();
+// Model Studio writes GLBs with EXT_meshopt_compression in `extensionsRequired`
+// (see src/model-studio/optimizeGlb.ts), and GLTFLoader hard-fails on those
+// without a decoder: "setMeshoptDecoder must be called before loading
+// compressed files". The app itself is fine — drei's useGLTF registers this
+// decoder by default — but this standalone harness constructs its own loader,
+// so it has to register one too or sprite generation dies on generated models.
+loader.setMeshoptDecoder(MeshoptDecoder);
 
 function loadGltf(url) {
   return new Promise((res, rej) => loader.load(url, res, undefined, rej));
