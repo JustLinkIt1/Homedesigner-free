@@ -28,6 +28,8 @@ export { isNewer } from '${sourceRoot}/src/lib/appUpdate.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${sourceRoot}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${sourceRoot}/src/lib/roof.ts';
 export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT } from '${sourceRoot}/src/lib/fence.ts';
+export { lockToAngle, ANGLE_LOCK_RAD } from '${sourceRoot}/src/lib/snapping.ts';
+export { spriteBox, spriteReshaped } from '${sourceRoot}/src/lib/spriteFit.ts';
 export { wallDistances } from '${sourceRoot}/src/lib/distanceGuides.ts';
 `);
 const out = join(dir, 'bundle.mjs');
@@ -44,7 +46,7 @@ const {
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
   buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
   fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT,
-  wallDistances,
+  wallDistances, lockToAngle, ANGLE_LOCK_RAD, spriteBox, spriteReshaped,
 } = await import(pathToFileURL(out).href);
 
 let fails = 0;
@@ -838,6 +840,80 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   // Dead centre still works, and so does the near edge.
   check('opening hit: centre and near-edge both hit',
     rect(centre) && rect({ x: 200 - 79, y: 0 }));
+}
+
+// --- tracing angle lock ----------------------------------------------------
+// A tester tracing an imported apartment plan asked for snap-to-grid: "it's
+// difficult to tap precisely exactly each corner". Grid snapping is off under a
+// background on purpose (its origin/scale mean nothing to the traced image), so
+// near-axis segments are straightened instead — at a tighter tolerance than
+// free drawing, or a deliberately angled wall would be yanked square.
+{
+  const TRACE = (6 * Math.PI) / 180;
+  const prev = { x: 0, y: 0 };
+  const at = (deg, len = 200) => ({
+    x: prev.x + Math.cos((deg * Math.PI) / 180) * len,
+    y: prev.y + Math.sin((deg * Math.PI) / 180) * len,
+  });
+  const angleOf = (p) => (Math.atan2(p.y - prev.y, p.x - prev.x) * 180) / Math.PI;
+
+  // 3° off horizontal: clearly meant to be straight.
+  check('trace lock: a 3° wobble is straightened',
+    Math.abs(angleOf(lockToAngle(prev, at(3), undefined, TRACE))) < 1e-6);
+  // 20° is a deliberate angle and must survive untouched.
+  const kept = lockToAngle(prev, at(20), undefined, TRACE);
+  check('trace lock: a deliberate 20° wall is left alone', Math.abs(angleOf(kept) - 20) < 1e-6);
+  // 10° would be captured by the looser free-drawing tolerance but not here —
+  // that difference is the whole point of the separate value.
+  check('trace lock: 10° is left alone while tracing',
+    Math.abs(angleOf(lockToAngle(prev, at(10), undefined, TRACE)) - 10) < 1e-6);
+  check('trace lock: 10° IS straightened when not tracing',
+    Math.abs(angleOf(lockToAngle(prev, at(10)))) < 1e-6, `ANGLE_LOCK_RAD=${ANGLE_LOCK_RAD}`);
+  // Length is preserved when straightening, so a traced wall keeps its size.
+  const s3 = lockToAngle(prev, at(3), undefined, TRACE);
+  check('trace lock: straightening preserves the wall length',
+    Math.abs(Math.hypot(s3.x - prev.x, s3.y - prev.y) - 200) < 1e-6);
+}
+
+// --- resized objects fill their footprint in plan --------------------------
+// "the object seems to correctly scale in 3D view but in 2D view it maintains
+// its proportions and therefore does not scale following the object resizing"
+// — a tester, on a kitchen sink.
+{
+  const sink = { width: 80, depth: 60 };       // catalogue default
+  const ar = 4 / 3;                             // sprite image aspect
+
+  // Untouched: contain-fit, so the drawn box keeps the render's aspect.
+  const asIs = spriteBox(80, 60, ar, { entry: sink });
+  check('sprite: an unresized object keeps the render aspect',
+    near(asIs.w / asIs.h, ar, 1e-9), JSON.stringify(asIs));
+
+  // Depth doubled: the footprint aspect no longer matches the catalogue, so the
+  // sprite must fill it. This is the reported bug — before, h stayed at 60.
+  const tall = spriteBox(80, 120, ar, { entry: sink });
+  check('sprite: doubling depth doubles the drawn height',
+    near(tall.w, 80) && near(tall.h, 120), JSON.stringify(tall));
+
+  // Width alone, same reasoning.
+  const wide = spriteBox(160, 60, ar, { entry: sink });
+  check('sprite: widening follows the footprint', near(wide.w, 160) && near(wide.h, 60), JSON.stringify(wide));
+
+  // Scaling BOTH sides equally is not a reshape — the object is just bigger, so
+  // the render's aspect is still right and contain-fit should hold.
+  const bigger = spriteBox(160, 120, ar, { entry: sink });
+  check('sprite: a proportional resize still contain-fits',
+    near(bigger.w / bigger.h, ar, 1e-9), JSON.stringify(bigger));
+  check('sprite: proportional resize is not treated as a reshape',
+    !spriteReshaped(160, 120, sink));
+  check('sprite: a one-axis resize is treated as a reshape', spriteReshaped(80, 120, sink));
+
+  // An explicit fill type ignores all of it.
+  check('sprite: explicit fill always fills',
+    (() => { const b = spriteBox(80, 60, ar, { fill: true, entry: sink }); return near(b.w, 80) && near(b.h, 60); })());
+
+  // No catalogue entry (a cloud type not present locally): contain-fit, never crash.
+  const orphan = spriteBox(80, 200, ar, {});
+  check('sprite: an unknown type still contain-fits', near(orphan.h, 60) && near(orphan.w, 80));
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

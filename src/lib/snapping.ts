@@ -150,6 +150,11 @@ export function lockToAngle(
   prev: Point,
   p: Point,
   grid?: (pt: Point) => Point,
+  /** How far off a 45° multiple still counts as "meant to be straight".
+   *  Tracing an imported plan passes a tighter value: real plans are mostly
+   *  axis-aligned so the help is worth a lot, but a genuinely angled wall must
+   *  not be yanked onto the axis. */
+  toleranceRad: number = ANGLE_LOCK_RAD,
 ): Point {
   const dx = p.x - prev.x;
   const dy = p.y - prev.y;
@@ -158,7 +163,7 @@ export function lockToAngle(
   const step = Math.PI / 4;
   const ang = Math.atan2(dy, dx);
   const snapped = Math.round(ang / step) * step;
-  if (Math.abs(ang - snapped) >= ANGLE_LOCK_RAD) return p;
+  if (Math.abs(ang - snapped) >= toleranceRad) return p;
   const out = { x: prev.x + Math.cos(snapped) * len, y: prev.y + Math.sin(snapped) * len };
   const horiz = Math.abs(Math.sin(snapped)) < 1e-6;
   const vert = Math.abs(Math.cos(snapped)) < 1e-6;

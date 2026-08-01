@@ -20,6 +20,7 @@ import { FLOOR_BY_ID, CATALOG_BY_TYPE, type Shape3D } from '../../data/furniture
 import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
 import { FURNITURE_SPRITES, spriteUrl } from '../../data/furnitureSprites';
 import { SPRITE_FILL } from '../../data/furnitureModels';
+import { spriteBox } from '../../lib/spriteFit';
 import DimensionsLayer, { DimensionPlate } from './DimensionsLayer';
 import SelectionRing from '../SelectionRing';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
@@ -66,6 +67,10 @@ const HANDLE_R = IS_COARSE ? 14 : 8; // radius in screen px (÷ zoom at render)
 // into a pan instead. 12px is still under Konva's own 8px node dragDistance
 // plus a fingertip's width, so deliberate drags are unaffected.
 const TAP_SLOP = IS_COARSE ? 12 : 7;
+/** Angle-lock tolerance while tracing a background plan (~6°). Much tighter
+ *  than free drawing: the goal is to straighten a wall the user clearly meant
+ *  to be square, not to reinterpret a deliberately angled one. */
+const TRACE_ANGLE_LOCK = (6 * Math.PI) / 180;
 const LONG_PRESS_MS = 500; // matches Android's ViewConfiguration long-press
 
 // Handle visuals (screen-space px; divided by zoom at render to stay constant).
@@ -440,6 +445,20 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     }
     lastHardSnapRef.current = null;
     snapGuideRef.current = null;
+    // Tracing an imported plan: the grid is deliberately NOT applied (its
+    // origin and scale have nothing to do with the traced image), but that
+    // used to leave a trace with no assistance at all — a tester asked for
+    // "snap to grid… otherwise it's difficult to tap precisely exactly each
+    // corner". Straighten near-axis segments without quantising position, at a
+    // tighter tolerance so a genuinely angled wall is left alone.
+    if (background && draft.length > 0
+      && (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room')) {
+      const straight = lockToAngle(draft[draft.length - 1], p, undefined, TRACE_ANGLE_LOCK);
+      if (straight !== p) {
+        snapKindRef.current = 'grid';
+        return straight;
+      }
+    }
     // Grid — skipped while tracing over a background so free angles aren't fought.
     if (showGrid && !background) {
       // Square-to-grid angle lock (identical to the 3D drawing): when drawing
@@ -2469,14 +2488,12 @@ function FurnitureItemGraphic({
   if (hasSprite && img && img.width > 0) {
     // Flat tops fill the footprint; everything else contain-fits to preserve
     // the rendered aspect (matches how the 3D model was normalized).
-    const ar = img.width / img.height;
-    let dw = width;
-    let dh = width / ar;
-    if (SPRITE_FILL.has(type)) {
-      dw = width; dh = depth;
-    } else if (dh > depth) {
-      dh = depth; dw = depth * ar;
-    }
+    //
+    // A RESIZED item fills too — see src/lib/spriteFit.ts for why.
+    const { w: dw, h: dh } = spriteBox(width, depth, img.width / img.height, {
+      fill: SPRITE_FILL.has(type),
+      entry: CATALOG_BY_TYPE[type],
+    });
     return (
       <>
         <KImage

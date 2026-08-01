@@ -5,6 +5,50 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.17.1 - 2026-08-01 (versionCode 11701)
+
+### Tester report No. 3
+
+- **A resized object now scales in the plan, not just in 3D.** Reported on a
+  kitchen sink: *"the object seems to correctly scale in 3D view but in 2D view
+  it maintains its proportions."* Sprites were contain-fitted to the rendered
+  image's aspect, so the drawn size was keyed to the picture rather than the
+  footprint — stretching depth alone redrew nothing. Once an object has been
+  deliberately reshaped, its footprint is now the truth and the sprite follows
+  it. A proportional resize (both sides equally) still contain-fits, because
+  the render's aspect is still correct there.
+- **Tracing an imported plan now gets drawing assistance.** The tester asked
+  for snap-to-grid: *"otherwise it's difficult to tap precisely exactly each
+  corner."* Grid snapping is deliberately off under a background — its origin
+  and scale have nothing to do with the traced image — but that left a trace
+  with no help at all. Near-axis segments are now straightened without
+  quantising position, at a **6°** tolerance rather than the 12° used for free
+  drawing, so a wall the user clearly meant to be square gets squared while a
+  deliberately angled one is left alone.
+
+### Not fixed: wall detection on filled-black plans
+
+The same report shows import detecting **57 walls** from an apartment plan whose
+thick walls are solid black, producing unusable output. This is real, but it is
+a threshold/vectorisation problem that cannot be tuned responsibly without the
+actual image — any change would be guesswork against a plan I cannot see. The
+tester's workaround (use it as a plain background and trace over it) is the
+right one for now, and the tracing fix above makes that path better.
+
+### Testing
+
+- Eight assertions pin the sprite fit, including that a *proportional* resize is
+  not mistaken for a reshape, and that a type with no catalogue entry still
+  contain-fits rather than crashing. The maths moved to `src/lib/spriteFit.ts`
+  so it is testable without a browser — a first attempt to assert this through
+  Konva's node tree needed engine internals and a stale store read, and proved
+  nothing.
+- Five assertions pin the tracing angle lock, including that 10° is straightened
+  when drawing freely but left alone while tracing — that difference is the
+  entire point of the separate tolerance.
+- Raised one more catalog click to 45s; it sits right after the docked 3D
+  catalog mounts a WebGL surface, the same software-GL stall as its neighbours.
+
 ## 1.17.0 - 2026-08-01 (versionCode 11700)
 
 ### The selection ring now works in 3D too

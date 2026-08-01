@@ -519,7 +519,10 @@ if (process.env.SMOKE_SKIP_3D) {
     JSON.stringify(dockRect),
   );
   const sideTableCard = page.locator('.catalog.docked .cat-item[data-tip="Side Table"]');
-  await sideTableCard.locator('.cat-item-select').click();
+  // 45s like the other clicks in this block: the docked 3D catalog has just
+  // mounted a WebGL surface, and under software GL that compile stalls the main
+  // thread well past the 30s default.
+  await sideTableCard.locator('.cat-item-select').click({ timeout: 45000 });
   check(
     'catalog selection stays GPU-light until 3D preview is requested',
     await page.locator('.catalog.docked .catalog-preview-static').isVisible().catch(() => false)
