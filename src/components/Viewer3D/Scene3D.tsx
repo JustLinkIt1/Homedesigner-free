@@ -236,6 +236,24 @@ function FocusAnchor() {
     // During walk-mode transitions the default controls are briefly
     // PointerLockControls, which have no target — skip those frames.
     if (!g || !controls || !controls.target) return;
+    // The drag handler below clamps the anchor to the design's neighbourhood,
+    // but OrbitControls' OWN pan (two-finger drag / right-drag) moves the
+    // target without that clamp — so after enough panning the anchor ended up
+    // far outside the design and off screen, with no way to get it back. A
+    // tester reported exactly that. Apply the same clamp continuously, moving
+    // the camera by the identical delta so the view stops at the boundary
+    // instead of jumping.
+    if (!drag.current) {
+      const m = radius + 2;
+      const tx = Math.min(center[0] + m, Math.max(center[0] - m, controls.target.x));
+      const tz = Math.min(center[2] + m, Math.max(center[2] - m, controls.target.z));
+      if (tx !== controls.target.x || tz !== controls.target.z) {
+        camera.position.x += tx - controls.target.x;
+        camera.position.z += tz - controls.target.z;
+        controls.target.set(tx, controls.target.y, tz);
+        controls.update();
+      }
+    }
     g.position.set(controls.target.x, 0.02, controls.target.z);
     const s = Math.min(1.8, Math.max(0.55, camera.position.distanceTo(controls.target) * 0.075));
     g.scale.setScalar(s);

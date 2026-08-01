@@ -178,7 +178,7 @@ export default function Toolbar({
 
   return (
     <div className="toolbar">
-      <button className="brand" onClick={onHome} title={t('Back to my projects')} aria-label={t('Back to my projects')}>
+      <button className="brand" onClick={onHome} data-tip={t('Back to my projects')} aria-label={t('Back to my projects')}>
         <div className="brand-mark">
           <img src={`${import.meta.env.BASE_URL}brand-icon.png`} alt="" width={34} height={34} />
         </div>
@@ -204,16 +204,16 @@ export default function Toolbar({
       <SavedBadge tick={s.savedTick} />
 
       <div className="tool-group">
-        <button className="tbtn icon-only" disabled={!s.canUndo()} onClick={() => s.undo()} title={`${t('Undo')} (⌘Z)`} aria-label={t('Undo')}>
+        <button className="tbtn icon-only" disabled={!s.canUndo()} onClick={() => s.undo()} data-tip={`${t('Undo')} (⌘Z)`} aria-label={t('Undo')}>
           <Undo2 className="icon" />
         </button>
-        <button className="tbtn icon-only" disabled={!s.canRedo()} onClick={() => s.redo()} title={`${t('Redo')} (⇧⌘Z)`} aria-label={t('Redo')}>
+        <button className="tbtn icon-only" disabled={!s.canRedo()} onClick={() => s.redo()} data-tip={`${t('Redo')} (⇧⌘Z)`} aria-label={t('Redo')}>
           <Redo2 className="icon" />
         </button>
       </div>
 
       <div className="tool-group">
-        <button className="tbtn ghost import-btn" onClick={onImport} title={t('Import a 2D plan (PDF / DXF / image)')}>
+        <button className="tbtn ghost import-btn" onClick={onImport} data-tip={t('Import a 2D plan (PDF / DXF / image)')} aria-label={t('Import a 2D plan (PDF / DXF / image)')}>
           <Import className="icon" />
           <span>{t('Import plan')}</span>
         </button>
@@ -221,7 +221,8 @@ export default function Toolbar({
           <div className="export-wrap export-btn-wrap" ref={exportRef}>
             <button
               className="tbtn ghost"
-              title={t('Export the 2D plan as PNG or PDF')}
+              data-tip={t('Export the 2D plan as PNG or PDF')}
+              aria-label={t('Export the 2D plan as PNG or PDF')}
               aria-haspopup="menu"
               aria-expanded={exportOpen}
               onClick={() => setExportOpen((o) => !o)}
@@ -258,7 +259,7 @@ export default function Toolbar({
         <div className="export-wrap" ref={moreRef}>
           <button
             className="tbtn icon-only"
-            title={t('More')}
+            data-tip={t('More')}
             aria-label={t('More')}
             aria-haspopup="menu"
             aria-expanded={moreOpen}

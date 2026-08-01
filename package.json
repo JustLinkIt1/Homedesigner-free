@@ -1,7 +1,7 @@
 {
   "name": "homedesigner-free",
   "private": true,
-  "version": "1.14.0",
+  "version": "1.14.1",
   "license": "UNLICENSED",
   "type": "module",
   "description": "HomeDesigner: draw floor plans in 2D, furnish every room, and walk through your home in 3D. Import PDF/DXF/image plans with automatic wall tracing.",
@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
-    "test": "node tests/geometry.mjs && node tests/models.mjs && node tests/samples.mjs && node tests/trace.mjs && node tests/smoke.mjs",
+    "test": "node tests/geometry.mjs && node tests/i18n.mjs && node tests/models.mjs && node tests/samples.mjs && node tests/trace.mjs && node tests/smoke.mjs",
     "models:trellis": "node scripts/model-catalog/generate-trellis.mjs",
     "sync-version": "node scripts/sync-version.mjs",
     "screenshots": "node tools/screenshots.mjs"

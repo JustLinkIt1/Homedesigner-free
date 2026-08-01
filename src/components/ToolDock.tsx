@@ -47,7 +47,6 @@ export default function ToolDock() {
             <button
               className={`dock-btn ${tool === t.id ? 'active' : ''}`}
               data-tip={tr(t.label)}
-              title={tr(t.label)}
               aria-label={tr(t.label)}
               aria-pressed={tool === t.id}
               onClick={() => {

@@ -5,6 +5,43 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.14.1 - 2026-08-01 (versionCode 11401)
+
+### Beta tester reports
+
+- **43 UI strings were never translated.** A French tester saw "Tap a wall to
+  place Passage ouvert" — an English sentence wrapped around a translated item
+  name. `t()` falls back to English silently by design, so strings added to a
+  component after the last translation pass stayed English forever and nothing
+  complained. All 43 are now translated in all 12 locales, and `tests/i18n.mjs`
+  joins `npm test`: it walks every `t('…')` literal in the sources and fails if
+  any locale is missing one, so this cannot accumulate again.
+- **"Show intro again" did nothing.** `CoachMarks` renders only in the editor's
+  2D view, and every step it anchors to exists nowhere else — but the button is
+  reachable from the projects screen, where the early `return` at `App.tsx:396`
+  means nothing renders it. It now switches to the editor and to 2D first.
+- **Tooltips looked light on a dark app.** The dock buttons carried BOTH a
+  `data-tip` and a native `title`, so Chrome drew its own tooltip — which
+  follows the browser's theme, not the page's, and `color-scheme: dark` cannot
+  reach it — on top of the styled one. Worse, the styled tooltip used
+  `background: var(--text)` with `color: #fff`, which in the dark theme is
+  white on near-white. Tooltips now use dedicated `--tip-*` tokens that are
+  legible in both themes, the duplicate `title` attributes are gone, and the
+  toolbar's native tooltips were converted too (keeping `aria-label` for the
+  accessible name). Tooltips are suppressed on touch, where they have no hover
+  to hang from.
+- **Localised labels overflowed their buttons.** "Terminer" spilled outside the
+  Finish pill and "Dessiner des murs" outside its bottom tab. The finish/cancel
+  buttons never shrink now, and the tab labels truncate instead of overflowing.
+- **The measure tool gave no feedback on the first tap.** Its rubber band needs
+  a hover cursor to draw, and touch has none — so on a phone the first point
+  produced nothing at all. A marker now holds that point until the second tap.
+- **The 3D pan anchor could get lost.** The anchor's drag handler clamps it to
+  the design, but OrbitControls' own pan bypassed that clamp, so it could end
+  up far off screen with no way back. The clamp now applies continuously, and
+  moves the camera by the same delta so the view stops at the boundary rather
+  than jumping.
+
 ## 1.14.0 - 2026-08-01 (versionCode 11400)
 
 ### Planner 5D parity pass

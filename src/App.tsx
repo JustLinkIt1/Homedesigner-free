@@ -223,6 +223,13 @@ export default function App() {
     setTipsDismissed(false);
     setShowHelp(false);
     setOfferTour(false);
+    // Take the user to where the tour can actually run before showing it.
+    // CoachMarks renders only in the editor's 2D view, and every step it points
+    // at (.tool-dock, .view-toggle, .mobile-tabs) exists nowhere else — so
+    // "Show intro again" pressed from the projects screen, or from 3D, used to
+    // set a flag that nothing rendered and appeared to do nothing at all.
+    setScreen('editor');
+    if (useDesign.getState().view !== '2d') useDesign.getState().setView('2d');
     setShowTour(true);
   };
 
@@ -894,14 +901,16 @@ export default function App() {
             aria-pressed={drawer === 'build' || buildModeActive}
           >
             <PenTool className="icon" />{' '}
-            {t(activeBuildTool?.label ?? (pendingEntry?.opening ? pendingEntry.name : 'Build'))}
+            <span className="mt-label">
+              {t(activeBuildTool?.label ?? (pendingEntry?.opening ? pendingEntry.name : 'Build'))}
+            </span>
           </button>
           <button
             className={drawer === 'catalog' || tool === 'furniture' ? 'active' : ''}
             onClick={toggleObjects}
             aria-pressed={drawer === 'catalog' || tool === 'furniture'}
           >
-            <Sofa className="icon" /> {t('Objects')}
+            <Sofa className="icon" /> <span className="mt-label">{t('Objects')}</span>
           </button>
           <button
             className={drawer === 'props' ? 'active' : ''}
@@ -916,7 +925,7 @@ export default function App() {
               }
             }}
           >
-            <SlidersHorizontal className="icon" /> {t('Edit')}
+            <SlidersHorizontal className="icon" /> <span className="mt-label">{t('Edit')}</span>
           </button>
         </div>
         {coarsePointer && !walkMode && selection.id && selection.kind && (

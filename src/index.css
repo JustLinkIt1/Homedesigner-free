@@ -79,6 +79,11 @@
   text-rendering: optimizeLegibility;
   color-scheme: light;
 
+  /* Tooltip chip (see [data-tip] below) — a dark chip on the light page. */
+  --tip-bg: #1f2532;
+  --tip-fg: #ffffff;
+  --tip-border: transparent;
+
   /* Motion */
   --dur-fast: 0.12s;
   --dur: 0.18s;
@@ -119,6 +124,11 @@
     0 20px 48px rgba(0, 0, 0, 0.6);
 
   color-scheme: dark;
+
+  /* var(--text) is near-white here, so the old chip drew white on white. */
+  --tip-bg: #262f42;
+  --tip-fg: #eef1f6;
+  --tip-border: #3a465e;
 }
 
 /* Floating overlay chrome that hardcodes white in the light theme. */
@@ -1467,14 +1477,20 @@ button.brand:hover .brand-name {
   background: var(--border);
   margin: 3px 6px;
 }
-.dock-btn[data-tip]:hover::after {
+/* App-owned tooltips.
+ *
+ * These exist because a native `title` tooltip is drawn by the browser's own UI
+ * layer and follows the BROWSER's theme, not the page's — `color-scheme: dark`
+ * cannot reach it, so a light-themed Chrome showed light tooltips over the dark
+ * app. Anything carrying `data-tip` must therefore NOT also carry `title`, or
+ * both tooltips appear at once. Keep `aria-label` for the accessible name. */
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
   content: attr(data-tip);
   position: absolute;
-  left: 52px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--text);
-  color: #fff;
+  background: var(--tip-bg);
+  color: var(--tip-fg);
+  border: 1px solid var(--tip-border);
   font-size: 12px;
   font-weight: 600;
   padding: 5px 9px;
@@ -1482,7 +1498,31 @@ button.brand:hover .brand-name {
   white-space: nowrap;
   pointer-events: none;
   box-shadow: var(--shadow-md);
-  z-index: 30;
+  z-index: 60;
+}
+/* Dock sits down the left edge, so its tip goes to the right. */
+.dock-btn[data-tip]:hover::after,
+.dock-btn[data-tip]:focus-visible::after {
+  left: 52px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+/* Toolbar runs along the top, so its tips hang below. */
+.toolbar [data-tip]:hover::after,
+.toolbar [data-tip]:focus-visible::after {
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.toolbar [data-tip] {
+  position: relative;
+}
+/* Touch has no hover: a tap would leave the tip stuck under the finger. */
+@media (pointer: coarse) {
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    content: none;
+  }
 }
 
 /* ---------- Overlay HUD ---------- */
@@ -2127,6 +2167,15 @@ button.brand:hover .brand-name {
   .cancel-btn {
     height: 44px;
     min-width: 44px;
+    /* The hint beside these wraps at this width, and a longer localised label
+       ("Terminer" vs "Finish") used to shrink the button until its text spilled
+       outside the pill. The hint is the flexible part, never the buttons. */
+    flex: none;
+    white-space: nowrap;
+  }
+  .draw-affordance > span,
+  .draw-affordance > .draw-hint {
+    min-width: 0;
   }
   .placement-affordance {
     top: calc(60px + env(safe-area-inset-top));
@@ -4466,7 +4515,21 @@ button.brand:hover .brand-name {
     font-weight: 700;
     font-size: 12.5px;
     white-space: nowrap;
+    /* Without this the grid track refuses to shrink and a long localised label
+       ("Dessiner des murs" against "Draw walls") overflowed the pill. */
+    min-width: 0;
     transition: color var(--dur-fast), background var(--dur-fast), transform var(--dur-fast);
+  }
+  /* Truncate rather than overflow: the icon still identifies the tab, and the
+     full label stays available as the button's accessible name. */
+  .mobile-tabs button .mt-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .mobile-tabs button .icon {
+    flex: none;
   }
   .mobile-tabs button.active {
     background: var(--grad-brand);

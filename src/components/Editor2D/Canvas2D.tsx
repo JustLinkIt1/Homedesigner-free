@@ -1807,6 +1807,22 @@ export default function Canvas2D() {
             <SnapIndicator at={cursor} kind={snapKind} zoom={zoom} />
           )}
 
+          {/* The first measure point, held until the second tap lands.
+              MeasureView below needs a cursor to draw its rubber band, and
+              touch has no hover — so on a phone the first tap used to produce
+              no feedback whatsoever. */}
+          {tool === 'measure' && measureA && !measureSeg && (
+            <Group x={measureA.x} y={measureA.y} listening={false}>
+              <Circle radius={9 / zoom} fill={C.selection} opacity={0.22} />
+              <Circle
+                radius={4.5 / zoom}
+                fill={C.handleFill}
+                stroke={C.selection}
+                strokeWidth={2 / zoom}
+              />
+            </Group>
+          )}
+
           {/* Tape measure (live A→cursor, or frozen A→B) */}
           {tool === 'measure' && (measureSeg || (measureA && cursor)) && (
             <MeasureView
