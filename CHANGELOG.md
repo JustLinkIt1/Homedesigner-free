@@ -5,6 +5,49 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.14.0 - 2026-08-01 (versionCode 11400)
+
+### Planner 5D parity pass
+
+Driven by a competitive session report. Two of the four items it flagged turned
+out to be already shipped — live room areas (`Canvas2D`) and the per-tool
+instruction bar (`App.tsx`) — so this covers the genuine gaps.
+
+- **Distances from the selected item to the walls it faces.** Selecting a piece
+  of furniture now draws a dashed leader and a measurement from each of its four
+  sides to the nearest wall. Distances are to the wall FACE, not its centreline,
+  because that is what a tape measure reads in the room. Every wall counts,
+  including fences and half walls: a ray that ignored a fence would pass through
+  a barrier the user can see and report the distance to whatever is behind it.
+  Guides appear on selection and not during a drag — furniture dragging runs no
+  React state updates on purpose, which is what keeps it smooth on slower
+  phones. Follows the existing "show dimensions" toggle.
+- **Rotate 90° in the long-press / right-click menu.** The rotate handle needs a
+  precise drag, which is awkward with a fingertip; a right-angle step is the
+  rotation people actually want when squaring furniture to a wall.
+- **"Start with a room" template.** Drops in a 5 × 5 m room, walls and floor
+  detected, ready to furnish. "Start from scratch" is untouched for anyone who
+  wants an empty page. The whole room is a single undo step rather than five.
+- **The save cue is visible on phones again.** It lived inside `.project`, which
+  is `display: none` under the phone breakpoint, so the platform that most needs
+  the reassurance never saw it. It now sits outside that wrapper and collapses
+  to icon-only, keeping its text as an accessible name.
+
+### Testing
+
+- Ten new assertions in `tests/geometry.mjs` cover the distance maths: face
+  offsets, the rotation convention, off-centre items, flush-to-wall items, and
+  a fence correctly blocking a ray. The measurement logic lives in
+  `src/lib/distanceGuides.ts` so it is testable without a browser — a sign error
+  in the ray/segment solve silently rejects every real hit, and a wrong rotation
+  convention aims the rays at the wrong walls, neither of which surfaces as an
+  error.
+- Smoke coverage for the starter room (four walls, one room, single undo), the
+  new menu item, and the phone-viewport save cue.
+- Raised one catalog click timeout from 30s to 45s to match its neighbours. It
+  lands right after the WebGL preview opens, and that compile stall timed the
+  click out in 3 of 4 runs on a loaded machine.
+
 ## 1.13.0 - 2026-07-31 (versionCode 11300)
 
 ### Model Studio fills its own catalogue card

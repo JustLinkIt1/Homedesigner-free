@@ -20,7 +20,7 @@ import { FLOOR_BY_ID, CATALOG_BY_TYPE, type Shape3D } from '../../data/furniture
 import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
 import { FURNITURE_SPRITES, spriteUrl } from '../../data/furnitureSprites';
 import { SPRITE_FILL } from '../../data/furnitureModels';
-import DimensionsLayer from './DimensionsLayer';
+import DimensionsLayer, { DimensionPlate } from './DimensionsLayer';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { useI18n } from '../../lib/i18n';
 import { planCapture } from '../../lib/renderBridge';
@@ -29,11 +29,12 @@ import { buildSnapElements, nearestSnap, lockToAngle, type SnapKind, type GuideL
 import { kitchenRunUnits, RUN_UNIT } from '../../lib/kitchenRun';
 import { computeWallPolygons } from '../../lib/wallGeometry';
 import { isFence, isHalfWall } from '../../lib/fence';
+import { wallDistances } from '../../lib/distanceGuides';
 import { formatLength, formatArea, type Units } from '../../lib/units';
 import { selectionTick, tapMedium } from '../../lib/haptics';
 import { useTheme, canvasColors } from '../../lib/theme';
 import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
-import type { Point, Selection } from '../../types';
+import type { Point, Selection, Wall } from '../../types';
 import {
   resizeBox,
   norm360,
@@ -1700,6 +1701,15 @@ export default function Canvas2D() {
                     dashed={(entry?.mountY ?? 0) > 0}
                   />
                 </Group>
+                {editing && !multi && draggingFurnId !== f.id && showDimensions && (
+                  <WallDistanceGuides
+                    box={{ position, width, depth }}
+                    rotation={rotation}
+                    walls={walls}
+                    zoom={zoom}
+                    units={units}
+                  />
+                )}
                 {editing && draggingFurnId !== f.id && (
                   <FurnitureHandles
                     box={{ position, width, depth }}
@@ -1981,6 +1991,13 @@ function ContextMenu({
           {menu.kind === 'furniture' && item(t('Copy'), () => s.copySelection(), { sub: '⌘C' })}
           {menu.kind === 'furniture' && !multi && (
             <>
+              {/* The rotate handle needs a precise drag, which is awkward with a
+                  fingertip; a right-angle step is the rotation people actually
+                  want when squaring furniture to a wall. */}
+              {item(t('Rotate 90°'), () => {
+                const f = s.furniture.find((x) => x.id === menu.id);
+                if (f) s.updateFurniture(menu.id, { rotation: (f.rotation + 90) % 360 });
+              })}
               {item(t('Bring to front'), () => s.bringToFront(menu.id))}
               {item(t('Send to back'), () => s.sendToBack(menu.id))}
             </>
@@ -1990,6 +2007,81 @@ function ContextMenu({
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Distance from the selected item to the wall each of its four sides faces.
+ *
+ * Rendered only while an item is selected and NOT being dragged. That is
+ * deliberate: furniture `onDragMove` runs no React state updates on purpose
+ * (it's what keeps dragging smooth on slower phones), so recomputing guides per
+ * frame would undo that. Selection is also when the number is actually useful —
+ * you place the item, then read how far it sits off the wall.
+ *
+ * Distances are to the wall FACE, not its centreline, because that is what a
+ * tape measure reads in the real room.
+ *
+ * Every wall counts here, including fences and half walls — unlike room
+ * detection, which filters to `structuralWalls`. A ray that ignored a fence
+ * would shoot straight through a barrier the user can see and report the
+ * distance to the house behind it, which is simply the wrong number.
+ */
+function WallDistanceGuides({
+  box,
+  rotation,
+  walls,
+  zoom,
+  units,
+}: {
+  box: { position: Point; width: number; depth: number };
+  rotation: number;
+  walls: Wall[];
+  zoom: number;
+  units: Units;
+}) {
+  const C = canvasColors(useTheme((t) => t.theme));
+  const px = (n: number) => n / zoom;
+  const legs = wallDistances(box, rotation, walls);
+
+  return (
+    <Group listening={false}>
+      {legs.map((leg, i) => {
+        // Nothing found, or the item is already against the wall — a stack of
+        // "0 cm" plates on a wall-hugging sofa is noise, not information.
+        if (!Number.isFinite(leg.distance) || leg.distance * zoom < 20) return null;
+        const to = {
+          x: leg.from.x + leg.dir.x * leg.distance,
+          y: leg.from.y + leg.dir.y * leg.distance,
+        };
+        const mid = { x: (leg.from.x + to.x) / 2, y: (leg.from.y + to.y) / 2 };
+        const fs = px(11);
+        // Keep the number upright regardless of how the item is rotated.
+        let rot = (Math.atan2(leg.dir.y, leg.dir.x) * 180) / Math.PI;
+        if (rot > 90 || rot < -90) rot += 180;
+        return (
+          <Group key={i}>
+            <Line
+              points={[leg.from.x, leg.from.y, to.x, to.y]}
+              stroke={C.selection}
+              strokeWidth={px(1)}
+              dash={[px(5), px(4)]}
+            />
+            <Group x={mid.x} y={mid.y} rotation={rot}>
+              <DimensionPlate
+                label={formatLength(leg.distance, units)}
+                fontSize={fs}
+                padding={px(7)}
+                fill={C.dimensionPlate}
+                stroke={C.dimensionPlateStroke}
+                strokeWidth={px(0.6)}
+                textColor={C.dimensionText}
+              />
+            </Group>
+          </Group>
+        );
+      })}
+    </Group>
   );
 }
 

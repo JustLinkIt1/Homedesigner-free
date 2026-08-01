@@ -541,7 +541,10 @@ if (process.env.SMOKE_SKIP_3D) {
     'on-demand catalog 3D preview opens',
     await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: 30000 }).then(() => true).catch(() => false),
   );
-  await page.locator('.catalog.docked .catalog-place').click({ timeout: 30000 });
+  // 45s to match the rotate-pill wait below: both land right after the WebGL
+  // preview opens, and under software GL that compile stalls the main thread
+  // long enough that a 30s click timed out in 3 of 4 runs on a loaded machine.
+  await page.locator('.catalog.docked .catalog-place').click({ timeout: 45000 });
   check(
     '3D placement guidance appears',
     await page.locator('.placement-affordance', { hasText: 'Tap a floor to place Side Table' }).isVisible().catch(() => false),
@@ -732,6 +735,13 @@ if (process.env.SMOKE_SKIP_3D) {
     check(
       'long-press menu offers Delete',
       hold.settled.labels.some((l) => /Delete/i.test(l)),
+      JSON.stringify(hold.settled.labels),
+    );
+    // The rotate handle needs a precise drag; on touch the right-angle step is
+    // the rotation people actually want, so it has to be reachable here.
+    check(
+      'long-press menu offers Rotate 90°',
+      hold.settled.labels.some((l) => /Rotate/i.test(l)),
       JSON.stringify(hold.settled.labels),
     );
     check('a real 40px drag still does not open the menu', !hold.dragged.opened);
@@ -1226,6 +1236,59 @@ await recoveryPage.close();
   await upd.waitForTimeout(1200);
   check('update: no prompt when already up to date', !(await banner.isVisible().catch(() => false)));
   await upd.close();
+}
+
+// ---- starter room + the phone save cue ------------------------------------
+// Its own page: the main one is deep in the 3D editor by now, and both of these
+// are first-run behaviours that need a clean projects screen.
+{
+  const sr = await browser.newPage({ viewport: { width: 390, height: 780 }, reducedMotion: 'reduce' });
+  await sr.goto(BASE);
+  await sr.evaluate(() => {
+    localStorage.setItem('homedesigner.tour.v1', 'done');
+    localStorage.setItem('homedesigner.tips.v1', 'dismissed');
+  });
+  await sr.reload({ waitUntil: 'networkidle' });
+
+  const card = sr.locator('.tpl-card', { hasText: 'Start with a room' });
+  check('starter room: the template card is offered',
+    await card.waitFor({ state: 'visible', timeout: 8000 }).then(() => true).catch(() => false));
+  await card.click();
+  await sr.waitForTimeout(700);
+
+  const room = await sr.evaluate(() => {
+    const s = window.useDesign.getState();
+    return {
+      walls: s.walls.length,
+      rooms: s.rooms.length,
+      undos: s.canUndo(),
+      // Interior span between opposing wall centrelines.
+      span: s.walls.length ? Math.round(Math.max(...s.walls.flatMap((w) => [w.start.x, w.end.x]))
+        - Math.min(...s.walls.flatMap((w) => [w.start.x, w.end.x]))) : 0,
+    };
+  });
+  check('starter room: four walls', room.walls === 4, JSON.stringify(room));
+  check('starter room: one detected room', room.rooms === 1, JSON.stringify(room));
+  check('starter room: 5m across', room.span === 500, JSON.stringify(room));
+
+  // The whole room must be ONE undo, or getting back to a blank page means
+  // pressing undo five times.
+  await sr.evaluate(() => window.useDesign.getState().undo());
+  const undone = await sr.evaluate(() => {
+    const s = window.useDesign.getState();
+    return { walls: s.walls.length, rooms: s.rooms.length };
+  });
+  check('starter room: a single undo clears the whole room',
+    undone.walls === 0 && undone.rooms === 0, JSON.stringify(undone));
+
+  // The save cue used to live inside `.project`, which is display:none on
+  // phones — so the platform that most needs the reassurance never saw it.
+  const badge = sr.locator('.saved-badge');
+  check('save cue: visible at a phone viewport',
+    await badge.isVisible().catch(() => false));
+  check('save cue: keeps an accessible name once its text is hidden',
+    !!(await badge.getAttribute('aria-label').catch(() => null)));
+  await sr.close();
 }
 
 check('zero page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));

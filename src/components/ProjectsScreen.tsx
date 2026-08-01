@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Home, Plus, Ruler, FolderOpen, Copy, Trash2, Pencil, Sofa, ChevronRight,
-  LayoutGrid, Settings, Lightbulb, PenTool,
+  LayoutGrid, Settings, Lightbulb, PenTool, Square,
 } from 'lucide-react';
 import { useDesign, type MaybeFloored } from '../store/designStore';
 import { confirmDialog, toast } from '../lib/ui';
@@ -42,6 +42,7 @@ export default function ProjectsScreen({
   // doesn't re-render on every design edit (actions are stable references).
   const loadSnapshot = useDesign((st) => st.loadSnapshot);
   const newProjectAction = useDesign((st) => st.newProject);
+  const addStarterRoom = useDesign((st) => st.addStarterRoom);
   const loadSample = useDesign((st) => st.loadSample);
   const t = useI18n();
   const [list, setList] = useState<projects.ProjectMeta[]>(() => projects.listProjects());
@@ -112,6 +113,17 @@ export default function ProjectsScreen({
         onOpenEditor();
         onImport();
       },
+    },
+    {
+      // A blank canvas is a hard first step. This drops in a room you can
+      // furnish immediately, while '__blank' below still gives an empty page to
+      // anyone who wants one.
+      key: '__room',
+      title: t('Start with a room'),
+      sub: t('A 5 × 5 m room, ready to furnish'),
+      icon: <Square className="icon" />,
+      preview: undefined,
+      onClick: () => newProject(() => addStarterRoom()),
     },
     {
       key: '__blank',

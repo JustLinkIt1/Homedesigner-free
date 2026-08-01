@@ -190,6 +190,8 @@ interface DesignState extends DesignSnapshot {
 
   importWalls: (walls: Wall[], replace?: boolean, openings?: Opening[]) => void;
   detectRoomsFromWalls: () => number;
+  /** Square room of `sizeCm` per side, walls + detected room, as one undo step. */
+  addStarterRoom: (sizeCm?: number) => void;
   setBackground: (bg: BackgroundPlan | null) => void;
   updateBackground: (patch: Partial<BackgroundPlan>) => void;
 
@@ -1177,6 +1179,51 @@ export const useDesign = create<DesignState>((set, get) => {
           d.openings.push(...openings.filter((o) => ids.has(o.wallId)));
         }
       }),
+
+    /** Drop a ready-to-use square room into an empty project.
+     *
+     *  The "Start with a room" template: a blank canvas is a hard first step,
+     *  and every competitor opens on something you can immediately furnish.
+     *
+     *  Everything happens in ONE commit so the whole room is a single undo —
+     *  calling addWall four times and then detectRoomsFromWalls would leave the
+     *  user pressing undo five times to get their blank canvas back. That means
+     *  running the detection against the draft rather than through the public
+     *  action, which does its own commit. */
+    addStarterRoom: (sizeCm = 500) => {
+      const { defaultWallHeight, defaultWallThickness } = get();
+      const half = sizeCm / 2;
+      // Centred on the origin, which is where the editor opens.
+      const corners: Point[] = [
+        { x: -half, y: -half },
+        { x: half, y: -half },
+        { x: half, y: half },
+        { x: -half, y: half },
+      ];
+      commit((d) => {
+        for (let i = 0; i < corners.length; i++) {
+          d.walls.push({
+            id: uid(),
+            start: corners[i],
+            end: corners[(i + 1) % corners.length],
+            thickness: defaultWallThickness,
+            height: defaultWallHeight,
+            color: '#ece6db',
+          });
+        }
+        for (const poly of detectRooms(structuralWalls(d.walls))) {
+          if (d.rooms.some((r) => roomMatches(poly, r.points))) continue;
+          d.rooms.push({
+            id: uid(),
+            name: `Room ${d.rooms.length + 1}`,
+            points: poly,
+            floorMaterial: 'oak',
+            color: '#f3ede2',
+            auto: true,
+          });
+        }
+      });
+    },
 
     detectRoomsFromWalls: () => {
       // A fenced garden is not a room, so boundary runs never close a polygon.

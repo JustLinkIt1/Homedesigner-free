@@ -84,6 +84,65 @@ function isPerimeterDuplicate(
 
 const near = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
 
+/**
+ * A rounded plate carrying a length, sized to its own text.
+ *
+ * Shared with the selected-item distance guides in Canvas2D so the plan's two
+ * annotation systems can't drift into two different-looking labels. Sizes are
+ * passed in already converted to world units by the caller's `px()`.
+ */
+export function DimensionPlate({
+  label,
+  fontSize,
+  padding,
+  fill,
+  stroke,
+  strokeWidth,
+  textColor,
+  children,
+}: {
+  label: string;
+  fontSize: number;
+  padding: number;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  textColor: string;
+  /** Optional interactive <Text> replacement (the wall labels are clickable). */
+  children?: (geom: { width: number; height: number }) => React.ReactNode;
+}) {
+  const width = padding + label.length * fontSize * 0.56;
+  const height = fontSize + padding * 0.72;
+  return (
+    <>
+      <Rect
+        x={-width / 2}
+        y={-height / 2}
+        width={width}
+        height={height}
+        cornerRadius={height / 2}
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        listening={false}
+      />
+      {children ? children({ width, height }) : (
+        <Text
+          x={-width / 2}
+          y={-fontSize / 2}
+          text={label}
+          fontSize={fontSize}
+          fontStyle="bold"
+          fill={textColor}
+          width={width}
+          align="center"
+          listening={false}
+        />
+      )}
+    </>
+  );
+}
+
 /** A small length label centered on a single interior wall. */
 function WallDimension({
   wall,
@@ -119,52 +178,51 @@ function WallDimension({
   const lc = midpoint(a, b);
   const fs = px(11.5);
   const label = formatLength(len, units);
-  const plateW = px(7) + label.length * fs * 0.56;
-  const plateH = fs + px(5);
 
   return (
     <Group x={lc.x} y={lc.y} rotation={rot}>
-      <Rect
-        x={-plateW / 2}
-        y={-plateH / 2}
-        width={plateW}
-        height={plateH}
-        cornerRadius={plateH / 2}
+      <DimensionPlate
+        label={label}
+        fontSize={fs}
+        padding={px(7)}
         fill={PLATE_FILL}
         stroke={PLATE_STROKE}
         strokeWidth={px(0.6)}
-        listening={false}
-      />
-      <Text
-        x={-plateW / 2}
-        y={-fs / 2}
-        text={label}
-        fontSize={fs}
-        fontStyle="bold"
-        fill={TEXT_COLOR}
-        width={plateW}
-        align="center"
-        listening={!!onEdit}
-        hitStrokeWidth={px(20)}
-        onMouseEnter={(e) => {
-          const st = e.target.getStage();
-          if (st) st.container().style.cursor = 'text';
-        }}
-        onMouseLeave={(e) => {
-          const st = e.target.getStage();
-          if (st) st.container().style.cursor = 'default';
-        }}
-        onClick={(e) => {
-          if (!onEdit) return;
-          e.cancelBubble = true;
-          onEdit(wall.id);
-        }}
-        onTap={(e) => {
-          if (!onEdit) return;
-          e.cancelBubble = true;
-          onEdit(wall.id);
-        }}
-      />
+        textColor={TEXT_COLOR}
+      >
+        {({ width }) => (
+          <Text
+            x={-width / 2}
+            y={-fs / 2}
+            text={label}
+            fontSize={fs}
+            fontStyle="bold"
+            fill={TEXT_COLOR}
+            width={width}
+            align="center"
+            listening={!!onEdit}
+            hitStrokeWidth={px(20)}
+            onMouseEnter={(e) => {
+              const st = e.target.getStage();
+              if (st) st.container().style.cursor = 'text';
+            }}
+            onMouseLeave={(e) => {
+              const st = e.target.getStage();
+              if (st) st.container().style.cursor = 'default';
+            }}
+            onClick={(e) => {
+              if (!onEdit) return;
+              e.cancelBubble = true;
+              onEdit(wall.id);
+            }}
+            onTap={(e) => {
+              if (!onEdit) return;
+              e.cancelBubble = true;
+              onEdit(wall.id);
+            }}
+          />
+        )}
+      </DimensionPlate>
     </Group>
   );
 }

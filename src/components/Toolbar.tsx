@@ -43,10 +43,13 @@ function SavedBadge({ tick }: { tick: number }) {
     const t = setTimeout(() => setSaving(false), 600);
     return () => clearTimeout(t);
   }, [tick]);
+  const label = saving ? tr('Saving…') : tr('Saved');
   return (
-    <span className={`saved-badge ${saving ? 'saving' : ''}`}>
+    // The label collapses to icon-only on phones (see .saved-badge in
+    // index.css), so it has to stay reachable as an accessible name.
+    <span className={`saved-badge ${saving ? 'saving' : ''}`} role="status" aria-label={label}>
       {saving ? <span className="spin" style={{ width: 12, height: 12 }} /> : <Check className="icon" style={{ width: 13, height: 13 }} />}
-      {saving ? tr('Saving…') : tr('Saved')}
+      <span className="saved-badge-text">{label}</span>
     </span>
   );
 }
@@ -194,8 +197,11 @@ export default function Toolbar({
           aria-label={t('Project name')}
           spellCheck={false}
         />
-        <SavedBadge tick={s.savedTick} />
       </div>
+      {/* Outside `.project` on purpose: that wrapper is display:none on phones
+          to reclaim toolbar width, which used to hide the save state on the
+          platform where people most need reassurance their work is kept. */}
+      <SavedBadge tick={s.savedTick} />
 
       <div className="tool-group">
         <button className="tbtn icon-only" disabled={!s.canUndo()} onClick={() => s.undo()} title={`${t('Undo')} (⌘Z)`} aria-label={t('Undo')}>

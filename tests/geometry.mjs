@@ -28,6 +28,7 @@ export { isNewer } from '${sourceRoot}/src/lib/appUpdate.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${sourceRoot}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${sourceRoot}/src/lib/roof.ts';
 export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT } from '${sourceRoot}/src/lib/fence.ts';
+export { wallDistances } from '${sourceRoot}/src/lib/distanceGuides.ts';
 `);
 const out = join(dir, 'bundle.mjs');
 // platform=node so CommonJS-only deps (dxf-parser) resolve via "main";
@@ -43,6 +44,7 @@ const {
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
   buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
   fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT,
+  wallDistances,
 } = await import(pathToFileURL(out).href);
 
 let fails = 0;
@@ -726,6 +728,70 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
     'half wall: internal run does not distort roof footprint',
     !!baseRoof && !!ponyRoof && near(Math.abs(polygonArea(baseRoof)), Math.abs(polygonArea(ponyRoof)), 0.01),
   );
+}
+
+// --- distance guides -------------------------------------------------------
+// These numbers are read off the plan as measurements, so they get asserted
+// rather than eyeballed. A sign slip in the ray/segment solve silently rejects
+// every real hit, and a wrong rotation convention points the rays at the wrong
+// walls — neither shows up as an error, only as a wrong number on screen.
+{
+  const W = 12; // wall thickness
+  // A 6x4 m room, walls on the centrelines of the rectangle.
+  const room = [
+    { id: 'n', start: { x: 0, y: 0 }, end: { x: 600, y: 0 }, thickness: W, height: 270, color: '#fff' },
+    { id: 'e', start: { x: 600, y: 0 }, end: { x: 600, y: 400 }, thickness: W, height: 270, color: '#fff' },
+    { id: 's', start: { x: 600, y: 400 }, end: { x: 0, y: 400 }, thickness: W, height: 270, color: '#fff' },
+    { id: 'w', start: { x: 0, y: 400 }, end: { x: 0, y: 0 }, thickness: W, height: 270, color: '#fff' },
+  ];
+  const at = (x, y, width, depth) => ({ position: { x, y }, width, depth });
+
+  // Item centred in the room, unrotated. Right/left legs run to the east/west
+  // wall faces; down/up to the south/north. Faces sit W/2 inside each centreline.
+  const centred = wallDistances(at(300, 200, 100, 60), 0, room);
+  const d = centred.map((l) => l.distance);
+  check('guides: right leg reaches the east wall face', near(d[0], 300 - 50 - W / 2, 0.001), `${d[0]}`);
+  check('guides: left leg reaches the west wall face', near(d[1], 300 - 50 - W / 2, 0.001), `${d[1]}`);
+  check('guides: down leg reaches the south wall face', near(d[2], 200 - 30 - W / 2, 0.001), `${d[2]}`);
+  check('guides: up leg reaches the north wall face', near(d[3], 200 - 30 - W / 2, 0.001), `${d[3]}`);
+
+  // The four legs must always sum with the item to the full internal span.
+  check(
+    'guides: opposing legs plus the item span the room',
+    near(d[0] + d[1] + 100, 600 - W, 0.001) && near(d[2] + d[3] + 60, 400 - W, 0.001),
+  );
+
+  // Rotation convention: at 90 degrees the item's WIDTH axis runs along world
+  // +Y, so the leg that measured to the east wall must now measure to the
+  // south, starting from the width half-extent (50). The depth leg swings round
+  // to the west wall, starting from the depth half-extent (30).
+  const turned = wallDistances(at(300, 200, 100, 60), 90, room).map((l) => l.distance);
+  check('guides: a quarter turn swaps which walls the legs meet',
+    near(turned[0], 200 - 50 - W / 2, 0.001) && near(turned[2], 300 - 30 - W / 2, 0.001),
+    `${turned.join(', ')}`);
+
+  // Off-centre: the near side must shorten by exactly the offset.
+  const shifted = wallDistances(at(400, 200, 100, 60), 0, room).map((l) => l.distance);
+  check('guides: moving 100 right shortens the right leg by 100',
+    near(shifted[0], d[0] - 100, 0.001) && near(shifted[1], d[1] + 100, 0.001));
+
+  // An item pushed flush against a wall reports (near) zero, not a negative.
+  const flush = wallDistances(at(600 - W / 2 - 50, 200, 100, 60), 0, room).map((l) => l.distance);
+  check('guides: an item against the wall never reports a negative distance',
+    flush.every((v) => v > 0 || !Number.isFinite(v)), `${flush.join(', ')}`);
+
+  // No walls at all: every leg reports Infinity so the renderer draws nothing.
+  check('guides: nothing to measure against yields no legs',
+    wallDistances(at(0, 0, 100, 60), 0, []).every((l) => !Number.isFinite(l.distance)));
+
+  // A fence must stop a ray. Ignoring it would report the wall behind it.
+  const withFence = [
+    ...room,
+    { id: 'f', start: { x: 450, y: -100 }, end: { x: 450, y: 500 }, thickness: 10, height: 180, color: '#fff', kind: 'fence' },
+  ];
+  const blocked = wallDistances(at(300, 200, 100, 60), 0, withFence).map((l) => l.distance);
+  check('guides: a fence blocks the ray instead of being seen through',
+    near(blocked[0], 150 - 50 - 5, 0.001), `${blocked[0]}`);
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

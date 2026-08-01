@@ -4170,6 +4170,16 @@ button.brand:hover .brand-name {
   .project {
     display: none;
   }
+  /* Toolbar width is tight here (see the 92px reserve for the pinned 2D/3D
+     switch), so the save state keeps its icon and drops its text. The text
+     stays as the badge's aria-label. */
+  .saved-badge-text {
+    display: none;
+  }
+  .saved-badge {
+    flex: none;
+    margin-left: 2px;
+  }
   .tbtn span:not(.ico) {
     display: none;
   }
