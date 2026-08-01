@@ -95,7 +95,7 @@ export default function SettingsDialog({
                     onClick={() => void syncNow()}
                     disabled={authBusy}
                     aria-label={t('Sync now')}
-                    title={t('Sync now')}
+                    data-tip={t('Sync now')}
                   >
                     <RefreshCw className={`icon ${authBusy ? 'spin' : ''}`} />
                   </button>
@@ -112,7 +112,7 @@ export default function SettingsDialog({
                     }}
                     disabled={authBusy}
                     aria-label={t('Delete cloud backups')}
-                    title={t('Delete cloud backups')}
+                    data-tip={t('Delete cloud backups')}
                   >
                     <Trash2 className="icon" />
                   </button>

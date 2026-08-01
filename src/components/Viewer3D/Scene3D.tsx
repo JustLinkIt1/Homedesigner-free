@@ -88,7 +88,7 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
                   key={c}
                   className={`pp-swatch ${!activeWallTexture && activeWallColor === c ? 'on' : ''}`}
                   style={{ background: c }}
-                  title={c}
+                  data-tip={c} aria-label={c}
                   onClick={() => paintWall(c, undefined)}
                 />
               ))
@@ -97,7 +97,7 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
                   key={m.id}
                   className={`pp-swatch ${!room?.texture && room?.floorMaterial === m.id ? 'on' : ''}`}
                   style={{ background: m.color }}
-                  title={t(m.name)}
+                  data-tip={t(m.name)} aria-label={t(m.name)}
                   onClick={() => st.updateRoom(tap.id, { floorMaterial: m.id, texture: undefined })}
                 />
               ))}
@@ -116,7 +116,7 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
                       key={m.id}
                       className={`pp-swatch ${activeSrc === src ? 'on' : ''}`}
                       style={{ backgroundImage: `url(${src})`, backgroundSize: 'cover' }}
-                      title={t(m.name)}
+                      data-tip={t(m.name)} aria-label={t(m.name)}
                       onClick={() => pickMaterial(m)}
                     />
                   );

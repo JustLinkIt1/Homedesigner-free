@@ -518,7 +518,7 @@ if (process.env.SMOKE_SKIP_3D) {
     !!dockRect && dockRect.left >= 0 && dockRect.width > 100,
     JSON.stringify(dockRect),
   );
-  const sideTableCard = page.locator('.catalog.docked .cat-item[title="Side Table"]');
+  const sideTableCard = page.locator('.catalog.docked .cat-item[data-tip="Side Table"]');
   await sideTableCard.locator('.cat-item-select').click();
   check(
     'catalog selection stays GPU-light until 3D preview is requested',
@@ -912,11 +912,11 @@ if (!process.env.SMOKE_SKIP_3D) {
   await r3.waitForTimeout(14000);
   await r3.locator('.view-pill > button').click();
   await r3.waitForTimeout(400);
-  const rotateVisible = await r3.locator('.view-menu-row button[title*="90"]').first().isVisible().catch(() => false);
+  const rotateVisible = await r3.locator('.view-menu-row button[data-tip*="90"]').first().isVisible().catch(() => false);
   check('rotate plan is reachable in 3D', rotateVisible);
   if (rotateVisible) {
     const before = await r3.evaluate(() => JSON.stringify(window.useDesign.getState().walls.map((w) => w.start)));
-    await r3.locator('.view-menu-row button[title*="90"]').first().click();
+    await r3.locator('.view-menu-row button[data-tip*="90"]').first().click();
     await r3.waitForTimeout(400);
     const after = await r3.evaluate(() => JSON.stringify(window.useDesign.getState().walls.map((w) => w.start)));
     check('rotating from 3D turns the plan', before !== after);
@@ -1289,6 +1289,54 @@ await recoveryPage.close();
   check('save cue: keeps an accessible name once its text is hidden',
     !!(await badge.getAttribute('aria-label').catch(() => null)));
   await sr.close();
+}
+
+// ---- app-owned tooltips ----------------------------------------------------
+// Native `title` tooltips follow the BROWSER's theme, not the page's, so a
+// light-themed Chrome drew light tooltips over the dark app and `color-scheme`
+// could not reach them. Assert the replacement actually appears, carries the
+// label, and is legible — the previous CSS tooltip used var(--text) as its
+// background, which in the dark theme is near-white text on near-white.
+{
+  const tp = await browser.newPage({ viewport: { width: 1280, height: 860 }, reducedMotion: 'reduce' });
+  await tp.goto(BASE);
+  await tp.evaluate(() => {
+    localStorage.setItem('homedesigner.tour.v1', 'done');
+    localStorage.setItem('homedesigner.tips.v1', 'dismissed');
+  });
+  await tp.reload({ waitUntil: 'networkidle' });
+  await tp.locator('.tpl-card', { hasText: 'Start with a room' }).click();
+  await tp.waitForSelector('.tool-dock', { timeout: 15000 });
+
+  const strays = await tp.locator('[data-tip][title]').count();
+  check('tooltips: nothing carries both data-tip and a native title', strays === 0, `${strays} found`);
+
+  await tp.locator('.dock-btn').first().hover();
+  const shown = await tp.waitForSelector('.app-tip', { timeout: 4000 }).then(() => true).catch(() => false);
+  check('tooltips: hovering a tool shows the app tooltip', shown);
+
+  if (shown) {
+    const style = await tp.evaluate(() => {
+      const el = document.querySelector('.app-tip');
+      const cs = getComputedStyle(el);
+      const lum = (c) => {
+        const [r, g, b] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number);
+        const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+      };
+      const a = lum(cs.color);
+      const b = lum(cs.backgroundColor);
+      return {
+        text: el.textContent.trim(),
+        contrast: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
+      };
+    });
+    check('tooltips: the tooltip carries the tool label', style.text.length > 2, JSON.stringify(style));
+    // WCAG AA for small text. The old chip scored ~1.0 (white on near-white).
+    check('tooltips: text is legible against its own background in the dark theme',
+      style.contrast >= 4.5, `contrast ${style.contrast.toFixed(2)}:1`);
+  }
+  await tp.close();
 }
 
 check('zero page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));

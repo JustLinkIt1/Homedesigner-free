@@ -46,6 +46,7 @@ import { useAuthStore } from './store/authStore';
 import { requirePro } from './lib/pro';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import UpdateBanner from './components/UpdateBanner';
+import TooltipHost from './components/TooltipHost';
 import { useDesign } from './store/designStore';
 import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
 import { TOOLS } from './data/tools';
@@ -429,6 +430,7 @@ export default function App() {
         <UpdateBanner />
         <Toaster />
         <ConfirmHost />
+        <TooltipHost />
       </div>
     );
   }
@@ -534,7 +536,7 @@ export default function App() {
                 </span>
               )}
               {tool === 'kitchen' && (
-                <label className="draw-toggle" title={t('Also add wall cabinets above the counter')}>
+                <label className="draw-toggle" data-tip={t('Also add wall cabinets above the counter')} aria-label={t('Also add wall cabinets above the counter')}>
                   <input
                     type="checkbox"
                     checked={kitchenUppers && isPro}
@@ -567,7 +569,7 @@ export default function App() {
                     ? `${t('Tap a wall to place')} ${t(pendingEntry.name)}`
                     : `${t('Tap the plan to place')} ${t(pendingEntry.name)}`}
               </span>
-              <button onClick={cancelPlacement} aria-label={t('Cancel placement')} title={t('Cancel placement')}>
+              <button onClick={cancelPlacement} aria-label={t('Cancel placement')} data-tip={t('Cancel placement')}>
                 <X className="icon" />
               </button>
             </div>
@@ -576,23 +578,23 @@ export default function App() {
           {view === '2d' && (
             <div className="hud hud-2d">
               <div className="pill">
-                <label className="toggle" title={t('Grid')}>
+                <label className="toggle" data-tip={t('Grid')} aria-label={t('Grid')}>
                   <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
                   <Grid3x3 className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Grid')}</span>
                 </label>
-                <label className="toggle" title={t('Dimensions')}>
+                <label className="toggle" data-tip={t('Dimensions')} aria-label={t('Dimensions')}>
                   <input type="checkbox" checked={showDimensions} onChange={(e) => setShowDimensions(e.target.checked)} />
                   <Ruler className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Dimensions')}</span>
                 </label>
                 <button
                   className={`toggle ${tool === 'measure' ? 'on' : ''}`}
-                  title={t('Measure a wall to scale the drawing')}
+                  data-tip={t('Measure a wall to scale the drawing')} aria-label={t('Measure a wall to scale the drawing')}
                   onClick={() => setTool(tool === 'measure' ? 'select' : 'measure')}
                   aria-pressed={tool === 'measure'}
                 >
                   <Ruler className="icon" style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Measure')}</span>
                 </button>
-                <label className="toggle" title={t('Lock objects so they cannot be moved')}>
+                <label className="toggle" data-tip={t('Lock objects so they cannot be moved')} aria-label={t('Lock objects so they cannot be moved')}>
                   <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
                   <FurnitureLockIcon style={{ width: 15, height: 15 }} /> <span className="hud-txt">{t('Lock')}</span>
                 </label>
@@ -602,7 +604,7 @@ export default function App() {
                   className={units === 'metric' ? 'unit active' : 'unit'}
                   onClick={() => setUnits('metric')}
                   aria-pressed={units === 'metric'}
-                  title={t('Metric (m / cm)')}
+                  data-tip={t('Metric (m / cm)')} aria-label={t('Metric (m / cm)')}
                 >
                   m
                 </button>
@@ -610,7 +612,7 @@ export default function App() {
                   className={units === 'imperial' ? 'unit active' : 'unit'}
                   onClick={() => setUnits('imperial')}
                   aria-pressed={units === 'imperial'}
-                  title={t('Imperial (ft / in)')}
+                  data-tip={t('Imperial (ft / in)')} aria-label={t('Imperial (ft / in)')}
                 >
                   ft
                 </button>
@@ -622,13 +624,13 @@ export default function App() {
               crowded and the units pill no longer clips off-screen. */}
           {view === '2d' && (
             <div className="zoom-buttons" role="group" aria-label={t('Zoom')}>
-              <button onClick={() => setZoom(zoom * 1.2)} aria-label={t('Zoom in')} title={t('Zoom in')}>
+              <button onClick={() => setZoom(zoom * 1.2)} aria-label={t('Zoom in')} data-tip={t('Zoom in')}>
                 <Plus className="icon" />
               </button>
-              <button onClick={() => setZoom(zoom / 1.2)} aria-label={t('Zoom out')} title={t('Zoom out')}>
+              <button onClick={() => setZoom(zoom / 1.2)} aria-label={t('Zoom out')} data-tip={t('Zoom out')}>
                 <Minus className="icon" />
               </button>
-              <button onClick={() => useDesign.getState().requestFit()} aria-label={t('Fit to view')} title={t('Fit to view')}>
+              <button onClick={() => useDesign.getState().requestFit()} aria-label={t('Fit to view')} data-tip={t('Fit to view')}>
                 <Maximize2 className="icon" />
               </button>
             </div>
@@ -649,7 +651,7 @@ export default function App() {
                   <button className="toggle" onClick={() => setWalkMode(true)} style={{ fontWeight: 600 }}>
                     <Footprints className="icon" style={{ width: 16, height: 16 }} /> {t('Walk through')}
                   </button>
-                  <label className="toggle" title={t('Lock objects so they cannot be moved')}>
+                  <label className="toggle" data-tip={t('Lock objects so they cannot be moved')} aria-label={t('Lock objects so they cannot be moved')}>
                     <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
                     <FurnitureLockIcon style={{ width: 15, height: 15 }} /> {t('Lock')}
                   </label>
@@ -663,7 +665,7 @@ export default function App() {
                     aria-haspopup="menu"
                     aria-expanded={lightingOpen}
                     onClick={() => setLightingOpen((o) => !o)}
-                    title={t('Lighting')}
+                    data-tip={t('Lighting')} aria-label={t('Lighting')}
                   >
                     {sunTime < 6 || sunTime >= 20 ? (
                       <Moon className="icon" style={{ width: 15, height: 15 }} />
@@ -680,7 +682,7 @@ export default function App() {
                       >
                         <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> {t('Lights')}
                       </button>
-                      <label className="sun-slider" title={t('Time of day')}>
+                      <label className="sun-slider" data-tip={t('Time of day')} aria-label={t('Time of day')}>
                         {sunTime < 6 || sunTime >= 20 ? (
                           <Moon className="icon" style={{ width: 15, height: 15 }} />
                         ) : (
@@ -711,7 +713,7 @@ export default function App() {
                     aria-haspopup="menu"
                     aria-expanded={viewOpen}
                     onClick={() => setViewOpen((o) => !o)}
-                    title={t('View')}
+                    data-tip={t('View')} aria-label={t('View')}
                   >
                     <House className="icon" style={{ width: 15, height: 15 }} /> {t('View')}
                     <ChevronDown className="icon caret" style={{ width: 14, height: 14 }} />
@@ -741,14 +743,14 @@ export default function App() {
                         <span className="view-menu-label">{t('Rotate plan')}</span>
                         <span className="view-menu-actions">
                           <button
-                            title={t('Rotate 90° left')}
+                            data-tip={t('Rotate 90° left')}
                             aria-label={t('Rotate 90° left')}
                             onClick={() => rotateDesign(-90)}
                           >
                             <RotateCcw className="icon" style={{ width: 15, height: 15 }} />
                           </button>
                           <button
-                            title={t('Rotate 90° right')}
+                            data-tip={t('Rotate 90° right')}
                             aria-label={t('Rotate 90° right')}
                             onClick={() => rotateDesign(90)}
                           >
@@ -763,7 +765,7 @@ export default function App() {
                       >
                         <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> {t('Lights')}
                       </button>
-                      <label className="sun-slider" title={t('Time of day')}>
+                      <label className="sun-slider" data-tip={t('Time of day')} aria-label={t('Time of day')}>
                         {sunTime < 6 || sunTime >= 20 ? (
                           <Moon className="icon" style={{ width: 15, height: 15 }} />
                         ) : (
@@ -786,7 +788,7 @@ export default function App() {
                 {/* Phones: Lock stays directly visible beside View — buried in
                     the popover alone, testers reported "no lock button in 3D". */}
                 <div className="pill lock-pill-3d">
-                  <label className="toggle" title={t('Lock objects so they cannot be moved')}>
+                  <label className="toggle" data-tip={t('Lock objects so they cannot be moved')} aria-label={t('Lock objects so they cannot be moved')}>
                     <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
                     <FurnitureLockIcon style={{ width: 15, height: 15 }} /> {t('Lock')}
                   </label>
@@ -814,7 +816,7 @@ export default function App() {
                     disabled={rendering}
                     aria-haspopup="menu"
                     aria-expanded={renderMenuOpen}
-                    title={t('Render image')}
+                    data-tip={t('Render image')} aria-label={t('Render image')}
                   >
                     {rendering ? <span className="spin" /> : <ImageIcon className="icon" />}
                     <span>{rendering ? t('Rendering…') : t('Render image')}</span>
@@ -852,10 +854,10 @@ export default function App() {
               </div>
               {/* Zoom the orbit camera (matches the 2D plan's zoom buttons). */}
               <div className="zoom-buttons" role="group" aria-label={t('Zoom')}>
-                <button onClick={() => orbitZoom.current?.(0.8)} aria-label={t('Zoom in')} title={t('Zoom in')}>
+                <button onClick={() => orbitZoom.current?.(0.8)} aria-label={t('Zoom in')} data-tip={t('Zoom in')}>
                   <Plus className="icon" />
                 </button>
-                <button onClick={() => orbitZoom.current?.(1.25)} aria-label={t('Zoom out')} title={t('Zoom out')}>
+                <button onClick={() => orbitZoom.current?.(1.25)} aria-label={t('Zoom out')} data-tip={t('Zoom out')}>
                   <Minus className="icon" />
                 </button>
               </div>
@@ -937,7 +939,7 @@ export default function App() {
               setDrawer(null);
             }}
             aria-label={t('Delete object')}
-            title={t('Delete object')}
+            data-tip={t('Delete object')}
           >
             <Trash2 className="icon" />
           </button>
@@ -1001,6 +1003,7 @@ export default function App() {
       <UpdateBanner />
       <Toaster />
       <ConfirmHost />
+      <TooltipHost />
     </div>
   );
 }

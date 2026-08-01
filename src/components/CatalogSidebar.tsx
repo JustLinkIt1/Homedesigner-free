@@ -43,7 +43,7 @@ function CatalogItem({
   return (
     <div
       className={`cat-item ${previewed || pendingFurnitureType === entry.type ? 'active' : ''} ${locked ? 'locked' : ''}`}
-      title={locked ? `${name} — Pro` : name}
+      data-tip={locked ? `${name} — Pro` : name} aria-label={locked ? `${name} — Pro` : name}
     >
       <button
         className="cat-item-select"
@@ -58,7 +58,7 @@ function CatalogItem({
         onClick={onToggleFavorite}
         aria-label={t(favorite ? 'Remove from favourites' : 'Add to favourites')}
         aria-pressed={favorite}
-        title={t(favorite ? 'Remove from favourites' : 'Add to favourites')}
+        data-tip={t(favorite ? 'Remove from favourites' : 'Add to favourites')}
       >
         <Star className="icon" />
       </button>
@@ -252,7 +252,7 @@ export default function CatalogSidebar({
                   : t('Cloud catalog')}
           </span>
           {cloudCatalog.status === 'offline' && (
-            <button onClick={() => void loadRemoteCatalog(true)} title={t('Retry')} aria-label={t('Retry')}>
+            <button onClick={() => void loadRemoteCatalog(true)} data-tip={t('Retry')} aria-label={t('Retry')}>
               <RefreshCw className="icon" />
             </button>
           )}

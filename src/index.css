@@ -1477,52 +1477,30 @@ button.brand:hover .brand-name {
   background: var(--border);
   margin: 3px 6px;
 }
-/* App-owned tooltips.
- *
- * These exist because a native `title` tooltip is drawn by the browser's own UI
- * layer and follows the BROWSER's theme, not the page's — `color-scheme: dark`
- * cannot reach it, so a light-themed Chrome showed light tooltips over the dark
- * app. Anything carrying `data-tip` must therefore NOT also carry `title`, or
- * both tooltips appear at once. Keep `aria-label` for the accessible name. */
-[data-tip]:hover::after,
-[data-tip]:focus-visible::after {
-  content: attr(data-tip);
-  position: absolute;
+/* App-owned tooltips — see src/components/TooltipHost.tsx for why these are a
+ * portaled element rather than a native `title` or a CSS ::after. */
+.app-tip {
+  position: fixed;
+  z-index: 200;
+  max-width: min(280px, 90vw);
+  padding: 5px 9px;
+  border-radius: 7px;
   background: var(--tip-bg);
   color: var(--tip-fg);
   border: 1px solid var(--tip-border);
+  box-shadow: var(--shadow-md);
   font-size: 12px;
   font-weight: 600;
-  padding: 5px 9px;
-  border-radius: 7px;
-  white-space: nowrap;
+  line-height: 1.35;
   pointer-events: none;
-  box-shadow: var(--shadow-md);
-  z-index: 60;
+  animation: tip-in var(--dur-fast) var(--ease);
 }
-/* Dock sits down the left edge, so its tip goes to the right. */
-.dock-btn[data-tip]:hover::after,
-.dock-btn[data-tip]:focus-visible::after {
-  left: 52px;
-  top: 50%;
-  transform: translateY(-50%);
+@keyframes tip-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-/* Toolbar runs along the top, so its tips hang below. */
-.toolbar [data-tip]:hover::after,
-.toolbar [data-tip]:focus-visible::after {
-  top: calc(100% + 7px);
-  left: 50%;
-  transform: translateX(-50%);
-}
-.toolbar [data-tip] {
-  position: relative;
-}
-/* Touch has no hover: a tap would leave the tip stuck under the finger. */
-@media (pointer: coarse) {
-  [data-tip]:hover::after,
-  [data-tip]:focus-visible::after {
-    content: none;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .app-tip { animation: none; }
 }
 
 /* ---------- Overlay HUD ---------- */

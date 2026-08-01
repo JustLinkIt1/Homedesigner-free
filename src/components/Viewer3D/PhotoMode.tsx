@@ -267,7 +267,7 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
         </Canvas>
       )}
 
-      <label className="photo-dollhouse" title="Fade the walls facing the camera">
+      <label className="photo-dollhouse" data-tip="Fade the walls facing the camera" aria-label="Fade the walls facing the camera">
         <input type="checkbox" checked={dollhouse} onChange={(e) => setDollhouse(e.target.checked)} />
         🏠 Dollhouse
       </label>

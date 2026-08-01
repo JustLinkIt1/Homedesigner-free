@@ -86,7 +86,7 @@ export default function ToolDock() {
                     key={e.type}
                     className={`of-item ${pendingFurnitureType === e.type ? 'active' : ''} ${locked ? 'locked' : ''}`}
                     role="menuitem"
-                    title={tr(e.name)}
+                    data-tip={tr(e.name)} aria-label={tr(e.name)}
                     onClick={() => pickOpening(e.type, locked)}
                   >
                     <SymbolIcon shape={e.shape} className="of-symbol" />

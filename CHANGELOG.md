@@ -5,6 +5,43 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.14.2 - 2026-08-01 (versionCode 11402)
+
+### Light-mode sweep
+
+Following the tooltip fix in 1.14.1, the rest of the app's native tooltips are
+gone too — 68 `title` attributes across 10 components.
+
+- **Tooltips are now a portaled element** (`src/components/TooltipHost.tsx`)
+  rather than a CSS `::after`. A pseudo-element cannot escape a scrolling
+  ancestor, and both the properties panel and the catalog sidebar scroll — a
+  `::after` tooltip inside them would simply never have been seen. One
+  delegated listener drives a single fixed-position node, so converting the
+  remaining `title` attributes became a safe rename.
+- **45 of those elements would have lost their accessible name.** Icon-only
+  buttons were relying on `title` for it. Every converted element now carries an
+  `aria-label` alongside its `data-tip`; the tooltip host itself is
+  `role="presentation"` and is never read out.
+- Tooltips are suppressed on touch, where there is no hover to hang them from,
+  and dismissed on scroll so one can't float over an element that has moved.
+
+**The rest of the sweep found nothing.** An audit of every literal background in
+`index.css` turned up exactly two light values, both on the Google Sign-In
+button, which Google's branding requires to stay white. Scrollbars, form
+controls and native chrome are already driven by `color-scheme: dark` and the
+token set. The tooltip really was the whole of it.
+
+### Testing
+
+- New `tests/theme.mjs` in `npm test` pins the fix: no element may carry both
+  `data-tip` and `title`, every `data-tip` must keep an accessible name, no rule
+  may paint a light background the dark theme cannot override, and the tooltip
+  tokens must exist in both themes. Verified by injecting each fault class and
+  confirming the suite fails.
+- Smoke coverage hovers a real tool and measures the tooltip's actual contrast
+  against its own background, asserting WCAG AA. The previous chip scored about
+  1.0:1 — white on near-white.
+
 ## 1.14.1 - 2026-08-01 (versionCode 11401)
 
 ### Beta tester reports

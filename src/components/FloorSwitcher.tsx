@@ -52,7 +52,7 @@ export default function FloorSwitcher() {
         className="floor-current"
         onClick={() => setMobileOpen((v) => !v)}
         aria-expanded={mobileOpen}
-        title={t('Choose floor')}
+        data-tip={t('Choose floor')} aria-label={t('Choose floor')}
       >
         <Layers className="icon" style={{ width: 15, height: 15 }} />
         <span>{t(activeFloor?.name ?? 'Ground floor')}</span>
@@ -60,7 +60,7 @@ export default function FloorSwitcher() {
           ? <ChevronUp className="icon floor-current-caret" />
           : <ChevronDown className="icon floor-current-caret" />}
       </button>
-      <button className="floor-add" onClick={handleAdd} title={t('Add an empty floor above')}>
+      <button className="floor-add" onClick={handleAdd} data-tip={t('Add an empty floor above')} aria-label={t('Add an empty floor above')}>
         <Plus className="icon" style={{ width: 14, height: 14 }} /> {t('Floor')}
         {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
       </button>
@@ -68,7 +68,7 @@ export default function FloorSwitcher() {
         <button
           className="floor-add floor-clone"
           onClick={() => setCloneOpen((v) => !v)}
-          title={t("Copy this floor's walls onto a new storey")}
+          data-tip={t("Copy this floor's walls onto a new storey")} aria-label={t("Copy this floor's walls onto a new storey")}
         >
           <Copy className="icon" style={{ width: 13, height: 13 }} /> {t('Copy floor')}
           {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
@@ -111,7 +111,7 @@ export default function FloorSwitcher() {
                     setMobileOpen(false);
                   }}
                   onDoubleClick={() => setEditing(f.id)}
-                  title={`${f.name} — double-click to rename`}
+                  data-tip={`${f.name} — double-click to rename`} aria-label={`${f.name} — double-click to rename`}
                 >
                   <Layers className="icon" style={{ width: 14, height: 14 }} />
                   <span>{t(f.name)}</span>
@@ -121,7 +121,7 @@ export default function FloorSwitcher() {
                 <button
                   className="floor-del"
                   aria-label={`Delete ${f.name}`}
-                  title={`Delete ${f.name}`}
+                  data-tip={`Delete ${f.name}`}
                   onClick={async () => {
                     const ok = await confirmDialog(
                       `Delete ${f.name}?`,

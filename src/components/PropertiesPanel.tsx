@@ -96,7 +96,7 @@ function OutdoorCard({ room }: { room: Room }) {
               key={m.id}
               className={`swatch ${room.floorMaterial === m.id ? 'active' : ''}`}
               style={{ background: m.color }}
-              title={t(m.name)}
+              data-tip={t(m.name)} aria-label={t(m.name)}
               onClick={() => updateRoom(room.id, { floorMaterial: m.id, color: m.color, texture: undefined })}
             >
               <span className="sw-name">{t(m.name)}</span>
@@ -244,10 +244,10 @@ function PlanCard() {
         <div className="prop-row">
           <label>{t('Rotate')}</label>
           <div className="align-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-            <button title={t('Rotate 90° left')} onClick={() => rotateDesign(-90)}>
+            <button data-tip={t('Rotate 90° left')} aria-label={t('Rotate 90° left')} onClick={() => rotateDesign(-90)}>
               <RotateCcw className="icon" />
             </button>
-            <button title={t('Rotate 90° right')} onClick={() => rotateDesign(90)}>
+            <button data-tip={t('Rotate 90° right')} aria-label={t('Rotate 90° right')} onClick={() => rotateDesign(90)}>
               <RotateCw className="icon" />
             </button>
           </div>
@@ -291,7 +291,7 @@ function ExteriorCard() {
               key={c}
               className="pp-swatch"
               style={{ background: c }}
-              title={c}
+              data-tip={c} aria-label={c}
               onClick={() => run(c, undefined)}
             />
           ))}
@@ -302,7 +302,7 @@ function ExteriorCard() {
                 key={m.id}
                 className="pp-swatch"
                 style={{ backgroundImage: `url(${src})`, backgroundSize: 'cover' }}
-                title={t(m.name)}
+                data-tip={t(m.name)} aria-label={t(m.name)}
                 onClick={() =>
                   run(m.color, { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness })
                 }
@@ -412,7 +412,7 @@ function RoofCard() {
               key={`${c.kind}-${c.color}`}
               className={`pp-swatch${roof.covering === c.kind && roof.color === c.color ? ' on' : ''}`}
               style={{ background: c.color }}
-              title={t(c.name)}
+              data-tip={t(c.name)} aria-label={t(c.name)}
               onClick={() => setRoof({ covering: c.kind, color: c.color, coveringScaleCm: c.scaleCm })}
             />
           ))}
@@ -495,24 +495,24 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
             <div className="prop-card">
               <div className="prop-label">{t('Align')}</div>
               <div className="align-grid">
-                <button title={t('Align left')} onClick={() => s.alignSelected('left')}><AlignStartVertical className="icon" /></button>
-                <button title={t('Align horizontal centres')} onClick={() => s.alignSelected('hcenter')}><AlignCenterVertical className="icon" /></button>
-                <button title={t('Align right')} onClick={() => s.alignSelected('right')}><AlignEndVertical className="icon" /></button>
-                <button title={t('Align top')} onClick={() => s.alignSelected('top')}><AlignStartHorizontal className="icon" /></button>
-                <button title={t('Align vertical centres')} onClick={() => s.alignSelected('vmiddle')}><AlignCenterHorizontal className="icon" /></button>
-                <button title={t('Align bottom')} onClick={() => s.alignSelected('bottom')}><AlignEndHorizontal className="icon" /></button>
+                <button data-tip={t('Align left')} aria-label={t('Align left')} onClick={() => s.alignSelected('left')}><AlignStartVertical className="icon" /></button>
+                <button data-tip={t('Align horizontal centres')} aria-label={t('Align horizontal centres')} onClick={() => s.alignSelected('hcenter')}><AlignCenterVertical className="icon" /></button>
+                <button data-tip={t('Align right')} aria-label={t('Align right')} onClick={() => s.alignSelected('right')}><AlignEndVertical className="icon" /></button>
+                <button data-tip={t('Align top')} aria-label={t('Align top')} onClick={() => s.alignSelected('top')}><AlignStartHorizontal className="icon" /></button>
+                <button data-tip={t('Align vertical centres')} aria-label={t('Align vertical centres')} onClick={() => s.alignSelected('vmiddle')}><AlignCenterHorizontal className="icon" /></button>
+                <button data-tip={t('Align bottom')} aria-label={t('Align bottom')} onClick={() => s.alignSelected('bottom')}><AlignEndHorizontal className="icon" /></button>
               </div>
               <div className="prop-label" style={{ marginTop: 10 }}>{t('Distribute (3+)')}</div>
               <div className="align-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 <button
-                  title={t('Distribute horizontally')}
+                  data-tip={t('Distribute horizontally')} aria-label={t('Distribute horizontally')}
                   disabled={s.selectedIds.length < 3}
                   onClick={() => s.distributeSelected('h')}
                 >
                   <AlignHorizontalDistributeCenter className="icon" />
                 </button>
                 <button
-                  title={t('Distribute vertically')}
+                  data-tip={t('Distribute vertically')} aria-label={t('Distribute vertically')}
                   disabled={s.selectedIds.length < 3}
                   onClick={() => s.distributeSelected('v')}
                 >
@@ -584,11 +584,11 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     key={c}
                     className={`paint-dot ${!displayedWallTexture && displayedWallColor.toLowerCase() === c.toLowerCase() ? 'active' : ''}`}
                     style={{ background: c }}
-                    title={c}
+                    data-tip={c} aria-label={c}
                     onClick={() => paintSelectedWall(c, undefined)}
                   />
                 ))}
-                <label className="paint-dot" style={{ background: displayedWallColor, display: 'grid', placeItems: 'center', cursor: 'pointer' }} title={t('Custom color')}>
+                <label className="paint-dot" style={{ background: displayedWallColor, display: 'grid', placeItems: 'center', cursor: 'pointer' }} data-tip={t('Custom color')} aria-label={t('Custom color')}>
                   <input type="color" value={displayedWallColor} onChange={(e) => paintSelectedWall(e.target.value, undefined)} style={{ opacity: 0, width: 0, height: 0 }} />
                 </label>
               </div>
@@ -611,7 +611,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                             className={`swatch ${displayedWallTexture?.src === src ? 'active' : ''}`}
                             style={{ backgroundImage: `url(${src})` }}
                             onClick={() => paintSelectedWall(displayedWallColor, { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness })}
-                            title={t(m.name)}
+                            data-tip={t(m.name)} aria-label={t(m.name)}
                           >
                             <span className="sw-name">{t(m.name)}</span>
                           </button>
@@ -661,7 +661,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     className={`swatch ${!room.texture && room.floorMaterial === m.id ? 'active' : ''}`}
                     style={{ backgroundImage: `url(${floorThumbnail(m.kind, m.color)})` }}
                     onClick={() => s.updateRoom(room.id, { floorMaterial: m.id, texture: undefined })}
-                    title={t(m.name)}
+                    data-tip={t(m.name)} aria-label={t(m.name)}
                   >
                     <span className="sw-name">{t(m.name)}</span>
                   </button>
@@ -682,7 +682,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                             className={`swatch ${room.texture?.src === src ? 'active' : ''}`}
                             style={{ backgroundImage: `url(${src})` }}
                             onClick={() => s.updateRoom(room.id, { floorMaterial: '', color: m.color, texture: { src, scaleCm: m.scaleCm, roughness: m.roughness, metalness: m.metalness } })}
-                            title={t(m.name)}
+                            data-tip={t(m.name)} aria-label={t(m.name)}
                           >
                             <span className="sw-name">{t(m.name)}</span>
                           </button>
@@ -735,7 +735,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <button
                   onClick={() => s.updateFurniture(item.id, { rotation: (item.rotation + 270) % 360 })}
                   aria-label={t('Rotate left 90 degrees')}
-                  title={t('Rotate left 90 degrees')}
+                  data-tip={t('Rotate left 90 degrees')}
                 >
                   <RotateCcw className="icon" /> <span>90°</span>
                 </button>
@@ -744,7 +744,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     className="wide"
                     onClick={() => s.updateFurniture(item.id, { rotation: (item.rotation + 180) % 360 })}
                     aria-label={t('Reverse stairs')}
-                    title={t('Reverse stairs')}
+                    data-tip={t('Reverse stairs')}
                   >
                     <ArrowUpDown className="icon" /> <span>{t('Reverse')}</span>
                   </button>
@@ -752,7 +752,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <button
                   onClick={() => s.updateFurniture(item.id, { rotation: (item.rotation + 90) % 360 })}
                   aria-label={t('Rotate right 90 degrees')}
-                  title={t('Rotate right 90 degrees')}
+                  data-tip={t('Rotate right 90 degrees')}
                 >
                   <RotateCw className="icon" /> <span>90°</span>
                 </button>
@@ -856,14 +856,14 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                   <button
                     onClick={() => s.updateOpening(opening.id, { flipHinge: !opening.flipHinge })}
                     aria-label={t('Flip hinge side')}
-                    title={t('Flip hinge side')}
+                    data-tip={t('Flip hinge side')}
                   >
                     <ArrowLeftRight className="icon" /> <span>{t('Hinge')}</span>
                   </button>
                   <button
                     onClick={() => s.updateOpening(opening.id, { flipSwing: !opening.flipSwing })}
                     aria-label={t('Flip swing direction')}
-                    title={t('Flip swing direction')}
+                    data-tip={t('Flip swing direction')}
                   >
                     <ArrowUpDown className="icon" /> <span>{t('In / out')}</span>
                   </button>
@@ -913,7 +913,7 @@ function StyleCard({ roomId }: { roomId: string }) {
             <button
               key={st.id}
               className="style-chip"
-              title={`${t(st.name)} — ${t(mat?.name ?? '')}`}
+              data-tip={`${t(st.name)} — ${t(mat?.name ?? '')}`} aria-label={`${t(st.name)} — ${t(mat?.name ?? '')}`}
               onClick={() => s.applyRoomStyle(wholeHome ? 'all' : roomId, st.id)}
             >
               <span

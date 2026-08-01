@@ -251,16 +251,16 @@ export default function ProjectsScreen({
                         }}
                       />
                     ) : (
-                      <span className="ps-name" title={p.name}>{p.name}</span>
+                      <span className="ps-name" data-tip={p.name} aria-label={p.name}>{p.name}</span>
                     )}
                     <span className="ps-date">{timeAgo(p.updatedAt, t)}</span>
                   </div>
                   <div className="ps-card-actions">
-                    <button title={t('Rename')} aria-label={`${t('Rename')} ${p.name}`} onClick={() => setRenaming(p.id)}>
+                    <button data-tip={t('Rename')} aria-label={`${t('Rename')} ${p.name}`} onClick={() => setRenaming(p.id)}>
                       <Pencil className="icon" /> <span>{t('Rename')}</span>
                     </button>
                     <button
-                      title={t('Duplicate')}
+                      data-tip={t('Duplicate')}
                       aria-label={`${t('Duplicate')} ${p.name}`}
                       onClick={() => {
                         if (!requirePro('projects')) return;
@@ -274,7 +274,7 @@ export default function ProjectsScreen({
                       <Copy className="icon" /> <span>{t('Duplicate')}</span>
                     </button>
                     <button
-                      title={t('Delete')}
+                      data-tip={t('Delete')}
                       aria-label={`${t('Delete')} ${p.name}`}
                       className="danger"
                       onClick={async () => {

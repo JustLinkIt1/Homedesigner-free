@@ -67,7 +67,7 @@ export default function AccountButton() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={account ? t('Account') : t('Sign in')}
-        title={account ? (account.name || account.email || t('Account')) : t('Sign in')}
+        data-tip={account ? (account.name || account.email || t('Account')) : t('Sign in')}
       >
         {account?.imageUrl ? (
           <img src={account.imageUrl} alt="" referrerPolicy="no-referrer" />
