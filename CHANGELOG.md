@@ -5,6 +5,43 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.17.2 - 2026-08-01 (versionCode 11702)
+
+### Sample home orientation
+
+Three pieces in the shipped samples had their back to an adjacent wall — a
+wardrobe's doors against the wall cannot be opened, and the samples are the
+first thing a new user sees.
+
+- `family-house`: the kitchen sink was turned along the north wall instead of
+  backing onto it; the chest of drawers upstairs faced its drawers at the wall.
+- `city-studio`: a nightstand's back faced away from the west wall its bed is
+  against.
+
+`tests/samples.mjs` now checks orientation. "Back" is local -Z in 3D (the bed's
+headboard sits at `dz = -d * 0.46`), which is local -Y in plan; `Furniture3D`
+rotates by `-rot` about Y, so it lands at `(sin rot, -cos rot)` in world
+coordinates. **Only a back pointing away from an adjacent wall fails.** A piece
+with its SIDE to the nearest wall is normal — a bed in a corner has a side wall
+closer than the wall its headboard is against — so judging by nearest wall alone
+would have flagged correct furniture. Verified by reverting a fix and confirming
+the check fails.
+
+### What the audit did NOT find
+
+Measured across all four samples, so it is worth recording:
+
+- **Nothing is resized.** No sample overrides a catalogue width or depth, so the
+  scaling problems visible in the samples come from the model-fit backlog (the
+  16 entries in `KNOWN_UNDERSIZED`, `tests/models.mjs`), not from the sample
+  data. Fixing them means curating those models.
+- **Density is fine.** No room is over 55% covered; the fullest is a 51% master
+  bedroom. Rooms flagged small (a 3.9 m² WC, a 4.4 m² bathroom) are realistic.
+- **Tight gaps are mostly intentional.** Of 43 sub-60cm gaps in `open-plan`,
+  the tightest are bar stools tucked under an island and a nightstand beside a
+  bed. A useful circulation check needs real pathfinding from the entrance,
+  not pairwise gaps — not attempted here rather than shipped as noise.
+
 ## 1.17.1 - 2026-08-01 (versionCode 11701)
 
 ### Tester report No. 3

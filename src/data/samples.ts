@@ -276,7 +276,7 @@ function familyHouse(): MaybeFloored {
       fur('fridge', 650, 45),
       fur('cabinets', 760, 30),
       fur('stove', 855, 45),
-      fur('kitchen_sink', 950, 45, 90),
+      fur('kitchen_sink', 950, 45, 0), // backs onto the north wall, not turned along it
       fur('dining_table', 800, 330),
       fur('wooden_dining_chair', 745, 270, 0),
       fur('wooden_dining_chair', 855, 270, 0),
@@ -338,7 +338,7 @@ function familyHouse(): MaybeFloored {
       fur('nightstand', 120, 60),
       fur('nightstand', 380, 60),
       fur('wardrobe', 80, 420, 180),
-      fur('chest_of_drawers', 430, 380, 270),
+      fur('chest_of_drawers', 430, 380, 90), // drawers face the room, back to the wall
       fur('rug', 250, 320),
       fur('ceiling_light', 250, 250),
       // Kids room
@@ -418,7 +418,7 @@ function cityStudio(): MaybeFloored {
   const furniture: FurnitureItem[] = [
     // Sleeping corner (NW)
     fur('bed_double', 110, 140, 270), // headboard against the west wall
-    fur('nightstand', 45, 260, 90),
+    fur('nightstand', 45, 260, 270), // back to the west wall, matching the bed
     fur('curtains', 22, 140, 90),
     // Kitchenette along the north wall
     fur('cabinets', 300, 30),

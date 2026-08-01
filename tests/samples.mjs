@@ -189,6 +189,48 @@ for (const sample of SAMPLES) {
     // 5. Every piece must resolve to a catalog entry.
     const unknown = furniture.filter((f) => !CATALOG_BY_TYPE[f.type]).map((f) => f.type);
     check(`${label}: every piece exists in the catalog`, unknown.length === 0, unknown.join(' '));
+
+  // --- orientation ----------------------------------------------------------
+  // Back-to-the-room furniture reads as a mistake immediately: a wardrobe whose
+  // doors face the wall cannot be opened, and it is the first thing a new user
+  // sees. "Back" is local -Z in 3D (the bed's headboard sits at dz=-d*0.46),
+  // which is local -Y in plan; Furniture3D rotates by -rot about Y, so that
+  // direction lands at (sin rot, -cos rot) in world coordinates.
+  //
+  // Only a back pointing AWAY from an adjacent wall fails. A piece with its
+  // SIDE to the nearest wall is normal — a bed in a corner has a side wall
+  // closer than the wall its headboard is against — so judging by the nearest
+  // wall alone would flag correct furniture.
+  {
+    const BACKS_TO_WALL = new Set([
+      'sofa', 'bed_double', 'wardrobe', 'dresser', 'desk', 'bookshelf', 'console',
+      'sideboard', 'chest_of_drawers', 'toilet', 'kitchen_sink', 'stove', 'fridge',
+      'day_bed', 'nightstand',
+    ]);
+    const backwards = [];
+    for (const f of furniture) {
+      if (!BACKS_TO_WALL.has(f.type)) continue;
+      let best = Infinity;
+      let near = null;
+      for (const w of walls) {
+        const d = segDist(f.position, w.start, w.end);
+        if (d < best) { best = d; near = w; }
+      }
+      if (!near || best > Math.max(f.width, f.depth)) continue;
+      const vx = near.end.x - near.start.x;
+      const vy = near.end.y - near.start.y;
+      const t = Math.max(0, Math.min(1,
+        ((f.position.x - near.start.x) * vx + (f.position.y - near.start.y) * vy) / (vx * vx + vy * vy || 1)));
+      const tx = near.start.x + t * vx - f.position.x;
+      const ty = near.start.y + t * vy - f.position.y;
+      const tl = Math.hypot(tx, ty) || 1;
+      const rad = (f.rotation * Math.PI) / 180;
+      const dot = (Math.sin(rad) * tx + -Math.cos(rad) * ty) / tl;
+      if (dot < -0.5) backwards.push(`${f.type}@(${f.position.x},${f.position.y}) ${f.rotation}° (${Math.round(best)}cm)`);
+    }
+    check(`${label}: nothing has its back to an adjacent wall`, backwards.length === 0, backwards.join(' | '));
+  }
+
   }
 }
 
