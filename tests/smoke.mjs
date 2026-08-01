@@ -1339,6 +1339,85 @@ await recoveryPage.close();
   await tp.close();
 }
 
+// ---- touch selection ring --------------------------------------------------
+// Selecting on a phone used to slide the full-height properties panel over the
+// plan, hiding the object being edited. The ring replaces that; the panel must
+// now only appear when its Edit button is pressed.
+{
+  const sr = await browser.newPage({
+    viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
+  });
+  await sr.goto(BASE);
+  await sr.evaluate(() => {
+    localStorage.setItem('homedesigner.tour.v1', 'done');
+    localStorage.setItem('homedesigner.tips.v1', 'dismissed');
+  });
+  await sr.reload({ waitUntil: 'networkidle' });
+  await sr.locator('.tpl-card', { hasText: 'Start with a room' }).click();
+  await sr.waitForSelector('.toolbar', { timeout: 15000 });
+
+  const id = await sr.evaluate(() => {
+    const s = window.useDesign.getState();
+    const fid = s.addFurniture('side_table', { x: 0, y: 0 });
+    s.select({ kind: 'furniture', id: fid });
+    return fid;
+  });
+  await sr.waitForTimeout(600);
+
+  const ring = sr.locator('.sel-ring');
+  // The .sel-ring element itself is a deliberate zero-size anchor (each button
+  // is placed by its own transform), which Playwright treats as hidden — so
+  // assert on a button.
+  check('selection ring: appears beside a selected object on touch',
+    await ring.locator('button').first().waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true).catch(() => false));
+  check('selection ring: the properties panel does NOT auto-open',
+    !(await sr.locator('.sidebar.right.open').isVisible().catch(() => false)));
+  check('selection ring: carries four actions',
+    (await ring.locator('button').count()) === 4);
+
+  // Every button must be inside the canvas, not clipped off an edge or hidden
+  // under the bottom tab bar.
+  const placed = await sr.evaluate(() => {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    return [...document.querySelectorAll('.sel-ring button')].map((b) => {
+      const r = b.getBoundingClientRect();
+      return r.left >= 0 && r.top >= 0 && r.right <= vw && r.bottom <= vh - 60;
+    });
+  });
+  check('selection ring: every button lands on screen', placed.every(Boolean), JSON.stringify(placed));
+
+  // The buttons must not overlap. They did at first — the arc was tight enough
+  // that Delete sat on top of Rotate and swallowed its taps, which no visual
+  // check would have caught.
+  const overlap = await sr.evaluate(() => {
+    const r = [...document.querySelectorAll('.sel-ring button')].map((b) => b.getBoundingClientRect());
+    const hits = [];
+    for (let i = 0; i < r.length; i++) {
+      for (let j = i + 1; j < r.length; j++) {
+        if (r[i].left < r[j].right && r[j].left < r[i].right
+          && r[i].top < r[j].bottom && r[j].top < r[i].bottom) hits.push(`${i}/${j}`);
+      }
+    }
+    return hits;
+  });
+  check('selection ring: no two buttons overlap', overlap.length === 0, overlap.join(', '));
+
+  // Rotate acts on the object without opening anything.
+  const before = await sr.evaluate((f) => window.useDesign.getState().furniture.find((x) => x.id === f).rotation, id);
+  await ring.locator('button').first().click();
+  await sr.waitForTimeout(300);
+  const after = await sr.evaluate((f) => window.useDesign.getState().furniture.find((x) => x.id === f).rotation, id);
+  check('selection ring: rotate turns the object by 90°', (after - before + 360) % 360 === 90, `${before} -> ${after}`);
+
+  // Edit is the only route to the full panel now.
+  await sr.locator('.sel-ring button[aria-label="Edit"]').click();
+  await sr.waitForTimeout(500);
+  check('selection ring: Edit opens the properties panel',
+    await sr.locator('.sidebar.right.open').isVisible().catch(() => false));
+  await sr.close();
+}
+
 check('zero page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));
 
 await browser.close();

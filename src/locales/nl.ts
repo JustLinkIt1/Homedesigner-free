@@ -777,4 +777,5 @@ export const NL: Record<string, string> = {
   'Signed in — plans and Pro access will sync across devices.': 'Aangemeld — plattegronden en Pro-toegang synchroniseren tussen apparaten.',
   'Signed out on this device. Online account cleanup will retry next time.': 'Afgemeld op dit apparaat. Het opschonen van het account wordt later opnieuw geprobeerd.',
   'Sync complete — plans and Pro access are up to date.': 'Synchronisatie voltooid — plattegronden en Pro-toegang zijn actueel.',
+  'Selection actions': 'Selectieacties',
 };

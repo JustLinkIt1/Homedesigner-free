@@ -21,6 +21,7 @@ import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
 import { FURNITURE_SPRITES, spriteUrl } from '../../data/furnitureSprites';
 import { SPRITE_FILL } from '../../data/furnitureModels';
 import DimensionsLayer, { DimensionPlate } from './DimensionsLayer';
+import SelectionRing from '../SelectionRing';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
 import { useI18n } from '../../lib/i18n';
 import { planCapture } from '../../lib/renderBridge';
@@ -69,7 +70,7 @@ const LONG_PRESS_MS = 500; // matches Android's ViewConfiguration long-press
 
 // Handle visuals (screen-space px; divided by zoom at render to stay constant).
 
-export default function Canvas2D() {
+export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => void } = {}) {
   const C = canvasColors(useTheme((t) => t.theme));
   const tr = useI18n();
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -184,6 +185,17 @@ export default function Canvas2D() {
   const [furnEdit, setFurnEdit] = useState<
     { id: string; position: Point; rotation: number; width: number; depth: number } | null
   >(null);
+
+  // Screen position of the one selected object, for the touch action ring.
+  // Recomputed from live edit state so the ring follows a resize/rotate.
+  const ringAnchor = useMemo(() => {
+    if (selection.kind !== 'furniture' || !selection.id) return null;
+    const f = furniture.find((item) => item.id === selection.id);
+    if (!f) return null;
+    const live = furnEdit && furnEdit.id === f.id ? furnEdit : null;
+    const p = live ? live.position : f.position;
+    return { id: f.id, x: p.x * zoom + pan.x, y: p.y * zoom + pan.y };
+  }, [selection.kind, selection.id, furniture, furnEdit, zoom, pan]);
   // Body-dragging a piece of furniture: the id is set once (to hide its handles)
   // and the node is moved by Konva alone, WITHOUT per-frame React re-renders —
   // re-rendering the whole scene every drag frame made moving objects choppy on
@@ -1872,6 +1884,30 @@ export default function Canvas2D() {
           )}
         </Layer>
       </Stage>
+      {/* Touch selection actions, fanned beside the object. Replaces
+          auto-opening the full-height properties drawer, which covered the very
+          thing you had just selected. Single furniture selection only: a
+          multi-selection has no one anchor, and walls/rooms/openings are edited
+          through Properties where their own controls live. */}
+      {IS_COARSE && tool === 'select' && !multi && draft.length === 0 && ringAnchor && (
+        <SelectionRing
+          x={ringAnchor.x}
+          y={ringAnchor.y}
+          bounds={{ w: size.w, h: size.h }}
+          actions={[
+            {
+              id: 'rotate',
+              run: () => {
+                const f = s.furniture.find((x) => x.id === ringAnchor.id);
+                if (f) s.updateFurniture(f.id, { rotation: (f.rotation + 90) % 360 });
+              },
+            },
+            { id: 'duplicate', run: () => s.duplicateSelection() },
+            { id: 'edit', run: () => onEditSelection?.() },
+            { id: 'delete', run: () => s.deleteSelected() },
+          ]}
+        />
+      )}
       {menu && <ContextMenu menu={menu} multi={multi} count={selectedIds.length} onClose={closeMenu} />}
 
       {/* Inline length editor over a tapped dimension label. */}

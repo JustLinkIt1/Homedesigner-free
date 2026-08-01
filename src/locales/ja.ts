@@ -777,4 +777,5 @@ export const JA: Record<string, string> = {
   'Signed in — plans and Pro access will sync across devices.': 'サインインしました — 間取りとPro権限が端末間で同期されます。',
   'Signed out on this device. Online account cleanup will retry next time.': 'この端末からサインアウトしました。オンラインの後処理は次回再試行します。',
   'Sync complete — plans and Pro access are up to date.': '同期が完了しました — 間取りとPro権限は最新です。',
+  'Selection actions': '選択項目の操作',
 };

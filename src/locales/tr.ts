@@ -777,4 +777,5 @@ export const TR: Record<string, string> = {
   'Signed in — plans and Pro access will sync across devices.': 'Oturum açıldı — planlar ve Pro erişimi cihazlar arasında eşitlenecek.',
   'Signed out on this device. Online account cleanup will retry next time.': 'Bu cihazda oturum kapatıldı. Çevrimiçi hesap temizliği daha sonra yeniden denenecek.',
   'Sync complete — plans and Pro access are up to date.': 'Eşitleme tamamlandı — planlar ve Pro erişimi güncel.',
+  'Selection actions': 'Seçim işlemleri',
 };

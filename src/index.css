@@ -1477,6 +1477,51 @@ button.brand:hover .brand-name {
   background: var(--border);
   margin: 3px 6px;
 }
+/* Touch selection ring — see src/components/SelectionRing.tsx.
+ * A zero-size anchor at the object's centre; each button is placed by its own
+ * transform, so the fan can flip side without moving the anchor. */
+.sel-ring {
+  position: absolute;
+  width: 0;
+  height: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+.sel-ring button {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+  animation: sel-ring-in 0.16s var(--ease-spring) backwards;
+}
+.sel-ring button .icon {
+  width: 20px;
+  height: 20px;
+}
+.sel-ring button:active {
+  transform-origin: center;
+  filter: brightness(1.15);
+}
+.sel-ring button.danger {
+  color: #fff;
+  background: var(--danger);
+  border-color: transparent;
+}
+@keyframes sel-ring-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sel-ring button { animation: none; }
+}
+
 /* App-owned tooltips — see src/components/TooltipHost.tsx for why these are a
  * portaled element rather than a native `title` or a CSS ::after. */
 .app-tip {

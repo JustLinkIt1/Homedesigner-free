@@ -777,4 +777,5 @@ export const KO: Record<string, string> = {
   'Signed in — plans and Pro access will sync across devices.': '로그인됨 — 도면과 Pro 이용권이 기기 간에 동기화됩니다.',
   'Signed out on this device. Online account cleanup will retry next time.': '이 기기에서 로그아웃했습니다. 온라인 계정 정리는 다음에 다시 시도합니다.',
   'Sync complete — plans and Pro access are up to date.': '동기화 완료 — 도면과 Pro 이용권이 최신입니다.',
+  'Selection actions': '선택 항목 작업',
 };

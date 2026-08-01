@@ -777,4 +777,5 @@ export const ZH: Record<string, string> = {
   'Signed in — plans and Pro access will sync across devices.': '已登录 — 户型图与 Pro 权限将在设备间同步。',
   'Signed out on this device. Online account cleanup will retry next time.': '已在本机退出登录。在线账号清理将在下次重试。',
   'Sync complete — plans and Pro access are up to date.': '同步完成 — 户型图与 Pro 权限均为最新。',
+  'Selection actions': '选中项操作',
 };

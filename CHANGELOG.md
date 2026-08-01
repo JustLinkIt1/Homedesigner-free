@@ -5,6 +5,31 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.16.0 - 2026-08-01 (versionCode 11600)
+
+### A selection ring instead of a full-screen panel on phones
+
+Selecting an object on a phone slid the properties panel in from the right at
+full height — covering the very object you had just selected, so you could not
+see the edit you were making. Reported directly by the owner.
+
+- Tapping an object in the 2D plan now fans four round buttons beside it:
+  **rotate 90°, duplicate, edit, delete**. The full properties panel opens only
+  when Edit is pressed. Desktop is untouched — the sidebar is always visible
+  there, so nothing was covering anything.
+- The fan flips above or below the object depending on where the room is, and
+  the whole cluster shifts on screen as a unit near an edge. Shifting each
+  button independently (the first attempt) collapsed the spacing in a corner
+  and stacked them on top of each other.
+- `RADIUS` and `SPREAD` are load-bearing together: adjacent buttons sit a chord
+  of `2·R·sin(step/2)` apart and that has to clear the 44px button. The first
+  values gave ~40px against 44px buttons, so Delete sat over Rotate and ate its
+  taps. A smoke assertion now fails if any two buttons overlap, because nothing
+  about that is visible in a screenshot.
+- 3D keeps its existing behaviour: walls and floors open the in-place paint
+  popover, and furniture still opens the panel, since there is no
+  canvas-anchored ring there yet.
+
 ## 1.15.0 - 2026-08-01 (versionCode 11500)
 
 ### Tester report: "I often feel like I am fighting with the UI"

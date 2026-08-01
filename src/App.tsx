@@ -164,21 +164,34 @@ export default function App() {
       window.removeEventListener('pointercancel', up, true);
     };
   }, []);
+  // Selecting something on a phone no longer slides the full properties panel
+  // over the plan. That panel is full height, so it covered the very object you
+  // had just selected and you could not see your own edit. The 2D canvas now
+  // fans a small ring of actions beside the object (SelectionRing), and its
+  // Edit button opens this panel deliberately. All that is left here is closing
+  // a panel we opened once the selection goes away.
   useEffect(() => {
     if (!coarsePointer || screen !== 'editor') return;
     if (!selection.id) {
       if (autoOpenedRef.current && drawerRef.current === 'props') setDrawer(null);
       autoOpenedRef.current = false;
       suppressedIdRef.current = null;
-      return;
     }
-    // In 3D, tapping a wall or floor is a "decorate" gesture handled by the
+    return;
+  }, [selection.id, coarsePointer, screen]);
+
+  // Kept for the 3D view, where there is no canvas-anchored ring: a wall or
+  // room tapped there opens the in-place paint popover instead, and furniture
+  // still needs a way to reach its full controls.
+  useEffect(() => {
+    if (!coarsePointer || screen !== 'editor' || view !== '3d') return;
+    if (!selection.id) return;
+    // Tapping a wall or floor in 3D is a "decorate" gesture handled by the
     // in-place paint popover (the surface recolours live with the scene still
     // visible) — don't also slide the full Edit drawer over the view. The wall
     // stays selected, so the Edit tab still opens its height/thickness/delete
-    // controls on demand. Furniture (no popover) and every 2D selection keep
-    // auto-opening the drawer as before.
-    const surfaceIn3D = view === '3d' && (selection.kind === 'wall' || selection.kind === 'room');
+    // controls on demand. Furniture, which has no popover, still opens here.
+    const surfaceIn3D = selection.kind === 'wall' || selection.kind === 'room';
     const ok =
       tool === 'select' && !drawing && !surfaceIn3D &&
       drawerRef.current === null && suppressedIdRef.current !== selection.id;
@@ -459,7 +472,15 @@ export default function App() {
         )}
         <div className="stage-wrap">
           {view === '2d' ? (
-            <Canvas2D />
+            <Canvas2D
+              onEditSelection={() => {
+                // Deliberate, not automatic: the ring's Edit button is the only
+                // thing that opens the full panel on a phone now.
+                autoOpenedRef.current = true;
+                suppressedIdRef.current = null;
+                setDrawer('props');
+              }}
+            />
           ) : !isWebGLAvailable() ? (
             <div className="stage-loading webgl-missing">
               <p>

@@ -777,4 +777,5 @@ export const FR: Record<string, string> = {
   'Signed in — plans and Pro access will sync across devices.': 'Connecté — vos plans et votre accès Pro seront synchronisés entre appareils.',
   'Signed out on this device. Online account cleanup will retry next time.': 'Déconnecté sur cet appareil. Le nettoyage du compte en ligne sera réessayé plus tard.',
   'Sync complete — plans and Pro access are up to date.': 'Synchronisation terminée — plans et accès Pro à jour.',
+  'Selection actions': 'Actions de sélection',
 };
