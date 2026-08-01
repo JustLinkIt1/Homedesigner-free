@@ -26,6 +26,10 @@ import { CATALOG_BY_TYPE, FLOOR_MATERIALS } from '../../data/furnitureCatalog';
 import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl } from '../../data/materials';
 import { useI18n } from '../../lib/i18n';
 import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
+import SelectionRing from '../SelectionRing';
+
+/** cm -> m, matching DesignScene's M. */
+const M3 = 0.01;
 
 export { sunModel };
 
@@ -522,6 +526,52 @@ function GuideStrip({ at, dir }: { at: Point; dir: number }) {
   );
 }
 
+/**
+ * The touch selection ring, anchored over the selected object in 3D.
+ *
+ * Same component and same four actions as the 2D plan, so the two views behave
+ * identically. drei's `Html` projects the world position and updates the
+ * transform imperatively, which is why this costs no React render per frame and
+ * does not fight the demand-render loop — the same reason `GhostDim` below uses
+ * it. Because `Html` cannot clamp to the viewport, the ring is given no bounds
+ * and a forced upward fan; an object right at the edge of the view can have
+ * part of its fan clipped, which is the accepted trade for tracking the camera.
+ */
+function SelectionRing3D({ onEdit }: { onEdit: () => void }) {
+  const selection = useDesign((s) => s.selection);
+  const item = useDesign((s) =>
+    s.selection.kind === 'furniture' ? s.furniture.find((f) => f.id === s.selection.id) : undefined);
+  const selectedIds = useDesign((s) => s.selectedIds);
+  const floors = useDesign((s) => s.floors);
+  const activeFloorId = useDesign((s) => s.activeFloorId);
+  if (selection.kind !== 'furniture' || !item || selectedIds.length > 1) return null;
+
+  const storey = (floors.find((f) => f.id === activeFloorId)?.elevation ?? 0) * M3;
+  // Sit just above the object so the fan clears it rather than passing through.
+  const top = storey + ((item.elevation ?? 0) + item.height) * M3 + 0.12;
+  const st = useDesign.getState();
+  return (
+    <Html
+      position={[item.position.x * M3, top, item.position.y * M3]}
+      center
+      zIndexRange={[40, 0]}
+      style={{ pointerEvents: 'none' }}
+    >
+      <SelectionRing
+        x={0}
+        y={0}
+        place="above"
+        actions={[
+          { id: 'rotate', run: () => st.updateFurniture(item.id, { rotation: (item.rotation + 90) % 360 }) },
+          { id: 'duplicate', run: () => st.duplicateSelection() },
+          { id: 'edit', run: onEdit },
+          { id: 'delete', run: () => st.deleteSelected() },
+        ]}
+      />
+    </Html>
+  );
+}
+
 /** Floating dimension pill over a drafted segment. */
 function GhostDim({ x, z, y, text }: { x: number; z: number; y: number; text: string }) {
   return (
@@ -689,7 +739,7 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
   return null;
 }
 
-export default function Scene3D() {
+export default function Scene3D({ onEditSelection }: { onEditSelection?: () => void } = {}) {
   const { center, radius } = useDesignBounds();
   const composerRef = useRef<any>(null);
   const dollhouse = useDesign((s) => s.dollhouse);
@@ -1048,6 +1098,12 @@ export default function Scene3D() {
         dollhouse={walkMode ? false : dollhouse}
         onSurfaceTap={walkMode ? undefined : handleSurfaceTap}
       />
+
+      {/* Touch selection actions over the selected object. Suppressed while
+          walking or while a draw tool is armed — both own the tap surface.
+          Not touch-gated: this replaces the old ±45° rotate pill, which desktop
+          had too, so gating it would have removed rotate from 3D on desktop. */}
+      {!walkMode && !armedTool() && <SelectionRing3D onEdit={() => onEditSelection?.()} />}
 
       {!noPost && (
         <PostFXBoundary onFail={() => setPostFailed(true)}>

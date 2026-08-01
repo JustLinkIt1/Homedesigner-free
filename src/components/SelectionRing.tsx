@@ -39,6 +39,7 @@ export default function SelectionRing({
   x,
   y,
   bounds,
+  place = 'auto',
   actions,
   danger = 'delete',
 }: {
@@ -46,8 +47,13 @@ export default function SelectionRing({
    *  the canvas overlay uses (not the viewport). */
   x: number;
   y: number;
-  /** Size of the canvas overlay the ring is positioned inside. */
-  bounds: { w: number; h: number };
+  /** Size of the canvas overlay the ring is positioned inside. Omit when the
+   *  wrapper is already anchored to the object (the 3D view puts the ring in a
+   *  drei <Html>, which positions it), in which case there is nothing to clamp
+   *  against and the fan direction must be given explicitly. */
+  bounds?: { w: number; h: number };
+  /** 'auto' picks a side from `y` within `bounds`; the 3D ring forces one. */
+  place?: 'auto' | 'above' | 'below';
   actions: SelectionAction[];
   danger?: SelectionAction['id'];
 }) {
@@ -64,7 +70,9 @@ export default function SelectionRing({
 
   // Fan upward by default; flip below when the object sits near the top. The
   // bottom reserve keeps it off the tab bar rather than merely on screen.
-  const roomAbove = y - RADIUS - BUTTON > EDGE;
+  const roomAbove = place === 'auto'
+    ? !bounds || y - RADIUS - BUTTON > EDGE
+    : place === 'above';
   const centreDeg = roomAbove ? -90 : 90;
   const step = actions.length > 1 ? SPREAD / (actions.length - 1) : 0;
   const start = centreDeg - SPREAD / 2;
@@ -82,9 +90,13 @@ export default function SelectionRing({
   const maxX = Math.max(...offsets.map((o) => o.dx));
   const minY = Math.min(...offsets.map((o) => o.dy));
   const maxY = Math.max(...offsets.map((o) => o.dy));
-  const shiftX = Math.max(0, EDGE + half - (x + minX)) - Math.max(0, (x + maxX) + half - (bounds.w - EDGE));
-  const shiftY = Math.max(0, EDGE + half - (y + minY))
-    - Math.max(0, (y + maxY) + half - (bounds.h - BOTTOM_RESERVE));
+  const shiftX = bounds
+    ? Math.max(0, EDGE + half - (x + minX)) - Math.max(0, (x + maxX) + half - (bounds.w - EDGE))
+    : 0;
+  const shiftY = bounds
+    ? Math.max(0, EDGE + half - (y + minY))
+      - Math.max(0, (y + maxY) + half - (bounds.h - BOTTOM_RESERVE))
+    : 0;
 
   return (
     <div className="sel-ring" style={{ left: x, top: y }} role="toolbar" aria-label={t('Selection actions')}>

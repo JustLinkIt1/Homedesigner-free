@@ -5,6 +5,45 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.17.0 - 2026-08-01 (versionCode 11700)
+
+### The selection ring now works in 3D too
+
+- Selecting furniture in the 3D view fans the same four actions over the object
+  — rotate 90°, duplicate, edit, delete — instead of sliding the full-height
+  properties panel across the scene. Both views now behave identically.
+- Anchored with drei's `Html` at the object's world position, so it tracks the
+  camera as you orbit. `Html` updates its transform imperatively, which is why
+  this costs no React render per frame and does not fight the scene's
+  demand-render loop. The trade: `Html` cannot clamp to the viewport, so an
+  object right at the edge of the view can have part of its fan clipped.
+- **The ±45° rotate pill is gone**, replaced by the ring. It was not
+  touch-gated, so the ring is not either — gating it would have removed rotate
+  from 3D on desktop entirely. Fine rotation and the numeric angle are still in
+  the properties panel.
+- The 3D auto-open effect is removed. It was the same full-screen panel the
+  ring exists to avoid.
+
+### The bottom nav no longer looks like it hides something
+
+A tester: *"position of the bottom navigation is too high… it makes me wonder
+if there's anything hidden behind it."* They were reading it correctly. The nav
+was a floating pill inset 12px with a 10px gap beneath, so the project list
+scrolled visibly through that gap. Nothing was ever unreachable — `.ps-main`
+already reserved room — but the gap advertised content passing underneath. It
+now spans the full width and sits on the bottom edge, with the safe-area inset
+moved into its padding so its own background fills the gesture area.
+
+The editor's Build/Objects/Edit bar is deliberately unchanged: it floats over a
+canvas rather than a scrolling list, so nothing passes through its gap.
+
+### Testing
+
+- The 3D ring assertions replace the old rotate-pill ones rather than dropping
+  that coverage, and include the same no-overlap check — the geometry is shared,
+  and overlapping buttons are invisible in a screenshot in either view.
+- A phone-viewport assertion pins the nav to the bottom edge.
+
 ## 1.16.0 - 2026-08-01 (versionCode 11600)
 
 ### A selection ring instead of a full-screen panel on phones

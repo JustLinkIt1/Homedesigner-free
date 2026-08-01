@@ -549,21 +549,40 @@ if (process.env.SMOKE_SKIP_3D) {
     '3D placement guidance appears',
     await page.locator('.placement-affordance', { hasText: 'Tap a floor to place Side Table' }).isVisible().catch(() => false),
   );
-  // Rotate pill drives store rotation.
+  // The selection ring replaced the ±45° rotate pill in 3D. It is anchored to
+  // the object through drei's <Html>, so this also proves the projection works.
   await store(() => {
     const s = window.useDesign.getState();
     s.select({ kind: 'furniture', id: s.furniture[0].id });
   });
   // Generous: under software GL the model-heavy scene can stall the main
   // thread for tens of seconds while shaders/BVH compile.
-  const pill = await page.waitForSelector('.rotate3d-pill', { timeout: 45000 }).then(() => true).catch(() => false);
-  check('3D rotate pill appears', pill);
-  if (pill) {
+  const ring3d = await page.waitForSelector('.sel-ring button', { timeout: 45000 })
+    .then(() => true).catch(() => false);
+  check('3D selection ring appears over the selected object', ring3d);
+  if (ring3d) {
+    check('3D selection ring carries four actions',
+      (await page.locator('.sel-ring button').count()) === 4);
+    // Same geometry as 2D, so the same overlap trap applies — and it is just as
+    // invisible in a screenshot here.
+    const overlap = await page.evaluate(() => {
+      const r = [...document.querySelectorAll('.sel-ring button')].map((b) => b.getBoundingClientRect());
+      const hits = [];
+      for (let i = 0; i < r.length; i++) {
+        for (let j = i + 1; j < r.length; j++) {
+          if (r[i].left < r[j].right && r[j].left < r[i].right
+            && r[i].top < r[j].bottom && r[j].top < r[i].bottom) hits.push(`${i}/${j}`);
+        }
+      }
+      return hits;
+    });
+    check('3D selection ring: no two buttons overlap', overlap.length === 0, overlap.join(', '));
+
     const r0 = await store(() => window.useDesign.getState().furniture[0].rotation);
-    await page.click('.rotate3d-pill button >> nth=1');
-    await page.waitForTimeout(200);
+    await page.locator('.sel-ring button[aria-label="Rotate 90°"]').click();
+    await page.waitForTimeout(250);
     const r1 = await store(() => window.useDesign.getState().furniture[0].rotation);
-    check('3D rotate +45°', (r1 - r0 + 360) % 360 === 45, `got ${r1 - r0}`);
+    check('3D selection ring: rotate turns the object by 90°', (r1 - r0 + 360) % 360 === 90, `got ${r1 - r0}`);
   }
 }
 
@@ -1253,6 +1272,19 @@ await recoveryPage.close();
   const card = sr.locator('.tpl-card', { hasText: 'Start with a room' });
   check('starter room: the template card is offered',
     await card.waitFor({ state: 'visible', timeout: 8000 }).then(() => true).catch(() => false));
+
+  // A tester read the floating bottom nav as hiding something, because the
+  // project list scrolled visibly through the gap beneath it. Seated on the
+  // edge, there is no gap for anything to show through.
+  const nav = await sr.evaluate(() => {
+    const el = document.querySelector('.ps-nav');
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { bottom: Math.round(r.bottom), vh: window.innerHeight, left: Math.round(r.left), vw: window.innerWidth };
+  });
+  check('bottom nav: sits on the bottom edge, leaving no gap beneath it',
+    !!nav && nav.bottom >= nav.vh - 1 && nav.left <= 1 && nav.vw > 0, JSON.stringify(nav));
+
   await card.click();
   await sr.waitForTimeout(700);
 

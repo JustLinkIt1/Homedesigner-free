@@ -35,7 +35,6 @@ import HelpPanel from './components/HelpPanel';
 import SettingsDialog from './components/SettingsDialog';
 import CoachMarks from './components/CoachMarks';
 import WelcomeTour from './components/WelcomeTour';
-import RotateControls from './components/Viewer3D/RotateControls';
 import ShoppingList from './components/ShoppingList';
 import ProUpsellModal from './components/ProUpsellModal';
 import ProjectsScreen from './components/ProjectsScreen';
@@ -166,10 +165,10 @@ export default function App() {
   }, []);
   // Selecting something on a phone no longer slides the full properties panel
   // over the plan. That panel is full height, so it covered the very object you
-  // had just selected and you could not see your own edit. The 2D canvas now
-  // fans a small ring of actions beside the object (SelectionRing), and its
-  // Edit button opens this panel deliberately. All that is left here is closing
-  // a panel we opened once the selection goes away.
+  // had just selected and you could not see your own edit. BOTH views now fan a
+  // small ring of actions over the object (SelectionRing), and its Edit button
+  // opens this panel deliberately. All that is left here is closing a panel we
+  // opened once the selection goes away.
   useEffect(() => {
     if (!coarsePointer || screen !== 'editor') return;
     if (!selection.id) {
@@ -179,38 +178,6 @@ export default function App() {
     }
     return;
   }, [selection.id, coarsePointer, screen]);
-
-  // Kept for the 3D view, where there is no canvas-anchored ring: a wall or
-  // room tapped there opens the in-place paint popover instead, and furniture
-  // still needs a way to reach its full controls.
-  useEffect(() => {
-    if (!coarsePointer || screen !== 'editor' || view !== '3d') return;
-    if (!selection.id) return;
-    // Tapping a wall or floor in 3D is a "decorate" gesture handled by the
-    // in-place paint popover (the surface recolours live with the scene still
-    // visible) — don't also slide the full Edit drawer over the view. The wall
-    // stays selected, so the Edit tab still opens its height/thickness/delete
-    // controls on demand. Furniture, which has no popover, still opens here.
-    const surfaceIn3D = selection.kind === 'wall' || selection.kind === 'room';
-    const ok =
-      tool === 'select' && !drawing && !surfaceIn3D &&
-      drawerRef.current === null && suppressedIdRef.current !== selection.id;
-    if (!ok) return;
-    const open = () => {
-      autoOpenedRef.current = true;
-      setDrawer('props');
-    };
-    if (!pointerDownRef.current) {
-      open();
-      return;
-    }
-    const once = () => {
-      if (useDesign.getState().selection.id === selection.id) open();
-    };
-    window.addEventListener('pointerup', once, { once: true });
-    return () => window.removeEventListener('pointerup', once);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection.id, selection.kind, tool, drawing, screen, view]);
 
   // First-run tour: only on entering the editor with a truly blank project
   // (the sample home loads walls before onOpenEditor, so it never shows).
@@ -499,7 +466,14 @@ export default function App() {
             </div>
           ) : (
             <Suspense fallback={<div className="stage-loading"><span className="spin" /> {t('Loading 3D…')}</div>}>
-              <Scene3D />
+              <Scene3D
+                onEditSelection={() => {
+                  // Same deliberate open as the 2D ring's Edit button.
+                  autoOpenedRef.current = true;
+                  suppressedIdRef.current = null;
+                  setDrawer('props');
+                }}
+              />
             </Suspense>
           )}
 
@@ -882,7 +856,6 @@ export default function App() {
                   <Minus className="icon" />
                 </button>
               </div>
-              <RotateControls />
             </>
           )}
 
