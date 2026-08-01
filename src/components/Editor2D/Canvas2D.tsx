@@ -652,6 +652,25 @@ export default function Canvas2D() {
     setDimEdit({ wallId, x: sx, y: sy, value: val });
   };
 
+  // Tapping away has to close the length editor.
+  //
+  // The input's `onBlur` handles this with a mouse, but NOT on touch: the Konva
+  // stage is a <canvas>, which is not focusable, so tapping it never moves
+  // focus and never fires blur. A tester hit exactly that and reported being
+  // "stuck" in the dialog with only the keyboard's Enter to escape — on a phone
+  // that is a dead end. A document-level pointerdown catches every case.
+  useEffect(() => {
+    if (!dimEdit) return;
+    const onDown = (e: PointerEvent) => {
+      if ((e.target as Element | null)?.closest?.('.dim-edit')) return;
+      applyDimEdit();
+    };
+    // Capture: the stage stops propagation on its own pointer handlers.
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dimEdit?.wallId]);
+
   // Commit the typed length: keep `start` fixed and move the wall's end (and any
   // walls sharing that corner) so the wall becomes exactly that long.
   const applyDimEdit = () => {
@@ -942,11 +961,29 @@ export default function Canvas2D() {
     return { pt: lerp(wall.start, wall.end, o.offset), wall };
   };
 
+  /** Is `p` on this opening? A door is a RECTANGLE along its wall, so a radial
+   *  test was wrong at both ends: it missed the outer thirds of a wide door
+   *  (the tap fell through to the wall — "when I try to select the door, often
+   *  it will select the wall instead") while over-claiming perpendicular to a
+   *  narrow one. Matching what is drawn fixes both. */
+  const hitsOpening = (p: Point, o: (typeof openings)[number]): boolean => {
+    const op = openingPoint(o);
+    if (!op) return false;
+    const { pt, wall } = op;
+    const len = dist(wall.start, wall.end) || 1;
+    const ux = (wall.end.x - wall.start.x) / len;
+    const uy = (wall.end.y - wall.start.y) / len;
+    // Distance along the wall, and perpendicular to it.
+    const along = Math.abs((p.x - pt.x) * ux + (p.y - pt.y) * uy);
+    const across = Math.abs((p.x - pt.x) * -uy + (p.y - pt.y) * ux);
+    const slop = 8 / zoom; // a fingertip's worth, constant on screen
+    return along <= o.width / 2 + slop && across <= Math.max(wall.thickness, 14 / zoom) / 2 + slop;
+  };
+
   // What sits under a world point (top-most first), without selecting.
   const pickAt = (p: Point): { kind: NonNullable<Selection['kind']>; id: string } | null => {
     for (const o of openings) {
-      const op = openingPoint(o);
-      if (op && dist(p, op.pt) <= Math.max(o.width / 2, 16 / zoom)) return { kind: 'opening', id: o.id };
+      if (hitsOpening(p, o)) return { kind: 'opening', id: o.id };
     }
     for (let i = furniture.length - 1; i >= 0; i--) {
       const f = furniture[i];
@@ -967,10 +1004,11 @@ export default function Canvas2D() {
   };
 
   const hitTest = (p: Point) => {
-    // Openings (clickable along their wall).
+    // Openings (clickable along their wall). Shares `hitsOpening` with pickAt —
+    // the two used to carry the same radial test written out twice, so fixing
+    // one would silently have left door selection broken through the other.
     for (const o of openings) {
-      const op = openingPoint(o);
-      if (op && dist(p, op.pt) <= Math.max(o.width / 2, 16 / zoom)) {
+      if (hitsOpening(p, o)) {
         s.select({ kind: 'opening', id: o.id });
         return;
       }

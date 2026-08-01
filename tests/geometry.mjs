@@ -794,5 +794,51 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
     near(blocked[0], 150 - 50 - 5, 0.001), `${blocked[0]}`);
 }
 
+// --- opening hit area ------------------------------------------------------
+// A tester reported "when I try to select the door, often it will select the
+// wall instead". The hit test was radial with radius = width/2, so it missed
+// the outer thirds of a wide door and over-claimed perpendicular to a narrow
+// one. This mirrors the rectangle Canvas2D now uses (hitsOpening).
+{
+  const zoom = 1; // 1 px per cm, so slop terms are in cm
+  const wall = { start: { x: 0, y: 0 }, end: { x: 400, y: 0 }, thickness: 12 };
+  // A double door — the width where the mismatch bites hardest, because the
+  // circle's radius grows with the door while its corners fall further inside
+  // the leaf that is actually drawn.
+  const door = { width: 160, offset: 0.5 };
+  const centre = { x: 200, y: 0 };
+
+  const radial = (p) => Math.hypot(p.x - centre.x, p.y - centre.y) <= Math.max(door.width / 2, 16 / zoom);
+  const rect = (p) => {
+    const along = Math.abs(p.x - centre.x);
+    const across = Math.abs(p.y - centre.y);
+    const slop = 8 / zoom;
+    return along <= door.width / 2 + slop && across <= Math.max(wall.thickness, 14 / zoom) / 2 + slop;
+  };
+
+  // Near the end of the leaf, slightly off the centreline — inside the drawn
+  // door, but outside the circle, because a circle's edge curves away from the
+  // rectangle's corners. This is the tap that fell through to the wall.
+  const nearEnd = { x: 200 + 84, y: 14 };
+  check('opening hit: a tap near the corner of a wide door hits the door', rect(nearEnd));
+  check('opening hit: the old radial test dropped that tap onto the wall', !radial(nearEnd),
+    `radial=${radial(nearEnd)}`);
+
+  // Well past the door along the wall must fall through to the wall.
+  const pastEnd = { x: 200 + 110, y: 0 };
+  check('opening hit: past the door falls through to the wall', !rect(pastEnd));
+
+  // Far off the wall perpendicular must not claim the tap — the radial test did,
+  // which is the same defect seen from the other side: it stole taps meant for
+  // furniture standing in a doorway.
+  const offWall = { x: 200, y: 60 };
+  check('opening hit: a tap well off the wall is not the door', !rect(offWall));
+  check('opening hit: the old radial test wrongly claimed it', radial(offWall));
+
+  // Dead centre still works, and so does the near edge.
+  check('opening hit: centre and near-edge both hit',
+    rect(centre) && rect({ x: 200 - 79, y: 0 }));
+}
+
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');
 process.exit(fails ? 1 : 0);

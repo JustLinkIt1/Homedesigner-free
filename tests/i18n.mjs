@@ -32,9 +32,48 @@ const sources = (dir, out = []) => {
   return out;
 };
 
+/** Blank out comments so prose that *describes* a call is not mistaken for one.
+ *  A doc comment explaining why `t('Made with')` would be wrong is not a
+ *  translatable string, and treating it as one fails the build for a phrase
+ *  that never reaches a user. Tracks strings/templates so a `//` inside one is
+ *  left alone. */
+function stripComments(src) {
+  let out = '';
+  let i = 0;
+  let quote = null; // "'", '"', '`' or null
+  while (i < src.length) {
+    const c = src[i];
+    const next = src[i + 1];
+    if (quote) {
+      out += c;
+      if (c === '\\') { out += next ?? ''; i += 2; continue; }
+      if (c === quote) quote = null;
+      i++;
+      continue;
+    }
+    if (c === '/' && next === '/') {
+      while (i < src.length && src[i] !== '\n') i++;
+      continue;
+    }
+    if (c === '/' && next === '*') {
+      i += 2;
+      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) {
+        if (src[i] === '\n') out += '\n'; // keep line numbers honest
+        i++;
+      }
+      i += 2;
+      continue;
+    }
+    if (c === "'" || c === '"' || c === '`') quote = c;
+    out += c;
+    i++;
+  }
+  return out;
+}
+
 const used = new Map(); // key -> first file that asks for it
 for (const file of sources(join(root, 'src'))) {
-  const src = readFileSync(file, 'utf8');
+  const src = stripComments(readFileSync(file, 'utf8'));
   // t('…') and tr('…'). Template literals and variables are deliberately not
   // matched: they cannot be statically resolved, and a dynamic key that misses
   // still falls back to readable English.

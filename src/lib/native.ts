@@ -2,7 +2,8 @@
 // On native we save renders/projects to the device and offer a share sheet;
 // on the web we fall back to a normal browser download.
 import { Capacitor } from '@capacitor/core';
-import { APP_NAME } from './appInfo';
+import { APP_NAME, PLAY_STORE_URL } from './appInfo';
+import { t } from './i18n';
 
 export const isNative = () => Capacitor.isNativePlatform();
 
@@ -40,7 +41,18 @@ export async function saveImage(dataUrl: string, filename: string): Promise<void
   });
   const { uri } = await Filesystem.getUri({ path, directory: Directory.Documents });
   try {
-    await Share.share({ title: `${APP_NAME} render`, url: uri });
+    // The image is the payload; the text is its caption. A shared render used
+    // to travel with no name and no link, so anyone who liked one had no way
+    // to find the app — the single cheapest organic channel, wasted.
+    //
+    // Three lines rather than a sentence: the product name has to lead so the
+    // brand is not embedded in a translation key, and "made with X" word order
+    // is not the same in Japanese or Korean as it is in English.
+    await Share.share({
+      title: `${APP_NAME} render`,
+      text: `${APP_NAME}\n${t('Design your dream home')}\n${PLAY_STORE_URL}`,
+      url: uri,
+    });
   } catch {
     /* user dismissed the share sheet — file is still saved */
   }

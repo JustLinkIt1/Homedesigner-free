@@ -770,6 +770,17 @@ export default function Scene3D() {
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
 
+  // Close the paint palette as soon as the selection moves off the surface it
+  // belongs to. Tapping furniture goes through a different path than
+  // handleSurfaceTap, so a floor's palette used to stay open over an unrelated
+  // selection — a 3D probe caught the popover still showing while a chair was
+  // selected. Anchoring it to the selection keeps the two in step whatever
+  // route the tap took.
+  const selectedId = useDesign((st) => st.selection.id);
+  useEffect(() => {
+    if (paintTap && selectedId !== paintTap.id) setPaintTap(null);
+  }, [selectedId, paintTap]);
+
   const addDraftPoint = (raw: Point) => {
     const st = useDesign.getState();
     const d = draftRef.current;

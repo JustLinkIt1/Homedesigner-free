@@ -12,6 +12,11 @@ export const APP_VERSION: string =
 export const PLAY_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.homedesigner.app';
 
+/** The product site. `SITE_DOMAIN` is the bare form used where a full URL would
+ *  be visual noise — currently the free-tier export watermark. */
+export const SITE_URL = 'https://homedesignerapp.com';
+export const SITE_DOMAIN = 'homedesignerapp.com';
+
 export const PRIVACY_URL = 'https://homedesignerapp.com/privacy.html';
 
 export const SUPPORT_EMAIL = 'nathanjoppich@gmail.com';

@@ -201,7 +201,12 @@ function WallDimension({
             width={width}
             align="center"
             listening={!!onEdit}
-            hitStrokeWidth={px(20)}
+            // 20px of slop in every direction made this plate a ~40px-wider
+            // target than it looks, and it sits at the wall midpoint — exactly
+            // where a centred door is. A tester aiming at a door kept opening
+            // the wall-length editor instead. 6px keeps the plate comfortably
+            // tappable without claiming the door's pixels.
+            hitStrokeWidth={px(6)}
             onMouseEnter={(e) => {
               const st = e.target.getStage();
               if (st) st.container().style.cursor = 'text';

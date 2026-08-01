@@ -5,6 +5,48 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.15.0 - 2026-08-01 (versionCode 11500)
+
+### Tester report: "I often feel like I am fighting with the UI"
+
+- **The wall-length editor could not be dismissed by tapping away.** Its input
+  relied on `onBlur`, which never fires on touch: the Konva stage is a
+  `<canvas>`, which is not focusable, so tapping it does not move focus. On a
+  phone the only way out was the keyboard's Enter — a dead end for anyone who
+  opened it by accident. A document-level `pointerdown` now closes it.
+- **Taps meant for a door hit the wall instead.** Two causes. The dimension
+  label carried 20px of hit slop in every direction, making it a ~40px-wider
+  target than it looks — and it sits at the wall midpoint, exactly where a
+  centred door is. And the opening hit test was a *circle* of radius
+  `width / 2`, while a door is drawn as a rectangle: a circle's edge curves
+  away from the rectangle's corners, so taps near the ends of a wide door fell
+  through to the wall, while taps well off a narrow one were wrongly claimed.
+  The hit area is now the rectangle that is actually drawn, and the label's
+  slop is down to 6px. `pickAt` and `hitTest` had the same test written out
+  twice and now share `hitsOpening`, so this cannot half-regress.
+- **The 3D paint palette stayed open over an unrelated selection.** Tapping
+  furniture does not go through `handleSurfaceTap`, so a floor's palette kept
+  floating after a chair was selected. It is now anchored to the selection.
+
+### Shared renders lead somewhere
+
+- The free-tier watermark carries `homedesignerapp.com`, and the share sheet
+  sends the app name, its tagline and the Play link alongside the image. A
+  shared render previously travelled with no name and no link — the cheapest
+  organic channel the app has, wasted. Deliberately three lines rather than a
+  sentence: the brand has to lead so it is not embedded in a translation key,
+  and "made with X" word order is not the same in Japanese or Korean.
+- The watermark shrinks to fit rather than clipping now that it is longer.
+
+### Testing
+
+- Six assertions in `tests/geometry.mjs` pin the opening hit area, including
+  two that assert the *old* radial test failed the same taps — so the fix
+  cannot be quietly reverted.
+- `tests/i18n.mjs` now strips comments before scanning. A doc comment
+  explaining why `t(...)` composition would be wrong was being read as a real
+  call and failed the build for a string no user ever sees.
+
 ## 1.14.2 - 2026-08-01 (versionCode 11402)
 
 ### Light-mode sweep
