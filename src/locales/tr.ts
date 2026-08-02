@@ -294,6 +294,7 @@ export const TR: Record<string, string> = {
   'Auto-detect rooms': 'Odaları otomatik algıla',
   'Deleted': 'Silindi',
   Undo: 'Geri al',
+  'Pro unlocked — thank you!': 'Pro etkinleştirildi — teşekkürler!',
   'Pro unlocked with your referral code!': 'Davet kodunuzla Pro açıldı!',
   'Plan exported as PNG': 'Plan PNG olarak dışa aktarıldı',
   'Plan exported as PDF': 'Plan PDF olarak dışa aktarıldı',
@@ -778,4 +779,7 @@ export const TR: Record<string, string> = {
   'Signed out on this device. Online account cleanup will retry next time.': 'Bu cihazda oturum kapatıldı. Çevrimiçi hesap temizliği daha sonra yeniden denenecek.',
   'Sync complete — plans and Pro access are up to date.': 'Eşitleme tamamlandı — planlar ve Pro erişimi güncel.',
   'Selection actions': 'Seçim işlemleri',
+  'Pick a tool to start — try ✏️ Draw walls': 'Bir araç seçin — ✏️ Duvar çizmeyi deneyin',
+  'The 3D view was interrupted by your device.': '3B görünüm cihazınız tarafından kesildi.',
+  'Reload 3D': '3B görünümü yeniden yükle',
 };

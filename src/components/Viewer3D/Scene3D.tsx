@@ -134,6 +134,50 @@ function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }
   );
 }
 
+/**
+ * WebGL context loss recovery.
+ *
+ * A lost context is what "the 3D view showed for a second and then went blank"
+ * actually is: the scene draws its first frames, the driver drops the context,
+ * and the canvas stays black forever. Android drops contexts readily — when
+ * memory is tight, when the app is backgrounded, and when a SECOND context is
+ * created (the catalog preview does exactly that beside the live scene).
+ *
+ * Nothing here was handled before, and the single most important line is
+ * `event.preventDefault()`: without it the browser will never fire
+ * `webglcontextrestored`, so the loss is permanent by default. Reported by a
+ * tester on a Pixel 10 Pro.
+ */
+function ContextLossGuard({
+  onLost,
+  onRestored,
+}: {
+  onLost: () => void;
+  onRestored: () => void;
+}) {
+  const gl = useThree((s) => s.gl);
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const lost = (event: Event) => {
+      // Opts into restoration. Omitting this is what makes a blank view final.
+      event.preventDefault();
+      onLost();
+    };
+    const restored = () => {
+      onRestored();
+      invalidate();
+    };
+    canvas.addEventListener('webglcontextlost', lost);
+    canvas.addEventListener('webglcontextrestored', restored);
+    return () => {
+      canvas.removeEventListener('webglcontextlost', lost);
+      canvas.removeEventListener('webglcontextrestored', restored);
+    };
+  }, [gl, invalidate, onLost, onRestored]);
+  return null;
+}
+
 /** Coarse pointer (no hover) → treat as touch and show on-screen controls. */
 const IS_TOUCH =
   typeof window !== 'undefined' &&
@@ -808,6 +852,12 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
   const [paintTap, setPaintTap] = useState<SurfaceTap | null>(null);
   // If post-processing fails on this GPU, drop it and render the plain scene.
   const [postFailed, setPostFailed] = useState(false);
+  // A dropped GPU context leaves a permanently black canvas unless we both opt
+  // into restoration and rebuild the scene. `canvasKey` forces a fresh Canvas
+  // when the driver never restores on its own.
+  const t3 = useI18n();
+  const [contextLost, setContextLost] = useState(false);
+  const [canvasKey, setCanvasKey] = useState(0);
   // Graded device capability (+ user override) instead of a bare touch check, so
   // capable phones keep shadows instead of losing every effect at once.
   const caps = useMemo(() => tierCaps(activeTier(), IS_TOUCH), []);
@@ -966,7 +1016,12 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         scheduleInteractEnd();
       }}
     >
+    {/* Unmounted while the context is lost. three.js keeps drawing against the
+        dead context otherwise and throws on its null attributes — the view is
+        already blank at that point, so there is nothing to preserve. */}
+    {!contextLost && (
     <Canvas
+      key={canvasKey}
       // Mobile perf tier: touch devices drop post-processing + shadows and cap
       // DPR — the biggest GPU costs — to keep 3D navigation smooth on Android.
       // (High-res photo/plan exports are separate and stay full quality.)
@@ -991,6 +1046,10 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
     >
       {/* Demand rendering keeps 120 Hz phones from redrawing an idle scene;
           AdaptiveDpr lowers interaction cost further if a frame budget slips. */}
+      <ContextLossGuard
+        onLost={() => setContextLost(true)}
+        onRestored={() => setContextLost(false)}
+      />
       <AdaptiveDpr pixelated={false} />
       {/* Soft daytime sky + gentle distance fog: gives renders a horizon and
           natural light falloff instead of a flat grey void. */}
@@ -1142,9 +1201,27 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         />
       )}
     </Canvas>
+    )}
 
     {/* Decorate popover, anchored at the tapped surface. */}
     {paintTap && !walkMode && <PaintPopover tap={paintTap} onClose={() => setPaintTap(null)} />}
+    {/* A dropped context used to leave a silent black rectangle with no way
+        back. Say so, and offer the rebuild — the driver often does not restore
+        on its own, and remounting the Canvas gets a fresh context. */}
+    {contextLost && (
+      <div className="gl-lost" role="alert">
+        <p>{t3('The 3D view was interrupted by your device.')}</p>
+        <button
+          className="btn primary"
+          onClick={() => {
+            setContextLost(false);
+            setCanvasKey((k) => k + 1);
+          }}
+        >
+          {t3('Reload 3D')}
+        </button>
+      </div>
+    )}
 
     {/* Walk-mode HUD: hint, exit, and (on touch) on-screen movement controls. */}
     {walkMode && (

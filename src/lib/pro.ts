@@ -35,6 +35,11 @@ export interface ProProvider {
   purchase(planID?: ProPlanID): Promise<boolean>;
   /** Returns true if a previous purchase was restored. */
   restore(): Promise<boolean>;
+  /** Push the store account's purchases up and re-read ownership, without any
+   *  user interaction. This is how a Play promo code — redeemed OUTSIDE the app,
+   *  in the Play Store — becomes visible to us. Optional: only the native
+   *  provider has an out-of-app redemption path. */
+  sync?(): Promise<boolean>;
   /** Switch RevenueCat from an anonymous customer to a stable account. */
   identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean>;
   /** Return to a fresh anonymous RevenueCat customer on account sign-out. */
@@ -180,6 +185,19 @@ class RevenueCatProvider implements ProProvider {
     const Purchases = await this.sdk();
     const { customerInfo } = await Purchases.restorePurchases();
     return hasProEntitlement(customerInfo);
+  }
+
+  async sync(): Promise<boolean> {
+    // Google grants a promo-code redemption to the PLAY ACCOUNT, not to the
+    // app: the user leaves, redeems in the Play Store (or via a redeem link),
+    // and comes back. Play Billing's guidance is to query purchases when the
+    // app resumes; syncPurchases() is RevenueCat's equivalent — it uploads the
+    // device's Play purchases; the recomputed customer is then read back.
+    const Purchases = await this.sdk();
+    await Purchases.syncPurchases();
+    const { customerInfo } = await Purchases.getCustomerInfo();
+    return hasProEntitlement(customerInfo)
+      || (customerInfo?.allPurchasedProductIdentifiers?.length ?? 0) > 0;
   }
 
   async identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean> {

@@ -294,6 +294,7 @@ export const NL: Record<string, string> = {
   'Auto-detect rooms': 'Kamers detecteren',
   'Deleted': 'Verwijderd',
   Undo: 'Ongedaan maken',
+  'Pro unlocked — thank you!': 'Pro ontgrendeld — bedankt!',
   'Pro unlocked with your referral code!': 'Pro ontgrendeld met je verwijzingscode!',
   'Plan exported as PNG': 'Plan geëxporteerd als PNG',
   'Plan exported as PDF': 'Plan geëxporteerd als PDF',
@@ -778,4 +779,7 @@ export const NL: Record<string, string> = {
   'Signed out on this device. Online account cleanup will retry next time.': 'Afgemeld op dit apparaat. Het opschonen van het account wordt later opnieuw geprobeerd.',
   'Sync complete — plans and Pro access are up to date.': 'Synchronisatie voltooid — plattegronden en Pro-toegang zijn actueel.',
   'Selection actions': 'Selectieacties',
+  'Pick a tool to start — try ✏️ Draw walls': 'Kies een gereedschap — probeer ✏️ Muren tekenen',
+  'The 3D view was interrupted by your device.': 'De 3D-weergave werd onderbroken door je apparaat.',
+  'Reload 3D': '3D opnieuw laden',
 };

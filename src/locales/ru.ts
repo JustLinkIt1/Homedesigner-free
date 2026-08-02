@@ -294,6 +294,7 @@ export const RU: Record<string, string> = {
   'Auto-detect rooms': 'Определить комнаты',
   'Deleted': 'Удалено',
   Undo: 'Отменить',
+  'Pro unlocked — thank you!': 'Pro активирован — спасибо!',
   'Pro unlocked with your referral code!': 'Pro активирован реферальным кодом!',
   'Plan exported as PNG': 'План экспортирован в PNG',
   'Plan exported as PDF': 'План экспортирован в PDF',
@@ -778,4 +779,7 @@ export const RU: Record<string, string> = {
   'Signed out on this device. Online account cleanup will retry next time.': 'Выход выполнен на этом устройстве. Очистка аккаунта будет повторена позже.',
   'Sync complete — plans and Pro access are up to date.': 'Синхронизация завершена — планы и доступ Pro актуальны.',
   'Selection actions': 'Действия с выделением',
+  'Pick a tool to start — try ✏️ Draw walls': 'Выберите инструмент — попробуйте ✏️ Рисовать стены',
+  'The 3D view was interrupted by your device.': 'Устройство прервало работу 3D-вида.',
+  'Reload 3D': 'Перезагрузить 3D',
 };

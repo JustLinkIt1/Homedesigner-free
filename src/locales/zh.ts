@@ -294,6 +294,7 @@ export const ZH: Record<string, string> = {
   'Auto-detect rooms': '自动识别房间',
   'Deleted': '已删除',
   Undo: '撤销',
+  'Pro unlocked — thank you!': 'Pro 已解锁，感谢支持！',
   'Pro unlocked with your referral code!': '已通过邀请码解锁 Pro！',
   'Plan exported as PNG': '图纸已导出为 PNG',
   'Plan exported as PDF': '图纸已导出为 PDF',
@@ -778,4 +779,7 @@ export const ZH: Record<string, string> = {
   'Signed out on this device. Online account cleanup will retry next time.': '已在本机退出登录。在线账号清理将在下次重试。',
   'Sync complete — plans and Pro access are up to date.': '同步完成 — 户型图与 Pro 权限均为最新。',
   'Selection actions': '选中项操作',
+  'Pick a tool to start — try ✏️ Draw walls': '选择一个工具 — 试试 ✏️ 绘制墙体',
+  'The 3D view was interrupted by your device.': '设备中断了 3D 视图。',
+  'Reload 3D': '重新加载 3D',
 };

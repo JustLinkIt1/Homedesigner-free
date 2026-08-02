@@ -5,6 +5,64 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.18.0 - 2026-08-02 (versionCode 11800)
+
+### The 3D view no longer dies permanently
+
+Reported from the field (Pixel 10 Pro): *"It briefly shows the 3D rendering and
+then the screen gets blank."*
+
+**Root cause: there was no `webglcontextlost` handler anywhere in `src/`.** The
+browser fires that event when the OS reclaims the GPU context — thermal
+pressure, a background app, the compositor dropping a surface. The event's
+default action is to make the loss **permanent**: unless a listener calls
+`event.preventDefault()`, the browser never fires `webglcontextrestored` and the
+canvas stays a blank rectangle for the rest of the process. Reloading the page
+was the only way out, and nothing in the app told the user that.
+
+`ContextLossGuard` in `src/components/Viewer3D/Scene3D.tsx` now:
+
+- calls `preventDefault()` on `webglcontextlost`, which is the single line that
+  turns an unrecoverable blank screen into a recoverable one;
+- unmounts the `<Canvas>` while the context is gone, so three.js is not left
+  issuing draw calls against a dead context;
+- shows a `.gl-lost` panel explaining what happened, with a **Reload 3D** button
+  that remounts the canvas on a fresh key — no app restart;
+- invalidates on `webglcontextrestored` so the demand-render loop draws again
+  when the browser hands the context back on its own.
+
+`tests/smoke.mjs` drives this for real via the `WEBGL_lose_context` extension:
+it kills the context, asserts the user is told rather than shown a black
+rectangle, clicks Reload, and asserts the scene comes back.
+
+### Play promo codes are picked up without restarting the app
+
+Google grants a promo-code redemption to the **Play account**, not to the app:
+the user leaves, redeems in the Play Store, and comes back. Nothing pushes that
+to us, and the entitlement was only ever resolved at startup — so a redeemed
+code did nothing until the app was force-quit and relaunched.
+
+- `initNative` now reports returns to the foreground (`appStateChange`).
+- `useProStore.recheck()` runs on resume: it calls RevenueCat `syncPurchases()`
+  (a plain `getCustomerInfo()` cannot see a purchase Play was never asked
+  about), then confirms Pro and toasts.
+- It **never downgrades**. A flaky read on resume revoking a paid unlock would
+  be far worse than a promo code taking one more resume to appear, so `recheck`
+  returns early for anyone already Pro and only ever flips the flag upward.
+- Rate limited to one check a minute, because resume fires on every screen
+  unlock. A failed check (offline) does not burn the limiter.
+
+New `tests/billing.mjs` covers all four rules against an injected provider.
+Verified by fault injection: removing the never-downgrade guard, the throttle,
+or the `syncPurchases()` call each makes it fail.
+
+### Smaller
+
+- The first-run tip said "Pick a tool **on the left**". The tool dock is hidden
+  on phones and moves to the bottom in portrait, so the direction was wrong for
+  most of the people reading it. It now just says "Pick a tool to start".
+- The purchase-success toast was a raw English string; it is translated now.
+
 ## 1.17.2 - 2026-08-01 (versionCode 11702)
 
 ### Sample home orientation

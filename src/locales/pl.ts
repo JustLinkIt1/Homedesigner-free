@@ -294,6 +294,7 @@ export const PL: Record<string, string> = {
   'Auto-detect rooms': 'Wykryj pokoje',
   'Deleted': 'Usunięto',
   Undo: 'Cofnij',
+  'Pro unlocked — thank you!': 'Pro odblokowane — dziękujemy!',
   'Pro unlocked with your referral code!': 'Pro odblokowane kodem polecającym!',
   'Plan exported as PNG': 'Plan wyeksportowany jako PNG',
   'Plan exported as PDF': 'Plan wyeksportowany jako PDF',
@@ -778,4 +779,7 @@ export const PL: Record<string, string> = {
   'Signed out on this device. Online account cleanup will retry next time.': 'Wylogowano na tym urządzeniu. Porządkowanie konta zostanie ponowione później.',
   'Sync complete — plans and Pro access are up to date.': 'Synchronizacja zakończona — plany i dostęp Pro są aktualne.',
   'Selection actions': 'Działania na zaznaczeniu',
+  'Pick a tool to start — try ✏️ Draw walls': 'Wybierz narzędzie — spróbuj ✏️ Rysuj ściany',
+  'The 3D view was interrupted by your device.': 'Widok 3D został przerwany przez urządzenie.',
+  'Reload 3D': 'Załaduj 3D ponownie',
 };

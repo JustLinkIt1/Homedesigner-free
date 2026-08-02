@@ -294,6 +294,7 @@ export const JA: Record<string, string> = {
   'Auto-detect rooms': '部屋を自動検出',
   'Deleted': '削除しました',
   Undo: '元に戻す',
+  'Pro unlocked — thank you!': 'Pro が有効になりました。ありがとうございます!',
   'Pro unlocked with your referral code!': '紹介コードでProが解放されました！',
   'Plan exported as PNG': 'プランをPNGで書き出しました',
   'Plan exported as PDF': 'プランをPDFで書き出しました',
@@ -778,4 +779,7 @@ export const JA: Record<string, string> = {
   'Signed out on this device. Online account cleanup will retry next time.': 'この端末からサインアウトしました。オンラインの後処理は次回再試行します。',
   'Sync complete — plans and Pro access are up to date.': '同期が完了しました — 間取りとPro権限は最新です。',
   'Selection actions': '選択項目の操作',
+  'Pick a tool to start — try ✏️ Draw walls': 'ツールを選んでください — ✏️ 壁を描くを試す',
+  'The 3D view was interrupted by your device.': 'デバイスにより3D表示が中断されました。',
+  'Reload 3D': '3Dを再読み込み',
 };

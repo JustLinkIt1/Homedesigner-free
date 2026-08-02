@@ -10,8 +10,15 @@ import {
   syncReferralAttribute,
 } from '../lib/referral';
 import { toast } from '../lib/ui';
+import { t } from '../lib/i18n';
 
 const PRO_CACHE_KEY = 'homedesigner.pro.v1';
+
+/** Resume fires on every screen unlock, so the promo-code re-check is rate
+ *  limited. Redemption takes a trip to the Play Store, so a minute is nowhere
+ *  near the user's perception of "instant". */
+const RECHECK_INTERVAL_MS = 60_000;
+let lastRecheck = 0;
 
 const readCache = (): boolean => {
   // Browser storage is user-editable and must never be an entitlement source.
@@ -47,6 +54,9 @@ interface ProState {
   busy: boolean;
   upsellFeature: ProFeature | null;
   refresh: () => Promise<void>;
+  /** Silent re-check for an entitlement granted outside the app (Play promo
+   *  code). Resolves true only when it flipped a non-Pro user to Pro. */
+  recheck: () => Promise<boolean>;
   purchase: (planID?: ProPlanID) => Promise<void>;
   restore: () => Promise<void>;
   linkAccount: (account: { appUserID: string; email: string | null; displayName: string | null }) => Promise<void>;
@@ -105,6 +115,29 @@ export const useProStore = create<ProState>((set, get) => ({
     }
   },
 
+  recheck: async () => {
+    // Nothing to find: a Pro user is already Pro, and this must never be able
+    // to take Pro away — a flaky read on resume revoking a paid unlock would be
+    // far worse than a promo code taking one more resume to appear.
+    if (get().isPro) return false;
+    const now = Date.now();
+    if (now - lastRecheck < RECHECK_INTERVAL_MS) return false;
+    lastRecheck = now;
+    const provider = getProProvider();
+    try {
+      await provider.init();
+      const entitled = provider.sync ? await provider.sync() : await provider.isEntitled();
+      if (!entitled) return false;
+      set({ isPro: true, upsellFeature: null });
+      writeCache(true);
+      return true;
+    } catch {
+      // Offline or store unavailable — try again on the next resume.
+      lastRecheck = 0;
+      return false;
+    }
+  },
+
   purchase: async (planID) => {
     if (get().busy) return;
     set({ busy: true });
@@ -113,7 +146,7 @@ export const useProStore = create<ProState>((set, get) => ({
       if (ok) {
         set({ isPro: true, upsellFeature: null });
         writeCache(true);
-        toast.success('Pro unlocked — thank you!');
+        toast.success(t('Pro unlocked — thank you!'));
       } else if (Capacitor.isNativePlatform()) {
         // The provider resolved false without throwing: the flow ended without a
         // confirmed transaction (e.g. sheet dismissed in a way that isn't

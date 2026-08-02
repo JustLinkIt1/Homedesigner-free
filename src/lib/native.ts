@@ -75,10 +75,13 @@ export async function saveText(text: string, filename: string, mime = 'applicati
 }
 
 /**
- * Initialise native chrome (status bar, splash) and route the hardware back
- * button. `onBack` returns true if it handled the press (don't exit the app).
+ * Initialise native chrome (status bar, splash), route the hardware back button
+ * and report returns to the foreground. `onBack` returns true if it handled the
+ * press (don't exit the app); `onResume` runs whenever the app becomes active
+ * again, which is when work done outside it (redeeming a Play promo code) has
+ * to be picked up.
  */
-export async function initNative(onBack: () => boolean): Promise<void> {
+export async function initNative(onBack: () => boolean, onResume?: () => void): Promise<void> {
   if (!isNative()) return;
   // Status-bar style/background are owned entirely by src/lib/theme.ts, which
   // sets them from the RESOLVED theme (dark icons on light chrome, light icons
@@ -97,6 +100,11 @@ export async function initNative(onBack: () => boolean): Promise<void> {
       const handled = onBack();
       if (!handled && !canGoBack) App.exitApp();
     });
+    if (onResume) {
+      App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) onResume();
+      });
+    }
   } catch {
     /* @capacitor/app not present */
   }

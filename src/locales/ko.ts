@@ -294,6 +294,7 @@ export const KO: Record<string, string> = {
   'Auto-detect rooms': '방 자동 감지',
   'Deleted': '삭제됨',
   Undo: '실행 취소',
+  'Pro unlocked — thank you!': 'Pro가 활성화되었습니다. 감사합니다!',
   'Pro unlocked with your referral code!': '추천 코드로 Pro가 잠금 해제되었습니다!',
   'Plan exported as PNG': '도면을 PNG로 내보냈습니다',
   'Plan exported as PDF': '도면을 PDF로 내보냈습니다',
@@ -778,4 +779,7 @@ export const KO: Record<string, string> = {
   'Signed out on this device. Online account cleanup will retry next time.': '이 기기에서 로그아웃했습니다. 온라인 계정 정리는 다음에 다시 시도합니다.',
   'Sync complete — plans and Pro access are up to date.': '동기화 완료 — 도면과 Pro 이용권이 최신입니다.',
   'Selection actions': '선택 항목 작업',
+  'Pick a tool to start — try ✏️ Draw walls': '도구를 선택하세요 — ✏️ 벽 그리기를 시도해 보세요',
+  'The 3D view was interrupted by your device.': '기기에서 3D 보기가 중단되었습니다.',
+  'Reload 3D': '3D 다시 불러오기',
 };

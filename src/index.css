@@ -1477,6 +1477,21 @@ button.brand:hover .brand-name {
   background: var(--border);
   margin: 3px 6px;
 }
+.gl-lost {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background: var(--bg);
+  color: var(--text-2);
+}
+.gl-lost p { max-width: 32ch; margin: 0; line-height: 1.5; }
+
 /* Touch selection ring — see src/components/SelectionRing.tsx.
  * A zero-size anchor at the object's centre; each button is placed by its own
  * transform, so the fan can flip side without moving the anchor. */

@@ -55,7 +55,7 @@ import { useDraw, drawBridge, useConfirm, toast } from './lib/ui';
 import { initNative } from './lib/native';
 import { isWebGLAvailable } from './lib/webgl';
 import { orbitZoom } from './lib/renderBridge';
-import { useI18n } from './lib/i18n';
+import { useI18n, t as translate } from './lib/i18n';
 
 // Heavy modules loaded on demand to keep the 2D-first experience light:
 //  - Scene3D pulls in three + drei + postprocessing
@@ -286,6 +286,13 @@ export default function App() {
         return true;
       }
       return false;
+    }, () => {
+      // Back in the foreground. A Play promo code is redeemed in the Play Store
+      // app, so the grant lands while we are backgrounded and nothing else would
+      // ever tell us about it.
+      void useProStore.getState().recheck().then((unlocked) => {
+        if (unlocked) toast.success(translate('Pro unlocked — thank you!'));
+      });
     });
     // Resolve the Pro entitlement (billing on Android, mock on web).
     void useProStore.getState().refresh().finally(() => {
@@ -365,7 +372,7 @@ export default function App() {
       ? null // the scale-calibration card takes over the top-centre slot
       : t('Measure a wall, then enter its real length to scale the whole drawing · Esc to clear')
     : tool === 'select' && walls.length === 0
-    ? t('Pick a tool on the left to start — try ✏️ Draw walls')
+    ? t('Pick a tool to start — try ✏️ Draw walls')
     : null;
   const pendingEntry = pendingFurnitureType ? CATALOG_BY_TYPE[pendingFurnitureType] : undefined;
   const activeBuildTool = TOOLS.find(
