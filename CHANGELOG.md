@@ -5,6 +5,73 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.18.1 - 2026-08-02 (versionCode 11801)
+
+From beta test report 5/15 (LiberTag, French locale). Two reported problems and
+one reported "missing feature" that turned out to be the same bug as the second.
+
+### Dialogs no longer get clipped off the screen with no way to scroll
+
+*"The page for idea is static, no scroll."*
+
+Measured on a 390×844 phone: the tips panel rendered **923px tall in an 844px
+viewport**, with `max-height: none` and a `.modal-body` of `overflow-y: visible`.
+The backdrop is `position: fixed` and centres its child, so **40px was cut off
+the top and 40px off the bottom, and neither was reachable** — no scrolling, no
+dragging, nothing.
+
+Only `.settings` and `.shopping-list` had ever set a height cap, each with its
+own copy of the rule. That cap now lives on the `.modal` shell itself, so About,
+Tips, Import, the Pro sheet and the confirm dialog are all fixed at once and no
+future dialog can be added without it. The two per-variant copies are gone.
+
+### …which is also why pinch-to-zoom was reported missing
+
+*"Zoom by pinching like pictures."*
+
+Pinch-to-zoom already works — `Canvas2D` has handled two-finger pinch zoom and
+pan since long before this report. The reason the tester didn't know is that the
+row documenting it, *"Pinch to zoom; drag two fingers to pan the plan"*, is the
+**last row of the Editing section** — precisely the content that fell off the
+bottom of the unscrollable panel. Their screenshot is clipped mid-sentence on
+the first row of that very section. One bug, two symptoms.
+
+No code change was needed for the gesture itself.
+
+### Photo mode no longer runs two 3D renderers at once
+
+*"The app was blocked when I tried photo mode."*
+
+Photo mode covers the whole screen with its **own** WebGL canvas, but the live
+3D scene stayed mounted underneath it. Measured: opening photo mode took the
+page from **1 canvas / 3 WebGL contexts to 2 canvases / 6**. Two full renderers
+— each with its own shadow maps and post-processing chain, one of them a path
+tracer — on a phone GPU.
+
+The 3D scene is now released while photo mode is open, so only one heavy
+renderer is ever live; it remounts from cache when photo mode closes. Verified
+end to end: 1 canvas before, 1 during, 1 after, with the scene back.
+
+This is very likely the same resource exhaustion behind the "renders briefly,
+then goes blank" report fixed defensively in 1.18.0 — that release recovered
+from a dropped context, this one removes a large cause of the drop.
+
+### Testing
+
+`tests/smoke.mjs` now walks every dialog reachable from the phone overflow menu
+at 390×740 — deliberately shorter than a real phone, so a dialog that only just
+fits today is still caught when a string grows — and asserts each one is fully
+on screen and scrolls if its content overflows. Verified by reverting the fix:
+the suite fails, and not only on the new checks — an existing check breaks too,
+with Playwright reporting the dialog's button as *"outside of the viewport"*.
+
+### Known, not fixed here
+
+Photo mode's own UI is still hard-coded English (`Photo mode`, `Dollhouse`,
+`Close`, `Save photo`, and both hint lines) while the rest of the app is
+translated into 12 languages. The reporter is a French user, so they met an
+otherwise-localised app that switches to English on this screen.
+
 ## 1.18.0 - 2026-08-02 (versionCode 11800)
 
 ### The 3D view no longer dies permanently

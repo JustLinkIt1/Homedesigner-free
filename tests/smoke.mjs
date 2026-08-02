@@ -1374,6 +1374,77 @@ await recoveryPage.close();
   await tp.close();
 }
 
+// ---- dialogs must fit a phone, or scroll ------------------------------------
+// A tester reported the tips panel "static, no scroll". Measured: 923px of
+// content in an 844px viewport, `max-height: none`, body `overflow-y: visible`
+// — the backdrop centres its child, so 40px was lost off the TOP and 40px off
+// the BOTTOM with no way to reach either. The rows that fell off the bottom
+// were the ones documenting pinch-to-zoom, so the same tester also asked for a
+// gesture the app had shipped all along.
+//
+// This walks every dialog reachable on a phone and asserts each one either fits
+// or scrolls. It runs at 390x740 — deliberately shorter than a real phone, so a
+// dialog that only just fits today still gets caught when a string grows.
+{
+  const dg = await browser.newPage({
+    viewport: { width: 390, height: 740 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
+  });
+  await dg.goto(BASE);
+  await dg.evaluate(() => {
+    localStorage.setItem('homedesigner.tour.v1', 'done');
+    localStorage.setItem('homedesigner.tips.v1', 'dismissed');
+  });
+  await dg.reload({ waitUntil: 'networkidle' });
+  await dg.locator('.tpl-card', { hasText: 'Start with a room' }).click();
+  await dg.waitForSelector('.toolbar', { timeout: 20000 });
+  await dg.locator('.coach-skip').click().catch(() => {});
+
+  /** Open a dialog from the toolbar overflow and measure how it fits. */
+  const openAndMeasure = async (label) => {
+    await dg.locator('button[aria-label="More"]').first().click();
+    await dg.waitForTimeout(200);
+    const hit = await dg.evaluate((needle) => {
+      const item = [...document.querySelectorAll('[role="menuitem"]')]
+        .find((b) => (b.textContent || '').trim().startsWith(needle));
+      if (!item) return false;
+      item.click();
+      return true;
+    }, label);
+    if (!hit) return null;
+    await dg.waitForSelector('.modal', { timeout: 5000 });
+    await dg.waitForTimeout(250);
+    const m = await dg.evaluate(() => {
+      const el = document.querySelector('.modal');
+      const body = el?.querySelector('.modal-body');
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return {
+        // Any part of the panel outside the viewport is unreachable, because
+        // the backdrop is position:fixed and does not scroll.
+        clipped: r.top < -1 || r.bottom > window.innerHeight + 1,
+        // If content exceeds the body box, the body itself must be scrollable.
+        overflows: body ? body.scrollHeight > body.clientHeight + 1 : false,
+        scrollable: body ? /auto|scroll/.test(getComputedStyle(body).overflowY) : false,
+      };
+    });
+    await dg.keyboard.press('Escape');
+    await dg.waitForTimeout(250);
+    return m;
+  };
+
+  for (const label of ['Settings', 'Tips', 'About']) {
+    const m = await openAndMeasure(label);
+    if (!m) {
+      check(`dialog "${label}" is reachable from the phone overflow menu`, false);
+      continue;
+    }
+    check(`dialog "${label}": no part of it is clipped off-screen`, !m.clipped, JSON.stringify(m));
+    check(`dialog "${label}": overflowing content can be scrolled`,
+      !m.overflows || m.scrollable, JSON.stringify(m));
+  }
+  await dg.close();
+}
+
 // ---- touch selection ring --------------------------------------------------
 // Selecting on a phone used to slide the full-height properties panel over the
 // plan, hiding the object being edited. The ring replaces that; the panel must

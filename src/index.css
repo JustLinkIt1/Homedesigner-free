@@ -2334,6 +2334,30 @@ button.brand:hover .brand-name {
   max-width: 100%;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+  /* Every dialog is capped to the viewport and scrolls its own body. Without
+     this the panel simply grew past a short screen: the backdrop is
+     `position: fixed` and centres its child, so a 923px dialog on an 844px
+     phone lost 40px off the TOP and 40px off the BOTTOM with no way to reach
+     either. A tester hit it on the tips panel — where the clipped-off rows
+     happened to be the ones documenting pinch-to-zoom, so they reported the
+     gesture as missing when it had shipped all along.
+     Only `.settings` and `.shopping-list` used to carry this; it belongs on
+     the shell so no dialog can ever be added without it. */
+  max-height: calc(100dvh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+.modal-head,
+.modal-foot {
+  flex: 0 0 auto;
+}
+.modal-body {
+  /* min-height:0 is what actually lets a flex child shrink below its content
+     height — without it the body refuses to shrink and nothing scrolls. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .modal-head {
   display: flex;
@@ -2660,21 +2684,9 @@ button.brand:hover .brand-name {
   color: var(--brand);
 }
 
-/* Settings */
+/* Settings — the cap/flex/scroll that used to live here is now on `.modal`. */
 .modal.settings {
   max-width: 440px;
-  max-height: calc(100dvh - 40px);
-  display: flex;
-  flex-direction: column;
-}
-.modal.settings .modal-body {
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-.modal.settings .modal-head,
-.modal.settings .modal-foot {
-  flex: 0 0 auto;
 }
 .settings-body section + section {
   margin-top: 18px;
@@ -2814,14 +2826,9 @@ button.brand:hover .brand-name {
 /* Shopping list */
 .modal.shopping-list {
   max-width: 560px;
-  display: flex;
-  flex-direction: column;
+  /* Deliberately shorter than the shell's cap: a long parts list reads better
+     as an obviously-scrollable panel than as a full-height wall of rows. */
   max-height: min(78vh, 680px);
-}
-.bom-body {
-  overflow: auto;
-  flex: 1;
-  min-height: 0;
 }
 .bom-table {
   width: 100%;

@@ -471,6 +471,16 @@ export default function App() {
                 {t('Go to 2D plan')}
               </button>
             </div>
+          ) : photoMode ? (
+            // Photo mode covers the whole screen with its OWN WebGL canvas, so
+            // keeping this one alive underneath bought nothing and cost a
+            // second live context: measured 1 canvas / 3 contexts → 2 / 6 the
+            // moment photo mode opened. On a phone that doubling is what a
+            // tester hit as "the app was blocked when I tried photo mode", and
+            // it is the same VRAM pressure that makes a mobile GPU drop the
+            // context outright. Releasing it here means one heavy renderer at a
+            // time; the scene remounts from cache when photo mode closes.
+            <div className="stage-loading"><span className="spin" /></div>
           ) : (
             <Suspense fallback={<div className="stage-loading"><span className="spin" /> {t('Loading 3D…')}</div>}>
               <Scene3D
