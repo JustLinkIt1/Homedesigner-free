@@ -1650,6 +1650,129 @@ await recoveryPage.close();
   check('drag-draw: panning with select never creates a wall',
     panned.wallsAfter === panned.wallsBefore, JSON.stringify(panned));
 
+  // ---- trace mode ----------------------------------------------------------
+  // An imported plan has x/y/scale/rotation, but until trace mode there was no
+  // way to set x/y at all: it sat wherever the import dropped it, with only a
+  // numeric cm/px field and a rotation slider. The tool is hidden until a plan
+  // exists, and while it is armed one finger moves the PLAN, not the viewport.
+  {
+    const hiddenFirst = await dd.evaluate(() => {
+      const st = window.useDesign.getState();
+      st.setBackground(null);
+      return st.background === null;
+    });
+    await dd.waitForTimeout(200);
+    check('trace: no imported plan, so no Position plan tool', hiddenFirst);
+
+    const traced = await dd.evaluate(async () => {
+      const st = window.useDesign.getState();
+      // A 1x1 transparent PNG is enough — nothing here depends on the pixels.
+      st.setBackground({
+        src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+        imgWidth: 800, imgHeight: 600, x: 0, y: 0, scale: 2, rotation: 0, opacity: 0.5,
+      });
+      st.setTool('trace');
+      await new Promise((r) => setTimeout(r, 250));
+
+      const content = document.querySelector('.konvajs-content');
+      const rect = content.getBoundingClientRect();
+      const mk = (id, cx, cy) => new Touch({
+        identifier: id, target: content, clientX: cx, clientY: cy,
+        screenX: cx, screenY: cy, pageX: cx, pageY: cy,
+      });
+      const fire = (t, tt, ch) => content.dispatchEvent(new TouchEvent(t, {
+        bubbles: true, cancelable: true, touches: tt, targetTouches: tt, changedTouches: ch,
+      }));
+      const bg = () => ({ ...window.useDesign.getState().background });
+      const panNow = () => ({ ...window.useDesign.getState().pan });
+
+      // One finger drags the plan, and must NOT pan the viewport.
+      const before = bg();
+      const panBefore = panNow();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      let t0 = mk(41, x, y);
+      fire('touchstart', [t0], [t0]);
+      for (let i = 1; i <= 6; i++) {
+        t0 = mk(41, x + i * 10, y + i * 6);
+        fire('touchmove', [t0], [t0]);
+        await new Promise((r) => setTimeout(r, 16));
+      }
+      fire('touchend', [], [t0]);
+      await new Promise((r) => setTimeout(r, 150));
+      const afterDrag = bg();
+      const panAfterDrag = panNow();
+
+      // Two fingers scale and rotate the plan.
+      const s0 = bg();
+      let a = mk(1, x - 50, y);
+      let b = mk(2, x + 50, y);
+      fire('touchstart', [a, b], [a, b]);
+      for (let i = 1; i <= 6; i++) {
+        const r0 = 50 + i * 10;
+        const ang = (i * 5 * Math.PI) / 180;
+        a = mk(1, x - r0 * Math.cos(ang), y - r0 * Math.sin(ang));
+        b = mk(2, x + r0 * Math.cos(ang), y + r0 * Math.sin(ang));
+        fire('touchmove', [a, b], [a, b]);
+        await new Promise((r) => setTimeout(r, 16));
+      }
+      fire('touchend', [b], [a]);
+      fire('touchend', [], [b]);
+      await new Promise((r) => setTimeout(r, 150));
+      const afterPinch = bg();
+
+      // Locking must freeze it against any further gesture.
+      window.useDesign.getState().updateBackground({ locked: true });
+      await new Promise((r) => setTimeout(r, 120));
+      const locked0 = bg();
+      let t1 = mk(51, x, y);
+      fire('touchstart', [t1], [t1]);
+      for (let i = 1; i <= 5; i++) {
+        t1 = mk(51, x + i * 20, y);
+        fire('touchmove', [t1], [t1]);
+        await new Promise((r) => setTimeout(r, 16));
+      }
+      fire('touchend', [], [t1]);
+      await new Promise((r) => setTimeout(r, 150));
+      const lockedAfter = bg();
+
+      return {
+        before, afterDrag, panBefore, panAfterDrag,
+        s0, afterPinch, locked0, lockedAfter,
+        walls: window.useDesign.getState().walls.length,
+      };
+    });
+
+    const moved = Math.hypot(traced.afterDrag.x - traced.before.x, traced.afterDrag.y - traced.before.y);
+    check('trace: one finger drags the imported plan', moved > 1, JSON.stringify({ before: traced.before, after: traced.afterDrag }));
+    check('trace: dragging the plan does not pan the viewport',
+      traced.panAfterDrag.x === traced.panBefore.x && traced.panAfterDrag.y === traced.panBefore.y,
+      JSON.stringify({ before: traced.panBefore, after: traced.panAfterDrag }));
+    check('trace: pinching scales the plan',
+      Math.abs(traced.afterPinch.scale - traced.s0.scale) > 1e-3,
+      JSON.stringify({ from: traced.s0.scale, to: traced.afterPinch.scale }));
+    check('trace: twisting rotates the plan',
+      Math.abs(traced.afterPinch.rotation - traced.s0.rotation) > 0.5,
+      JSON.stringify({ from: traced.s0.rotation, to: traced.afterPinch.rotation }));
+    const nudged = Math.hypot(traced.lockedAfter.x - traced.locked0.x, traced.lockedAfter.y - traced.locked0.y);
+    check('trace: a locked plan cannot be nudged', nudged < 1e-9, `moved ${nudged}`);
+    // Positioning a plan must never leave stray geometry behind.
+    check('trace: positioning the plan draws nothing', traced.walls === (await dd.evaluate(
+      () => window.useDesign.getState().walls.length)));
+
+    // The tool only exists while a plan does.
+    const dockNow = await dd.evaluate(async () => {
+      window.useDesign.getState().setTool('select');
+      await new Promise((r) => setTimeout(r, 150));
+      const withPlan = !!document.querySelector('[aria-label="Position plan"]');
+      window.useDesign.getState().setBackground(null);
+      await new Promise((r) => setTimeout(r, 200));
+      return { withPlan, withoutPlan: !!document.querySelector('[aria-label="Position plan"]') };
+    });
+    check('trace: the tool is offered once a plan is loaded', dockNow.withPlan, JSON.stringify(dockNow));
+    check('trace: the tool disappears with the plan', !dockNow.withoutPlan, JSON.stringify(dockNow));
+  }
+
   await dd.close();
 }
 

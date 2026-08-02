@@ -28,7 +28,9 @@ import { useI18n } from '../../lib/i18n';
 import { planCapture } from '../../lib/renderBridge';
 import FurnitureSymbol from './FurnitureSymbol';
 import { buildSnapElements, nearestSnap, lockToAngle, type SnapKind, type GuideLine } from '../../lib/snapping';
-import { isDragDrawTool, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm } from '../../lib/drawGesture';
+import {
+  isDragDrawTool, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan,
+} from '../../lib/drawGesture';
 import { kitchenRunUnits, RUN_UNIT } from '../../lib/kitchenRun';
 import { computeWallPolygons } from '../../lib/wallGeometry';
 import { isFence, isHalfWall } from '../../lib/fence';
@@ -121,6 +123,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     updateWall: st.updateWall,
     addRoom: st.addRoom,
     addKitchenRun: st.addKitchenRun,
+    updateBackground: st.updateBackground,
     addFurniture: st.addFurniture,
     updateFurniture: st.updateFurniture,
     addOpening: st.addOpening,
@@ -487,7 +490,35 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     return {
       dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
       center: { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 },
+      // Trace mode rotates the imported plan by the twist between the fingers.
+      angle: Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX),
     };
+  };
+
+  // --- trace mode: position the imported plan ------------------------------
+  // The plan has x/y/scale/rotation, but until now x/y could not be set at all:
+  // it was pinned wherever the import dropped it, with only a numeric cm/px
+  // field and a rotation slider to work with. Trace mode makes it draggable.
+  const traceOne = useRef<{ x: number; y: number } | null>(null);
+  const tracePinch = useRef<{ dist: number; center: Point; angle: number } | null>(null);
+  const traceArmed = tool === 'trace' && !!background && !background.locked;
+
+  /** Client px → plan cm. */
+  const clientToWorld = (cx: number, cy: number): Point | null => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    const r = stage.container().getBoundingClientRect();
+    return {
+      x: (cx - r.left - panRef.current.x) / zoomRef.current,
+      y: (cy - r.top - panRef.current.y) / zoomRef.current,
+    };
+  };
+
+  const nudgePlan = (about: Point, k: number, dDeg: number, dx: number, dy: number) => {
+    // Read live: a fast gesture fires many moves between renders.
+    const bg = useDesign.getState().background;
+    if (!bg || bg.locked) return;
+    s.updateBackground(transformPlan(bg, about, k, dDeg, dx, dy));
   };
 
   // Move the plan imperatively during a pan gesture: nudge the Konva layer
@@ -647,6 +678,13 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     const isMiddle = e.evt.button === 1;
     const p = worldPointer();
     if (!p) return;
+    // Desktop gets the same positioning gesture: press and drag the plan.
+    // Scale and rotation stay on the numeric field and slider, which are more
+    // precise with a mouse than a two-finger twist would be.
+    if (traceArmed && e.evt.button === 0) {
+      traceOne.current = { x: e.evt.clientX, y: e.evt.clientY };
+      return;
+    }
     if (tool === 'pan' || isMiddle || e.evt.button === 2 || spacePan) {
       setIsPanning(true);
       // Anchor immediately so the very first mousemove already pans.
@@ -814,9 +852,16 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       // A second finger means zoom, not draw. Abandon the in-progress point —
       // `touchMoved` is already true above, so the release cannot commit one.
       if (drawDragRef.current) endDrawDrag();
+      if (traceArmed) {
+        // Two fingers scale and rotate the PLAN, not the viewport.
+        tracePinch.current = twoFinger(t);
+        traceOne.current = null;
+        pinch.current = null;
+      }
     } else if (t.length === 1) {
       touchMoved.current = false;
       touchStartPt.current = { x: t[0].clientX, y: t[0].clientY };
+      if (traceArmed) traceOne.current = { x: t[0].clientX, y: t[0].clientY };
       // A drag that starts on empty canvas (or the traced background plan)
       // pans the viewport — but NOT with a drawing tool armed, where one
       // finger draws and panning moves to two. Lock mode extends the pan
@@ -867,6 +912,32 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
 
   const onTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
     const t = e.evt.touches;
+    // Trace mode moves the PLAN, so it takes both gestures before the normal
+    // pan/pinch/draw handling can claim them.
+    if (traceArmed && t.length === 2 && tracePinch.current) {
+      e.evt.preventDefault();
+      const next = twoFinger(t);
+      const prev = tracePinch.current;
+      const about = clientToWorld(next.center.x, next.center.y);
+      if (about) {
+        const k = next.dist / (prev.dist || next.dist);
+        const dDeg = ((next.angle - prev.angle) * 180) / Math.PI;
+        const z = zoomRef.current;
+        nudgePlan(about, k, dDeg, (next.center.x - prev.center.x) / z, (next.center.y - prev.center.y) / z);
+      }
+      tracePinch.current = next;
+      return;
+    }
+    if (traceArmed && t.length === 1 && traceOne.current) {
+      e.evt.preventDefault();
+      const cur = { x: t[0].clientX, y: t[0].clientY };
+      const z = zoomRef.current;
+      nudgePlan({ x: 0, y: 0 }, 1, 0, (cur.x - traceOne.current.x) / z, (cur.y - traceOne.current.y) / z);
+      traceOne.current = cur;
+      touchMoved.current = true;
+      cancelLongPress();
+      return;
+    }
     if (t.length === 2 && pinch.current) {
       e.evt.preventDefault();
       const stage = stageRef.current;
@@ -955,6 +1026,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       pinch.current = null;
       touchStartPt.current = null;
       touchPanEligible.current = false;
+      traceOne.current = null;
+      tracePinch.current = null;
       endPan();
     }
   };
@@ -976,6 +1049,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       touchMoved.current = false;
       lastPan.current = null;
       setIsPanning(false);
+      traceOne.current = null;
+      tracePinch.current = null;
       // Without this a snatched gesture leaves the preview frozen on screen,
       // rubber-banding to a finger that is no longer there.
       endDrawDrag();
@@ -1011,7 +1086,17 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   // in its temporal dead zone until this point.
   publishRef.current = publishCursor;
 
-  const onMouseMove = () => {
+  const onMouseMove = (e?: Konva.KonvaEventObject<MouseEvent>) => {
+    if (traceArmed && traceOne.current && e) {
+      const z = zoomRef.current;
+      nudgePlan(
+        { x: 0, y: 0 }, 1, 0,
+        (e.evt.clientX - traceOne.current.x) / z,
+        (e.evt.clientY - traceOne.current.y) / z,
+      );
+      traceOne.current = { x: e.evt.clientX, y: e.evt.clientY };
+      return;
+    }
     // While panning, the layer is moving imperatively — a cursor-snap setState
     // here would re-render and fight (reset) that live position. Skip it.
     if (lastPan.current) return;
@@ -1020,12 +1105,14 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     publishCursor(p);
   };
 
-  const onStageMouseMove = () => {
-    onMouseMove();
+  const onStageMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    onMouseMove(e);
   };
   const endPan = () => {
     setIsPanning(false);
     lastPan.current = null;
+    // A trace drag ends the same way a pan does.
+    traceOne.current = null;
     const layer = layerRef.current;
     if (!layer) return;
     layer.listening(true); // restore hit detection now the gesture is over

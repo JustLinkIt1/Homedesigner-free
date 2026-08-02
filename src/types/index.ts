@@ -157,6 +157,9 @@ export interface BackgroundPlan {
   scale: number;
   rotation: number;
   opacity: number;
+  /** Frozen against the trace tool, so a stray tap can't undo a careful
+   *  alignment. Purely a guard on trace mode — nothing else moves the plan. */
+  locked?: boolean;
 }
 
 export type ToolMode =
@@ -169,7 +172,9 @@ export type ToolMode =
   | 'kitchen'
   | 'pan'
   | 'erase'
-  | 'measure';
+  | 'measure'
+  /** Position/scale/rotate an imported plan. Only offered once one is loaded. */
+  | 'trace';
 
 /** A storey: its own walls/rooms/furniture, stacked at `elevation` (cm). */
 /** NB: the roof lives on FloorInfo, NOT FloorGeom. FloorGeom is rebuilt from

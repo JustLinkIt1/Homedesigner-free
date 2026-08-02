@@ -27,14 +27,22 @@ export function isDragDrawTool(tool: string): boolean {
 }
 
 /**
+ * Tools where one finger is spoken for and panning moves to two: the drawing
+ * tools, plus `trace`, where one finger drags the imported plan itself.
+ */
+export function claimsOneFinger(tool: string): boolean {
+  return isDragDrawTool(tool) || tool === 'trace';
+}
+
+/**
  * Whether a one-finger touch should pan the viewport.
  *
  * Previously this was `moveLock || targetIsStage || targetIsBgPlan`, which made
  * a drag on empty canvas a pan with EVERY tool — so drawing by dragging was
- * impossible. A drawing tool now claims one finger, and panning moves to two.
+ * impossible. A tool that claims one finger now suppresses it.
  *
- * Note this overrides `moveLock` for drawing tools: lock mode exists to stop
- * objects being moved by accident, not to stop you drawing.
+ * Note this overrides `moveLock`: lock mode exists to stop objects being moved
+ * by accident, not to stop you drawing.
  */
 export function shouldPanOnTouch(o: {
   tool: string;
@@ -42,8 +50,44 @@ export function shouldPanOnTouch(o: {
   targetIsStage: boolean;
   targetIsBgPlan: boolean;
 }): boolean {
-  if (isDragDrawTool(o.tool)) return false;
+  if (claimsOneFinger(o.tool)) return false;
   return o.moveLock || o.targetIsStage || o.targetIsBgPlan;
+}
+
+/**
+ * The similarity transform that keeps whatever is under a two-finger pinch
+ * under it while the imported plan is scaled and rotated.
+ *
+ * Konva rotates the image about its own top-left origin, so the origin has to
+ * move too: scaling and rotating it about the same centre does exactly that,
+ * because a uniform scale and a rotation about a common point compose into one
+ * similarity transform of the whole shape.
+ */
+export function transformPlan(
+  plan: { x: number; y: number; scale: number; rotation: number },
+  about: { x: number; y: number },
+  k: number,
+  dDeg: number,
+  dx: number,
+  dy: number,
+): { x: number; y: number; scale: number; rotation: number } {
+  let ox = about.x + (plan.x - about.x) * k;
+  let oy = about.y + (plan.y - about.y) * k;
+  if (dDeg) {
+    const r = (dDeg * Math.PI) / 180;
+    const cos = Math.cos(r);
+    const sin = Math.sin(r);
+    const vx = ox - about.x;
+    const vy = oy - about.y;
+    ox = about.x + vx * cos - vy * sin;
+    oy = about.y + vx * sin + vy * cos;
+  }
+  return {
+    x: ox + dx,
+    y: oy + dy,
+    scale: Math.max(0.01, plan.scale * k),
+    rotation: (((plan.rotation + dDeg) % 360) + 360) % 360,
+  };
 }
 
 /**

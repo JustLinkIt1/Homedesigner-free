@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
-import { TOOLS, OPENINGS } from '../data/tools';
+import { TOOLS, visibleTools, OPENINGS } from '../data/tools';
 import { tapLight } from '../lib/haptics';
 import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
@@ -13,17 +13,19 @@ import type { ToolMode } from '../types';
 // from the Build tab. Replaces the floating 7-icon dock on phones so the canvas
 // stays clear and nothing runs off-screen (Planner-5D-style grouping). Tapping a
 // tool arms it and dismisses the sheet so you can draw straight away.
-const SHEET_TOOLS = TOOLS.filter((t) => t.id !== 'pan'); // two-finger drag pans on touch
+// Two-finger drag pans on touch, so the Pan tool would only take up space.
+const sheetTools = (hasBackground: boolean) => visibleTools(hasBackground).filter((t) => t.id !== 'pan');
 // 3D build mode supports the floor-drawing tools (walls / rooms / kitchen runs)
 // plus select; measure/erase and wall openings stay 2D-only for now.
 const SHEET_TOOLS_3D = TOOLS.filter((t) => ['select', 'wall', 'halfWall', 'fence', 'room', 'kitchen'].includes(t.id));
 
 export default function BuildSheet({ open, onClose, limited = false }: { open: boolean; onClose: () => void; limited?: boolean }) {
-  const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign(useShallow((s) => ({
+  const { tool, setTool, setPendingFurniture, pendingFurnitureType, hasBackground } = useDesign(useShallow((s) => ({
     tool: s.tool,
     setTool: s.setTool,
     setPendingFurniture: s.setPendingFurniture,
     pendingFurnitureType: s.pendingFurnitureType,
+    hasBackground: !!s.background,
   })));
   const isPro = useProStore((s) => s.isPro);
   const tr = useI18n();
@@ -59,7 +61,7 @@ export default function BuildSheet({ open, onClose, limited = false }: { open: b
       </div>
 
       <div className="bs-grid">
-        {(limited ? SHEET_TOOLS_3D : SHEET_TOOLS).map((t) => {
+        {(limited ? SHEET_TOOLS_3D : sheetTools(hasBackground)).map((t) => {
           const Icon = t.icon;
           const active = tool === t.id && !openingActive;
           return (

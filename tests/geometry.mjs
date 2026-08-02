@@ -31,7 +31,7 @@ export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENC
 export { lockToAngle, ANGLE_LOCK_RAD } from '${sourceRoot}/src/lib/snapping.ts';
 export { spriteBox, spriteReshaped } from '${sourceRoot}/src/lib/spriteFit.ts';
 export { wallDistances } from '${sourceRoot}/src/lib/distanceGuides.ts';
-export { isDragDrawTool, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm } from '${sourceRoot}/src/lib/drawGesture.ts';
+export { isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan } from '${sourceRoot}/src/lib/drawGesture.ts';
 `);
 const out = join(dir, 'bundle.mjs');
 // platform=node so CommonJS-only deps (dxf-parser) resolve via "main";
@@ -48,7 +48,7 @@ const {
   buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
   fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT,
   wallDistances, lockToAngle, ANGLE_LOCK_RAD, spriteBox, spriteReshaped,
-  isDragDrawTool, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm,
+  isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan,
 } = await import(pathToFileURL(out).href);
 
 let fails = 0;
@@ -967,6 +967,71 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   // It is a screen-space gap, so it must shrink in world units as we zoom in.
   check('gesture: readout gap is constant on screen, not in the plan',
     near(Math.abs(readoutOffsetCm({ screenY: 400, zoom: 2 })), Math.abs(mid) / 2, 1e-9));
+}
+
+// ---- trace mode: positioning an imported plan ------------------------------
+// The imported plan has x/y/scale/rotation but no way at all to set x/y — it is
+// pinned at the import origin. Trace mode drags and pinches it, and the pinch
+// has to keep whatever is under the fingers under the fingers.
+{
+  const plan = { x: 100, y: 50, scale: 2, rotation: 0 };
+  // The renderer draws the image from its origin, rotated about that origin, so
+  // "where does an image pixel land" is this composition and nothing else.
+  const project = (p, px, py) => {
+    const r = (p.rotation * Math.PI) / 180;
+    const lx = px * p.scale;
+    const ly = py * p.scale;
+    return {
+      x: p.x + lx * Math.cos(r) - ly * Math.sin(r),
+      y: p.y + lx * Math.sin(r) + ly * Math.cos(r),
+    };
+  };
+  const closeTo = (a, b, tol = 1e-9) => Math.hypot(a.x - b.x, a.y - b.y) <= tol;
+
+  // Pure translation moves every pixel by the same amount.
+  {
+    const out = transformPlan(plan, { x: 0, y: 0 }, 1, 0, 30, -20);
+    const before = project(plan, 40, 60);
+    const after = project(out, 40, 60);
+    check('trace: dragging translates the whole plan',
+      closeTo(after, { x: before.x + 30, y: before.y - 20 }));
+  }
+  // Scaling about the pinch centre must leave the pixel under the fingers put.
+  {
+    const about = project(plan, 25, 35);
+    const out = transformPlan(plan, about, 1.75, 0, 0, 0);
+    check('trace: pinch-to-scale keeps the point under the fingers still',
+      closeTo(project(out, 25, 35), about, 1e-9), JSON.stringify({ about, got: project(out, 25, 35) }));
+    check('trace: pinch-to-scale actually scales', Math.abs(out.scale - 3.5) < 1e-9, `scale ${out.scale}`);
+  }
+  // …and so must rotating about it. This is the case that catches rotating the
+  // image without also carrying its origin around the same centre.
+  {
+    const about = project(plan, 80, 10);
+    const out = transformPlan(plan, about, 1, 37, 0, 0);
+    check('trace: pinch-to-rotate keeps the point under the fingers still',
+      closeTo(project(out, 80, 10), about, 1e-9), JSON.stringify({ about, got: project(out, 80, 10) }));
+    check('trace: pinch-to-rotate actually rotates', Math.abs(out.rotation - 37) < 1e-9, `rot ${out.rotation}`);
+  }
+  // Scale and rotate together, from an already-rotated plan.
+  {
+    const tilted = { x: -40, y: 90, scale: 0.8, rotation: 200 };
+    const about = project(tilted, 12, 96);
+    const out = transformPlan(tilted, about, 0.6, -80, 0, 0);
+    check('trace: combined scale+rotate is still anchored',
+      closeTo(project(out, 12, 96), about, 1e-9), JSON.stringify({ about, got: project(out, 12, 96) }));
+    check('trace: rotation stays within 0..360', out.rotation >= 0 && out.rotation < 360, `rot ${out.rotation}`);
+  }
+  // A pinch that collapses to nothing must not produce a zero/negative scale.
+  {
+    const out = transformPlan(plan, { x: 0, y: 0 }, 0, 0, 0, 0);
+    check('trace: scale can never collapse to zero', out.scale > 0, `scale ${out.scale}`);
+  }
+  // The trace tool owns one finger, exactly like the drawing tools.
+  check('trace: the trace tool claims one finger', claimsOneFinger('trace') === true);
+  check('trace: it is not treated as a drawing tool', isDragDrawTool('trace') === false);
+  check('trace: one finger does not pan while positioning the plan',
+    shouldPanOnTouch({ tool: 'trace', moveLock: false, targetIsStage: true, targetIsBgPlan: false }) === false);
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

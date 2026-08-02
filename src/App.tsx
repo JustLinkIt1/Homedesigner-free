@@ -74,6 +74,7 @@ export default function App() {
     sunTime, setSunTime, lightsOn, setLightsOn,
     kitchenUppers, setKitchenUppers,
     moveLock, setMoveLock,
+    background, updateBackground,
     rotateDesign, deleteById,
   } = useDesign(useShallow((s) => ({
     view: s.view,
@@ -103,6 +104,8 @@ export default function App() {
     kitchenUppers: s.kitchenUppers,
     setKitchenUppers: s.setKitchenUppers,
     moveLock: s.moveLock,
+    background: s.background,
+    updateBackground: s.updateBackground,
     setMoveLock: s.setMoveLock,
     rotateDesign: s.rotateDesign,
     deleteById: s.deleteById,
@@ -514,13 +517,36 @@ export default function App() {
               </button>
             </div>
           )}
+          {/* Trace mode: the imported plan is the thing being manipulated, so
+              it gets the same pill treatment as a draw in progress. */}
+          {view === '2d' && tool === 'trace' && background && (
+            <div className="draw-affordance">
+              <span>
+                {coarsePointer
+                  ? t('Drag the plan to position it · pinch to scale and turn')
+                  : t('Drag the plan to position it')}
+              </span>
+              <label className="draw-toggle" title={t('Stop the plan moving by accident')}>
+                <input
+                  type="checkbox"
+                  checked={!!background.locked}
+                  onChange={(e) => updateBackground({ locked: e.target.checked })}
+                />
+                {t('Lock plan')}
+              </label>
+              <button className="finish-btn" onClick={() => setTool('select')}>
+                ✓ {t('Done')}
+              </button>
+            </div>
+          )}
+
           {drawing && (
             <div className="draw-affordance">
               <span>
                 {coarsePointer
                   ? tool === 'room'
-                    ? t('Tap the first point to close, or finish')
-                    : t('Tap points, then finish')
+                    ? t('Drag or tap · close on the first point, or finish')
+                    : t('Drag or tap to place corners, then finish')
                   : `${tool === 'room' ? t('Click the first point or') : t('Double-click or')} ${t('press Enter to finish')}`}
               </span>
               {/* Exact dimensions in 3D ("beginner to architect"): retype the

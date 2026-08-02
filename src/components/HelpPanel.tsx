@@ -25,10 +25,10 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
     rows: [
       {
         text: 'Click to chain wall points; click a room’s first point to close it',
-        touchText: 'Tap to chain wall points; tap a room’s first point to close it',
+        touchText: 'Press and drag to draw, releasing to drop each corner — a tap works too',
       },
       { keys: ['Enter'], text: 'Finish the current wall chain / room', touchText: 'Tap Finish to end the current wall chain / room' },
-      { keys: ['Esc'], text: 'Cancel drawing (or clear the typed length)', touchText: 'Tap ✕ or tap an empty area to cancel drawing' },
+      { keys: ['Esc'], text: 'Cancel drawing (or clear the typed length)', touchText: 'Tap ✕ to cancel drawing' },
       {
         keys: ['4', '.', '5', 'Enter'],
         text: 'Type a number while drawing to place the next point at that exact length (m or ft)',
@@ -47,7 +47,8 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
       { keys: ['Ctrl', 'A'], text: 'Select all furniture', desktopOnly: true },
       { keys: ['←', '↑', '↓', '→'], text: 'Nudge selected furniture 1 cm (hold Shift for 10 cm)', desktopOnly: true },
       { text: 'Right-click (or long-press on touch) for copy / duplicate / arrange', touchText: 'Long-press an item for copy / duplicate / arrange' },
-      { text: '', touchText: 'Pinch to zoom; drag two fingers to pan the plan' },
+      { text: '', touchText: 'One finger draws; pinch or drag two fingers to zoom and pan' },
+      { text: '', touchText: 'Imported a plan? Pick Position plan to drag, pinch and turn it' },
     ],
   },
   {

@@ -4,17 +4,18 @@ import { DoorOpen, Sofa } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
-import { TOOLS, OPENINGS } from '../data/tools';
+import { visibleTools, OPENINGS } from '../data/tools';
 import { tapLight } from '../lib/haptics';
 import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
 
 export default function ToolDock() {
-  const { tool, setTool, setPendingFurniture, pendingFurnitureType } = useDesign(useShallow((s) => ({
+  const { tool, setTool, setPendingFurniture, pendingFurnitureType, hasBackground } = useDesign(useShallow((s) => ({
     tool: s.tool,
     setTool: s.setTool,
     setPendingFurniture: s.setPendingFurniture,
     pendingFurnitureType: s.pendingFurnitureType,
+    hasBackground: !!s.background,
   })));
   const isPro = useProStore((s) => s.isPro);
   const tr = useI18n();
@@ -40,7 +41,7 @@ export default function ToolDock() {
 
   return (
     <div className="tool-dock">
-      {TOOLS.map((t) => {
+      {visibleTools(hasBackground).map((t) => {
         const Icon = t.icon;
         return (
           <div key={t.id} style={{ display: 'contents' }}>
