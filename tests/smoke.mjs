@@ -1445,6 +1445,214 @@ await recoveryPage.close();
   await dg.close();
 }
 
+// ---- drag-to-draw walls on touch -------------------------------------------
+// Phone users reported 2D wall drawing as hard to use. Cause: setCursor lived
+// only in onMouseMove, Konva routes touchmove to a separate event map, so on a
+// phone `cursor` stayed null and every gated overlay — rubber band, length
+// readout, snap marker, guide line — never rendered. A one-finger drag also
+// panned rather than drawing.
+//
+// Nothing anywhere drove the drawing gesture before this block: the existing
+// "a fence run can be drawn" check calls store.addWall() directly, so both the
+// mouse and touch paths were entirely uncovered.
+{
+  const dd = await browser.newPage({
+    viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
+  });
+  await dd.goto(BASE);
+  await dd.evaluate(() => {
+    localStorage.setItem('homedesigner.tour.v1', 'done');
+    localStorage.setItem('homedesigner.tips.v1', 'dismissed');
+  });
+  await dd.reload({ waitUntil: 'networkidle' });
+  await dd.locator('.tpl-card', { hasText: 'Start with a room' }).click();
+  await dd.waitForSelector('.toolbar', { timeout: 20000 });
+  await dd.locator('.coach-skip').click().catch(() => {});
+  await dd.waitForSelector('.konvajs-content canvas', { timeout: 15000 });
+
+  // One press-drag-release with the wall tool, sampling the live preview
+  // BEFORE the finger lifts — otherwise "it drew a wall" would also pass with
+  // no preview at all, which is exactly the bug.
+  const drag = await dd.evaluate(async () => {
+    const st = window.useDesign.getState();
+    st.setTool('wall');
+    await new Promise((r) => setTimeout(r, 120));
+    const content = document.querySelector('.konvajs-content');
+    const rect = content.getBoundingClientRect();
+    const mk = (cx, cy) => new Touch({
+      identifier: 21, target: content, clientX: cx, clientY: cy,
+      screenX: cx, screenY: cy, pageX: cx, pageY: cy,
+    });
+    const fire = (t, tt, ch) => content.dispatchEvent(new TouchEvent(t, {
+      bubbles: true, cancelable: true, touches: tt, targetTouches: tt, changedTouches: ch,
+    }));
+    const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const stage = () => window.Konva?.stages?.[0] ?? null;
+    const world = (cx, cy) => {
+      const s = window.useDesign.getState();
+      return { x: (cx - rect.left - s.pan.x) / s.zoom, y: (cy - rect.top - s.pan.y) / s.zoom };
+    };
+
+    // Somewhere empty: well inside the stage, away from the starter room.
+    const ax = rect.left + 90;
+    const ay = rect.top + rect.height - 120;
+    const bx = rect.left + 300;
+    const by = ay - 150;
+
+    const panBefore = { ...window.useDesign.getState().pan };
+    const wallsBefore = window.useDesign.getState().walls.length;
+
+    // First corner: a plain tap, which must keep working exactly as before.
+    const t0 = mk(ax, ay);
+    fire('touchstart', [t0], [t0]);
+    fire('touchend', [], [t0]);
+    await frame();
+    const afterTap = window.__draftLen?.() ?? null;
+
+    // Second corner: press at A, drag to B, sample mid-flight, then release.
+    const t1 = mk(ax, ay);
+    fire('touchstart', [t1], [t1]);
+    let midPreview = null;
+    for (let i = 1; i <= 8; i++) {
+      const j = mk(ax + ((bx - ax) * i) / 8, ay + ((by - ay) * i) / 8);
+      fire('touchmove', [j], [j]);
+      await frame();
+      if (i === 6) {
+        const s = stage();
+        const readout = s?.findOne('.draft-readout');
+        const rubber = s?.findOne('.draft-rubber');
+        midPreview = {
+          konva: !!s,
+          readout: readout ? readout.text() : null,
+          rubberPts: rubber ? rubber.points().length : 0,
+          wallsSoFar: window.useDesign.getState().walls.length,
+          panNow: { ...window.useDesign.getState().pan },
+        };
+      }
+    }
+    const tEnd = mk(bx, by);
+    fire('touchend', [], [tEnd]);
+    await frame();
+
+    const target = world(bx, by);
+    return {
+      afterTap,
+      midPreview,
+      panBefore,
+      panAfter: { ...window.useDesign.getState().pan },
+      wallsBefore,
+      target,
+    };
+  });
+
+  // The preview: this is the check that fails outright before the fix, because
+  // DraftView never renders its Text when `cursor` is null.
+  check('drag-draw: Konva is reachable for inspection', drag.midPreview?.konva === true);
+  check('drag-draw: a live length readout follows the finger mid-drag',
+    /\d/.test(drag.midPreview?.readout ?? ''), JSON.stringify(drag.midPreview));
+  check('drag-draw: the rubber band reaches the finger mid-drag',
+    (drag.midPreview?.rubberPts ?? 0) >= 4, `points ${drag.midPreview?.rubberPts}`);
+  // Drawing, not panning.
+  check('drag-draw: dragging draws instead of panning the viewport',
+    drag.midPreview?.panNow.x === drag.panBefore.x && drag.midPreview?.panNow.y === drag.panBefore.y,
+    JSON.stringify({ before: drag.panBefore, during: drag.midPreview?.panNow }));
+  check('drag-draw: nothing is committed until the finger lifts',
+    drag.midPreview?.wallsSoFar === drag.wallsBefore);
+
+  // Finish and confirm the wall landed where the finger was RELEASED, not
+  // where it pressed — the whole point of the gesture.
+  await dd.locator('.finish-btn').click();
+  await dd.waitForTimeout(300);
+  const made = await dd.evaluate((t) => {
+    const ws = window.useDesign.getState().walls;
+    const w = ws[ws.length - 1];
+    return { count: ws.length, end: w ? w.end : null, start: w ? w.start : null, t };
+  }, drag.target);
+  const near = (p, q, tol) => p && q && Math.hypot(p.x - q.x, p.y - q.y) <= tol;
+  check('drag-draw: a wall is committed on finish', made.count > drag.wallsBefore, JSON.stringify(made));
+  // Snapping can pull the corner onto a guide, so this is a generous radius —
+  // it is asserting "the release point", not exact coordinates.
+  check('drag-draw: the wall ends where the finger was released, not where it pressed',
+    near(made.end, made.t, 90) || near(made.start, made.t, 90), JSON.stringify(made));
+
+  // Regression: two fingers must still zoom, and must never place a point.
+  const pinched = await dd.evaluate(async () => {
+    const st = window.useDesign.getState();
+    st.setTool('wall');
+    await new Promise((r) => setTimeout(r, 100));
+    const content = document.querySelector('.konvajs-content');
+    const rect = content.getBoundingClientRect();
+    const mk = (id, cx, cy) => new Touch({
+      identifier: id, target: content, clientX: cx, clientY: cy,
+      screenX: cx, screenY: cy, pageX: cx, pageY: cy,
+    });
+    const fire = (t, tt, ch) => content.dispatchEvent(new TouchEvent(t, {
+      bubbles: true, cancelable: true, touches: tt, targetTouches: tt, changedTouches: ch,
+    }));
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const z0 = window.useDesign.getState().zoom;
+    const wallsBefore = window.useDesign.getState().walls.length;
+    let a = mk(1, cx - 40, cy);
+    let b = mk(2, cx + 40, cy);
+    fire('touchstart', [a, b], [a, b]);
+    for (let i = 1; i <= 5; i++) {
+      a = mk(1, cx - 40 - i * 12, cy);
+      b = mk(2, cx + 40 + i * 12, cy);
+      fire('touchmove', [a, b], [a, b]);
+      await new Promise((r) => setTimeout(r, 16));
+    }
+    fire('touchend', [b], [a]);
+    fire('touchend', [], [b]);
+    await new Promise((r) => setTimeout(r, 200));
+    const s = window.useDesign.getState();
+    return { z0, z1: s.zoom, wallsBefore, wallsAfter: s.walls.length, draftGrew: false };
+  });
+  check('drag-draw: two fingers still zoom while the wall tool is armed',
+    Math.abs(pinched.z1 - pinched.z0) > 1e-6, JSON.stringify(pinched));
+  check('drag-draw: a pinch never commits a point',
+    pinched.wallsAfter === pinched.wallsBefore, JSON.stringify(pinched));
+
+  // Regression: the select tool must still pan on a one-finger drag.
+  const panned = await dd.evaluate(async () => {
+    const st = window.useDesign.getState();
+    st.setTool('select');
+    st.clearSelection();
+    await new Promise((r) => setTimeout(r, 100));
+    const content = document.querySelector('.konvajs-content');
+    const rect = content.getBoundingClientRect();
+    const mk = (cx, cy) => new Touch({
+      identifier: 31, target: content, clientX: cx, clientY: cy,
+      screenX: cx, screenY: cy, pageX: cx, pageY: cy,
+    });
+    const fire = (t, tt, ch) => content.dispatchEvent(new TouchEvent(t, {
+      bubbles: true, cancelable: true, touches: tt, targetTouches: tt, changedTouches: ch,
+    }));
+    const x = rect.left + 60;
+    const y = rect.top + 60;
+    const before = { ...window.useDesign.getState().pan };
+    const wallsBefore = window.useDesign.getState().walls.length;
+    const t0 = mk(x, y);
+    fire('touchstart', [t0], [t0]);
+    for (let i = 1; i <= 6; i++) {
+      const j = mk(x + i * 15, y + i * 10);
+      fire('touchmove', [j], [j]);
+      await new Promise((r) => setTimeout(r, 16));
+    }
+    fire('touchend', [], [mk(x + 90, y + 60)]);
+    await new Promise((r) => setTimeout(r, 250));
+    const s = window.useDesign.getState();
+    return { before, after: { ...s.pan }, wallsBefore, wallsAfter: s.walls.length };
+  });
+  check('drag-draw: the select tool still pans on a one-finger drag',
+    Math.abs(panned.after.x - panned.before.x) + Math.abs(panned.after.y - panned.before.y) > 1,
+    JSON.stringify(panned));
+  check('drag-draw: panning with select never creates a wall',
+    panned.wallsAfter === panned.wallsBefore, JSON.stringify(panned));
+
+  await dd.close();
+}
+
 // ---- touch selection ring --------------------------------------------------
 // Selecting on a phone used to slide the full-height properties panel over the
 // plan, hiding the object being edited. The ring replaces that; the panel must

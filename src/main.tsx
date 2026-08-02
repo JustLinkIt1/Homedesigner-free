@@ -31,6 +31,13 @@ initTheme();
 // namespace) is deliberately not part of any public API.
 if (import.meta.env.DEV) {
   (window as unknown as { useDesign: typeof useDesign }).useDesign = useDesign;
+  // The 2D editor draws into a canvas, so its live preview (rubber band, snap
+  // marker, length readout) leaves no DOM for the smoke suite to assert on.
+  // Exposing Konva lets it look those nodes up by name. Dev-only: this is a
+  // test seam, not something the shipped app should hand out.
+  void import('konva').then((m) => {
+    (window as unknown as { Konva: unknown }).Konva = m.default ?? m;
+  });
 }
 
 if (!completedGooglePopup) {

@@ -28,6 +28,7 @@ import { useI18n } from '../../lib/i18n';
 import { planCapture } from '../../lib/renderBridge';
 import FurnitureSymbol from './FurnitureSymbol';
 import { buildSnapElements, nearestSnap, lockToAngle, type SnapKind, type GuideLine } from '../../lib/snapping';
+import { isDragDrawTool, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm } from '../../lib/drawGesture';
 import { kitchenRunUnits, RUN_UNIT } from '../../lib/kitchenRun';
 import { computeWallPolygons } from '../../lib/wallGeometry';
 import { isFence, isHalfWall } from '../../lib/fence';
@@ -226,6 +227,10 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     setMeasureA(null);
     setMeasureSeg(null);
     setLengthInput('');
+    // Switching tools mid-drag must not leave a live preview behind. Safe to
+    // call the hoisted const: effects run after the render that defines it.
+    endDrawDrag();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool]);
 
   // Frame the whole design when asked (after load / import) once size is known.
@@ -636,6 +641,9 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   };
 
   const onMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Compatibility mouse events fired for a touch we have already handled.
+    // Ignoring them here stops a drag-release placing its point twice.
+    if (Date.now() < ghostMouseUntilRef.current) return;
     const isMiddle = e.evt.button === 1;
     const p = worldPointer();
     if (!p) return;
@@ -739,6 +747,56 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     }
   };
 
+  // --- press-drag-release drawing (touch) ---------------------------------
+  /** This one-finger touch owns a drawing gesture, so it must never pan. */
+  const drawDragRef = useRef(false);
+  const pendingPreviewRef = useRef<Point | null>(null);
+  const previewRafRef = useRef<number | null>(null);
+  // The rAF callback fires after the event that scheduled it, possibly after a
+  // re-render. Going through a ref means it always calls the CURRENT
+  // publishCursor — one captured from an old render would snap against a stale
+  // draft and quietly place points against the previous chain state.
+  const publishRef = useRef<(p: Point) => void>(() => {});
+  // A tap on touch is followed by compatibility mouse events unless they are
+  // suppressed. That used to be harmless for a drag (a drag panned and never
+  // committed), but now every drag-release places a point — so a leaked ghost
+  // mousedown would place a SECOND point on top of it.
+  const ghostMouseUntilRef = useRef(0);
+
+  const cancelPreview = () => {
+    if (previewRafRef.current !== null) cancelAnimationFrame(previewRafRef.current);
+    previewRafRef.current = null;
+    pendingPreviewRef.current = null;
+  };
+
+  /** Coalesce to one snap+render per frame: touchmove fires faster than frames
+   *  on a 120Hz phone, and each preview is a React setState. */
+  const schedulePreview = (p: Point) => {
+    pendingPreviewRef.current = p;
+    if (previewRafRef.current !== null) return;
+    previewRafRef.current = requestAnimationFrame(() => {
+      previewRafRef.current = null;
+      const pt = pendingPreviewRef.current;
+      if (pt) publishRef.current(pt);
+    });
+  };
+
+  /** End a draw gesture without committing anything. Clearing `cursor` matters:
+   *  left set, DraftView would draw a zero-length rubber band from the point
+   *  just placed to itself, reading "0.00 m · 0°" under a finger that has gone. */
+  const endDrawDrag = () => {
+    drawDragRef.current = false;
+    cancelPreview();
+    setCursor(null);
+    setSnapKind('free');
+    setSnapGuide(null);
+    snapKindRef.current = 'free';
+    snapGuideRef.current = null;
+    lastHardSnapRef.current = null;
+  };
+
+  useEffect(() => cancelPreview, []);
+
   const onTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
     const t = e.evt.touches;
     if (t.length === 2) {
@@ -753,17 +811,32 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         draggingFurn.current = null;
         setDraggingFurnId(null);
       }
+      // A second finger means zoom, not draw. Abandon the in-progress point —
+      // `touchMoved` is already true above, so the release cannot commit one.
+      if (drawDragRef.current) endDrawDrag();
     } else if (t.length === 1) {
       touchMoved.current = false;
       touchStartPt.current = { x: t[0].clientX, y: t[0].clientY };
       // A drag that starts on empty canvas (or the traced background plan)
-      // pans the viewport with ANY tool. Lock mode extends that pan surface
-      // across rooms, walls and furniture, so a plan that fills the screen is
-      // still navigable with one finger. Taps remain selection/actions because
-      // panning only starts after the movement threshold in onTouchMove.
+      // pans the viewport — but NOT with a drawing tool armed, where one
+      // finger draws and panning moves to two. Lock mode extends the pan
+      // surface across rooms, walls and furniture for every other tool, so a
+      // plan that fills the screen is still navigable with one finger.
       const target = e.target as Konva.Node;
-      touchPanEligible.current =
-        moveLock || target === target.getStage() || target.name() === 'bg-plan';
+      touchPanEligible.current = shouldPanOnTouch({
+        tool,
+        moveLock,
+        targetIsStage: target === target.getStage(),
+        targetIsBgPlan: target.name() === 'bg-plan',
+      });
+      if (isDragDrawTool(tool)) {
+        drawDragRef.current = true;
+        const wp = worldPointer();
+        // Publish synchronously, not through the rAF: the rubber band and snap
+        // marker have to appear the instant the finger lands, which is most of
+        // what makes the gesture feel magnetic rather than blind.
+        if (wp) publishCursor(wp);
+      }
       if (tool === 'pan') {
         setIsPanning(true);
         lastPan.current = { x: t[0].clientX, y: t[0].clientY };
@@ -816,6 +889,19 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       pinch.current = next;
     } else if (t.length === 1) {
       const cur = { x: t[0].clientX, y: t[0].clientY };
+      if (drawDragRef.current) {
+        // The finger is drawing: track it live and never fall through to pan.
+        // `touchMoved` still has to flip past slop so the release is treated as
+        // a drag rather than a tap.
+        const st0 = touchStartPt.current;
+        if (!touchMoved.current && st0 && Math.hypot(cur.x - st0.x, cur.y - st0.y) >= TAP_SLOP) {
+          touchMoved.current = true;
+        }
+        cancelLongPress();
+        const wp = worldPointer();
+        if (wp) schedulePreview(wp);
+        return;
+      }
       if (!touchMoved.current) {
         // Tap slop: fingers jitter a few px — don't turn taps into drags.
         const st0 = touchStartPt.current;
@@ -842,10 +928,26 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       // tap ran BOTH the touch handler and the ghost mousedown — placing
       // furniture twice and instantly closing freshly-opened drawers.
       if (e.evt.cancelable) e.evt.preventDefault();
+      // preventDefault only works while the event is cancellable. Belt and
+      // braces: a leaked ghost mousedown would now place a SECOND point on top
+      // of the one this release just committed.
+      ghostMouseUntilRef.current = Date.now() + 500;
       cancelLongPress();
       if (longPressFired.current) {
         // The long-press already opened the context menu — swallow the tap.
         longPressFired.current = false;
+        endDrawDrag();
+      } else if (drawDragRef.current) {
+        const p = worldPointer();
+        // Cancel the queued frame BEFORE committing: otherwise it lands after
+        // endDrawDrag's setCursor(null) and repaints a rubber band reaching for
+        // a finger that has already lifted.
+        cancelPreview();
+        // Commit the RAW point — actAt re-runs applySnaps, so the placed corner
+        // is exactly the previewed one, and room-closing and the kitchen run's
+        // second point work on release with no extra code.
+        if (p) actAt(p);
+        endDrawDrag();
       } else if (!touchMoved.current && tool !== 'pan') {
         const p = worldPointer();
         if (p) actAt(p);
@@ -874,9 +976,15 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       touchMoved.current = false;
       lastPan.current = null;
       setIsPanning(false);
+      // Without this a snatched gesture leaves the preview frozen on screen,
+      // rubber-banding to a finger that is no longer there.
+      endDrawDrag();
     };
     el.addEventListener('touchcancel', cancel);
     return () => el.removeEventListener('touchcancel', cancel);
+    // Mount-once by design. endDrawDrag only touches refs and useState setters,
+    // all of which are stable, so the captured copy stays correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -898,6 +1006,10 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     setSnapKind(snapKindRef.current);
     setSnapGuide(snapGuideRef.current);
   };
+  // Kept fresh every render so the rAF preview never snaps against a stale
+  // draft. Assigned here rather than beside the ref because `publishCursor` is
+  // in its temporal dead zone until this point.
+  publishRef.current = publishCursor;
 
   const onMouseMove = () => {
     // While panning, the layer is moving imperatively — a cursor-snap setState
@@ -955,13 +1067,18 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   }, [isPanning]);
 
   const finishDraft = () => {
-    if ((tool === 'wall' || tool === 'halfWall' || tool === 'fence') && draft.length >= 2) {
+    // Finishing with a double-click/double-tap necessarily places a point on
+    // the FIRST of the two, so the chain arrives here ending in a duplicate and
+    // would emit a zero-length wall. Long-standing on desktop too, since
+    // onMouseDown commits on press.
+    const d = stripDegenerateTail(draft, 1);
+    if ((tool === 'wall' || tool === 'halfWall' || tool === 'fence') && d.length >= 2) {
       const kind = tool === 'fence' ? 'fence' : tool === 'halfWall' ? 'half' : 'wall';
-      for (let i = 0; i < draft.length - 1; i++) s.addWall(draft[i], draft[i + 1], kind);
-    } else if (tool === 'room' && draft.length >= 3) {
-      s.addRoom(draft);
-    } else if (tool === 'kitchen' && draft.length >= 1 && cursor) {
-      s.addKitchenRun(draft[0], cursor);
+      for (let i = 0; i < d.length - 1; i++) s.addWall(d[i], d[i + 1], kind);
+    } else if (tool === 'room' && d.length >= 3) {
+      s.addRoom(d);
+    } else if (tool === 'kitchen' && d.length >= 1 && cursor) {
+      s.addKitchenRun(d[0], cursor);
     }
     setDraft([]);
   };
@@ -970,11 +1087,11 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   useEffect(() => {
     drawBridge.finish = finishDraft;
     drawBridge.cancel = () => setDraft([]);
-    const active =
-      tool === 'room' ? draft.length >= 3
-      : tool === 'wall' || tool === 'halfWall' || tool === 'fence' ? draft.length >= 2
-      : tool === 'kitchen' ? draft.length >= 1
-      : false;
+    // One point is enough to show the pill. With drag-drawing the first gesture
+    // ends with a single corner placed, and requiring two left the user with no
+    // ✕ on screen and no way out but switching tools. Finish still no-ops below
+    // the minimum for the shape, so nothing can be committed prematurely.
+    const active = isDragDrawTool(tool) && draft.length >= 1;
     useDraw.getState().setActive(active);
     return () => {
       drawBridge.finish = null;
@@ -1216,6 +1333,9 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onDblClick={() => (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room') && finishDraft()}
+        // Touch had no equivalent of double-click-to-finish: Konva emits
+        // `dbltap`, which was never wired, so the pill was the only way out.
+        onDblTap={() => isDragDrawTool(tool) && tool !== 'kitchen' && finishDraft()}
         onContextMenu={(e) => {
           e.evt.preventDefault();
           const p = worldPointer();
@@ -1861,7 +1981,14 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
 
           {/* Draft (in-progress wall/room) */}
           {draft.length > 0 && (
-            <DraftView draft={draft} cursor={cursor} tool={tool} zoom={zoom} units={units} lengthInput={lengthInput} />
+            <DraftView
+              draft={draft} cursor={cursor} tool={tool} zoom={zoom} units={units} lengthInput={lengthInput}
+              readoutDy={
+                IS_COARSE && cursor
+                  ? readoutOffsetCm({ screenY: cursor.y * zoom + pan.y, zoom })
+                  : null
+              }
+            />
           )}
 
           {/* Live kitchen-run ghost: tiled cabinet outlines from the start tap to
@@ -2322,18 +2449,24 @@ function MeasureView({ a, b, zoom, units }: { a: Point; b: Point; zoom: number; 
 /** Inference marker at the cursor: a point/midpoint lock (magenta square) or a
  *  guide/segment inference (green/blue ring), à la SketchUp/CAD tools. */
 function SnapIndicator({ at, kind, zoom }: { at: Point; kind: SnapKind; zoom: number }) {
-  const r = 7 / zoom;
+  // The marker sits exactly on the point being committed, so it cannot be moved
+  // aside — but on touch a 14px marker is entirely hidden under the fingertip.
+  // Drawing it larger than the finger turns it into a visible halo instead, and
+  // dropping the wash keeps that ring readable against walls and floors.
+  const r = (IS_COARSE ? 18 : 7) / zoom;
+  const wash = IS_COARSE ? '00' : undefined;
   if (kind === 'point' || kind === 'midpoint') {
     const color = kind === 'midpoint' ? '#1f9d55' : '#e0299b';
     return (
       <Rect
+        name="snap-indicator"
         x={at.x - r}
         y={at.y - r}
         width={r * 2}
         height={r * 2}
         stroke={color}
         strokeWidth={2 / zoom}
-        fill={`${color}2e`}
+        fill={wash ? undefined : `${color}2e`}
         cornerRadius={kind === 'midpoint' ? r : 0}
         listening={false}
       />
@@ -2341,13 +2474,24 @@ function SnapIndicator({ at, kind, zoom }: { at: Point; kind: SnapKind; zoom: nu
   }
   const color = kind === 'segment' ? '#2f7ed8' : '#1f9d55';
   return (
-    <Circle x={at.x} y={at.y} radius={r} stroke={color} strokeWidth={2 / zoom} fill={`${color}22`} listening={false} />
+    <Circle
+      name="snap-indicator"
+      x={at.x} y={at.y} radius={r} stroke={color} strokeWidth={2 / zoom}
+      fill={wash ? undefined : `${color}22`} listening={false}
+    />
   );
 }
 
 function DraftView({
-  draft, cursor, tool, zoom, units, lengthInput,
-}: { draft: Point[]; cursor: Point | null; tool: string; zoom: number; units: Units; lengthInput: string }) {
+  draft, cursor, tool, zoom, units, lengthInput, readoutDy,
+}: {
+  draft: Point[]; cursor: Point | null; tool: string; zoom: number; units: Units;
+  lengthInput: string;
+  /** Non-null on touch: world-cm offset that lifts the readout off the
+   *  fingertip, since on a phone the finger sits exactly on the point being
+   *  placed and would otherwise cover the number it is about to commit. */
+  readoutDy: number | null;
+}) {
   const C = canvasColors(useTheme((t) => t.theme));
   const last = draft[draft.length - 1];
   // While typing a length, lock the ghost segment's endpoint to that distance
@@ -2367,6 +2511,7 @@ function DraftView({
   return (
     <Group listening={false}>
       <Line
+        name="draft-rubber"
         points={flat}
         closed={tool === 'room'}
         stroke={C.selection}
@@ -2403,8 +2548,17 @@ function DraftView({
       ))}
       {cursor && last && (
         <Text
-          x={midpoint(last, previewEnd ?? cursor).x}
-          y={midpoint(last, previewEnd ?? cursor).y - 20 / zoom}
+          name="draft-readout"
+          // Mouse: centred on the segment, where the eye already is. Touch:
+          // anchored to the fingertip and pushed clear of it, because the
+          // finger is sitting on the point and the segment midpoint can be
+          // under it too on a short run.
+          x={readoutDy === null ? midpoint(last, previewEnd ?? cursor).x : (previewEnd ?? cursor).x - 30 / zoom}
+          y={
+            readoutDy === null
+              ? midpoint(last, previewEnd ?? cursor).y - 20 / zoom
+              : (previewEnd ?? cursor).y + readoutDy
+          }
           text={
             lengthInput
               ? `${lengthInput}${units === 'imperial' ? ' ft' : ' m'} ▏ Enter to confirm`
