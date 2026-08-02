@@ -879,16 +879,33 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     return () => el.removeEventListener('touchcancel', cancel);
   }, []);
 
+  /**
+   * The ONE place the live drawing preview is published. Everything the user
+   * sees while placing a point — the rubber band, the length/angle readout, the
+   * snap marker, the inference guide, the snap haptic — is gated on `cursor`,
+   * and this is the only writer.
+   *
+   * It used to be inlined in onMouseMove, which is exactly how touch ended up
+   * with none of it: Konva routes touchmove to a separate event map, so a finger
+   * never reached that handler and `cursor` stayed null forever on a phone.
+   * Keeping a single publisher means the two input paths cannot drift apart
+   * again.
+   */
+  const publishCursor = (raw: Point) => {
+    lastCursorRef.current = raw;
+    // applySnaps also sets snapKindRef/snapGuideRef and fires the haptic tick.
+    setCursor(applySnaps(raw));
+    setSnapKind(snapKindRef.current);
+    setSnapGuide(snapGuideRef.current);
+  };
+
   const onMouseMove = () => {
     // While panning, the layer is moving imperatively — a cursor-snap setState
     // here would re-render and fight (reset) that live position. Skip it.
     if (lastPan.current) return;
     const p = worldPointer();
     if (!p) return;
-    lastCursorRef.current = p;
-    setCursor(applySnaps(p));
-    setSnapKind(snapKindRef.current);
-    setSnapGuide(snapGuideRef.current);
+    publishCursor(p);
   };
 
   const onStageMouseMove = () => {

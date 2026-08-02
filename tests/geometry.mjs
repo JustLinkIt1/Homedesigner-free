@@ -31,6 +31,7 @@ export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENC
 export { lockToAngle, ANGLE_LOCK_RAD } from '${sourceRoot}/src/lib/snapping.ts';
 export { spriteBox, spriteReshaped } from '${sourceRoot}/src/lib/spriteFit.ts';
 export { wallDistances } from '${sourceRoot}/src/lib/distanceGuides.ts';
+export { isDragDrawTool, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm } from '${sourceRoot}/src/lib/drawGesture.ts';
 `);
 const out = join(dir, 'bundle.mjs');
 // platform=node so CommonJS-only deps (dxf-parser) resolve via "main";
@@ -47,6 +48,7 @@ const {
   buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
   fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT,
   wallDistances, lockToAngle, ANGLE_LOCK_RAD, spriteBox, spriteReshaped,
+  isDragDrawTool, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm,
 } = await import(pathToFileURL(out).href);
 
 let fails = 0;
@@ -914,6 +916,57 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   // No catalogue entry (a cloud type not present locally): contain-fit, never crash.
   const orphan = spriteBox(80, 200, ar, {});
   check('sprite: an unknown type still contain-fits', near(orphan.h, 60) && near(orphan.w, 80));
+}
+
+// ---- touch drawing gesture -----------------------------------------------
+// One finger draws with a build tool armed, and pans with everything else.
+// These are the exact decisions that used to be an inline boolean expression
+// inside Canvas2D, where nothing could reach them.
+{
+  const draws = ['wall', 'halfWall', 'fence', 'room', 'kitchen'];
+  const doesNot = ['select', 'erase', 'pan'];
+  check('gesture: every build tool draws on drag', draws.every(isDragDrawTool));
+  // select owns node dragging + the long-press menu; erase would be
+  // destructive; pan is pan. Regressing any of these is a serious bug.
+  check('gesture: select/erase/pan never draw on drag', doesNot.every((t) => !isDragDrawTool(t)));
+
+  // Drawing beats lock mode: lock stops objects MOVING, not you drawing.
+  check('gesture: a draw tool wins over move lock',
+    shouldPanOnTouch({ tool: 'wall', moveLock: true, targetIsStage: true, targetIsBgPlan: false }) === false);
+  check('gesture: a draw tool does not pan on the traced plan',
+    shouldPanOnTouch({ tool: 'room', moveLock: false, targetIsStage: false, targetIsBgPlan: true }) === false);
+  // …but every non-drawing tool keeps the panning it has today.
+  check('gesture: lock-mode one-finger pan survives for select',
+    shouldPanOnTouch({ tool: 'select', moveLock: true, targetIsStage: false, targetIsBgPlan: false }) === true);
+  check('gesture: traced-plan pan survives for select',
+    shouldPanOnTouch({ tool: 'select', moveLock: false, targetIsStage: false, targetIsBgPlan: true }) === true);
+  check('gesture: empty-canvas pan survives for erase',
+    shouldPanOnTouch({ tool: 'erase', moveLock: false, targetIsStage: true, targetIsBgPlan: false }) === true);
+  check('gesture: nothing pans when the touch is on an object',
+    shouldPanOnTouch({ tool: 'select', moveLock: false, targetIsStage: false, targetIsBgPlan: false }) === false);
+}
+{
+  // Finishing with a double-tap places a point on the FIRST tap, so the draft
+  // ends with two coincident points and would commit a zero-length wall.
+  const a = { x: 0, y: 0 };
+  const b = { x: 300, y: 0 };
+  check('gesture: a doubled final point is dropped',
+    stripDegenerateTail([a, b, { x: 300, y: 0 }], 1).length === 2);
+  check('gesture: a real short segment is kept',
+    stripDegenerateTail([a, b, { x: 300, y: 2 }], 1).length === 3);
+  // Must never eat the only point, or the first tap of a chain vanishes.
+  check('gesture: a single point is never stripped', stripDegenerateTail([a], 1).length === 1);
+}
+{
+  // The readout has to clear the fingertip, and flip below it near the top bar
+  // where the toolbar and the draw pill would hide it.
+  const mid = readoutOffsetCm({ screenY: 400, zoom: 1 });
+  const top = readoutOffsetCm({ screenY: 30, zoom: 1 });
+  check('gesture: readout sits above the finger normally', mid < 0, `got ${mid}`);
+  check('gesture: readout flips below the finger near the top bar', top > 0, `got ${top}`);
+  // It is a screen-space gap, so it must shrink in world units as we zoom in.
+  check('gesture: readout gap is constant on screen, not in the plan',
+    near(Math.abs(readoutOffsetCm({ screenY: 400, zoom: 2 })), Math.abs(mid) / 2, 1e-9));
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');
