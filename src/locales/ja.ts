@@ -792,5 +792,8 @@ export const JA: Record<string, string> = {
   'Tap ✕ to cancel drawing': '✕ をタップして描画を中止',
   'One finger draws; pinch or drag two fingers to zoom and pan': '1本指で描画、2本指でズームと移動',
   'Imported a plan? Pick Position plan to drag, pinch and turn it': '図面を読み込んだら「図面を配置」でドラッグ・拡大縮小・回転できます',
+  'Free': '無料',
+  'Pro item': 'Pro アイテム',
+  'cloud objects (Pro)': 'クラウド オブジェクト (Pro)',
   'Reload 3D': '3Dを再読み込み',
 };

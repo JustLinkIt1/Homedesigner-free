@@ -124,5 +124,23 @@ for (const token of ['--tip-bg', '--tip-fg', '--tip-border']) {
   check(`${token} is defined for both themes`, defs >= 2, `${defs} definition(s)`);
 }
 
+// ---- the Pro badge -------------------------------------------------------
+// "PRO" is a two-letter visual token, so a screen reader gets nothing useful
+// from the text alone — it needs an explicit name. Keeping the badge in ONE
+// component is what makes that enforceable, so also assert nobody has started
+// hand-rolling the markup again somewhere else.
+{
+  const proTag = readFileSync(join(root, 'src', 'components', 'ProTag.tsx'), 'utf8');
+  check('the Pro badge carries an accessible name', /aria-label=/.test(proTag));
+
+  const strays = [];
+  for (const file of tsx(join(root, 'src'))) {
+    if (file.endsWith('ProTag.tsx')) continue;
+    const src = readFileSync(file, 'utf8');
+    if (/className="pro-tag-corner"/.test(src)) strays.push(file.replace(`${root}/`, ''));
+  }
+  check('the Pro badge markup lives in exactly one component', strays.length === 0, strays.join(', '));
+}
+
 console.log(fails ? `\nTHEME: ${fails} FAILED` : '\nTHEME: all green');
 process.exit(fails ? 1 : 0);

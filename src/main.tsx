@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { LazyMotion, MotionConfig, domMax } from 'framer-motion';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
+import { useProStore } from './store/proStore';
 import { useDesign } from './store/designStore';
 import { initTheme } from './lib/theme';
 import { finishStrandedGooglePopup } from './lib/googleAuth';
@@ -38,6 +39,9 @@ if (import.meta.env.DEV) {
   void import('konva').then((m) => {
     (window as unknown as { Konva: unknown }).Konva = m.default ?? m;
   });
+  // Entitlement is not reachable from the DOM, so the smoke suite needs this to
+  // assert what a free user and a Pro user each see of the catalog.
+  (window as unknown as { useProStore: typeof useProStore }).useProStore = useProStore;
 }
 
 if (!completedGooglePopup) {

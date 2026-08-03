@@ -792,5 +792,8 @@ export const KO: Record<string, string> = {
   'Tap ✕ to cancel drawing': '✕를 탭해 그리기를 취소',
   'One finger draws; pinch or drag two fingers to zoom and pan': '한 손가락으로 그리고, 두 손가락으로 확대와 이동',
   'Imported a plan? Pick Position plan to drag, pinch and turn it': '도면을 가져왔다면 ‘도면 배치’로 끌고 크기와 회전을 조절하세요',
+  'Free': '무료',
+  'Pro item': 'Pro 항목',
+  'cloud objects (Pro)': '클라우드 오브젝트 (Pro)',
   'Reload 3D': '3D 다시 불러오기',
 };

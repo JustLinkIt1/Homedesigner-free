@@ -792,5 +792,8 @@ export const FR: Record<string, string> = {
   'Tap ✕ to cancel drawing': 'Touchez ✕ pour annuler le tracé',
   'One finger draws; pinch or drag two fingers to zoom and pan': 'Un doigt dessine ; deux doigts pour zoomer et déplacer',
   'Imported a plan? Pick Position plan to drag, pinch and turn it': 'Plan importé ? Choisissez « Placer le plan » pour le déplacer, redimensionner et pivoter',
+  'Free': 'Gratuit',
+  'Pro item': 'Objet Pro',
+  'cloud objects (Pro)': 'objets cloud (Pro)',
   'Reload 3D': 'Recharger la 3D',
 };

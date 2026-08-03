@@ -792,5 +792,8 @@ export const ZH: Record<string, string> = {
   'Tap ✕ to cancel drawing': '点按 ✕ 取消绘制',
   'One finger draws; pinch or drag two fingers to zoom and pan': '单指绘制；双指缩放和平移',
   'Imported a plan? Pick Position plan to drag, pinch and turn it': '导入了平面图？选择“放置平面图”即可拖动、缩放和旋转',
+  'Free': '免费',
+  'Pro item': 'Pro 物件',
+  'cloud objects (Pro)': '云端物件 (Pro)',
   'Reload 3D': '重新加载 3D',
 };

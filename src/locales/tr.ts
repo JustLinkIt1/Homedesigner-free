@@ -792,5 +792,8 @@ export const TR: Record<string, string> = {
   'Tap ✕ to cancel drawing': 'Çizimi iptal etmek için ✕ dokunun',
   'One finger draws; pinch or drag two fingers to zoom and pan': 'Tek parmak çizer; iki parmakla yakınlaştırıp kaydırın',
   'Imported a plan? Pick Position plan to drag, pinch and turn it': 'Plan içe aktardınız mı? Sürüklemek, ölçeklemek ve döndürmek için «Planı yerleştir» seçin',
+  'Free': 'Ücretsiz',
+  'Pro item': 'Pro öğe',
+  'cloud objects (Pro)': 'bulut nesnesi (Pro)',
   'Reload 3D': '3B görünümü yeniden yükle',
 };

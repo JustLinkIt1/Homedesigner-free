@@ -792,5 +792,8 @@ export const RU: Record<string, string> = {
   'Tap ✕ to cancel drawing': 'Коснитесь ✕, чтобы отменить рисование',
   'One finger draws; pinch or drag two fingers to zoom and pan': 'Один палец рисует; двумя пальцами масштаб и перемещение',
   'Imported a plan? Pick Position plan to drag, pinch and turn it': 'Импортировали план? Выберите «Разместить план», чтобы двигать, масштабировать и вращать',
+  'Free': 'Бесплатно',
+  'Pro item': 'Объект Pro',
+  'cloud objects (Pro)': 'облачных объектов (Pro)',
   'Reload 3D': 'Перезагрузить 3D',
 };

@@ -955,23 +955,6 @@ button.brand:hover .brand-name {
     opacity: 1;
   }
 }
-.cat-item .ci-lock {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  background: linear-gradient(160deg, #202636, #0d63f8);
-  color: #fff;
-}
-.cat-item .ci-lock .icon {
-  width: 10px;
-  height: 10px;
-}
 .cat-item.locked .ci-visual {
   opacity: 0.55;
 }
@@ -1438,7 +1421,8 @@ button.brand:hover .brand-name {
   height: 30px;
   color: var(--text);
 }
-.of-lock {
+.of-lock,
+.pro-tag-corner {
   position: absolute;
   top: 4px;
   right: 4px;
@@ -3295,6 +3279,7 @@ button.brand:hover .brand-name {
   border-top: 1px solid var(--border);
 }
 .ps-card-actions button {
+  position: relative; /* containing block for .pro-tag-corner */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3346,6 +3331,7 @@ button.brand:hover .brand-name {
   display: inline-block;
 }
 .ps-hero-new {
+  position: relative; /* containing block for .pro-tag-corner */
   flex: none;
   height: 46px;
   padding: 0 20px;
@@ -3392,6 +3378,7 @@ button.brand:hover .brand-name {
   display: none;
 }
 .tpl-card {
+  position: relative; /* containing block for .pro-tag-corner */
   flex: 0 0 168px;
   display: flex;
   flex-direction: column;

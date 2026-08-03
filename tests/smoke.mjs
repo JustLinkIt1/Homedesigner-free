@@ -219,6 +219,21 @@ check(
 // ---- 1. Projects screen renders, sample home opens -------------------------
 await page.goto(BASE);
 check('projects screen renders', await page.waitForSelector('.projects-screen', { timeout: 20000 }).then(() => true).catch(() => false));
+// ---- the projects paywall is count-based, so the badge must be too ---------
+// `list.length >= 1 && requirePro('projects')` — your FIRST project is free
+// whichever template you pick. A static badge would tell a brand-new user their
+// free first project costs money, which is worse than the silence it replaced.
+{
+  const badgesNow = () => page.evaluate(() => ({
+    projects: window.useDesign ? document.querySelectorAll('.ps-card').length : -1,
+    templateBadges: document.querySelectorAll('.tpl-card .pro-tag-corner').length,
+    heroBadge: document.querySelectorAll('.ps-hero-new .pro-tag-corner').length,
+    templates: document.querySelectorAll('.tpl-card').length,
+  }));
+  const fresh = await badgesNow();
+  check('pro: templates are unbadged while the first project is still free',
+    fresh.templates > 0 && fresh.templateBadges === 0 && fresh.heroBadge === 0, JSON.stringify(fresh));
+}
 const desktopSettings = page.locator('.ps-head .ps-settings-btn');
 check('desktop header shows Settings beside Language', await desktopSettings.isVisible().catch(() => false));
 await desktopSettings.click();
@@ -544,6 +559,57 @@ if (process.env.SMOKE_SKIP_3D) {
     'on-demand catalog 3D preview opens',
     await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: 30000 }).then(() => true).catch(() => false),
   );
+  // ---- Pro items are legible before they are tapped ------------------------
+  // Reported: "the user has no idea it is a paid feature, only after clicking on
+  // it. User has to manually click through every single furniture to check if
+  // it's a free or paid one." 57 of the 96 bundled objects are Pro, so the badge
+  // has to track the DATA — a decorative badge on a fixed set would pass a
+  // "some badge exists" check and still mislead.
+  {
+    const badged = await page.locator('.catalog.docked .cat-item .pro-tag-corner').count();
+    const lockedInStore = await page.evaluate(() => {
+      const shown = [...document.querySelectorAll('.catalog.docked .cat-item')];
+      const isPro = window.useProStore.getState().isPro;
+      return { shown: shown.length, isPro };
+    });
+    check('pro: locked catalog items are badged before being tapped', badged > 0, `${badged} badges`);
+    check('pro: not every item is badged — free ones are visibly free',
+      badged < lockedInStore.shown, `${badged} of ${lockedInStore.shown}`);
+    check('pro: the badge is only shown to non-Pro users', lockedInStore.isPro === false);
+
+    // The Free chip is the answer to "click through every single furniture".
+    const freeChip = page.locator('.catalog.docked .cat-chips .chip', { hasText: /^Free$/ });
+    check('pro: a Free chip is offered to non-Pro users', await freeChip.isVisible().catch(() => false));
+    await freeChip.click();
+    await page.waitForTimeout(300);
+    const afterFilter = await page.evaluate(() => ({
+      items: document.querySelectorAll('.catalog.docked .cat-item').length,
+      badges: document.querySelectorAll('.catalog.docked .cat-item .pro-tag-corner').length,
+    }));
+    check('pro: filtering to Free leaves only placeable objects',
+      afterFilter.items > 0 && afterFilter.badges === 0, JSON.stringify(afterFilter));
+
+    // Owning Pro must retire both the badges and the chip.
+    await page.evaluate(() => window.useProStore.setState({ isPro: true }));
+    await page.waitForTimeout(400);
+    const asPro = await page.evaluate(() => ({
+      badges: document.querySelectorAll('.catalog.docked .pro-tag-corner').length,
+      freeChip: [...document.querySelectorAll('.catalog.docked .cat-chips .chip')]
+        .some((c) => c.textContent.trim() === 'Free'),
+      category: document.querySelector('.catalog.docked .cat-chips .chip.active')?.textContent.trim(),
+    }));
+    check('pro: a Pro owner sees no badges', asPro.badges === 0, JSON.stringify(asPro));
+    check('pro: the Free chip is retired once Pro is owned', !asPro.freeChip, JSON.stringify(asPro));
+    // Buying while standing on the Free chip must not strand the user on a
+    // filter that no longer exists.
+    check('pro: buying while filtered to Free falls back to All',
+      asPro.category === 'All', JSON.stringify(asPro));
+    await page.evaluate(() => window.useProStore.setState({ isPro: false }));
+    await page.waitForTimeout(300);
+    await page.locator('.catalog.docked .cat-chips .chip', { hasText: /^All$/ }).click();
+    await page.waitForTimeout(200);
+  }
+
   // 45s to match the rotate-pill wait below: both land right after the WebGL
   // preview opens, and under software GL that compile stalls the main thread
   // long enough that a 30s click timed out in 3 of 4 runs on a loaded machine.
@@ -1909,6 +1975,50 @@ await recoveryPage.close();
       afterRecovery.length === 0, afterRecovery.slice(0, 2).join(' | '));
   }
   await gl.close();
+}
+
+// ---- the projects paywall, once it actually applies ------------------------
+// The other half of the report: "the paid furnitures AND TEMPLATES are hidden
+// pro features". Seeding one saved project flips the count-based gate, and the
+// badge must appear in step with it — the case a static badge would get right
+// by accident and the fresh-user case above would get wrong.
+{
+  const ps = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
+  await ps.goto(BASE);
+  await ps.waitForSelector('.projects-screen', { timeout: 20000 });
+  await ps.evaluate(() => {
+    localStorage.setItem('homedesigner.projects.index.v1', JSON.stringify([
+      { id: 'smoke-existing', name: 'Existing home', updatedAt: Date.now() },
+    ]));
+  });
+  await ps.reload({ waitUntil: 'networkidle' });
+  await ps.waitForSelector('.projects-screen', { timeout: 20000 });
+  await ps.waitForTimeout(400);
+
+  const gated = await ps.evaluate(() => ({
+    templates: document.querySelectorAll('.tpl-card').length,
+    templateBadges: document.querySelectorAll('.tpl-card .pro-tag-corner').length,
+    heroBadge: document.querySelectorAll('.ps-hero-new .pro-tag-corner').length,
+    cards: document.querySelectorAll('.ps-card').length,
+  }));
+  check('pro: templates are badged once a second project would cost money',
+    gated.templates > 0 && gated.templateBadges === gated.templates, JSON.stringify(gated));
+  check('pro: the New project button is badged too', gated.heroBadge === 1, JSON.stringify(gated));
+
+  // Duplicate is gated unconditionally, not by count, so it is always marked.
+  const dup = await ps.evaluate(() => {
+    const btn = [...document.querySelectorAll('.ps-card-actions button')]
+      .find((b) => /duplicate/i.test(b.getAttribute('aria-label') || ''));
+    return btn ? btn.querySelectorAll('.pro-tag-corner').length : -1;
+  });
+  check('pro: Duplicate is badged, since it is always Pro', dup === 1, `badges ${dup}`);
+
+  // …and all of it disappears for an owner.
+  await ps.evaluate(() => window.useProStore.setState({ isPro: true }));
+  await ps.waitForTimeout(400);
+  const owned = await ps.evaluate(() => document.querySelectorAll('.projects-screen .pro-tag-corner').length);
+  check('pro: a Pro owner sees no badges on the projects screen', owned === 0, `${owned} badges`);
+  await ps.close();
 }
 
 check('zero page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));

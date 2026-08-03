@@ -83,6 +83,22 @@ for (const file of sources(join(root, 'src'))) {
   }
 }
 
+// The catalog chip row renders `t(value)` over a runtime list, so the scanner
+// above cannot see those keys — a category could ship untranslated in all 12
+// locales and nothing would fail. That is exactly what happened to the "Free"
+// chip. Resolve the list from the data and require it explicitly.
+{
+  const catalogSrc = readFileSync(join(root, 'src', 'data', 'furnitureCatalog.ts'), 'utf8');
+  for (const m of catalogSrc.matchAll(/\bcategory:\s*'((?:[^'\\]|\\.)*)'/g)) {
+    const key = m[1].replace(/\\'/g, "'");
+    if (!used.has(key)) used.set(key, 'src/data/furnitureCatalog.ts (category chip)');
+  }
+  // The two pseudo-categories the chip row adds on top of the real ones.
+  for (const key of ['All', 'Free']) {
+    if (!used.has(key)) used.set(key, 'src/components/CatalogSidebar.tsx (category chip)');
+  }
+}
+
 // --- what each locale actually defines --------------------------------------
 const localeFiles = readdirSync(join(root, 'src', 'locales'))
   .filter((f) => f.endsWith('.ts') && f !== 'index.ts');

@@ -13,6 +13,8 @@ import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
 import AccountButton from './AccountButton';
 import * as projects from '../lib/projects';
+import ProTag from './ProTag';
+import { useProStore } from '../store/proStore';
 
 function timeAgo(ts: number, t: (en: string) => string): string {
   const mins = Math.max(1, Math.round((Date.now() - ts) / 60000));
@@ -46,6 +48,12 @@ export default function ProjectsScreen({
   const loadSample = useDesign((st) => st.loadSample);
   const t = useI18n();
   const [list, setList] = useState<projects.ProjectMeta[]>(() => projects.listProjects());
+  const isPro = useProStore((state) => state.isPro);
+  // The projects gate is COUNT-based (`list.length >= 1 && requirePro`), not
+  // per-template: your first project is free whichever card you pick. Deriving
+  // the badge from the same expression is the only way it cannot lie — a static
+  // badge would tell a brand-new user their free first project costs money.
+  const projectsGated = list.length >= 1 && !isPro;
   const [renaming, setRenaming] = useState<string | null>(null);
   // Which bottom-nav destination is selected. It's an explicit tapped state
   // (not scroll-spy) — the home content barely overflows, so a scroll-position
@@ -166,6 +174,7 @@ export default function ProjectsScreen({
           </div>
           <button className="btn primary ps-hero-new" onClick={() => newProject()}>
             <Plus className="icon" /> {t('New project')}
+            {projectsGated && <ProTag />}
           </button>
         </section>
 
@@ -190,6 +199,7 @@ export default function ProjectsScreen({
                 )}
                 <span className="tpl-title">{tpl.title}</span>
                 <span className="tpl-sub">{tpl.sub}</span>
+                {projectsGated && <ProTag />}
               </button>
             ))}
           </div>
@@ -272,6 +282,7 @@ export default function ProjectsScreen({
                       }}
                     >
                       <Copy className="icon" /> <span>{t('Duplicate')}</span>
+                      {!isPro && <ProTag />}
                     </button>
                     <button
                       data-tip={t('Delete')}

@@ -792,5 +792,8 @@ export const NL: Record<string, string> = {
   'Tap ✕ to cancel drawing': 'Tik op ✕ om te annuleren',
   'One finger draws; pinch or drag two fingers to zoom and pan': 'Eén vinger tekent; twee vingers om te zoomen en verschuiven',
   'Imported a plan? Pick Position plan to drag, pinch and turn it': 'Plattegrond geïmporteerd? Kies ‘Plattegrond plaatsen’ om te slepen, schalen en draaien',
+  'Free': 'Gratis',
+  'Pro item': 'Pro-object',
+  'cloud objects (Pro)': 'cloudobjecten (Pro)',
   'Reload 3D': '3D opnieuw laden',
 };

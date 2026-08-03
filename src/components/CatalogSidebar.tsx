@@ -14,12 +14,18 @@ import { getRecent } from '../lib/recent';
 import { getFavorites, toggleFavorite } from '../lib/favorites';
 import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
+import ProTag from './ProTag';
 import { loadRemoteCatalog, useRemoteCatalog } from '../lib/remoteCatalog';
 import { FURNITURE_SPRITES, spriteUrl } from '../data/furnitureSprites';
 
 // Keep Three.js out of the initial 2D editor path; load it only after a user
 // actually asks to inspect an object.
 const CatalogPreview = lazy(() => import('./CatalogPreview'));
+
+/** Pseudo-category for the "show me only what I can place" chip. Cuts across
+ *  every real category, so it is deliberately not a value in the data. No real
+ *  category may ever be named this — asserted in tests/geometry.mjs. */
+const FREE_ONLY = 'Free';
 
 function CatalogItem({
   entry,
@@ -62,11 +68,7 @@ function CatalogItem({
       >
         <Star className="icon" />
       </button>
-      {locked && (
-        <span className="ci-lock" aria-label="Pro item">
-          <Lock className="icon" />
-        </span>
-      )}
+      {locked && <ProTag />}
     </div>
   );
 }
@@ -118,6 +120,7 @@ export default function CatalogSidebar({
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [browseBy, setBrowseBy] = useState<'room' | 'type'>('room');
+  const isPro = useProStore((state) => state.isPro);
   const [previewEntry, setPreviewEntry] = useState<CatalogEntry | null>(null);
   const [interactivePreview, setInteractivePreview] = useState(false);
   const [favoriteTypes, setFavoriteTypes] = useState(() => getFavorites());
@@ -153,8 +156,15 @@ export default function CatalogSidebar({
     const ordered = browseBy === 'type'
       ? CATALOG_GROUP_ORDER.filter((group) => values.has(group))
       : [...values];
-    return ['All', ...ordered];
-  }, [browseBy, catalog]);
+    // 57 of the 96 bundled objects are Pro, so without this a free user scrolls
+    // past more locked items than usable ones. Pro owners have nothing to filter.
+    return isPro ? ['All', ...ordered] : ['All', FREE_ONLY, ...ordered];
+  }, [browseBy, catalog, isPro]);
+
+  // Buying Pro removes the chip, so anyone standing on it must be moved off.
+  useEffect(() => {
+    if (isPro && category === FREE_ONLY) setCategory('All');
+  }, [isPro, category]);
 
   const recent = useMemo(
     () => getRecent().map((type) => CATALOG_BY_TYPE[type]).filter((entry): entry is CatalogEntry => !!entry),
@@ -174,8 +184,10 @@ export default function CatalogSidebar({
     const q = query.trim().toLowerCase();
     const items = catalog.filter((entry) => {
       const group = browseBy === 'room' ? entry.category : catalogGroupFor(entry);
+      // FREE_ONLY is a pseudo-category: it cuts across every real one.
+      if (category === FREE_ONLY && entry.pro) return false;
       return (
-        (category === 'All' || group === category) &&
+        (category === 'All' || category === FREE_ONLY || group === category) &&
         (!q ||
           entry.name.toLowerCase().includes(q) ||
           t(entry.name).toLowerCase().includes(q) ||
@@ -246,7 +258,7 @@ export default function CatalogSidebar({
             {cloudCatalog.status === 'loading'
               ? t('Loading cloud objects…')
               : cloudCatalog.status === 'ready'
-                ? `${cloudCatalog.remoteCount} ${t('cloud objects')}`
+                ? `${cloudCatalog.remoteCount} ${isPro ? t('cloud objects') : t('cloud objects (Pro)')}`
                 : cloudCatalog.status === 'offline'
                   ? t('Offline catalog')
                   : t('Cloud catalog')}
