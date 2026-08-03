@@ -5,6 +5,97 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.19.0 - 2026-08-03 (versionCode 11900)
+
+Three pieces of beta feedback, each of which turned out to be a bigger hole than
+the report suggested.
+
+### Drawing walls on a phone shows you what you are doing
+
+Reported as walls being hard to draw on a phone; the owner asked for
+press-drag-release with the endpoint clicking into place near a snap target.
+
+The snapping was never the problem — 2D and 3D already call the *same* engine
+(`src/lib/snapping.ts`). The problem was that **`setCursor` was called in exactly
+one place, `onMouseMove`**, and Konva routes `touchmove` to a separate event map,
+so a finger never reached it. `cursor` stayed `null` forever on touch, and every
+piece of live feedback is gated on it. None of this rendered on a phone, though
+all of it worked on desktop:
+
+- the rubber band and the live `3.50 m · 90°` readout
+- the snap markers (magenta endpoint, green midpoint, blue wall body)
+- the dashed inference guide
+- the snap haptic
+
+Tap → dot, tap → line, nothing in between. Worse, dragging with a wall tool
+*panned the viewport* rather than drawing.
+
+Now: press shows the preview immediately, drag updates it (rAF-coalesced),
+release drops the corner and the chain continues. A quick tap still places a
+point exactly as before. One finger draws, two fingers pan and zoom. Double-tap
+finishes a chain, matching desktop's double-click. The length readout is offset
+clear of the fingertip, flipping below it near the top bar.
+
+The gesture decisions live in `src/lib/drawGesture.ts` as pure functions so the
+truth tables — which tools claim one finger, when panning survives — are tested
+in plain Node rather than being unreachable inside a 2,500-line component.
+
+### An imported plan can finally be moved
+
+One finger cannot both draw and pan over a traced plan, so positioning became its
+own mode — and that exposed a hole: `BackgroundPlan` has `x`/`y`, but **nothing
+has ever been able to set them**. They were written once at import as `{0, 0}`;
+the only controls were an opacity slider, a numeric cm/px field and a rotation
+slider. (Relatedly, the plan image is `listening={false}`, so the "drag on the
+plan pans" branch of the touch rule was unreachable dead code.)
+
+The **Position plan** tool appears once a plan is loaded. One finger drags it,
+two fingers scale and rotate it, and a lock freezes it so a stray tap cannot undo
+a careful alignment. Desktop gets drag-to-position too.
+
+The pinch transform is a pure function tested against an independent
+reimplementation of how the renderer places an image pixel — asserting the point
+under the fingers stays under them through scale, through rotation, through both,
+and from an already-rotated plan. The renderer rotates about the image's
+top-left, so the origin has to travel around the pinch centre too; omitting that
+is the classic way to get this wrong, and the rotation cases catch it.
+
+### Pro items say so before you tap them
+
+Reported: *"the user has no idea it is a paid feature, only after clicking on it.
+User has to manually click through every single furniture to check if it's a free
+or paid one."*
+
+The catalog did have a marker — a 10px padlock — but a padlock **also** means
+"locked in place" on placed furniture, so one glyph carried two meanings and read
+as neither. Locked tiles now say **PRO**, reusing the corner tag the openings
+flyout already used rather than adding a sixth Pro style.
+
+57 of the 96 bundled objects are Pro, so a **Free** chip now filters the grid to
+what can actually be placed. It retires on purchase, and buying while standing on
+it falls back to All rather than stranding you on a filter that no longer exists.
+
+The templates half of the report was exactly right: the projects screen had no
+Pro marker anywhere. Its gate is **count-based** — the first project is free
+whichever template you pick — so the badge is derived from the same expression as
+the gate. A static badge would tell a new user their free first project costs
+money, which is worse than the silence it replaced.
+
+Cloud objects default to Pro unless a manifest opts out, so the sidebar now says
+so instead of advertising a count of objects that cannot be placed.
+
+### Testing
+
+Drawing had **no gesture-level coverage at all** — the existing "a fence run can
+be drawn" called `addWall` on the store directly. This release adds the first,
+driving real touch sequences.
+
+`tests/i18n.mjs` gained a fix for a genuine blind spot: the category chips render
+`t(value)` over a runtime list, so the scanner could not see those keys. The new
+Free chip would have shipped as English in all 12 languages with the suite fully
+green. Category names are now resolved from the catalog data and required
+explicitly.
+
 ## 1.18.1 - 2026-08-02 (versionCode 11801)
 
 From beta test report 5/15 (LiberTag, French locale). Two reported problems and
