@@ -38,18 +38,25 @@ function applyChrome(theme: ResolvedTheme) {
   if (Capacitor.isNativePlatform()) {
     import('@capacitor/status-bar')
       .then(({ StatusBar, Style }) =>
-        Promise.all([
-          // Keep the status bar as a solid, OS-reserved bar (NOT overlaying the
-          // web content). Without this, some devices (e.g. Samsung on Android 9)
-          // draw the WebView edge-to-edge under a translucent status bar, and
-          // since Android doesn't populate env(safe-area-inset-top) the app's
-          // top row ends up beneath the clock/battery. Reserving the bar means
-          // content always sits below it and the colour below actually shows.
-          StatusBar.setOverlaysWebView({ overlay: false }),
-          // Style.Light = dark icons (for our light chrome) and vice versa.
-          StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light }),
-          StatusBar.setBackgroundColor({ color: CHROME[theme] }),
-        ]),
+        // ONLY setStyle. It maps to WindowInsetsControllerCompat's
+        // setAppearanceLight*Bars, which is current API and is what keeps the
+        // clock and battery legible against our chrome.
+        //
+        // Its two former neighbours are deliberately gone, and must not come
+        // back:
+        //  - setOverlaysWebView({ overlay: false }) asked the framework to
+        //    reserve the status bar. Android 15 removed that: apps targeting
+        //    SDK 35+ are edge-to-edge and the request is ignored. We target 36.
+        //  - setBackgroundColor() calls Window.setStatusBarColor, which Play
+        //    flags as deprecated and which is a no-op on Android 15+.
+        //
+        // They were added for a Samsung Android 9 device that drew edge-to-edge
+        // without populating env(safe-area-inset-top). That predates
+        // `viewport-fit=cover` in index.html and the safe-area padding in
+        // index.css, both of which now carry the insets — so the bar is painted
+        // by the app's own chrome instead. If an old device ever regresses,
+        // the fix is a version-gated fallback, NOT restoring these calls.
+        StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light }),
       )
       .catch(() => {});
   }

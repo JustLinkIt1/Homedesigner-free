@@ -5,6 +5,85 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.21.0 - 2026-08-04 (versionCode 12100)
+
+Play Console advisories against 11800. None were blocking — recommendations, not
+policy violations — but two were worth acting on. **This ships alone**, with no
+feature work stacked on top, because neither change can be verified without real
+hardware.
+
+### Edge-to-edge, and the deprecated status-bar calls
+
+`targetSdkVersion` is already **36**, so edge-to-edge was never optional — it has
+been forced since that bump. The web layer was largely ready: `viewport-fit=cover`
+in `index.html`, 36 `env(safe-area-inset-*)` uses, and `.app` padding all four
+insets with a comment already naming Android 15.
+
+What contradicted it was `src/lib/theme.ts`:
+
+- `setOverlaysWebView({ overlay: false })` asked the framework to **reserve** the
+  status bar — precisely the behaviour Android 15 removed. Ignored on SDK 35+.
+- `setBackgroundColor()` calls `Window.setStatusBarColor`, one of the deprecated
+  APIs Play named. A no-op on Android 15+.
+
+Both are gone. **`setStyle` stays** — it is not deprecated, it maps to
+`WindowInsetsControllerCompat.setAppearanceLight*Bars`, and it is what keeps the
+clock and battery legible against our chrome.
+
+Those two calls existed for a Samsung Android 9 device that drew edge-to-edge
+without populating `env(safe-area-inset-top)`. That predates both
+`viewport-fit=cover` and the safe-area padding, so the reasoning no longer holds.
+
+**The status bar is now painted by the app's own chrome.** Without that it would
+have regressed in one theme only: `.app` carries `var(--bg)`, so behind the
+status bar the light theme would show `#eef0ee` above a white `#ffffff` toolbar —
+a visible grey band. Dark mode would have looked untouched, because `--bg` there
+is `#0a0d14`, byte-identical to the colour previously pushed natively. The top
+inset therefore moved off `.app` and onto `.toolbar` and `.ps-head`, which extend
+their own surface upward — what a native app does.
+
+### R8 is on
+
+`minifyEnabled true`, with keep rules where R8 cannot see the reference:
+Capacitor resolves plugin classes **by name** from `capacitor.plugins.json`, so
+nothing in the compiled code points at them and they would be stripped.
+
+`shrinkResources` is deliberately **left off**. It is a separate lever with its
+own failure mode, and stacking two build-level changes into a release that cannot
+be verified here would make any crash report impossible to attribute.
+
+No keeps were added for RevenueCat, social-login or app-update. Those ship
+consumer rules that R8 applies automatically; pre-emptive keeps would mask a real
+gap and partly defeat the optimisation.
+
+### Not addressed
+
+The `androidbrowserhelper` deprecation warnings come from a third-party plugin.
+The app calls none of those APIs, so there is nothing to fix on our side short of
+a plugin bump with its own regression risk.
+
+### Testing, and its limits
+
+**The automated suite cannot prove either change.** Playwright has no status bar,
+and R8 failures are runtime-only in a release build. What it does pin is the
+contract, in `tests/theme.mjs`: `theme.ts` must not reference the two deprecated
+calls and must keep `setStyle`; `.app` must not carry the top inset while
+`.toolbar` and `.ps-head` must; and the R8 keep rules must be present.
+
+All ten were fault-injected — restoring `setBackgroundColor`, letting the inset
+drift back onto `.app`, and deleting the Capacitor keep rule each fail the right
+assertion.
+
+One of those checks initially failed against correct code: `theme.ts` names both
+deprecated calls in the comment explaining why they were removed, and the regex
+read the mention as a call. It now strips comments first, the same way the i18n
+scanner does for the same reason.
+
+Device verification is the tester's job this release: launch, place furniture,
+**the purchase and restore flow** (RevenueCat is the most reflection-heavy
+dependency and the likeliest R8 casualty), Google sign-in, an update check, and
+the status bar in both themes with gesture and 3-button navigation.
+
 ## 1.20.0 - 2026-08-04 (versionCode 12000)
 
 Test Report No. 6, three asks: *"they need to be scaled proportionally from all
