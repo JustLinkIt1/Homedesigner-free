@@ -795,5 +795,6 @@ export const ZH: Record<string, string> = {
   'Free': '免费',
   'Pro item': 'Pro 物件',
   'cloud objects (Pro)': '云端物件 (Pro)',
+  'Rotate — drag to set any angle': '旋转 — 拖动可设任意角度',
   'Reload 3D': '重新加载 3D',
 };

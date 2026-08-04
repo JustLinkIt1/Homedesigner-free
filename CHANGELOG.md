@@ -5,6 +5,77 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.20.0 - 2026-08-04 (versionCode 12000)
+
+Test Report No. 6, three asks: *"they need to be scaled proportionally from all
+sides, the rotate no only in cross way, make it so i can rotate how i want.
+Lastly the Undo button when you delete something is ontop of the menu, so i cant
+select my objects again until i close it."*
+
+### Resizing keeps an object's shape
+
+Dragging a corner used to derive width and depth **independently** — there was
+no ratio term anywhere in `resizeBox` — so a sofa dragged sideways came out flat.
+It also pinned the diagonally-opposite corner, so the piece slid across the plan
+while you resized it.
+
+Corners now scale uniformly about the object's **centre**, so the shape is
+preserved and it stays where it is. Height scales with the footprint: without
+that, a "bigger" sofa was wider but the same height and read wrong the moment you
+switched to 3D.
+
+The scale factor is the pointer's projection onto the original half-diagonal
+rather than the larger of the two axis ratios — projection keeps the corner
+tracking your finger, where an axis-max makes the box jump whenever the dominant
+axis changes mid-drag.
+
+**Free stretching is still there**, on Shift. That is a change of default: a rug
+or a counter run now needs Shift on desktop, or the width/depth inputs in the
+properties panel on touch, where there is no modifier key.
+
+### Rotation, on the control you can actually see
+
+Free rotation already existed — the 2D stalk handle has always allowed any angle
+with a 15° magnet. But the selection ring's Rotate button was a hard
+`+90°`, and on a phone that ring is the loud thing that appears when you tap an
+object, while the stalk is a small circle 28 cm above it. So the affordance
+people found stepped in quarter turns — literally "cross way".
+
+Rotate is now both: **tap** still steps 90° (the common case, squaring furniture
+to a wall), **press and drag** follows your finger to any angle. It reuses the
+stalk's `snapAngleTo(deg, 15, 5)`, so the two affordances cannot disagree about
+where an angle settles.
+
+Because the ring is shared with 3D, **3D gets free rotation for the first time** —
+it previously had no rotation affordance on the object at all.
+
+### The Undo toast no longer sits on the catalog
+
+Measured: the toaster is `z-index: 200` pinned 132 px from the bottom; the
+Objects sheet is `z-index: 75` and `58vh` tall. So the toast landed *inside* the
+sheet and painted over the grid. `.toast` sets `pointer-events: auto`, so the
+chip swallowed taps — and its `onTouchStart` pauses the auto-dismiss, so a
+mis-hit both lost the tap and kept the toast up. On a 6-second toast, raised on
+every delete.
+
+The toast now rides above an open sheet, so Undo stays reachable and the grid
+stays tappable.
+
+### Testing
+
+`editHandles.ts` had **no test coverage at all**. It has 16 assertions now,
+covering all four corners, a 37°-rotated box, the minimum-size floor binding on
+the *smaller* axis, and dragging back through the centre — plus a fence proving
+`resizeBox` still moves the centre, pinning the Shift path as unchanged.
+
+The toast overlap check took three attempts, and fault injection is the only
+reason that is known. Sampling one tile missed it (that tile sits at the top of
+the sheet). Sampling every visible tile's centre also missed it: the toast is
+`width: max-content`, so a short message lands in the gutter *between* the two
+grid columns, covering tiles either side while missing both midpoints. Only
+rectangle intersection detects it — `visible: 6, covered: 2` with the fix
+reverted. The first two versions would have shipped looking like coverage.
+
 ## 1.19.0 - 2026-08-03 (versionCode 11900)
 
 Three pieces of beta feedback, each of which turned out to be a bigger hole than

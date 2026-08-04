@@ -795,5 +795,6 @@ export const NL: Record<string, string> = {
   'Free': 'Gratis',
   'Pro item': 'Pro-object',
   'cloud objects (Pro)': 'cloudobjecten (Pro)',
+  'Rotate — drag to set any angle': 'Draaien — sleep voor elke hoek',
   'Reload 3D': '3D opnieuw laden',
 };

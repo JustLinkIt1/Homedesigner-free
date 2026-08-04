@@ -795,5 +795,6 @@ export const KO: Record<string, string> = {
   'Free': '무료',
   'Pro item': 'Pro 항목',
   'cloud objects (Pro)': '클라우드 오브젝트 (Pro)',
+  'Rotate — drag to set any angle': '회전 — 끌어서 원하는 각도로',
   'Reload 3D': '3D 다시 불러오기',
 };

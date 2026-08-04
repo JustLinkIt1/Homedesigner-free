@@ -795,5 +795,6 @@ export const RU: Record<string, string> = {
   'Free': 'Бесплатно',
   'Pro item': 'Объект Pro',
   'cloud objects (Pro)': 'облачных объектов (Pro)',
+  'Rotate — drag to set any angle': 'Поворот — потяните для любого угла',
   'Reload 3D': 'Перезагрузить 3D',
 };

@@ -426,7 +426,20 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div
+      className="app"
+      style={{
+        // How far the toast must sit above the bottom edge. A delete raises a
+        // 6s Undo toast at 132px, which lands INSIDE the Objects sheet (58vh)
+        // and paints over the grid at z-index 200 vs the sheet's 75 — so taps
+        // meant for objects hit the toast instead, and its onTouchStart even
+        // freezes the auto-dismiss. Lifting it clear keeps Undo reachable
+        // without blocking the thing you are trying to tap.
+        ['--toast-lift' as string]: drawer === 'catalog' ? 'calc(58vh + 12px)'
+          : drawer === 'build' ? 'calc(42vh + 12px)'
+          : undefined,
+      }}
+    >
       <IntroVideo />
       <Toolbar
         onImport={() => setShowImport(true)}

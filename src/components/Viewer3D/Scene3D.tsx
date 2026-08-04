@@ -27,6 +27,7 @@ import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUr
 import { useI18n } from '../../lib/i18n';
 import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
 import SelectionRing from '../SelectionRing';
+import { norm360, snapAngleTo } from '../Editor2D/editHandles';
 
 /** cm -> m, matching DesignScene's M. */
 const M3 = 0.01;
@@ -606,7 +607,15 @@ function SelectionRing3D({ onEdit }: { onEdit: () => void }) {
         y={0}
         place="above"
         actions={[
-          { id: 'rotate', run: () => st.updateFurniture(item.id, { rotation: (item.rotation + 90) % 360 }) },
+          {
+            id: 'rotate',
+            run: () => st.updateFurniture(item.id, { rotation: (item.rotation + 90) % 360 }),
+            // 3D had no free-rotate affordance at all before this — the ring is
+            // shared, so it arrives here for free.
+            drag: (deg) => st.updateFurniture(item.id, {
+              rotation: norm360(snapAngleTo(deg, 15, 5)),
+            }),
+          },
           { id: 'duplicate', run: () => st.duplicateSelection() },
           { id: 'edit', run: onEdit },
           { id: 'delete', run: () => st.deleteSelected() },

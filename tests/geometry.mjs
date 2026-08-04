@@ -30,6 +30,7 @@ export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${sourceRoot}/src/lib
 export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT } from '${sourceRoot}/src/lib/fence.ts';
 export { lockToAngle, ANGLE_LOCK_RAD } from '${sourceRoot}/src/lib/snapping.ts';
 export { spriteBox, spriteReshaped } from '${sourceRoot}/src/lib/spriteFit.ts';
+export { scaleBox, resizeBox, snapAngleTo, norm360, cornerSign } from '${sourceRoot}/src/components/Editor2D/editHandles.ts';
 export { wallDistances } from '${sourceRoot}/src/lib/distanceGuides.ts';
 export { isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan } from '${sourceRoot}/src/lib/drawGesture.ts';
 `);
@@ -49,6 +50,7 @@ const {
   fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT,
   wallDistances, lockToAngle, ANGLE_LOCK_RAD, spriteBox, spriteReshaped,
   isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan,
+  scaleBox, resizeBox, snapAngleTo, norm360, cornerSign,
 } = await import(pathToFileURL(out).href);
 
 let fails = 0;
@@ -1032,6 +1034,89 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   check('trace: it is not treated as a drawing tool', isDragDrawTool('trace') === false);
   check('trace: one finger does not pan while positioning the plan',
     shouldPanOnTouch({ tool: 'trace', moveLock: false, targetIsStage: true, targetIsBgPlan: false }) === false);
+}
+
+// ---- resizing and rotating furniture ---------------------------------------
+// editHandles.ts had NO test coverage at all before this. A tester asked for
+// proportional scaling ("more like the sims... scaled proportionally from all
+// sides"), so scaleBox is new — but resizeBox is still reachable behind Shift,
+// and both need pinning.
+{
+  // Where does the dragged corner actually sit in the world, for a given box?
+  const cornerWorld = (b, corner, rot) => {
+    const s = cornerSign(corner);
+    const lx = (s.x * b.width) / 2;
+    const ly = (s.y * b.depth) / 2;
+    const r = (rot * Math.PI) / 180;
+    return {
+      x: b.position.x + lx * Math.cos(r) - ly * Math.sin(r),
+      y: b.position.y + lx * Math.sin(r) + ly * Math.cos(r),
+    };
+  };
+  const ratio = (b) => b.width / b.depth;
+  const box = { position: { x: 400, y: 250 }, width: 200, depth: 90 };
+
+  // 1. Aspect ratio survives a drag from EVERY corner. The bug being fixed is
+  //    that resizeBox derives width and depth independently.
+  for (let c = 0; c < 4; c++) {
+    const target = cornerWorld({ ...box, width: box.width * 1.6, depth: box.depth * 1.6 }, c, 0);
+    const out = scaleBox(box, c, target, 0, 10);
+    check(`scale: corner ${c} keeps the shape`,
+      near(ratio(out), ratio(box), 1e-9), `${ratio(out)} vs ${ratio(box)}`);
+    check(`scale: corner ${c} scales by the dragged amount`,
+      near(out.scale, 1.6, 1e-9), `k=${out.scale}`);
+  }
+
+  // 2. The centre does not move — this is exactly what resizeBox does NOT do,
+  //    and what "from all sides" means.
+  {
+    const out = scaleBox(box, 2, { x: 900, y: 700 }, 0, 10);
+    check('scale: the object stays put', out.position.x === 400 && out.position.y === 250,
+      JSON.stringify(out.position));
+    // Contrast: the old behaviour slides the box toward the fixed corner.
+    const old = resizeBox(box, 2, { x: 900, y: 700 }, 0, 10);
+    check('scale: resizeBox still moves the centre (unchanged behaviour)',
+      old.position.x !== 400 || old.position.y !== 250, JSON.stringify(old.position));
+  }
+
+  // 3. minSize binds on the SMALLER axis, so a long thin rug cannot collapse.
+  {
+    const out = scaleBox(box, 2, { x: 400.001, y: 250.001 }, 0, 10);
+    check('scale: the short side never drops below the minimum',
+      out.depth >= 10 - 1e-9, `depth ${out.depth}`);
+    check('scale: the long side scales with it, keeping the shape',
+      near(ratio(out), ratio(box), 1e-9), `${ratio(out)}`);
+  }
+
+  // 4. A rotated box scales along its OWN axes, not the world's.
+  {
+    const rot = 37;
+    const target = cornerWorld({ ...box, width: box.width * 0.5, depth: box.depth * 0.5 }, 1, rot);
+    const out = scaleBox(box, 1, target, rot, 10);
+    check('scale: a rotated box still scales proportionally',
+      near(ratio(out), ratio(box), 1e-9), `${ratio(out)}`);
+    check('scale: a rotated box still scales by the dragged amount',
+      near(out.scale, 0.5, 1e-9), `k=${out.scale}`);
+    check('scale: a rotated box stays centred', out.position.x === 400 && out.position.y === 250);
+  }
+
+  // 5. Dragging the corner back THROUGH the centre must not invert the object.
+  {
+    const out = scaleBox(box, 2, { x: 100, y: 60 }, 0, 10);
+    check('scale: dragging past the centre cannot flip or zero the box',
+      out.width > 0 && out.depth > 0 && out.scale > 0, JSON.stringify(out));
+  }
+
+  // 6. Rotation snapping: the 15° magnet the stalk uses, which the selection
+  //    ring's drag now shares so the two affordances cannot disagree.
+  check('rotate: an angle just off a 15° multiple is pulled onto it',
+    snapAngleTo(43, 15, 5) === 45, `${snapAngleTo(43, 15, 5)}`);
+  check('rotate: an angle outside the window is left alone',
+    snapAngleTo(37, 15, 5) === 37, `${snapAngleTo(37, 15, 5)}`);
+  check('rotate: free angles really are free — most of the circle passes through',
+    snapAngleTo(22, 15, 5) === 22 && snapAngleTo(52, 15, 5) === 52);
+  check('rotate: the wrap point snaps too', snapAngleTo(358, 15, 5) === 360, `${snapAngleTo(358, 15, 5)}`);
+  check('rotate: norm360 brings that back in range', norm360(snapAngleTo(358, 15, 5)) === 0);
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

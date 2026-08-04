@@ -648,7 +648,7 @@ if (process.env.SMOKE_SKIP_3D) {
     check('3D selection ring: no two buttons overlap', overlap.length === 0, overlap.join(', '));
 
     const r0 = await store(() => window.useDesign.getState().furniture[0].rotation);
-    await page.locator('.sel-ring button[aria-label="Rotate 90°"]').click();
+    await page.locator('.sel-ring button[aria-label^="Rotate"]').click();
     await page.waitForTimeout(250);
     const r1 = await store(() => window.useDesign.getState().furniture[0].rotation);
     check('3D selection ring: rotate turns the object by 90°', (r1 - r0 + 360) % 360 === 90, `got ${r1 - r0}`);
@@ -1913,6 +1913,44 @@ await recoveryPage.close();
   const after = await sr.evaluate((f) => window.useDesign.getState().furniture.find((x) => x.id === f).rotation, id);
   check('selection ring: rotate turns the object by 90°', (after - before + 360) % 360 === 90, `${before} -> ${after}`);
 
+  // …and dragging that same button rotates freely. A tester asked to "rotate
+  // how i want" — free rotation already existed, but only on the small stalk
+  // handle beside the object, which this much louder ring sits right next to.
+  {
+    const rotBtn = ring.locator('button[aria-label^="Rotate"]');
+    const b = await rotBtn.boundingBox();
+    const anchor = await sr.evaluate(() => {
+      const r = document.querySelector('.sel-ring').getBoundingClientRect();
+      return { x: r.left, y: r.top };
+    });
+    await sr.evaluate(([bx, by, ax, ay]) => {
+      const btn = document.querySelector('.sel-ring button[aria-label^="Rotate"]');
+      const down = (x, y) => btn.dispatchEvent(new PointerEvent('pointerdown',
+        { bubbles: true, cancelable: true, pointerId: 7, clientX: x, clientY: y }));
+      const move = (x, y) => btn.dispatchEvent(new PointerEvent('pointermove',
+        { bubbles: true, cancelable: true, pointerId: 7, clientX: x, clientY: y }));
+      const up = (x, y) => btn.dispatchEvent(new PointerEvent('pointerup',
+        { bubbles: true, cancelable: true, pointerId: 7, clientX: x, clientY: y }));
+      btn.setPointerCapture = () => {};
+      btn.hasPointerCapture = () => false;
+      btn.releasePointerCapture = () => {};
+      down(bx, by);
+      // Sweep to a bearing that is deliberately NOT a multiple of 90 and not
+      // within the 15° magnet, so passing proves free rotation rather than a
+      // step that happened to land somewhere.
+      const r = 140;
+      for (let k = 1; k <= 6; k++) {
+        const deg = (-90 + k * 7) * Math.PI / 180;
+        move(ax + Math.cos(deg) * r, ay + Math.sin(deg) * r);
+      }
+      up(ax + r, ay);
+    }, [b.x + b.width / 2, b.y + b.height / 2, anchor.x, anchor.y]);
+    await sr.waitForTimeout(300);
+    const dragged = await sr.evaluate((f) =>
+      window.useDesign.getState().furniture.find((x) => x.id === f).rotation, id);
+    check('selection ring: dragging rotate sets a free angle', dragged % 90 !== 0, `rotation ${dragged}`);
+  }
+
   // Edit is the only route to the full panel now.
   await sr.locator('.sel-ring button[aria-label="Edit"]').click();
   await sr.waitForTimeout(500);
@@ -2019,6 +2057,90 @@ await recoveryPage.close();
   const owned = await ps.evaluate(() => document.querySelectorAll('.projects-screen .pro-tag-corner').length);
   check('pro: a Pro owner sees no badges on the projects screen', owned === 0, `${owned} badges`);
   await ps.close();
+}
+
+// ---- the Undo toast must not sit on the catalog ----------------------------
+// "the Undo button when you delete something is ontop of the menu, so i cant
+// select my objects again until i close it, but maybe i dont want to close it
+// and keep adding stuff." Measured: the toaster is z-index 200 pinned 132px up,
+// the Objects sheet is z-index 75 and 58vh tall — so the toast lands inside the
+// sheet and paints over the grid. Its onTouchStart also freezes the auto-
+// dismiss, so a mis-hit both loses the tap and keeps the toast up.
+{
+  const tz = await browser.newPage({
+    viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
+  });
+  await tz.goto(BASE);
+  await tz.evaluate(() => {
+    localStorage.setItem('homedesigner.tour.v1', 'done');
+    localStorage.setItem('homedesigner.tips.v1', 'dismissed');
+  });
+  await tz.reload({ waitUntil: 'networkidle' });
+  await tz.locator('.tpl-card', { hasText: 'Start with a room' }).click();
+  await tz.waitForSelector('.toolbar', { timeout: 20000 });
+  await tz.locator('.coach-skip').click().catch(() => {});
+
+  // Place something, open Objects, then delete it so the Undo toast appears
+  // while the sheet is open — exactly the reported situation.
+  const fid = await tz.evaluate(() => {
+    const s = window.useDesign.getState();
+    const id = s.addFurniture('side_table', { x: 0, y: 0 });
+    s.select({ kind: 'furniture', id });
+    return id;
+  });
+  await tz.locator('.mobile-tabs button', { hasText: 'Objects' }).click();
+  await tz.waitForTimeout(600);
+  await tz.evaluate(() => window.useDesign.getState().deleteSelected());
+  await tz.waitForTimeout(400);
+
+  const geom = await tz.evaluate(() => {
+    const toast = document.querySelector('.toast');
+    const sheet = document.querySelector('.sidebar.catalog');
+    if (!toast || !sheet) return null;
+    const t = toast.getBoundingClientRect();
+    const s = sheet.getBoundingClientRect();
+    return {
+      toast: { top: Math.round(t.top), bottom: Math.round(t.bottom) },
+      sheet: { top: Math.round(s.top), bottom: Math.round(s.bottom) },
+      overlaps: t.bottom > s.top && t.top < s.bottom,
+      // What is actually under the middle of the toast? If it is the toast
+      // itself, a tap there never reaches the grid.
+      hitAtToastCentre: document.elementFromPoint((t.left + t.right) / 2, (t.top + t.bottom) / 2)
+        ?.closest('.toast') ? 'toast' : 'not-toast',
+    };
+  });
+  check('toast: an Undo toast is raised on delete', geom !== null, JSON.stringify(geom));
+  if (geom) {
+    check('toast: it does not cover the open Objects sheet', !geom.overlaps, JSON.stringify(geom));
+    // Overlap has to be measured as rectangle INTERSECTION, not by hit-testing
+    // tile centres. The toast is `width: max-content` and centred, so for a
+    // short message like "Deleted" it lands in the gutter BETWEEN the two grid
+    // columns — it covers part of the tiles either side while missing both
+    // midpoints. A centre-sampling check passed happily with the fix reverted.
+    const blocked = await tz.evaluate(() => {
+      const toast = document.querySelector('.toast').getBoundingClientRect();
+      const items = [...document.querySelectorAll('.sidebar.catalog .cat-item')];
+      const onScreen = items.filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.bottom > 0 && r.top < window.innerHeight;
+      });
+      const covered = onScreen.filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.right > toast.left && r.left < toast.right
+          && r.bottom > toast.top && r.top < toast.bottom;
+      });
+      return { visible: onScreen.length, covered: covered.length };
+    });
+    check('toast: no catalog object is under the toast at all',
+      blocked.visible > 0 && blocked.covered === 0, JSON.stringify(blocked));
+  }
+  // Undo must still work — lifting it must not have put it out of reach.
+  await tz.locator('.toast-action').click();
+  await tz.waitForTimeout(300);
+  const restored = await tz.evaluate((f) =>
+    window.useDesign.getState().furniture.some((x) => x.id === f), fid);
+  check('toast: Undo is still reachable and still restores', restored);
+  await tz.close();
 }
 
 check('zero page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));

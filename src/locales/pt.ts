@@ -795,5 +795,6 @@ export const PT: Record<string, string> = {
   'Free': 'Grátis',
   'Pro item': 'Objeto Pro',
   'cloud objects (Pro)': 'objetos na nuvem (Pro)',
+  'Rotate — drag to set any angle': 'Girar — arraste para qualquer ângulo',
   'Reload 3D': 'Recarregar 3D',
 };

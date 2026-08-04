@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Copy, RotateCw, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import { tapLight } from '../lib/haptics';
@@ -19,6 +20,14 @@ import { tapLight } from '../lib/haptics';
 export interface SelectionAction {
   id: 'rotate' | 'duplicate' | 'delete' | 'edit';
   run: () => void;
+  /** Optional press-and-drag behaviour, in addition to tapping.
+   *
+   *  Rotate uses it: a tester asked to "rotate how i want", and free rotation
+   *  already existed — on the small stalk handle beside the object, which on a
+   *  phone is easy to miss next to this much louder ring. Putting it on the
+   *  control people actually see is the fix. `deg` is the angle from the
+   *  OBJECT's centre to the finger, already snapped. */
+  drag?: (deg: number) => void;
 }
 
 /** Radius of the arc, and how far apart the buttons sit along it.
@@ -58,10 +67,12 @@ export default function SelectionRing({
   danger?: SelectionAction['id'];
 }) {
   const t = useI18n();
+  const dragRef = useRef<{ id: string; moved: boolean } | null>(null);
+  const draggedRef = useRef(false);
   if (!actions.length) return null;
 
   const label: Record<SelectionAction['id'], string> = {
-    rotate: t('Rotate 90°'),
+    rotate: t('Rotate — drag to set any angle'),
     duplicate: t('Duplicate'),
     delete: t('Delete'),
     edit: t('Edit'),
@@ -111,9 +122,51 @@ export default function SelectionRing({
             style={{ transform: `translate(-50%, -50%) translate(${dx}px, ${dy}px)` }}
             aria-label={label[action.id]}
             data-tip={label[action.id]}
-            onPointerDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              if (!action.drag) return;
+              // Capture so the gesture survives the finger leaving the 44px
+              // button — which it does immediately, since rotating sweeps a
+              // long way from where it started.
+              e.currentTarget.setPointerCapture(e.pointerId);
+              dragRef.current = { id: action.id, moved: false };
+            }}
+            onPointerMove={(e) => {
+              const d = dragRef.current;
+              if (!d || d.id !== action.id || !action.drag) return;
+              const host = e.currentTarget.parentElement?.getBoundingClientRect();
+              if (!host) return;
+              // Measure from the OBJECT's centre, not the button: the buttons
+              // sit on an arc beside the object, so using the button as the
+              // pivot would rotate about the wrong point entirely.
+              const deg = (Math.atan2(e.clientY - host.top, e.clientX - host.left) * 180) / Math.PI + 90;
+              if (!d.moved) {
+                d.moved = true;
+                tapLight();
+              }
+              action.drag(deg);
+            }}
+            onPointerUp={(e) => {
+              const d = dragRef.current;
+              dragRef.current = null;
+              if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+              }
+              // A drag has already applied its angle continuously; the click
+              // that follows must not ALSO fire the 90° step.
+              draggedRef.current = !!d?.moved;
+            }}
+            onPointerCancel={() => {
+              // Android takes touches away mid-gesture. Without this the object
+              // keeps following a finger that is no longer there.
+              dragRef.current = null;
+            }}
             onClick={(e) => {
               e.stopPropagation();
+              if (draggedRef.current) {
+                draggedRef.current = false;
+                return;
+              }
               tapLight();
               action.run();
             }}

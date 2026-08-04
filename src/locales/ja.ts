@@ -795,5 +795,6 @@ export const JA: Record<string, string> = {
   'Free': '無料',
   'Pro item': 'Pro アイテム',
   'cloud objects (Pro)': 'クラウド オブジェクト (Pro)',
+  'Rotate — drag to set any angle': '回転 — ドラッグで自由な角度に',
   'Reload 3D': '3Dを再読み込み',
 };

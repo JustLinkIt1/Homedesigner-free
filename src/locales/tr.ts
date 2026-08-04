@@ -795,5 +795,6 @@ export const TR: Record<string, string> = {
   'Free': 'Ücretsiz',
   'Pro item': 'Pro öğe',
   'cloud objects (Pro)': 'bulut nesnesi (Pro)',
+  'Rotate — drag to set any angle': 'Döndür — istediğiniz açı için sürükleyin',
   'Reload 3D': '3B görünümü yeniden yükle',
 };

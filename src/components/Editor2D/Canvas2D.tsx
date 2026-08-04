@@ -42,6 +42,7 @@ import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../l
 import type { Point, Selection, Wall } from '../../types';
 import {
   resizeBox,
+  scaleBox,
   norm360,
   snapAngleTo,
   type Box,
@@ -192,7 +193,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   // Dragging a shared corner: every wall endpoint at `from` previews at `to`.
   const [cornerDrag, setCornerDrag] = useState<{ from: Point; to: Point } | null>(null);
   const [furnEdit, setFurnEdit] = useState<
-    { id: string; position: Point; rotation: number; width: number; depth: number } | null
+    { id: string; position: Point; rotation: number; width: number; depth: number; height: number } | null
   >(null);
 
   // Screen position of the one selected object, for the touch action ring.
@@ -2010,22 +2011,27 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
                     zoom={zoom}
                     pan={pan}
                     onResizeStart={() =>
-                      setFurnEdit({ id: f.id, position, rotation, width, depth })
+                      setFurnEdit({ id: f.id, position, rotation, width, depth, height: f.height })
                     }
-                    onResize={(b) =>
+                    onResize={(b, scale) =>
                       setFurnEdit({
                         id: f.id,
                         position: b.position,
                         rotation,
                         width: b.width,
                         depth: b.depth,
+                        // A proportional scale carries the height with it —
+                        // otherwise a "bigger" sofa is wider but the same height
+                        // and reads wrong the moment you switch to 3D. The free
+                        // Shift-stretch passes no scale and leaves it alone.
+                        height: scale === undefined ? f.height : f.height * scale,
                       })
                     }
                     onRotateStart={() =>
-                      setFurnEdit({ id: f.id, position, rotation, width, depth })
+                      setFurnEdit({ id: f.id, position, rotation, width, depth, height: f.height })
                     }
                     onRotate={(deg) =>
-                      setFurnEdit({ id: f.id, position, rotation: deg, width, depth })
+                      setFurnEdit({ id: f.id, position, rotation: deg, width, depth, height: f.height })
                     }
                     onCommit={() => {
                       setFurnEdit((cur) => {
@@ -2035,6 +2041,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
                             rotation: norm360(cur.rotation),
                             width: cur.width,
                             depth: cur.depth,
+                            height: cur.height,
                           });
                         }
                         return null;
@@ -2151,6 +2158,11 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
                 const f = s.furniture.find((x) => x.id === ringAnchor.id);
                 if (f) s.updateFurniture(f.id, { rotation: (f.rotation + 90) % 360 });
               },
+              // Same 15° magnet the stalk handle uses, so the two rotation
+              // affordances cannot disagree about where an angle settles.
+              drag: (deg) => s.updateFurniture(ringAnchor.id, {
+                rotation: norm360(snapAngleTo(deg, 15, 5)),
+              }),
             },
             { id: 'duplicate', run: () => s.duplicateSelection() },
             { id: 'edit', run: () => onEditSelection?.() },
@@ -2848,7 +2860,8 @@ function FurnitureHandles({
   zoom: number;
   pan: Point;
   onResizeStart: () => void;
-  onResize: (b: Box) => void;
+  /** `scale` is present only for a proportional drag, and carries the height. */
+  onResize: (b: Box, scale?: number) => void;
   onRotateStart: () => void;
   onRotate: (deg: number) => void;
   onCommit: () => void;
@@ -2955,8 +2968,18 @@ function FurnitureHandles({
           onDragMove={(e) => {
             e.cancelBubble = true;
             const w = evtWorld(e);
-            const nb = resizeBox(box, i, w, rotation, 10);
-            onResize(nb);
+            // Proportional about the centre by default — dragging a corner used
+            // to stretch width and depth independently, so a sofa came out flat
+            // and slid across the plan while you did it. Shift restores that
+            // free stretch for the cases that genuinely want it (a rug, a
+            // counter run). Touch has no modifier, so independent width/depth
+            // stays where it already is: the properties panel inputs.
+            if (e.evt.shiftKey) {
+              onResize(resizeBox(box, i, w, rotation, 10));
+              return;
+            }
+            const nb = scaleBox(box, i, w, rotation, 10);
+            onResize(nb, nb.scale);
           }}
           onDragEnd={(e) => {
             e.cancelBubble = true;

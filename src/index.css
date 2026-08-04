@@ -4438,7 +4438,7 @@ button.brand:hover .brand-name {
   }
   .toaster {
     /* Above the tool dock so toasts never cover the drawing tools. */
-    bottom: calc(132px + env(safe-area-inset-bottom));
+    bottom: calc(var(--toast-lift, 132px) + env(safe-area-inset-bottom));
   }
 
   .sidebar {
@@ -4791,7 +4791,9 @@ button.brand:hover .brand-name {
 /* ---------- Toasts ---------- */
 .toaster {
   position: fixed;
-  bottom: calc(72px + env(safe-area-inset-bottom));
+  /* --toast-lift is set by App when a bottom sheet is open, so the toast rides
+     above it instead of covering the grid the user is tapping. */
+  bottom: calc(var(--toast-lift, 72px) + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: flex;

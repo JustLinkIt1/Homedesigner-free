@@ -79,6 +79,49 @@ export const resizeBox = (
 /** Normalize an angle to [0, 360). */
 export const norm360 = (deg: number): number => ((deg % 360) + 360) % 360;
 
+/**
+ * Uniform scale about the box CENTRE, driven by dragging `corner`.
+ *
+ * `resizeBox` above stretches width and depth independently and pins the
+ * opposite corner, so a sofa dragged sideways comes out flat and slides across
+ * the plan while you do it. A tester asked for the other behaviour — "scaled
+ * proportionally from all sides" — which is this: the shape is preserved and
+ * the object stays where it is.
+ *
+ * The factor is the pointer's projection onto the ORIGINAL half-diagonal rather
+ * than, say, the larger of the two axis ratios. Projection keeps the corner
+ * tracking the finger smoothly; an axis-max would make the box jump whenever
+ * the dominant axis changed mid-drag.
+ */
+export const scaleBox = (
+  box: Box,
+  corner: number,
+  worldPointer: Point,
+  rotationDeg: number,
+  minSize: number,
+): Box & { scale: number } => {
+  const s = cornerSign(corner);
+  const half: Point = { x: (s.x * box.width) / 2, y: (s.y * box.depth) / 2 };
+  const p = worldToLocal(worldPointer, box.position, rotationDeg);
+
+  const denom = half.x * half.x + half.y * half.y;
+  // A zero-size box has no diagonal to project onto; leave it alone rather than
+  // dividing by zero.
+  if (denom === 0) return { ...box, scale: 1 };
+
+  // Neither side may fall under minSize, so the clamp is driven by whichever
+  // axis is already smaller — this is what stops a long thin rug collapsing.
+  const floor = Math.max(minSize / box.width, minSize / box.depth);
+  const scale = Math.max(floor, (p.x * half.x + p.y * half.y) / denom);
+
+  return {
+    position: box.position, // the centre is the anchor — that is the whole point
+    width: box.width * scale,
+    depth: box.depth * scale,
+    scale,
+  };
+};
+
 /** Snap an angle to the nearest `step` degrees when within `tol` degrees. */
 export const snapAngleTo = (deg: number, step: number, tol: number): number => {
   const snapped = Math.round(deg / step) * step;
