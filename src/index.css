@@ -220,12 +220,7 @@ select {
   display: flex;
   align-items: center;
   gap: 8px;
-  /* Extends behind the status bar under Android 15 edge-to-edge, so the bar is
-     painted by this surface rather than by .app's --bg. Without it there is a
-     visible grey band above a white toolbar in the light theme (--bg #eef0ee
-     vs --surface #ffffff); dark mode happens to match, so it hides there. */
-  padding-top: env(safe-area-inset-top);
-  height: calc(58px + env(safe-area-inset-top));
+  height: 58px;
   padding: 0 14px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -3069,12 +3064,7 @@ button.brand:hover .brand-name {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Extends behind the status bar under Android 15 edge-to-edge, so the bar is
-     painted by this surface rather than by .app's --bg. Without it there is a
-     visible grey band above a white toolbar in the light theme (--bg #eef0ee
-     vs --surface #ffffff); dark mode happens to match, so it hides there. */
-  padding-top: env(safe-area-inset-top);
-  height: calc(58px + env(safe-area-inset-top));
+  height: 58px;
   padding: 0 18px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -4914,8 +4904,7 @@ button.brand:hover .brand-name {
 /* Edge-to-edge safe areas (Android 15+ draws under the status/nav bars;
    landscape notches eat into the sides). */
 .app {
-  /* No padding-top here on purpose: .toolbar / .ps-head carry the top inset so
-     their own surface paints behind the status bar. */
+  padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);

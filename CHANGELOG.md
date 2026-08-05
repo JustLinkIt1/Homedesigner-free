@@ -5,6 +5,33 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.21.1 - 2026-08-04 (versionCode 12101)
+
+### Revert edge-to-edge — the status bar overlapped the toolbar
+
+1.21.0 removed `setOverlaysWebView({ overlay: false })` and
+`setBackgroundColor()` on Play's advice that they are deprecated under Android
+15. On a real device in portrait the toolbar then drew **underneath** the clock,
+signal and battery icons.
+
+The cause is exactly what the original code comment warned about and I dismissed
+as obsolete: that device does not populate `env(safe-area-inset-top)`. With the
+bar no longer reserved, `padding-top: env(safe-area-inset-top)` resolves to `0`,
+so the top row sits at y=0 with the status bar painted over it. The comment
+named the failure and the reasoning still held — `viewport-fit=cover` and the
+`.app` padding do not help when the inset itself never arrives.
+
+Reverted: the status bar is reserved and coloured again, and `.app` owns the top
+inset rather than `.toolbar` / `.ps-head` stretching behind the bar.
+
+This reinstates the Play Console advisory about `Window.setStatusBarColor`. That
+is the deliberate trade — an advisory is not a policy violation, and a broken
+portrait layout for real users is worse. `tests/theme.mjs` now asserts the
+*opposite* of what Play asks for, with the reason recorded, so the warning
+cannot be "fixed" again without a device proving the inset actually arrives.
+
+**R8 is kept.** Only the edge-to-edge half was reverted; minification was fine.
+
 ## 1.21.0 - 2026-08-04 (versionCode 12100)
 
 Play Console advisories against 11800. None were blocking — recommendations, not

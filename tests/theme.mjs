@@ -24,40 +24,6 @@ const check = (name, ok, detail = '') => {
   if (!ok) fails++;
 };
 
-function stripComments(src) {
-  let out = '';
-  let i = 0;
-  let quote = null; // "'", '"', '`' or null
-  while (i < src.length) {
-    const c = src[i];
-    const next = src[i + 1];
-    if (quote) {
-      out += c;
-      if (c === '\\') { out += next ?? ''; i += 2; continue; }
-      if (c === quote) quote = null;
-      i++;
-      continue;
-    }
-    if (c === '/' && next === '/') {
-      while (i < src.length && src[i] !== '\n') i++;
-      continue;
-    }
-    if (c === '/' && next === '*') {
-      i += 2;
-      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) {
-        if (src[i] === '\n') out += '\n'; // keep line numbers honest
-        i++;
-      }
-      i += 2;
-      continue;
-    }
-    if (c === "'" || c === '"' || c === '`') quote = c;
-    out += c;
-    i++;
-  }
-  return out;
-}
-
 const tsx = (dir, out = []) => {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (e.name === 'node_modules') continue;
@@ -176,54 +142,52 @@ for (const token of ['--tip-bg', '--tip-fg', '--tip-border']) {
   check('the Pro badge markup lives in exactly one component', strays.length === 0, strays.join(', '));
 }
 
-// ---- Android 15 edge-to-edge ----------------------------------------------
-// Play flagged Window.setStatusBarColor as deprecated, reached through the
-// StatusBar plugin. Both of these are no-ops on Android 15+ (we target SDK 36),
-// and both are the kind of call that gets pasted back in while chasing a
-// status-bar bug on some older device. setStyle is NOT deprecated and must stay.
+// ---- the status bar must stay RESERVED -------------------------------------
+// 1.21.0 went edge-to-edge on Play's advice and had to be reverted: on a real
+// device the toolbar drew underneath the clock and signal icons. The cause is
+// the one the code comment always warned about — that device does not populate
+// `env(safe-area-inset-top)`, so `padding-top: env(...)` resolves to 0 and the
+// top row lands at y=0 with the status bar painted over it.
+//
+// So these assert the OPPOSITE of what a Play Console advisory asks for, on
+// purpose. Play flags `setStatusBarColor` as deprecated; a broken portrait
+// layout for real users is worse than an advisory. Do not "fix" the warning by
+// deleting these calls again without a device that proves the inset arrives.
 {
-  // Comments are stripped first: theme.ts deliberately names both calls in a
-  // comment explaining why they went away, and matching that mention would make
-  // this check fail on the very documentation that keeps them gone.
-  const themeSrc = stripComments(readFileSync(join(root, 'src', 'lib', 'theme.ts'), 'utf8'));
-  check('edge-to-edge: no setBackgroundColor (deprecated on Android 15+)',
-    !/setBackgroundColor/.test(themeSrc));
-  check('edge-to-edge: no setOverlaysWebView (ignored on Android 15+)',
-    !/setOverlaysWebView/.test(themeSrc));
-  check('edge-to-edge: setStyle is kept, so the bar icons stay legible',
+  const themeSrc = readFileSync(join(root, 'src', 'lib', 'theme.ts'), 'utf8');
+  check('status bar: setOverlaysWebView(false) keeps the bar reserved',
+    /setOverlaysWebView/.test(themeSrc));
+  check('status bar: its colour is still set, since the app paints nothing there',
+    /setBackgroundColor/.test(themeSrc));
+  check('status bar: setStyle still keeps the icons legible',
     /setStyle/.test(themeSrc));
 
-  // The top inset must be carried by the chrome, not by .app — otherwise .app's
-  // --bg paints behind the status bar and the light theme shows a grey band
-  // above the white toolbar.
+  // With the bar reserved, .app owns the inset again — the chrome must NOT try
+  // to extend behind a bar that is no longer overlaying it.
   const css = readFileSync(join(root, 'src', 'index.css'), 'utf8');
-  const appRule = /\.app \{[^}]*\}/g;
-  const appBlocks = css.match(appRule) ?? [];
-  const appPadsTop = appBlocks.some((b) => /padding-top:\s*env\(safe-area-inset-top\)/.test(b));
-  check('edge-to-edge: .app does not carry the top inset', !appPadsTop);
+  const appBlocks = css.match(/\.app \{[^}]*\}/g) ?? [];
+  check('status bar: .app carries the top inset',
+    appBlocks.some((b) => /padding-top:\s*env\(safe-area-inset-top\)/.test(b)));
   for (const sel of ['.toolbar', '.ps-head']) {
     const block = new RegExp(`\\${sel} \\{[^}]*\\}`).exec(css)?.[0] ?? '';
-    check(`edge-to-edge: ${sel} paints behind the status bar`,
-      /padding-top:\s*env\(safe-area-inset-top\)/.test(block)
-        && /height:\s*calc\([^)]*safe-area-inset-top/.test(block),
-      block.slice(0, 80));
+    check(`status bar: ${sel} does not stretch behind the bar`,
+      !/height:\s*calc\([^)]*safe-area-inset-top/.test(block), block.slice(0, 70));
   }
 }
 
 // ---- R8 --------------------------------------------------------------------
-// Enabled for the first time in 1.21.0. R8 cannot see Capacitor's plugin lookup
-// (by name, from capacitor.plugins.json), so losing these keeps would strip
-// every plugin — and nothing in the JS test suite would notice.
+// Kept from 1.21.0 — the minification change was fine; only the edge-to-edge
+// half was reverted. R8 cannot see Capacitor's plugin lookup (by name, from
+// capacitor.plugins.json), so losing these keeps would strip every plugin and
+// nothing in the JS suite would notice.
 {
   const gradle = readFileSync(join(root, 'android', 'app', 'build.gradle'), 'utf8');
   check('r8: minification is enabled', /minifyEnabled true/.test(gradle));
   const rules = readFileSync(join(root, 'android', 'app', 'proguard-rules.pro'), 'utf8');
   check('r8: Capacitor plugin classes are kept',
     /-keep class \* extends com\.getcapacitor\.Plugin/.test(rules));
-  check('r8: @PluginMethod members are kept',
-    /com\.getcapacitor\.PluginMethod/.test(rules));
-  check('r8: the JS bridge interface is kept',
-    /JavascriptInterface/.test(rules));
+  check('r8: @PluginMethod members are kept', /com\.getcapacitor\.PluginMethod/.test(rules));
+  check('r8: the JS bridge interface is kept', /JavascriptInterface/.test(rules));
 }
 
 console.log(fails ? `\nTHEME: ${fails} FAILED` : '\nTHEME: all green');
