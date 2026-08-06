@@ -796,5 +796,10 @@ export const JA: Record<string, string> = {
   'Pro item': 'Pro アイテム',
   'cloud objects (Pro)': 'クラウド オブジェクト (Pro)',
   'Rotate — drag to set any angle': '回転 — ドラッグで自由な角度に',
+  'Try again': '再試行',
+  '3D view isn\'t available right now — the graphics driver didn\'t hand out a 3D canvas. This is often temporary. The 2D editor still works fully.': '現在 3D 表示を利用できません。グラフィックドライバーが 3D キャンバスを返しませんでした。多くの場合一時的です。2D エディターは引き続き完全に使えます。',
+  'Couldn\'t delete cloud backups — try again when you\'re online.': 'クラウドバックアップを削除できませんでした。オンラインのときに再試行してください。',
+  'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'サインインしましたが、クラウド同期を完了できませんでした。オンラインになったら再試行します。',
+  'Sync couldn\'t finish. Check your connection and try again.': '同期を完了できませんでした。接続を確認して再試行してください。',
   'Reload 3D': '3Dを再読み込み',
 };

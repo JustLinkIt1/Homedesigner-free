@@ -796,5 +796,10 @@ export const PL: Record<string, string> = {
   'Pro item': 'Element Pro',
   'cloud objects (Pro)': 'obiekty w chmurze (Pro)',
   'Rotate — drag to set any angle': 'Obróć — przeciągnij, aby ustawić dowolny kąt',
+  'Try again': 'Spróbuj ponownie',
+  '3D view isn\'t available right now — the graphics driver didn\'t hand out a 3D canvas. This is often temporary. The 2D editor still works fully.': 'Widok 3D jest teraz niedostępny — sterownik graficzny nie udostępnił obszaru 3D. Zwykle jest to chwilowe. Edytor 2D nadal działa w pełni.',
+  'Couldn\'t delete cloud backups — try again when you\'re online.': 'Nie udało się usunąć kopii w chmurze — spróbuj ponownie, gdy będziesz online.',
+  'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'Zalogowano, ale synchronizacja w chmurze nie zakończyła się. Spróbujemy ponownie, gdy będziesz online.',
+  'Sync couldn\'t finish. Check your connection and try again.': 'Nie udało się zakończyć synchronizacji. Sprawdź połączenie i spróbuj ponownie.',
   'Reload 3D': 'Załaduj 3D ponownie',
 };

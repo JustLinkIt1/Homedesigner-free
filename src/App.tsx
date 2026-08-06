@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import {
   Minus,
@@ -127,8 +127,14 @@ export default function App() {
   const [viewOpen, setViewOpen] = useState(false); // phone "View" popover (dollhouse/walk/lighting)
   const viewRef = useRef<HTMLDivElement>(null);
   const [drawer, setDrawer] = useState<null | 'catalog' | 'props' | 'build'>(null);
+  // Re-probed on demand. isWebGLAvailable() caches only SUCCESS, so it will
+  // happily succeed later — but nothing re-renders on its own after a GPU
+  // hiccup, which stranded a tester on a permanent "not available" screen.
+  const [glRetry, setGlRetry] = useState(0);
   // Projects home first — the editor opens a specific project.
   const [screen, setScreen] = useState<'projects' | 'editor'>('projects');
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- glRetry is the probe trigger
+  const webglOk = useMemo(() => isWebGLAvailable(), [glRetry]);
   const drawing = useDraw((s) => s.active);
   const calibrating = useDraw((s) => s.calibrating);
   // One-time first-run tour + dismissible tip bar.
@@ -471,13 +477,21 @@ export default function App() {
                 setDrawer('props');
               }}
             />
-          ) : !isWebGLAvailable() ? (
+          ) : !webglOk ? (
             <div className="stage-loading webgl-missing">
               <p>
                 {t(
-                  "3D view isn't available on this device — it needs WebGL, which your browser/graphics driver doesn't provide. The 2D editor still works fully.",
+                  "3D view isn't available right now — the graphics driver didn't hand out a 3D canvas. This is often temporary. The 2D editor still works fully.",
                 )}
               </p>
+              {/* isWebGLAvailable() caches only SUCCESS, so it retries on every
+                  call — but nothing re-renders this branch on its own, which
+                  left the user staring at a permanent dead end after a GPU
+                  hiccup. Reported by a tester whose device recovers if the app
+                  is restarted. Bumping the key re-runs the probe. */}
+              <button className="btn primary" onClick={() => setGlRetry((n) => n + 1)}>
+                {t('Try again')}
+              </button>
             </div>
           ) : walls.length === 0 ? (
             <div className="stage-loading stage-empty">

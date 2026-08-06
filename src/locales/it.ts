@@ -796,5 +796,10 @@ export const IT: Record<string, string> = {
   'Pro item': 'Oggetto Pro',
   'cloud objects (Pro)': 'oggetti cloud (Pro)',
   'Rotate — drag to set any angle': 'Ruota — trascina per qualsiasi angolo',
+  'Try again': 'Riprova',
+  '3D view isn\'t available right now — the graphics driver didn\'t hand out a 3D canvas. This is often temporary. The 2D editor still works fully.': 'La vista 3D non è disponibile al momento: il driver grafico non ha fornito un canvas 3D. Di solito è temporaneo. L\'editor 2D funziona ancora del tutto.',
+  'Couldn\'t delete cloud backups — try again when you\'re online.': 'Impossibile eliminare i backup cloud: riprova quando sei online.',
+  'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'Accesso eseguito, ma la sincronizzazione cloud non è riuscita. Riproveremo quando sarai online.',
+  'Sync couldn\'t finish. Check your connection and try again.': 'Sincronizzazione non riuscita. Controlla la connessione e riprova.',
   'Reload 3D': 'Ricarica 3D',
 };

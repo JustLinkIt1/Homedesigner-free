@@ -796,5 +796,10 @@ export const TR: Record<string, string> = {
   'Pro item': 'Pro öğe',
   'cloud objects (Pro)': 'bulut nesnesi (Pro)',
   'Rotate — drag to set any angle': 'Döndür — istediğiniz açı için sürükleyin',
+  'Try again': 'Yeniden dene',
+  '3D view isn\'t available right now — the graphics driver didn\'t hand out a 3D canvas. This is often temporary. The 2D editor still works fully.': '3B görünüm şu anda kullanılamıyor — grafik sürücüsü bir 3B tuval vermedi. Bu genellikle geçicidir. 2B düzenleyici tam olarak çalışmaya devam eder.',
+  'Couldn\'t delete cloud backups — try again when you\'re online.': 'Bulut yedekleri silinemedi — çevrimiçi olduğunuzda yeniden deneyin.',
+  'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'Oturum açıldı, ancak bulut eşitlemesi tamamlanamadı. Çevrimiçi olduğunuzda yeniden deneyeceğiz.',
+  'Sync couldn\'t finish. Check your connection and try again.': 'Eşitleme tamamlanamadı. Bağlantınızı kontrol edip yeniden deneyin.',
   'Reload 3D': '3B görünümü yeniden yükle',
 };

@@ -796,5 +796,10 @@ export const RU: Record<string, string> = {
   'Pro item': 'Объект Pro',
   'cloud objects (Pro)': 'облачных объектов (Pro)',
   'Rotate — drag to set any angle': 'Поворот — потяните для любого угла',
+  'Try again': 'Повторить',
+  '3D view isn\'t available right now — the graphics driver didn\'t hand out a 3D canvas. This is often temporary. The 2D editor still works fully.': '3D-вид сейчас недоступен — графический драйвер не выдал 3D-холст. Обычно это временно. 2D-редактор работает полностью.',
+  'Couldn\'t delete cloud backups — try again when you\'re online.': 'Не удалось удалить облачные копии — повторите, когда будете в сети.',
+  'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'Вход выполнен, но облачная синхронизация не завершилась. Повторим, когда вы будете в сети.',
+  'Sync couldn\'t finish. Check your connection and try again.': 'Синхронизация не завершилась. Проверьте подключение и повторите.',
   'Reload 3D': 'Перезагрузить 3D',
 };

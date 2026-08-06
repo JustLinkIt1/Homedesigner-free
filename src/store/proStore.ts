@@ -92,9 +92,27 @@ export const useProStore = create<ProState>((set, get) => ({
       // Backfill the referral attribute for devices that redeemed before we
       // started reporting redemptions to RevenueCat (needs configure() first).
       syncReferralAttribute();
+      // A Play promo code is granted to the ACCOUNT, and getCustomerInfo() does
+      // not see a purchase Play was never asked about. Only syncPurchases()
+      // does. Resume already syncs (see recheck), but a redemption made while
+      // the app was CLOSED is followed by a cold launch, where this is the only
+      // entitlement path that runs — so it has to sync too, or the code is
+      // silently ignored until the user happens to background and return.
+      // Reported: "the pro code is marked OK in the Play Store but the app does
+      // not seem to recognize it."
+      let synced = false;
+      if (!get().isPro && provider.sync) {
+        try {
+          synced = await provider.sync();
+        } catch {
+          /* fall through to the plain read below */
+        }
+      }
       // A redeemed referral code is a grant in its own right: RevenueCat
       // knows nothing about it, so it must never be able to revoke it.
-      const entitled = (await provider.isEntitled()) || isReferralRedeemed();
+      // `synced` is OR'd in rather than short-circuiting the function, so the
+      // price and plan lookups further down still run for the upsell.
+      const entitled = synced || (await provider.isEntitled()) || isReferralRedeemed();
       // Only a SUCCESSFUL response may change the flag — a network error must
       // never lock a paying user out of what they bought.
       set({ isPro: entitled });

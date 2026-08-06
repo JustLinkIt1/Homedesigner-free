@@ -5,6 +5,62 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.21.2 - 2026-08-05 (versionCode 12102)
+
+Two reports from Ron on 1.21.0.
+
+### A Play promo code redeemed while the app was closed is now recognised
+
+*"The pro code is marked OK in the Play Store but the app does not seem to
+recognize it."*
+
+1.18.0 added a `syncPurchases()` re-check so a code redeemed in the Play Store
+would be picked up — but wired it **only to resume** (`recheck`). A promo is
+usually redeemed with the app closed, and the next thing that happens is a
+**cold launch**, where `refresh()` is the only entitlement path. That called
+`getCustomerInfo()` alone, which cannot see a purchase Play was never asked
+about. So the exact flow the feature was built for was the one it missed.
+
+`refresh()` now syncs too, on native, when not already entitled. The result is
+OR'd into the existing check rather than short-circuiting, so the price and plan
+lookups still run for the upsell.
+
+**Workaround on any earlier build:** Settings → Restore purchase. That has always
+called `restorePurchases()`, which does sync with Play.
+
+### The "3D unavailable" screen is no longer a dead end
+
+*"3D view isn't available on this device — it needs WebGL…"*
+
+The probe is honest: after a GPU process dies, the WebView really cannot hand out
+a context. `isWebGLAvailable()` caches only success and retries on every call, so
+it self-heals — but nothing re-rendered that branch, leaving a permanent dead end
+until the app was restarted.
+
+There is now a **Try again** button, and the copy no longer claims the device is
+incapable ("isn't available right now… this is often temporary") since on a Pixel
+10 Pro that is plainly untrue.
+
+This does not fix the underlying GPU failure, which is still undiagnosed.
+
+### The i18n scanner was missing every string with an apostrophe
+
+Adding these strings surfaced a hole in `tests/i18n.mjs`: it matched only
+**single-quoted** `t('…')` calls. Any string containing an apostrophe has to be
+written in double quotes, so all of them were silently exempt from the
+12-language coverage check.
+
+Six were hiding — all user-facing error copy, four of them already shipping in
+English to every non-English user:
+
+- "Couldn't delete cloud backups — try again when you're online."
+- "Signed in, but cloud sync couldn't finish. We'll retry when you're online."
+- "Sync couldn't finish. Check your connection and try again."
+- "Couldn't load that image."
+- "Copy this floor's walls onto a new storey"
+
+The scanner now reads both quote styles, and all six are translated.
+
 ## 1.21.1 - 2026-08-04 (versionCode 12101)
 
 ### Revert edge-to-edge — the status bar overlapped the toolbar

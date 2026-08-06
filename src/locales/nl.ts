@@ -796,5 +796,10 @@ export const NL: Record<string, string> = {
   'Pro item': 'Pro-object',
   'cloud objects (Pro)': 'cloudobjecten (Pro)',
   'Rotate — drag to set any angle': 'Draaien — sleep voor elke hoek',
+  'Try again': 'Opnieuw proberen',
+  '3D view isn\'t available right now — the graphics driver didn\'t hand out a 3D canvas. This is often temporary. The 2D editor still works fully.': '3D-weergave is nu niet beschikbaar — het grafische stuurprogramma leverde geen 3D-canvas. Dit is meestal tijdelijk. De 2D-editor werkt nog volledig.',
+  'Couldn\'t delete cloud backups — try again when you\'re online.': 'Kon cloudback-ups niet verwijderen — probeer het opnieuw als je online bent.',
+  'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'Ingelogd, maar cloudsynchronisatie kon niet worden voltooid. We proberen het opnieuw als je online bent.',
+  'Sync couldn\'t finish. Check your connection and try again.': 'Synchronisatie kon niet worden voltooid. Controleer je verbinding en probeer opnieuw.',
   'Reload 3D': '3D opnieuw laden',
 };

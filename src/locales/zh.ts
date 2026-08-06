@@ -796,5 +796,10 @@ export const ZH: Record<string, string> = {
   'Pro item': 'Pro 物件',
   'cloud objects (Pro)': '云端物件 (Pro)',
   'Rotate — drag to set any angle': '旋转 — 拖动可设任意角度',
+  'Try again': '重试',
+  '3D view isn\'t available right now — the graphics driver didn\'t hand out a 3D canvas. This is often temporary. The 2D editor still works fully.': '3D 视图暂时不可用 — 图形驱动没有提供 3D 画布。这通常是暂时的。2D 编辑器仍可完整使用。',
+  'Couldn\'t delete cloud backups — try again when you\'re online.': '无法删除云备份 — 联网后重试。',
+  'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': '已登录，但云同步未能完成。联网后我们会重试。',
+  'Sync couldn\'t finish. Check your connection and try again.': '同步未能完成。请检查网络连接后重试。',
   'Reload 3D': '重新加载 3D',
 };

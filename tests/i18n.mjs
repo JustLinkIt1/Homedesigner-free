@@ -77,8 +77,16 @@ for (const file of sources(join(root, 'src'))) {
   // t('…') and tr('…'). Template literals and variables are deliberately not
   // matched: they cannot be statically resolved, and a dynamic key that misses
   // still falls back to readable English.
+  // BOTH quote styles. Single-quoted only was the original rule, which silently
+  // exempted every string containing an apostrophe — i.e. most of the
+  // user-facing error copy ("Couldn't load that image.") — from the 12-locale
+  // coverage check. Six strings were hiding behind it.
   for (const m of src.matchAll(/\b(?:t|tr)\(\s*'((?:[^'\\]|\\.)*)'/g)) {
     const key = m[1].replace(/\\'/g, "'");
+    if (!used.has(key)) used.set(key, file.replace(`${root}/`, ''));
+  }
+  for (const m of src.matchAll(/\b(?:t|tr)\(\s*"((?:[^"\\]|\\.)*)"/g)) {
+    const key = m[1].replace(/\\"/g, '"');
     if (!used.has(key)) used.set(key, file.replace(`${root}/`, ''));
   }
 }

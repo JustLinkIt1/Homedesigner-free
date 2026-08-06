@@ -796,5 +796,10 @@ export const KO: Record<string, string> = {
   'Pro item': 'Pro 항목',
   'cloud objects (Pro)': '클라우드 오브젝트 (Pro)',
   'Rotate — drag to set any angle': '회전 — 끌어서 원하는 각도로',
+  'Try again': '다시 시도',
+  '3D view isn\'t available right now — the graphics driver didn\'t hand out a 3D canvas. This is often temporary. The 2D editor still works fully.': '지금은 3D 보기를 사용할 수 없습니다. 그래픽 드라이버가 3D 캔버스를 제공하지 않았습니다. 대개 일시적입니다. 2D 편집기는 계속 완전히 작동합니다.',
+  'Couldn\'t delete cloud backups — try again when you\'re online.': '클라우드 백업을 삭제하지 못했습니다. 온라인 상태에서 다시 시도하세요.',
+  'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': '로그인했지만 클라우드 동기화를 완료하지 못했습니다. 온라인이 되면 다시 시도합니다.',
+  'Sync couldn\'t finish. Check your connection and try again.': '동기화를 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요.',
   'Reload 3D': '3D 다시 불러오기',
 };

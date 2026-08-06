@@ -92,6 +92,33 @@ const reset = (isPro) => {
   useProStore.setState({ isPro, upsellFeature: null });
 };
 
+// --- a promo redeemed while the app was CLOSED --------------------------------
+// The gap a tester hit: "the pro code is marked OK in the Play Store but the app
+// does not seem to recognize it." recheck() syncs, but it only runs on RESUME.
+// Redeeming while the app is closed is followed by a COLD LAUNCH, where refresh()
+// is the only entitlement path — and it used to call getCustomerInfo() alone,
+// which cannot see a purchase Play was never asked about.
+{
+  reset(false);
+  const p = fakeProvider({ entitled: false, synced: true });
+  setProProvider(p);
+  await useProStore.getState().refresh();
+  check('promo: a code redeemed while the app was closed is found on launch',
+    useProStore.getState().isPro === true);
+  check('promo: startup syncs with the store, not just a plain read', p.calls.sync === 1);
+}
+{
+  // …but the sync must not become the only signal: a provider without one still
+  // has to fall back, and the price/plan lookups must still run either way.
+  reset(false);
+  const p = fakeProvider({ entitled: true });
+  delete p.sync;
+  setProProvider(p);
+  await useProStore.getState().refresh();
+  check('promo: startup still works for a provider that cannot sync',
+    useProStore.getState().isPro === true && p.calls.isEntitled === 1);
+}
+
 // --- a promo code redeemed outside the app is picked up ---------------------
 {
   reset(false);
