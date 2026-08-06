@@ -5,6 +5,50 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.22.0 - 2026-08-06 (versionCode 12200)
+
+### A fifth template: "Suburban classic"
+
+The four bundled templates were all compact and European — an open plan, a
+modest family house, a studio and a narrow terrace. Not one had a garage, a
+utility wing, a formal dining room or a den, so anyone drawing a US/AU/NZ
+suburban home started from nothing. This is that shape: 15.6 x 11.5 m, two
+storeys, a double garage, and the front-to-back hall with the stairs in it.
+
+Ground floor is a sitting room and living room on the left, the kitchen with a
+round table across the back, a hall with the stairs, a formal dining room, a
+laundry-to-den utility wing, and the garage filling the right third. Upstairs
+carries a master, a kids' room, a second bedroom, a family bathroom, a home
+office and a bonus room, off an L-shaped landing.
+
+Two decisions worth recording:
+
+**The upper storey covers the whole footprint, garage included.** A stepped
+profile — bedrooms over the main block, single-storey garage beside it — is the
+truer shape, but the app carries exactly one roof and `normalizeRoofs` keeps it
+on the top storey. Anything below the top storey is therefore left open to the
+sky, and a wing with no roof reads as a bug rather than as a design. The garage
+gets a bonus room over it instead, and the house gets a roof that closes. (The
+underlying limitation is still worth fixing — it applies to any single-storey
+wing a user draws, not just this template.)
+
+**The landing is L-shaped**, a stair hall plus a corridor running east. With a
+rectangular landing the garage wing met it at a single point and the whole east
+side of the upper floor was unreachable — the kind of defect a plan looks fine
+with until you try to walk it.
+
+Also: the kitchen floor takes the checkerboard from the material library via a
+room texture override, since the checker ships there and not in the (much
+shorter) floor list.
+
+### Seating that faces what it is pulled up to
+
+Every chair in the new template was placed backwards on the first pass, and the
+sample suite could not see it: chairs are exempt from the overlap check (they
+are meant to tuck under tables) and are not in the back-to-wall set. Caught by
+rendering the plan and looking at it. Twenty-three rotations corrected across
+dining chairs, desk chairs, lounge seating and patio chairs.
+
 ## 1.21.2 - 2026-08-05 (versionCode 12102)
 
 Two reports from Ron on 1.21.0.

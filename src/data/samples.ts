@@ -560,6 +560,356 @@ function terraceHouse(): MaybeFloored {
   return { walls, rooms, furniture, openings, background: null, projectName: 'Terraced townhouse' };
 }
 
+/* ------------------------------------------------------------------ 5. Suburban classic
+   A big American two-storey with an ATTACHED GARAGE — the shape every other
+   template here is missing. The existing four are all compact and European:
+   an open plan, a modest family house, a studio and a narrow terrace. None of
+   them has a garage, a utility wing, a formal dining room or a den, so anyone
+   drawing a US/AU/NZ suburban home starts from nothing.
+
+   The layout is the familiar sitcom-suburb arrangement: a front-to-back hall
+   with the stairs in it, a formal room each side, the kitchen and its round
+   table across the back, a utility wing (laundry → den) and a double garage
+   filling the right third. Upstairs sits on the main block only; the garage
+   stays single-storey, which is what gives the front elevation its step. */
+
+function suburbanClassic(): MaybeFloored {
+  n = 0;
+  const W = 1560; // full width including the garage
+  const H = 1150;
+  const MID = 480; // front/back divider on both storeys
+  const STOREY = 282; // matches the store's storey rise
+  // Salmon walls and a burnt-orange roof: the palette does more of the
+  // "I know that house" work than the plan does, and it costs nothing.
+  const PAINT = '#e9a98e';
+
+  // ---------- Ground floor ----------
+  const g1 = wall([0, 0], [W, 0], PAINT); // rear
+  const g2 = wall([W, 0], [W, H], PAINT); // east (garage side)
+  const g3 = wall([W, H], [0, H], PAINT); // front
+  const g4 = wall([0, H], [0, 0], PAINT); // west
+  const g5 = wall([500, 0], [500, H], PAINT); // left rooms | centre
+  const g6 = wall([1000, 0], [1000, H], PAINT); // centre | utility+garage
+  const g7 = wall([0, MID], [1000, MID], PAINT); // back rooms | front rooms
+  const g8 = wall([740, MID], [740, H], PAINT); // hall | dining
+  const g9 = wall([1000, MID], [W, MID], PAINT); // utility | garage
+  const g10 = wall([1280, 0], [1280, MID], PAINT); // laundry | den
+
+  const gN = (cm: number) => at([0, 0], [W, 0], cm);
+  const gE = (cm: number) => at([W, 0], [W, H], cm);
+  const gS = (cm: number) => at([W, H], [0, H], cm);
+  const gW = (cm: number) => at([0, H], [0, 0], cm);
+  const gV5 = (cm: number) => at([500, 0], [500, H], cm);
+  const gV6 = (cm: number) => at([1000, 0], [1000, H], cm);
+  const gMid = (cm: number) => at([0, MID], [1000, MID], cm);
+  const gV8 = (cm: number) => at([740, MID], [740, H], cm - MID);
+  const gUtil = (cm: number) => at([1000, MID], [W, MID], cm - 1000);
+  const gV10 = (cm: number) => at([1280, 0], [1280, MID], cm);
+
+  const groundGeom: FloorGeom = {
+    walls: [g1, g2, g3, g4, g5, g6, g7, g8, g9, g10],
+    openings: [
+      // Exterior
+      opening(g1.id, 'window', gN(250), 170, 140, 90),
+      opening(g1.id, 'window', gN(640), 150, 140, 90),
+      opening(g1.id, 'window', gN(900), 150, 140, 90), // over the kitchen sink
+      opening(g1.id, 'window', gN(1140), 90, 90, 140, 'casement'), // laundry
+      opening(g1.id, 'window', gN(1420), 170, 140, 90), // den
+      opening(g2.id, 'window', gE(240), 150, 140, 90),
+      opening(g2.id, 'window', gE(700), 90, 90, 140, 'casement'), // garage
+      opening(g3.id, 'door', gS(280), 420, 230, 0, 'double'), // garage door
+      opening(g3.id, 'window', gS(690), 160, 140, 90), // dining
+      opening(g3.id, 'door', gS(940), 110, 215, 0), // front door
+      opening(g3.id, 'window', gS(1310), 220, 140, 90), // living room
+      opening(g4.id, 'door', gW(400), 240, 215, 0, 'sliding'), // out to the deck
+      opening(g4.id, 'window', gW(900), 150, 140, 90),
+      // Interior
+      opening(g5.id, 'door', gV5(400), 100, 210, 0, 'passage'), // sitting → kitchen
+      opening(g5.id, 'door', gV5(560), 100, 210, 0, 'passage'), // living → hall
+      opening(g6.id, 'door', gV6(200), 90, 210, 0), // kitchen → laundry
+      opening(g7.id, 'door', gMid(120), 110, 210, 0, 'passage'), // sitting → living
+      opening(g7.id, 'door', gMid(560), 110, 210, 0, 'passage'), // kitchen → hall
+      opening(g7.id, 'door', gMid(870), 100, 210, 0, 'passage'), // kitchen → dining
+      opening(g8.id, 'door', gV8(950), 100, 210, 0, 'passage'), // hall → dining
+      opening(g9.id, 'door', gUtil(1100), 90, 210, 0), // garage → laundry
+      opening(g10.id, 'door', gV10(400), 90, 210, 0), // laundry → den
+    ],
+    rooms: [
+      outdoor('Deck', rect(-420, 500, 0, 1000), 'out_deck'),
+      outdoor('Side lawn', rect(-900, -350, -420, 1300), 'out_lawn'),
+      outdoor('Back lawn', rect(0, -350, W, 0), 'out_lawn'),
+      outdoor('Front lawn', rect(0, H, 1000, 1560), 'out_lawn'),
+      outdoor('Driveway', rect(1000, H, W, 1620), 'out_asphalt'),
+      room('Sitting Room', rect(0, 0, 500, MID), 'oak', '#f3ecdf'),
+      // The one surface everybody can name. A room texture override rather
+      // than a floor-material id, because the checkerboard ships in the
+      // material library and not in the (much shorter) floor list.
+      {
+        ...room('Kitchen', rect(500, 0, 1000, MID), 'tile_white', '#eef0ea'),
+        texture: { src: materialUrl('checkered_pavement_tiles'), scaleCm: 40, roughness: 0.4, metalness: 0.03 },
+      },
+      room('Laundry', rect(1000, 0, 1280, MID), 'tile_grey', '#e8ecee'),
+      room('Den', rect(1280, 0, W, MID), 'carpet_grey', '#e9ecf2'),
+      room('Living Room', rect(0, MID, 500, H), 'oak', '#f0eadc'),
+      room('Hallway', rect(500, MID, 740, H), 'oak', '#f0eadc'),
+      room('Dining Room', rect(740, MID, 1000, H), 'walnut', '#efe6d7'),
+      room('Garage', rect(1000, MID, W, H), 'concrete', '#d9dade'),
+    ],
+    furniture: [
+      // --- Sitting room: the formal front room, no TV.
+      fur('rug', 250, 230),
+      fur('sofa', 250, 60),
+      fur('coffee_table', 250, 250),
+      fur('armchair', 90, 290, 270),
+      fur('lounge_chair', 410, 290, 90),
+      fur('side_table', 90, 180),
+      fur('bookshelf', 400, 20),
+      fur('large_plant', 450, 130),
+      fur('floor_lamp', 40, 60),
+      fur('wall_art', 8, 380, 270),
+      fur('ceiling_light', 250, 240),
+      // --- Kitchen: run along the back wall, round table in the middle.
+      fur('fridge', 545, 45),
+      fur('counter', 690, 35),
+      fur('dishwasher', 825, 35),
+      fur('kitchen_sink', 900, 35),
+      fur('stove', 535, 200, 270),
+      fur('cabinets', 690, 12),
+      fur('round_dining_table', 740, 300),
+      fur('dining_chair', 740, 225),
+      fur('dining_chair', 740, 375, 180),
+      fur('dining_chair', 665, 300, 270),
+      fur('dining_chair', 815, 300, 90),
+      fur('pendant', 740, 300),
+      // --- Laundry
+      fur('washer', 1040, 50, 270),
+      fur('sink', 1040, 330, 270),
+      fur('cabinets', 1150, 12),
+      fur('ceiling_light', 1140, 240),
+      // --- Den: the second living room, off the utility wing.
+      fur('desk', 1420, 50),
+      fur('office_chair', 1450, 150, 180),
+      fur('day_bed', 1390, 230, 270),
+      fur('bookshelf', 1510, 60, 90),
+      fur('rug', 1420, 330),
+      fur('ceiling_light', 1420, 240),
+      // --- Living room: couch facing the TV across the rug.
+      fur('sofa', 250, 1090, 180),
+      fur('tv_stand', 250, 492),
+      fur('rug', 250, 900),
+      fur('coffee_table', 250, 960),
+      fur('armchair', 80, 950, 270),
+      fur('lounge_chair', 420, 950, 90),
+      fur('floor_lamp', 60, 1080),
+      fur('bookshelf', 20, 560, 270),
+      fur('large_plant', 400, 700),
+      fur('wall_art', 8, 750, 270),
+      fur('ceiling_light', 250, 800),
+      // --- Hall: stairs down the middle, so it stays deliberately bare.
+      fur('stairs', 620, 800),
+      fur('large_plant', 710, 1060),
+      fur('wall_art', 620, 486),
+      fur('mirror', 508, 620, 270),
+      fur('ceiling_light', 620, 620),
+      // --- Dining room: the formal one, six places.
+      fur('dining_table', 870, 780, 90),
+      fur('wooden_dining_chair', 870, 680),
+      fur('wooden_dining_chair', 870, 880, 180),
+      fur('wooden_dining_chair', 795, 730, 270),
+      fur('wooden_dining_chair', 795, 830, 270),
+      fur('wooden_dining_chair', 945, 730, 90),
+      fur('wooden_dining_chair', 945, 830, 90),
+      fur('sideboard', 770, 620, 270),
+      fur('display_cabinet', 790, 1080, 270),
+      fur('large_plant', 950, 1080),
+      fur('pendant', 870, 780),
+      // --- Garage: no car in the catalog, so it reads as one by what a
+      //     garage actually accumulates — bench, shelving, bins.
+      fur('bench', 1480, 700, 90),
+      fur('worn_bookshelf', 1500, 900, 90),
+      fur('filing_cabinet', 1500, 550, 90),
+      fur('outdoor_bin', 1050, 1020),
+      fur('outdoor_bin', 1110, 1020),
+      fur('ceiling_light', 1280, 800),
+      // --- Deck, out through the living-room slider.
+      fur('patio_table', -230, 700),
+      fur('patio_chair', -340, 640, 270),
+      fur('patio_chair', -340, 760, 270),
+      fur('patio_chair', -120, 640, 90),
+      fur('bbq', -360, 920),
+      // --- Gardens
+      fur('tree', -680, 200),
+      fur('tree_small', -620, 900),
+      fur('hedge', -870, 700, 90),
+      fur('garden_lamp', -470, 1150),
+      fur('hedge', 300, -40),
+      fur('tree_small', 900, -200),
+      fur('tree', 1350, -180),
+      fur('tree_small', 300, 1400),
+      fur('hedge', 500, 1350),
+      fur('garden_lamp', 1020, 1200),
+      fur('planter_box', 1530, 1320),
+    ],
+    background: null,
+  };
+
+  // ---------- Upper floor ----------
+  // The upper storey covers the WHOLE footprint, garage included. A stepped
+  // profile (bedrooms over the main block, single-storey garage beside it)
+  // would be truer to the reference, but the app carries exactly one roof and
+  // it sits on the top storey — so anything below the top storey is left open
+  // to the sky. A wing with no roof reads as a bug, not as a design, so the
+  // garage gets a bonus room over it and the house gets a roof that closes.
+  //
+  // That forces the landing to be L-shaped: a stair hall plus a corridor
+  // running east along y 480–620. Without it the landing would meet the garage
+  // wing at a single point and the whole east side would be unreachable.
+  const u1 = wall([0, 0], [W, 0], PAINT);
+  const u2 = wall([W, 0], [W, H], PAINT);
+  const u3 = wall([W, H], [0, H], PAINT);
+  const u4 = wall([0, H], [0, 0], PAINT);
+  const u5 = wall([0, MID], [W, MID], PAINT); // north rooms | corridor
+  const u6 = wall([500, MID], [500, H], PAINT); // bedroom | landing
+  const u7 = wall([740, 620], [740, H], PAINT); // stair hall | bathroom
+  const u8 = wall([620, 0], [620, MID], PAINT); // master | kids
+  const u9 = wall([740, 620], [W, 620], PAINT); // corridor | bathroom + bonus
+  const u10 = wall([1000, 620], [1000, H], PAINT); // bathroom | bonus
+
+  const uN = (cm: number) => at([0, 0], [W, 0], cm);
+  const uE = (cm: number) => at([W, 0], [W, H], cm);
+  const uS = (cm: number) => at([W, H], [0, H], cm);
+  const uW = (cm: number) => at([0, H], [0, 0], cm);
+  const uMid = (cm: number) => at([0, MID], [W, MID], cm);
+  const uV6 = (cm: number) => at([500, MID], [500, H], cm - MID);
+  const uV7 = (cm: number) => at([740, 620], [740, H], cm - 620);
+  const uV8 = (cm: number) => at([620, 0], [620, MID], cm);
+  const uCorr = (cm: number) => at([740, 620], [W, 620], cm - 740);
+
+  const upperGeom: FloorGeom = {
+    walls: [u1, u2, u3, u4, u5, u6, u7, u8, u9, u10],
+    openings: [
+      opening(u1.id, 'window', uN(250), 170, 130, 95),
+      opening(u1.id, 'window', uN(820), 150, 130, 95),
+      opening(u1.id, 'window', uN(1280), 170, 130, 95), // office
+      opening(u2.id, 'window', uE(240), 150, 130, 95), // office
+      opening(u2.id, 'window', uE(550), 90, 110, 115, 'casement'), // corridor
+      opening(u2.id, 'window', uE(880), 150, 130, 95), // bonus room
+      opening(u3.id, 'window', uS(280), 170, 130, 95), // bonus room
+      opening(u3.id, 'window', uS(690), 90, 90, 135, 'casement'), // bathroom
+      opening(u3.id, 'window', uS(1310), 170, 130, 95), // second bedroom
+      opening(u4.id, 'window', uW(300), 150, 130, 95),
+      opening(u4.id, 'window', uW(900), 150, 130, 95),
+      opening(u5.id, 'door', uMid(560), 90, 210, 0), // master → corridor
+      opening(u5.id, 'door', uMid(680), 90, 210, 0), // kids → corridor
+      opening(u5.id, 'door', uMid(1280), 90, 210, 0), // office → corridor
+      opening(u6.id, 'door', uV6(620), 90, 210, 0), // second bedroom → landing
+      opening(u7.id, 'door', uV7(750), 80, 210, 0), // bathroom → landing
+      opening(u8.id, 'door', uV8(420), 90, 210, 0), // master ↔ kids
+      opening(u9.id, 'door', uCorr(1200), 90, 210, 0), // bonus room → corridor
+    ],
+    rooms: [
+      room('Master Bedroom', rect(0, 0, 620, MID), 'carpet_beige', '#efe6d7'),
+      room("Kids' Room", rect(620, 0, 1000, MID), 'carpet_grey', '#e9ecf2'),
+      room('Home Office', rect(1000, 0, W, MID), 'oak', '#f0eadc'),
+      room('Second Bedroom', rect(0, MID, 500, H), 'carpet_beige', '#efe6d7'),
+      // Stair hall plus the east corridor, as one L.
+      room('Landing', [
+        [500, MID], [W, MID], [W, 620], [740, 620], [740, H], [500, H],
+      ], 'oak', '#f0eadc'),
+      room('Bathroom', rect(740, 620, 1000, H), 'marble', '#eaf0f0'),
+      room('Bonus Room', rect(1000, 620, W, H), 'carpet_grey', '#e9ecf2'),
+    ],
+    furniture: [
+      // --- Master
+      fur('bed_double', 300, 140),
+      fur('nightstand', 170, 50),
+      fur('nightstand', 430, 50),
+      fur('wardrobe', 150, 440, 180),
+      fur('dresser', 560, 200, 90),
+      fur('rug', 300, 330),
+      fur('large_plant', 560, 340),
+      fur('wall_art', 300, 8),
+      fur('ceiling_light', 300, 240),
+      // --- Kids' room
+      fur('bed_single', 690, 130),
+      fur('nightstand', 790, 55),
+      fur('desk', 920, 320, 90),
+      fur('desk_lamp', 920, 270),
+      fur('office_chair', 820, 320, 270),
+      fur('bookshelf', 950, 55, 90),
+      fur('rug', 800, 380),
+      fur('ceiling_light', 800, 240),
+      // --- Home office, over the front half of the garage.
+      fur('desk', 1280, 45),
+      fur('office_chair', 1280, 140, 180),
+      fur('desk_lamp', 1330, 40),
+      fur('office_bookshelf', 1060, 240, 270),
+      fur('filing_cabinet', 1060, 380, 270),
+      fur('sofa', 1500, 240, 90),
+      fur('rug', 1280, 300),
+      fur('large_plant', 1500, 60),
+      fur('ceiling_light', 1280, 240),
+      // --- Second bedroom
+      fur('bed_single', 90, 590),
+      fur('nightstand', 185, 700),
+      fur('desk', 250, 520),
+      fur('office_chair', 250, 610, 180),
+      fur('wardrobe', 350, 1110, 180),
+      fur('bookshelf', 450, 760, 90),
+      fur('rug', 280, 850),
+      fur('large_plant', 460, 1040),
+      fur('ceiling_light', 250, 800),
+      // --- Landing: the stairwell opens into the hall, so that half stays
+      //     clear; the corridor takes the storage.
+      fur('sideboard', 900, 500),
+      fur('large_plant', 700, 1080),
+      fur('wall_art', 620, 486),
+      fur('wall_art', 1200, 486),
+      fur('mirror', 508, 1000, 270),
+      fur('ceiling_light', 620, 800),
+      fur('ceiling_light', 1100, 550),
+      // --- Bathroom
+      fur('bathtub', 890, 670),
+      fur('vanity', 950, 830, 90),
+      fur('sink', 790, 830, 270),
+      fur('shower', 940, 1060),
+      fur('toilet', 790, 1080, 270),
+      fur('mirror', 745, 830, 270),
+      fur('ceiling_light', 870, 880),
+      // --- Bonus room over the garage: the rumpus room this house type
+      //     always ends up with.
+      fur('sofa', 1400, 1090, 180),
+      fur('tv_stand', 1400, 632),
+      fur('rug', 1400, 900),
+      fur('coffee_table', 1400, 950),
+      fur('armchair', 1200, 950, 270),
+      fur('lounge_chair', 1510, 950, 90),
+      fur('bookshelf', 1060, 700, 270),
+      fur('large_plant', 1500, 700),
+      fur('floor_lamp', 1060, 1080),
+      fur('ceiling_light', 1400, 880),
+    ],
+    background: null,
+  };
+
+  const groundId = uid();
+  const upperId = uid();
+  return {
+    walls: groundGeom.walls,
+    rooms: groundGeom.rooms,
+    furniture: groundGeom.furniture,
+    openings: groundGeom.openings,
+    background: null,
+    projectName: 'Suburban classic',
+    floors: [
+      { id: groundId, name: 'Ground floor', elevation: 0 },
+      { id: upperId, name: 'Upper floor', elevation: STOREY },
+    ],
+    floorGeom: { [groundId]: groundGeom, [upperId]: upperGeom },
+    activeFloorId: groundId,
+  };
+}
+
 /* ------------------------------------------------------------------ registry */
 
 /**
@@ -643,6 +993,9 @@ const ROOFS = {
   slateGable: { type: 'gable', pitch: 38, overhang: 40, thickness: 18, covering: 'slate', coveringScaleCm: 90, color: '#4a4f55' },
   greyHip: { type: 'hip', pitch: 28, overhang: 50, thickness: 18, covering: 'tile', coveringScaleCm: 100, color: '#6f7275' },
   cityFlat: { type: 'flat', pitch: 5, overhang: 25, thickness: 22, covering: 'plain', coveringScaleCm: 100, color: '#8d9298' },
+  // Deep eaves and asphalt shingle: the American suburban roof, and the thing
+  // that stops the salmon walls reading as a Mediterranean villa.
+  orangeGable: { type: 'gable', pitch: 34, overhang: 55, thickness: 18, covering: 'shingle', coveringScaleCm: 90, color: '#b4652f' },
 } satisfies Record<string, Roof>;
 
 export interface SampleDef {
@@ -697,6 +1050,15 @@ export const SAMPLES: SampleDef[] = [
       exterior: { color: '#b69068', material: 'brown_brick_02' },
     }),
     hasPreview: true,
+  },
+  {
+    id: 'suburban-classic',
+    name: 'Suburban classic',
+    blurb: 'Two storeys, double garage and a big checkerboard kitchen',
+    build: () => dressed(suburbanClassic(), {
+      roof: ROOFS.orangeGable,
+      exterior: { color: '#e8a07c', material: 'beige_wall_001' },
+    }),
   },
 ];
 
