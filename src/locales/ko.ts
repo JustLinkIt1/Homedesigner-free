@@ -294,6 +294,7 @@ export const KO: Record<string, string> = {
   'Auto-detect rooms': '방 자동 감지',
   'Deleted': '삭제됨',
   Undo: '실행 취소',
+  'Still waiting for the Play Store…': 'Play 스토어를 기다리는 중…',
   'Pro unlocked — thank you!': 'Pro가 활성화되었습니다. 감사합니다!',
   'Pro unlocked with your referral code!': '추천 코드로 Pro가 잠금 해제되었습니다!',
   'Plan exported as PNG': '도면을 PNG로 내보냈습니다',

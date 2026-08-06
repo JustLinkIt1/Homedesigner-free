@@ -17,12 +17,32 @@ export interface ProPlan {
   priceLabel: string;
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
+export function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
   return Promise.race([
     promise,
     new Promise<never>((_, reject) => setTimeout(() => reject(new Error(msg)), ms)),
   ]);
 }
+
+/**
+ * Every native call goes through Google Play Billing, and Play Billing can sit
+ * FOREVER when its service connection cannot be established — a sideloaded
+ * build, wedged Play Services, no Play account on the device. The plugin
+ * surfaces that as a promise that never settles, not as an error, so an
+ * unguarded `await` is an unbounded hang with no way out.
+ *
+ * Reported on 1.22.0: "hit the buy subscription button and it hangs." The buy
+ * button renders a spinner while `busy`, and `busy` only clears in a `finally`
+ * — so a promise that never settles leaves the sheet spinning forever with
+ * Restore disabled beside it.
+ *
+ * Read-shaped calls get a short bound; anything that opens the Play sheet gets
+ * a long one, because a human is typing a password into it.
+ */
+const STORE_TIMEOUT_MS = 12_000;
+export const PURCHASE_TIMEOUT_MS = 180_000;
+/** Sentinel: a purchase that ran out of time is NOT a purchase that failed. */
+const PURCHASE_TIMEOUT = 'homedesigner:purchase-timeout';
 
 export interface ProProvider {
   init(): Promise<void>;
@@ -149,13 +169,15 @@ class RevenueCatProvider implements ProProvider {
 
   async isEntitled(): Promise<boolean> {
     const Purchases = await this.sdk();
-    const { customerInfo } = await Purchases.getCustomerInfo();
+    const { customerInfo } = await withTimeout(
+      Purchases.getCustomerInfo(), STORE_TIMEOUT_MS, 'Timed out reading your purchases');
     return hasProEntitlement(customerInfo);
   }
 
   async getPrice(): Promise<string | null> {
     const Purchases = await this.sdk();
-    const offerings = await Purchases.getOfferings();
+    const offerings = await withTimeout(
+      Purchases.getOfferings(), STORE_TIMEOUT_MS, 'Timed out loading store products');
     const pkg = firstAvailablePackage(offerings);
     return pkg?.product.priceString ?? null;
   }
@@ -167,10 +189,29 @@ class RevenueCatProvider implements ProProvider {
 
   async purchase(_planID?: ProPlanID): Promise<boolean> {
     const Purchases = await this.sdk();
-    const offerings = await withTimeout(Purchases.getOfferings(), 10000, 'Timed out loading store products');
+    const offerings = await withTimeout(
+      Purchases.getOfferings(), STORE_TIMEOUT_MS, 'Timed out loading store products');
     const pkg = firstAvailablePackage(offerings);
     if (!pkg) throw new Error('Pro upgrade is not available right now. Please try again later.');
-    const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
+    let customerInfo;
+    try {
+      ({ customerInfo } = await withTimeout(
+        Purchases.purchasePackage({ aPackage: pkg }), PURCHASE_TIMEOUT_MS, PURCHASE_TIMEOUT));
+    } catch (err) {
+      if (!(err instanceof Error) || err.message !== PURCHASE_TIMEOUT) throw err;
+      // Running out of time is not the same as failing. Play may still have
+      // taken the money on its own schedule, and `Promise.race` only stops us
+      // WAITING — it cannot cancel the transaction. So ask the store what it
+      // actually believes before telling the user anything: reporting a
+      // completed purchase as a failure is the one outcome worth avoiding.
+      if (await this.sync().catch(() => false)) return true;
+      // `err` is the sentinel withTimeout() threw a line above; anything else was
+      // already rethrown. The real Play error never arrives (its promise is still
+      // pending), so there is no upstream cause to attach — and Error.cause would
+      // need lib ES2022, which this project deliberately does not use.
+      // eslint-disable-next-line preserve-caught-error -- no upstream cause exists
+      throw new Error("The Play Store didn't answer. If you were charged, tap Restore purchase.");
+    }
     // purchasePackage resolving (not throwing) means Play charged the user, so
     // the transaction itself succeeded. If the entitlement is missing from
     // customerInfo (product not attached to an entitlement in the RevenueCat
@@ -183,7 +224,8 @@ class RevenueCatProvider implements ProProvider {
 
   async restore(): Promise<boolean> {
     const Purchases = await this.sdk();
-    const { customerInfo } = await Purchases.restorePurchases();
+    const { customerInfo } = await withTimeout(
+      Purchases.restorePurchases(), PURCHASE_TIMEOUT_MS, 'The Play Store took too long. Try again in a moment.');
     return hasProEntitlement(customerInfo);
   }
 
@@ -194,19 +236,21 @@ class RevenueCatProvider implements ProProvider {
     // app resumes; syncPurchases() is RevenueCat's equivalent — it uploads the
     // device's Play purchases; the recomputed customer is then read back.
     const Purchases = await this.sdk();
-    await Purchases.syncPurchases();
-    const { customerInfo } = await Purchases.getCustomerInfo();
+    await withTimeout(Purchases.syncPurchases(), STORE_TIMEOUT_MS, 'Timed out syncing your purchases');
+    const { customerInfo } = await withTimeout(
+      Purchases.getCustomerInfo(), STORE_TIMEOUT_MS, 'Timed out reading your purchases');
     return hasProEntitlement(customerInfo)
       || (customerInfo?.allPurchasedProductIdentifiers?.length ?? 0) > 0;
   }
 
   async identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean> {
     const Purchases = await this.sdk();
-    const { customerInfo } = await Purchases.logIn({ appUserID });
-    await Promise.all([
+    const { customerInfo } = await withTimeout(
+      Purchases.logIn({ appUserID }), STORE_TIMEOUT_MS, 'Timed out linking your account');
+    await withTimeout(Promise.all([
       Purchases.setEmail({ email }),
       Purchases.setDisplayName({ displayName }),
-    ]);
+    ]), STORE_TIMEOUT_MS, 'Timed out linking your account');
     const ownsPro = (info: typeof customerInfo) =>
       hasProEntitlement(info) || (info.allPurchasedProductIdentifiers?.length ?? 0) > 0;
     if (ownsPro(customerInfo)) return true;
@@ -216,14 +260,16 @@ class RevenueCatProvider implements ProProvider {
     // the new Google ID empty. Re-sync the current Play account once while
     // linking; RevenueCat aliases an anonymous owner to this identified ID
     // under the project's "Transfer to new App User ID" policy.
-    await Purchases.syncPurchases();
-    const { customerInfo: migrated } = await Purchases.getCustomerInfo();
+    await withTimeout(Purchases.syncPurchases(), STORE_TIMEOUT_MS, 'Timed out syncing your purchases');
+    const { customerInfo: migrated } = await withTimeout(
+      Purchases.getCustomerInfo(), STORE_TIMEOUT_MS, 'Timed out reading your purchases');
     return ownsPro(migrated);
   }
 
   async disconnect(): Promise<boolean> {
     const Purchases = await this.sdk();
-    const { customerInfo } = await Purchases.logOut();
+    const { customerInfo } = await withTimeout(
+      Purchases.logOut(), STORE_TIMEOUT_MS, 'Timed out signing out of the store');
     return hasProEntitlement(customerInfo);
   }
 }

@@ -294,6 +294,7 @@ export const IT: Record<string, string> = {
   'Auto-detect rooms': 'Rileva stanze',
   'Deleted': 'Eliminato',
   Undo: 'Annulla',
+  'Still waiting for the Play Store…': 'In attesa del Play Store…',
   'Pro unlocked — thank you!': 'Pro sbloccato — grazie!',
   'Pro unlocked with your referral code!': 'Pro sbloccato con il tuo codice invito!',
   'Plan exported as PNG': 'Pianta esportata come PNG',

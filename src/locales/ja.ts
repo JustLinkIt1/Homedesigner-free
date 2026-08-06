@@ -294,6 +294,7 @@ export const JA: Record<string, string> = {
   'Auto-detect rooms': '部屋を自動検出',
   'Deleted': '削除しました',
   Undo: '元に戻す',
+  'Still waiting for the Play Store…': 'Play ストアの応答を待っています…',
   'Pro unlocked — thank you!': 'Pro が有効になりました。ありがとうございます!',
   'Pro unlocked with your referral code!': '紹介コードでProが解放されました！',
   'Plan exported as PNG': 'プランをPNGで書き出しました',

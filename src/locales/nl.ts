@@ -294,6 +294,7 @@ export const NL: Record<string, string> = {
   'Auto-detect rooms': 'Kamers detecteren',
   'Deleted': 'Verwijderd',
   Undo: 'Ongedaan maken',
+  'Still waiting for the Play Store…': 'Nog steeds wachten op de Play Store…',
   'Pro unlocked — thank you!': 'Pro ontgrendeld — bedankt!',
   'Pro unlocked with your referral code!': 'Pro ontgrendeld met je verwijzingscode!',
   'Plan exported as PNG': 'Plan geëxporteerd als PNG',

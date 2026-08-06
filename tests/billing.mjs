@@ -15,7 +15,7 @@
 //   * a thrown provider (offline) must not burn the rate limit.
 //
 //   node tests/billing.mjs
-import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -179,6 +179,91 @@ const reset = (isPro) => {
   setProProvider(p);
   const unlocked = await useProStore.getState().recheck();
   check('promo: a provider without sync() falls back to a plain read', unlocked === true && p.calls.isEntitled === 1);
+}
+
+// --- no native store call may be awaited without a bound --------------------
+//
+// Google Play Billing can leave a promise pending FOREVER when its service
+// connection cannot be established (sideloaded build, wedged Play Services, no
+// Play account). The plugin reports that as silence, not as an error, so an
+// unguarded `await` is an unbounded hang: the buy button spins with Restore
+// disabled beside it and the user has no way forward. Reported on 1.22.0 as
+// "hit the buy subscription button and it hangs."
+//
+// A comment asking future code to remember this would not survive. This walks
+// the real source instead: for every `Purchases.<method>(` call, it climbs the
+// enclosing parentheses and fails unless one of them belongs to a
+// `withTimeout(`. Verified by fault injection — unwrapping any single call
+// makes this fail.
+{
+  const whole = readFileSync(join(root, 'src/lib/pro.ts'), 'utf8');
+  // Only the NATIVE provider talks to Play Billing. The web provider is
+  // RevenueCat Web Billing over Stripe — ordinary HTTP, which fails rather
+  // than hangs — so policing it would be noise.
+  const from = whole.indexOf('class RevenueCatProvider');
+  const to = whole.indexOf('class WebRevenueCatProvider');
+  if (from < 0 || to < 0 || to < from) throw new Error('pro.ts no longer has the two provider classes');
+  const src = whole.slice(from, to);
+  const GUARDED = /Purchases\.(getCustomerInfo|getOfferings|purchasePackage|restorePurchases|syncPurchases|logIn|logOut|setEmail|setDisplayName|configure)\s*\(/g;
+
+  /** True when `idx` sits inside the argument list of some `withTimeout(`. */
+  const insideWithTimeout = (text, idx) => {
+    let depth = 0;
+    for (let i = idx - 1; i >= 0; i--) {
+      const c = text[i];
+      if (c === ')') depth++;
+      else if (c === '(') {
+        // An unbalanced '(' is a call we are nested inside. Whose is it?
+        if (depth === 0) {
+          if (/withTimeout\s*$/.test(text.slice(Math.max(0, i - 20), i))) return true;
+        } else depth--;
+      }
+    }
+    return false;
+  };
+
+  const unguarded = [];
+  for (const m of src.matchAll(GUARDED)) {
+    if (!insideWithTimeout(src, m.index)) {
+      unguarded.push(`${m[1]} at char ${m.index}`);
+    }
+  }
+  check('every native store call is wrapped in withTimeout()', unguarded.length === 0, unguarded.join(', '));
+
+  // The purchase sheet is driven by a human typing a password, so its bound has
+  // to be far longer than a read's — a short one would cancel real purchases.
+  const purchaseBound = /export const PURCHASE_TIMEOUT_MS = ([\d_]+)/.exec(whole);
+  const readBound = /const STORE_TIMEOUT_MS = ([\d_]+)/.exec(whole);
+  const asNum = (m) => (m ? Number(m[1].replace(/_/g, '')) : 0);
+  check('the purchase bound is far longer than the read bound',
+    asNum(purchaseBound) >= 60_000 && asNum(purchaseBound) > asNum(readBound) * 4,
+    `purchase ${asNum(purchaseBound)}ms vs read ${asNum(readBound)}ms`);
+
+  // A timeout must not be reported to the user as a failed purchase: Promise
+  // .race stops us waiting, it cannot cancel a transaction Play already took.
+  check('a timed-out purchase re-checks entitlement before reporting failure',
+    /!== PURCHASE_TIMEOUT[\s\S]{0,600}?this\.sync\(\)/.test(src));
+}
+
+// --- the buy button must always stop spinning -------------------------------
+// `busy` gates the spinner and disables Restore. Whatever the provider does,
+// it has to come back.
+{
+  reset(false);
+  setProProvider({
+    ...fakeProvider({}),
+    purchase: () => Promise.reject(new Error('Play Store unavailable')),
+  });
+  await useProStore.getState().purchase();
+  check('a rejected purchase clears busy', useProStore.getState().busy === false);
+
+  reset(false);
+  setProProvider({
+    ...fakeProvider({}),
+    restore: () => Promise.reject(new Error('Play Store unavailable')),
+  });
+  await useProStore.getState().restore();
+  check('a rejected restore clears busy', useProStore.getState().busy === false);
 }
 
 rmSync(dir, { recursive: true, force: true });

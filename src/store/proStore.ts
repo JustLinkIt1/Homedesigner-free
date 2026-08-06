@@ -159,6 +159,16 @@ export const useProStore = create<ProState>((set, get) => ({
   purchase: async (planID) => {
     if (get().busy) return;
     set({ busy: true });
+    // The Play sheet normally appears in well under a second. When Play Billing
+    // cannot reach its service it appears never — and the provider's bound is
+    // deliberately minutes long, because cutting a real purchase short is the
+    // worse failure. That leaves a silent spinner in between, which is exactly
+    // what "it hangs" felt like to the tester. Say something instead: the sheet
+    // is still the only thing that can finish this, but the user now knows the
+    // app is waiting on Play rather than broken, and "Maybe later" stays live.
+    const slow = setTimeout(() => {
+      if (get().busy) toast.info(t('Still waiting for the Play Store…'));
+    }, 12_000);
     try {
       const ok = await getProProvider().purchase(planID);
       if (ok) {
@@ -177,6 +187,7 @@ export const useProStore = create<ProState>((set, get) => ({
       const msg = err instanceof Error ? err.message : '';
       if (!/cancel/i.test(msg)) toast.error(msg || 'Purchase did not complete. You were not charged.');
     } finally {
+      clearTimeout(slow);
       set({ busy: false });
     }
   },

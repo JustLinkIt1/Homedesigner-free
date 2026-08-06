@@ -294,6 +294,7 @@ export const TR: Record<string, string> = {
   'Auto-detect rooms': 'Odaları otomatik algıla',
   'Deleted': 'Silindi',
   Undo: 'Geri al',
+  'Still waiting for the Play Store…': 'Play Store hâlâ bekleniyor…',
   'Pro unlocked — thank you!': 'Pro etkinleştirildi — teşekkürler!',
   'Pro unlocked with your referral code!': 'Davet kodunuzla Pro açıldı!',
   'Plan exported as PNG': 'Plan PNG olarak dışa aktarıldı',

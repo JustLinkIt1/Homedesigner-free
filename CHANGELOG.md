@@ -5,6 +5,51 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.22.1 - 2026-08-06 (versionCode 12201)
+
+### The Pro buy button could spin forever
+
+Test Report No. 10: *"opening new project, hit the buy subscription button and
+it hangs."*
+
+It really did hang — there was no timeout on it, and no way out. Google Play
+Billing can leave a promise **pending forever** when its service connection
+cannot be established: a sideloaded build, wedged Play Services, no Play
+account on the device. The plugin reports that as silence rather than as an
+error. `purchasePackage()` was awaited unguarded, so the promise never settled,
+`busy` never cleared, and the buy button sat spinning with Restore disabled
+beside it. Only "Maybe later" still worked.
+
+It was not just that one call. Of the ten native store calls in `lib/pro.ts`,
+only two were bounded — `configure()` and one of the two `getOfferings()`. The
+rest could all hang: `getCustomerInfo`, `restorePurchases`, `syncPurchases`,
+`logIn`, `logOut`. A hang in `sync()` was quieter but worse in its own way,
+because `refresh()` chains `restoreSession()` off its `finally` — so a wedged
+billing service also meant Google sign-in silently never restored.
+
+All ten are now bounded. Reads get 12s; anything that opens the Play sheet gets
+180s, because a human is typing a password into it and cutting a real purchase
+short is the worse failure.
+
+**A timeout is not a failure.** `Promise.race` stops us waiting; it cannot
+cancel a transaction Play has already taken. So a purchase that runs out of
+time now calls `syncPurchases()` and re-reads ownership before saying anything,
+and reports success if the money actually moved. Only if the store still shows
+nothing does it surface an error — and that error names Restore.
+
+Three new fences in `tests/billing.mjs`, all verified by fault injection: every
+native store call is `withTimeout`-wrapped (checked by walking the real source
+and climbing enclosing parens, so it cannot be satisfied by a comment); the
+purchase bound is far longer than the read bound; and a timed-out purchase
+re-checks entitlement before reporting failure.
+
+### The wait is no longer silent
+
+A 180s bound still means up to three minutes of blank spinner, which would feel
+exactly as broken as before. If the sheet has not resolved after 12 seconds the
+app now says it is still waiting for the Play Store, so the wait reads as a slow
+store rather than a dead app. Translated into all 12 locales.
+
 ## 1.22.0 - 2026-08-06 (versionCode 12200)
 
 ### A fifth template: "Suburban classic"

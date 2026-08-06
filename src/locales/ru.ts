@@ -294,6 +294,7 @@ export const RU: Record<string, string> = {
   'Auto-detect rooms': 'Определить комнаты',
   'Deleted': 'Удалено',
   Undo: 'Отменить',
+  'Still waiting for the Play Store…': 'Ожидание ответа от Play Маркета…',
   'Pro unlocked — thank you!': 'Pro активирован — спасибо!',
   'Pro unlocked with your referral code!': 'Pro активирован реферальным кодом!',
   'Plan exported as PNG': 'План экспортирован в PNG',

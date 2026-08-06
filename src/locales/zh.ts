@@ -294,6 +294,7 @@ export const ZH: Record<string, string> = {
   'Auto-detect rooms': '自动识别房间',
   'Deleted': '已删除',
   Undo: '撤销',
+  'Still waiting for the Play Store…': '正在等待 Play 商店…',
   'Pro unlocked — thank you!': 'Pro 已解锁，感谢支持！',
   'Pro unlocked with your referral code!': '已通过邀请码解锁 Pro！',
   'Plan exported as PNG': '图纸已导出为 PNG',
