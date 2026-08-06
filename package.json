@@ -17,7 +17,8 @@
     "sync-version": "node scripts/sync-version.mjs",
     "android:aab": "npm run sync-version && npm run build && npx cap sync android && cd android && ./gradlew bundleRelease && cd .. && node scripts/verify-aab.mjs",
     "verify-aab": "node scripts/verify-aab.mjs",
-    "screenshots": "node tools/screenshots.mjs"
+    "screenshots": "node tools/screenshots.mjs",
+    "listing": "node tools/store-listing.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
