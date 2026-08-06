@@ -20,6 +20,12 @@ const PRO_CACHE_KEY = 'homedesigner.pro.v1';
 const RECHECK_INTERVAL_MS = 60_000;
 let lastRecheck = 0;
 
+/** How long a resume waits for an in-flight Play call to settle on its own
+ *  before deciding it was stranded. Long enough not to race a purchase that is
+ *  about to succeed, short enough that a stuck button frees in a blink rather
+ *  than at the provider's minutes-long timeout. */
+const SETTLE_GRACE_MS = 2_500;
+
 const readCache = (): boolean => {
   // Browser storage is user-editable and must never be an entitlement source.
   // Android keeps this offline fallback for previously verified Play purchases.
@@ -57,6 +63,10 @@ interface ProState {
   /** Silent re-check for an entitlement granted outside the app (Play promo
    *  code). Resolves true only when it flipped a non-Pro user to Pro. */
   recheck: () => Promise<boolean>;
+  /** Resolve a purchase/restore that the Play sheet never reported back on, and
+   *  free the button. Called on resume — the only moment we can tell. Resolves
+   *  true only when it flipped a non-Pro user to Pro. */
+  settleStranded: () => Promise<boolean>;
   purchase: (planID?: ProPlanID) => Promise<void>;
   restore: () => Promise<void>;
   linkAccount: (account: { appUserID: string; email: string | null; displayName: string | null }) => Promise<void>;
@@ -156,6 +166,36 @@ export const useProStore = create<ProState>((set, get) => ({
     }
   },
 
+  settleStranded: async () => {
+    if (!get().busy) return false;
+    // Coming back to the foreground is ALSO what a normal, successful purchase
+    // looks like a moment before its promise resolves. Give the in-flight call
+    // a beat to land on its own rather than racing it.
+    await new Promise((r) => setTimeout(r, SETTLE_GRACE_MS));
+    if (!get().busy) return false;
+    // Still waiting, with the sheet gone and the user back in the app. Play
+    // never delivered a result: Android can destroy the host Activity behind
+    // the billing sheet (testers frequently have "Don't keep activities" on),
+    // and a PENDING purchase — one whose payment needs a further step — never
+    // calls back at all. Either way the answer now lives with the store, not
+    // with a callback that is not coming. Ask it, then release the UI.
+    let unlocked = false;
+    try {
+      const provider = getProProvider();
+      const entitled = provider.sync ? await provider.sync() : await provider.isEntitled();
+      if (entitled && !get().isPro) {
+        set({ isPro: true, upsellFeature: null });
+        writeCache(true);
+        unlocked = true;
+      }
+    } catch {
+      // Offline or store unreachable. Freeing the button is still right: a
+      // spinner the user cannot dismiss is worse than one they can retry.
+    }
+    set({ busy: false });
+    return unlocked;
+  },
+
   purchase: async (planID) => {
     if (get().busy) return;
     set({ busy: true });
@@ -172,9 +212,13 @@ export const useProStore = create<ProState>((set, get) => ({
     try {
       const ok = await getProProvider().purchase(planID);
       if (ok) {
+        // `settleStranded` may already have found this purchase on resume and
+        // announced it. Setting the flag again is harmless; congratulating the
+        // user twice for one payment is not.
+        const alreadyKnown = get().isPro;
         set({ isPro: true, upsellFeature: null });
         writeCache(true);
-        toast.success(t('Pro unlocked — thank you!'));
+        if (!alreadyKnown) toast.success(t('Pro unlocked — thank you!'));
       } else if (Capacitor.isNativePlatform()) {
         // The provider resolved false without throwing: the flow ended without a
         // confirmed transaction (e.g. sheet dismissed in a way that isn't

@@ -296,10 +296,24 @@ export default function App() {
       }
       return false;
     }, () => {
-      // Back in the foreground. A Play promo code is redeemed in the Play Store
-      // app, so the grant lands while we are backgrounded and nothing else would
-      // ever tell us about it.
-      void useProStore.getState().recheck().then((unlocked) => {
+      // Back in the foreground, which is the only moment two different things
+      // become knowable.
+      //
+      // First: a purchase whose result Play never delivered. The billing sheet
+      // takes over the screen, so the app was backgrounded for it; if we are
+      // still `busy` now that the user is back, no callback is coming and the
+      // buy button would otherwise spin until the provider's timeout.
+      // Second: a Play promo code, redeemed in the Play Store app, which lands
+      // while we are backgrounded and which nothing else would ever tell us
+      // about.
+      //
+      // settleStranded() runs first and no-ops unless a flow is actually in
+      // flight; recheck() then covers the promo case (and is rate limited, so
+      // the two together still cost at most one store round trip per minute).
+      void useProStore.getState().settleStranded().then((freed) => {
+        if (freed) toast.success(translate('Pro unlocked — thank you!'));
+        return useProStore.getState().recheck();
+      }).then((unlocked) => {
         if (unlocked) toast.success(translate('Pro unlocked — thank you!'));
       });
     });

@@ -266,6 +266,61 @@ const reset = (isPro) => {
   check('a rejected restore clears busy', useProStore.getState().busy === false);
 }
 
+// --- a purchase the Play sheet never reported back on ----------------------
+//
+// The billing sheet takes over the screen, so the app is backgrounded for it.
+// Android can destroy the host Activity behind that sheet, and a PENDING
+// purchase never calls back at all — either way the promise the buy button is
+// waiting on never settles. Resume is the only moment we can tell, and until
+// 1.22.2 nothing on that path cleared `busy`, so the button kept spinning.
+{
+  // Stranded, and the purchase had in fact gone through.
+  reset(false);
+  const p = fakeProvider({ synced: true });
+  p.purchase = () => new Promise(() => {}); // never settles, exactly like Play
+  setProProvider(p);
+  void useProStore.getState().purchase();
+  await new Promise((r) => setTimeout(r, 20));
+  check('a stranded purchase leaves the button busy until resume', useProStore.getState().busy === true);
+
+  const freed = await useProStore.getState().settleStranded();
+  check('resume frees a stranded buy button', useProStore.getState().busy === false);
+  check('resume claims the purchase Play never reported', freed === true && useProStore.getState().isPro === true);
+}
+{
+  // Stranded, and nothing was actually bought: free the button, grant nothing.
+  reset(false);
+  const p = fakeProvider({ synced: false });
+  p.purchase = () => new Promise(() => {});
+  setProProvider(p);
+  void useProStore.getState().purchase();
+  await new Promise((r) => setTimeout(r, 20));
+  const freed = await useProStore.getState().settleStranded();
+  check('an unpaid stranded purchase still frees the button',
+    useProStore.getState().busy === false && freed === false && useProStore.getState().isPro === false);
+}
+{
+  // The store being unreachable must not strand the user either — a spinner
+  // they cannot dismiss is worse than one they can retry.
+  reset(false);
+  const p = fakeProvider({ throws: true });
+  p.purchase = () => new Promise(() => {});
+  setProProvider(p);
+  void useProStore.getState().purchase();
+  await new Promise((r) => setTimeout(r, 20));
+  await useProStore.getState().settleStranded();
+  check('an offline resume still frees the button', useProStore.getState().busy === false);
+}
+{
+  // Nothing in flight: resume must not touch entitlement or invent a toast.
+  reset(false);
+  const p = fakeProvider({ synced: true });
+  setProProvider(p);
+  const freed = await useProStore.getState().settleStranded();
+  check('resume is a no-op when no purchase is in flight',
+    freed === false && p.calls.sync === 0 && useProStore.getState().isPro === false);
+}
+
 rmSync(dir, { recursive: true, force: true });
 if (failures) {
   console.log(`\nBILLING: ${failures} failing`);

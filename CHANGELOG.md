@@ -5,6 +5,50 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.22.2 - 2026-08-06 (versionCode 12202)
+
+### Coming back to the app now un-sticks the buy button
+
+Follow-up to 1.22.1. The tester's build was **not** sideloaded, which rules
+out the easy explanation and points somewhere more interesting.
+
+Work backwards through the pre-1.22.1 purchase path and only one call could
+hang: `configure()` was bounded at 8s and `getOfferings()` at 10s, so the stall
+had to be in `purchasePackage()`. That means offerings resolved with a real
+package — the product is configured and reachable — Play was asked to open the
+billing flow, and no result ever came back.
+
+On a Play-installed build that has two well-known causes, and they share a
+shape. The billing sheet takes over the screen, so the app is backgrounded for
+it; Android may then destroy the host Activity behind the sheet and the result
+callback dies with it (testers very often have "Don't keep activities" on, and
+low-memory devices do it unprompted). A PENDING purchase — one whose payment
+needs a further step — never calls back at all either. In both cases the
+promise the button is waiting on will never settle, and the outcome can only be
+learned by asking the store after the user comes back.
+
+The app already re-checked entitlement on resume, for Play promo codes. But
+`recheck()` returns early when already Pro, is rate limited to once a minute,
+and — the part that mattered — never touched `busy`. So the entitlement could
+be found while the button carried on spinning.
+
+`settleStranded()` now runs first on every resume. It no-ops unless a flow is
+actually in flight, waits 2.5s in case the real call is about to land (coming
+back to the foreground is also what a *successful* purchase looks like a moment
+before it resolves), then asks the store directly and frees the button either
+way — including when the store is unreachable, because a spinner the user
+cannot dismiss is worse than one they can retry. A purchase found this way is
+announced once, not twice.
+
+Practical effect: 1.22.1 turned an unbounded hang into a 180-second one. This
+turns it into about three seconds, and recovers the purchase if the money moved.
+
+Four fences in `tests/billing.mjs`, each fault-injected: a stranded purchase
+stays busy until resume; resume frees it; resume claims a purchase Play never
+reported; and resume is a no-op when nothing is in flight. (The first injection
+attempt at that last one passed a *second* guard and proved nothing — both
+guards had to be removed before the test failed.)
+
 ## 1.22.1 - 2026-08-06 (versionCode 12201)
 
 ### The Pro buy button could spin forever
