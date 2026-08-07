@@ -998,13 +998,13 @@ function TextureCard({
           </div>
           <div className="prop-row">
             <label>{t('Real-world tile size')}</label>
-            <input
-              type="number"
+            <NumberInput
+              value={texture.scaleCm}
               min={5}
               max={400}
               step={1}
-              value={Math.round(texture.scaleCm)}
-              onChange={(e) => onChange({ ...texture, scaleCm: Math.max(5, Math.min(400, Number(e.target.value))) })}
+              onChange={(v) => onChange({ ...texture, scaleCm: v })}
+              ariaLabel={t('Real-world tile size')}
             />
           </div>
           {onApplyAll && (
@@ -1028,19 +1028,85 @@ function TextureCard({
   );
 }
 
+/**
+ * A number box you can actually retype.
+ *
+ * Every one of these used to clamp on each keystroke, straight into the store.
+ * That makes the field fight you: clearing "250" leaves "", which parses as 0,
+ * clamps to the minimum and rewrites the box to "10" with the caret after it —
+ * so the next keystroke gives "101", not "1", and reaching 160 means threading
+ * a digit into a number the field keeps putting back.
+ *
+ * Reported by a tester: "Erasing 250 sets the field to 10. I cannot backspace
+ * and type 160... let the user put any number in the field, then add
+ * constraints upon validation rather than during the typing."
+ *
+ * So: while focused the box holds exactly what was typed, unclamped, including
+ * empty and half-finished states. A value that is ALREADY legal still commits
+ * live, because watching the plan resize as you type is most of the point of
+ * this panel; only out-of-range and mid-typing states are held back. Blur or
+ * Enter clamps and commits; Escape abandons the edit.
+ */
+function NumberInput({
+  value, min, max, step, format = (n: number) => String(Math.round(n)), onChange, ariaLabel,
+}: {
+  value: number;
+  min: number;
+  max?: number;
+  step?: number;
+  format?: (n: number) => string;
+  onChange: (v: number) => void;
+  ariaLabel?: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const clamp = (n: number) => Math.max(min, max === undefined ? n : Math.min(max, n));
+
+  const commit = (raw: string) => {
+    setDraft(null);
+    const n = Number(raw);
+    // An empty or unparseable box reverts to the live value. Snapping it to the
+    // minimum instead would silently resize the object the moment someone
+    // cleared the field and looked away.
+    if (raw.trim() === '' || !Number.isFinite(n)) return;
+    onChange(clamp(n));
+  };
+
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      aria-label={ariaLabel}
+      value={draft ?? format(value)}
+      min={min}
+      max={max}
+      step={step}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setDraft(raw);
+        const n = Number(raw);
+        if (raw.trim() !== '' && Number.isFinite(n) && n === clamp(n)) onChange(n);
+      }}
+      onBlur={(e) => commit(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          commit(e.currentTarget.value);
+          e.currentTarget.blur();
+        } else if (e.key === 'Escape') {
+          setDraft(null);
+          e.currentTarget.blur();
+        }
+      }}
+    />
+  );
+}
+
 function NumberRow({
   label, value, min, max, onChange,
 }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void }) {
   return (
     <div className="prop-row">
       <label>{label}</label>
-      <input
-        type="number"
-        value={Math.round(value)}
-        min={min}
-        max={max}
-        onChange={(e) => onChange(Math.max(min, Math.min(max, Number(e.target.value))))}
-      />
+      <NumberInput value={value} min={min} max={max} onChange={onChange} ariaLabel={label} />
     </div>
   );
 }
@@ -1060,8 +1126,14 @@ function BackgroundProps() {
         </div>
         <div className="prop-row">
           <label>{t('Scale (cm/px)')}</label>
-          <input type="number" step={0.01} value={Number(bg.scale.toFixed(3))}
-            onChange={(e) => s.updateBackground({ scale: Math.max(0.01, Number(e.target.value)) })} />
+          <NumberInput
+            value={bg.scale}
+            min={0.01}
+            step={0.01}
+            format={(n) => String(Number(n.toFixed(3)))}
+            onChange={(v) => s.updateBackground({ scale: v })}
+            ariaLabel={t('Scale (cm/px)')}
+          />
         </div>
         <div className="prop-row">
           <label>{t('Rotation')}</label>

@@ -424,6 +424,60 @@ await page.click('.toast-action');
 await page.waitForTimeout(200);
 check('undo restores item', (await store(() => window.useDesign.getState().furniture.length)) === placed);
 
+// ---- 2b. Retyping a size box ----------------------------------------------
+// Every number field in the properties panel used to clamp on each keystroke,
+// straight into the store. Clearing "250" left "", which parses as 0, clamps to
+// the minimum and rewrites the box — so the next keystroke produced "101", not
+// "1", and you could not simply backspace and retype a value.
+// Reported: "Erasing 250 sets the field to 10. I cannot backspace and type 160."
+{
+  await store(() => {
+    const s = window.useDesign.getState();
+    const id = s.furniture[s.furniture.length - 1].id;
+    s.select({ kind: 'furniture', id });
+    s.updateFurniture(id, { width: 250 });
+  });
+  const widthBox = page.locator('.prop-row input[type=number]').first();
+  const widthOf = () => store(() => {
+    const s = window.useDesign.getState();
+    return s.furniture[s.furniture.length - 1].width;
+  });
+
+  await widthBox.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Backspace');
+  await page.waitForTimeout(120);
+  check('clearing a size box leaves it empty, not snapped to the minimum',
+    (await widthBox.inputValue()) === '', `box shows "${await widthBox.inputValue()}"`);
+  check('clearing a size box does not resize the object', (await widthOf()) === 250);
+
+  // "1" is below the 10cm minimum and must sit in the box untouched rather than
+  // being clamped and written back under the caret.
+  await page.keyboard.type('1');
+  await page.waitForTimeout(80);
+  check('a below-minimum keystroke is left alone while typing',
+    (await widthBox.inputValue()) === '1', `box shows "${await widthBox.inputValue()}"`);
+  await page.keyboard.type('60');
+  await page.waitForTimeout(120);
+  check('the typed number survives to the end', (await widthBox.inputValue()) === '160');
+  check('an in-range value previews live', (await widthOf()) === 160);
+
+  // Validation moved, it did not go away.
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type('4');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(150);
+  check('committing a below-minimum value clamps it', (await widthOf()) === 10, `got ${await widthOf()}`);
+
+  // Clearing and walking away reverts rather than silently resizing.
+  await widthBox.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(150);
+  check('an emptied box reverts on commit', (await widthOf()) === 10);
+}
+
 const stairId = await store(() => {
   const s = window.useDesign.getState();
   const id = s.addFurniture('stairs', { x: 250, y: 250 });

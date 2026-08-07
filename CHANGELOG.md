@@ -5,6 +5,47 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## 1.22.3 - 2026-08-07 (versionCode 12203)
+
+### Size boxes you can actually retype
+
+From MyToDoo's test report, and it is exactly right:
+
+> *"There is a problem with the manual resizing text box. Since there is a
+> minimum of 10 and maximum of 500, how do I change 250 to 160? Erasing 250 sets
+> the field to 10. I cannot backspace and type 160. Only way is to carefully
+> insert the 6 between the 1 and the 0. It should be easier — let the user put
+> any number in the field, then add constraints upon validation of the text
+> field rather than during the typing."*
+
+Every number box in the properties panel clamped on each keystroke, straight
+into the store. Clearing "250" left an empty string, which parses as 0, clamps
+to the minimum and rewrites the box to "10" with the caret after the "1" — so
+the next keystroke produced "101", not "1". The field was overwriting the user
+faster than they could type. Ten fields were affected: wall thickness and
+height, furniture width/depth/height/angle, opening width/height/sill, plus the
+texture tile size and the background plan scale.
+
+Fixed the way the report asks. While a box has focus it holds exactly what was
+typed, unclamped, including empty and half-finished states. Blur or Enter
+clamps and commits; Escape abandons the edit. Validation moved, it did not go
+away — committing "4" into a 10-500 field still gives 10.
+
+One deliberate exception to "never commit while typing": a value that is
+*already* legal commits immediately, so the plan still resizes live as you
+type, which is most of the point of the panel. Only out-of-range and mid-typing
+states are held back. And an emptied box reverts to the current value on commit
+rather than snapping to the minimum — clearing a field and looking away should
+not silently resize anything.
+
+The 2D and 3D length editors were already correct (they hold a string and
+commit on Enter); this brings the properties panel in line with them.
+
+Seven checks added to `tests/smoke.mjs`, driving the real keyboard against the
+real field. Verified by restoring the old clamp-per-keystroke handler, which
+fails five of them and reproduces the report exactly: the box shows "10" after
+clearing and "101" after typing a single "1".
+
 ## 1.22.2 - 2026-08-06 (versionCode 12202)
 
 ### Coming back to the app now un-sticks the buy button
