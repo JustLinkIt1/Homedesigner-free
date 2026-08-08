@@ -134,6 +134,7 @@ const proStoreSource = await readFile(join(root, 'src', 'store', 'proStore.ts'),
 const proSource = await readFile(join(root, 'src', 'lib', 'pro.ts'), 'utf8');
 const proUpsellSource = await readFile(join(root, 'src', 'components', 'ProUpsellModal.tsx'), 'utf8');
 const canvas2DSource = await readFile(join(root, 'src', 'components', 'Editor2D', 'Canvas2D.tsx'), 'utf8');
+const modelStudioAccessSource = await readFile(join(root, 'src', 'lib', 'modelStudioAccess.ts'), 'utf8');
 const scene3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Scene3D.tsx'), 'utf8');
 const furniture3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Furniture3D.tsx'), 'utf8');
 const referralSource = await readFile(join(root, 'src', 'lib', 'referral.ts'), 'utf8');
@@ -144,6 +145,12 @@ const androidManifest = await readFile(join(root, 'android', 'app', 'src', 'main
 check(
   'Google login does not trigger the Android custom-scope guard',
   !/SocialLogin\.login\(\{[\s\S]{0,300}?scopes\s*:/.test(googleAuthSource),
+);
+check(
+  'mobile Model Studio uses the supported native browser instead of window.open',
+  modelStudioAccessSource.includes("from '@capacitor/browser'") &&
+    modelStudioAccessSource.includes('await Browser.open({ url: MODEL_STUDIO_URL })') &&
+    !modelStudioAccessSource.includes('window.open('),
 );
 check(
   'Google login avoids the plugin 8.3.38 invalid-JWT decoder',
@@ -588,6 +595,25 @@ const dark = await page.evaluate(() => document.documentElement.getAttribute('da
 check('dark theme applies', dark === 'dark');
 await page.click('.seg button:has-text("System")');
 await page.click('.modal-foot .btn.primary');
+
+// The private production tool must remain reachable in the cramped editor
+// toolbar without requiring the owner to find the horizontally-scrolled
+// account avatar first.
+await page.evaluate(async () => {
+  const { useAuthStore } = await import('/src/store/authStore.ts');
+  useAuthStore.setState({
+    account: {
+      subject: 'owner-smoke',
+      email: ' NATHANJOPPICH@GMAIL.COM ',
+      name: 'Owner',
+      imageUrl: null,
+    },
+  });
+});
+await page.click('[aria-label="More"]');
+check('owner can reach Model Studio directly from the editor More menu',
+  await page.locator('.more-menu [role="menuitem"]:has-text("Model Studio")').isVisible().catch(() => false));
+await page.click('[aria-label="More"]');
 
 // ---- 5. 3D view -------------------------------------------------------------
 if (process.env.SMOKE_SKIP_3D) {
@@ -1878,6 +1904,7 @@ await staleEditorPage.close();
     const target = world(bx, by);
     return {
       afterTap,
+      afterDrag: window.__draftPoints?.() ?? null,
       midPreview,
       panBefore,
       panAfter: { ...window.useDesign.getState().pan },
@@ -1899,9 +1926,16 @@ await staleEditorPage.close();
     JSON.stringify({ before: drag.panBefore, during: drag.midPreview?.panNow }));
   check('drag-draw: nothing is committed until the finger lifts',
     drag.midPreview?.wallsSoFar === drag.wallsBefore);
+  check('drag-draw: release appends to the existing corner instead of triggering double-tap finish',
+    drag.afterTap === 1 && drag.afterDrag?.length === 2, JSON.stringify({ afterTap: drag.afterTap, afterDrag: drag.afterDrag }));
 
   // Finish and confirm the wall landed where the finger was RELEASED, not
   // where it pressed — the whole point of the gesture.
+  // A real user cannot lift and tap Finish in the same render frame. Give the
+  // drawBridge effect one human-scale beat to publish the final draft closure;
+  // otherwise a heavily loaded run can click the previous closure even though
+  // the completed preview is already painted.
+  await dd.waitForTimeout(150);
   await dd.locator('.finish-btn').click();
   await dd.waitForTimeout(300);
   const made = await dd.evaluate((t) => {
@@ -1910,11 +1944,11 @@ await staleEditorPage.close();
     return { count: ws.length, end: w ? w.end : null, start: w ? w.start : null, t };
   }, drag.target);
   const near = (p, q, tol) => p && q && Math.hypot(p.x - q.x, p.y - q.y) <= tol;
-  check('drag-draw: a wall is committed on finish', made.count > drag.wallsBefore, JSON.stringify(made));
+  check('drag-draw: a wall is committed on finish', made.count > drag.wallsBefore, JSON.stringify({ ...made, afterTap: drag.afterTap, afterDrag: drag.afterDrag }));
   // Snapping can pull the corner onto a guide, so this is a generous radius —
   // it is asserting "the release point", not exact coordinates.
   check('drag-draw: the wall ends where the finger was released, not where it pressed',
-    near(made.end, made.t, 90) || near(made.start, made.t, 90), JSON.stringify(made));
+    near(made.end, made.t, 90) || near(made.start, made.t, 90), JSON.stringify({ ...made, afterTap: drag.afterTap, afterDrag: drag.afterDrag }));
 
   // Regression: two fingers must still zoom, and must never place a point.
   const pinched = await dd.evaluate(async () => {

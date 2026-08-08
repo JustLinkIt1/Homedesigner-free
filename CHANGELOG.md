@@ -7,6 +7,26 @@ changes and add an entry when you ship one.
 
 ## Unreleased
 
+### Mobile Model Studio access
+
+- Restored a dependable owner-only route to Model Studio from the mobile
+  editor. The signed-in owner now sees **Model Studio** directly in the More
+  menu as well as in the account menu, so the horizontally scrolling toolbar
+  cannot hide the only entry point.
+- Replaced Android WebView `window.open()` with Capacitor Browser and registered
+  the native plugin. The hosted HTTPS studio now opens in an Android Custom Tab;
+  an older native shell falls back to direct navigation instead of doing
+  nothing. The Worker still performs the authoritative owner-token check.
+
+### Touch wall drawing
+
+- Fixed tap-then-drag wall drawing being mistaken for a double-tap when the
+  dragged segment began on the previous corner. A moved second gesture no
+  longer clears the draft, and Android touch release commits the last visible
+  point even when the WebView has already cleared its pointer coordinates.
+- Added a development-only draft inspection seam and browser coverage for the
+  retained first corner, final release position and completed wall.
+
 ### Internal UI research
 
 - Added a UI improvement report based on the current source, tester feedback

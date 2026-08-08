@@ -18,6 +18,7 @@ import {
   CircleHelp,
   Settings,
   MoreVertical,
+  WandSparkles,
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
@@ -29,6 +30,8 @@ import { useProStore } from '../store/proStore';
 import { useI18n } from '../lib/i18n';
 import { capturePlanThumbnail } from '../lib/thumb';
 import AccountButton from './AccountButton';
+import { useAuthStore } from '../store/authStore';
+import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
 
 function SavedBadge({ tick }: { tick: number }) {
   const [saving, setSaving] = useState(false);
@@ -91,6 +94,8 @@ export default function Toolbar({
     undo: st.undo,
   })));
   const isPro = useProStore((st) => st.isPro);
+  const account = useAuthStore((st) => st.account);
+  const canOpenModelStudio = isModelStudioOwner(account?.email);
   const t = useI18n();
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -278,6 +283,11 @@ export default function Toolbar({
               <button role="menuitem" onClick={() => { setMoreOpen(false); onAbout(); }}>
                 <Info className="icon" /> {t('About')}
               </button>
+              {canOpenModelStudio ? (
+                <button role="menuitem" onClick={() => { setMoreOpen(false); void openModelStudio(); }}>
+                  <WandSparkles className="icon" /> Model Studio
+                </button>
+              ) : null}
               <div className="menu-divider" role="separator" />
               <button role="menuitem" onClick={() => { setMoreOpen(false); openFromFile(); }}>
                 <FolderOpen className="icon" /> {t('Open project file')}

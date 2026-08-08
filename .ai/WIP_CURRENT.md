@@ -1,13 +1,32 @@
 # WIP — current handoff
 
+> **Mobile Model Studio entry repaired 2026-08-08:** the owner-only tool is now
+> available directly in the editor's More menu as well as the Account menu.
+> Android opens `https://homedesignerapp.com/app/model-studio/` through the
+> supported Capacitor Browser Custom Tab rather than the unreliable WebView
+> `window.open()` path; `@capacitor/browser` is installed and synchronized into
+> the native Gradle project. A 390×780 touch-browser check confirms the owner
+> entry is visible and on-screen. Email comparison remains normalized and the
+> sync Worker remains the final authorization boundary.
+
+> **Rebase validation completed 2026-08-08:** `agent/cloudflare-private` is
+> resolved against current `claude/home-design-app-2d-plans-12y5u5` (1.22.4).
+> Typecheck, lint and the full geometry suite are green. The full browser suite
+> passed every existing check and exposed one touch-wall regression: starting a
+> drag at the previous corner was misread as a double-tap and cleared the first
+> point. That handler now finishes only a stationary second tap. A focused real
+> touch-browser rerun retains both points and commits the wall at release. The
+> production web build and Android Java 21 debug compilation also pass with the
+> new Capacitor Browser registration.
+
 > **One-shot placement feedback completed 2026-08-08:** successful placements
 > in 2D and 3D now confirm the translated item name and expose both Undo and
 > Place another. Furniture, doors/windows, wall-mounted models and décor placed
 > on another object all use the same helper. Placement still disarms after one
 > item, the new item stays selected, and only Place another explicitly re-arms
 > it. The existing placement pill still supplies Cancel before placement.
-> Re-run validation after the rebase completes. Next report item: P2 catalogue
-> preview metadata.
+> Validation is green after the rebase. Next report item: P2 catalogue preview
+> metadata.
 
 > **UI plan rebased onto 1.22.4 on 2026-08-08:** the first three priorities in
 > `docs/UI_IMPROVEMENT_REPORT_2026-08-08.md` are implemented against Claude's
@@ -17,7 +36,7 @@
 > cloud search terms, result counts and empty-state recovery preserve the newer
 > Free-only filter. The Pro sheet separates plan selection from checkout and
 > uses exact RevenueCat prices without replacing the newer 1.22.x Play recovery
-> flow. Re-run validation after the rebase completes.
+> flow. Validation is green after the rebase.
 
 > **Play/RevenueCat purchase configuration repaired 2026-08-08:** the JSON
 > uploaded in RevenueCat belongs to
