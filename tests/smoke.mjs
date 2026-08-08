@@ -843,10 +843,11 @@ if (process.env.SMOKE_SKIP_3D) {
   check('rotate plan: four right turns restore the plan exactly', rot.backWalls === rot.beforeWalls);
 }
 
-// Nothing below reuses the model-heavy editor page. Close it before starting
-// isolated UI pages so its live WebGL scene cannot starve their app bootstrap
-// on software-rendered CI runners.
-await page.close();
+// Nothing below reuses the model-heavy editor page. Commit a navigation away
+// before starting isolated UI pages so its live WebGL scene cannot starve their
+// app bootstrap on software-rendered CI runners. Navigating is more reliable
+// here than awaiting Chromium's renderer shutdown during page.close().
+await page.goto('about:blank', { waitUntil: 'commit', timeout: 5000 });
 
 // ---- long-press context menu ------------------------------------------------
 // Only needs the 2D Konva stage, so it no longer sits inside the 3D section and
