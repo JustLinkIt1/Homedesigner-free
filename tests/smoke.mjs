@@ -846,13 +846,14 @@ if (process.env.SMOKE_SKIP_3D) {
   check('rotate plan: four right turns restore the plan exactly', rot.backWalls === rot.beforeWalls);
 }
 
-// Nothing below needs the 3D scene. Return through the app's normal view path
-// so React cleanly unmounts WebGL before isolated UI pages start; closing or
-// navigating the busy renderer directly can serialize every later browser
-// command on software-rendered CI runners.
-await store(() => window.useDesign.getState().setView('2d'));
-await page.waitForSelector('.konvajs-content canvas', { timeout: 45000 });
-await page.waitForTimeout(500);
+// Keep the remaining fresh-page checks on a separate Chromium connection.
+// A software-rendered WebGL page can serialize teardown and navigation commands
+// in its own process even after the 3D assertions are complete.
+const isolatedBrowser = await chromium.launch({
+  executablePath: process.env.CHROMIUM_PATH || undefined,
+  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'],
+});
+browser.close().catch(() => {});
 
 // ---- long-press context menu ------------------------------------------------
 // Only needs the 2D Konva stage, so it no longer sits inside the 3D section and
@@ -867,7 +868,7 @@ await page.waitForTimeout(500);
   // item slid out from under the menu. In a clean page the same gesture is
   // deterministic (verified 8/8 by hand, before and after the fix). Touch
   // simulation is sensitive to stage state, so give it an untouched stage.
-  const lp = await browser.newPage({
+  const lp = await isolatedBrowser.newPage({
     viewport: { width: 1280, height: 800 },
     hasTouch: true,
     reducedMotion: 'reduce',
@@ -1009,7 +1010,7 @@ await page.waitForTimeout(500);
 // the main `page` is deep in the 3D editor by now and its state is not worth
 // unwinding just to open a dialog.
 {
-  const a11y = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'reduce' });
+  const a11y = await isolatedBrowser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'reduce' });
   await a11y.goto(BASE);
   // Mark the first-run tour as seen BEFORE the app boots. CoachMarks installs a
   // document-level Escape handler of its own, and on a fresh profile it was
@@ -1060,7 +1061,7 @@ await page.waitForTimeout(500);
 // animations were never wired up. This context leaves motion ON and checks that a
 // closing dialog actually lingers for a frame instead of vanishing instantly.
 {
-  const motionPage = await browser.newPage({ viewport: { width: 1100, height: 800 } });
+  const motionPage = await isolatedBrowser.newPage({ viewport: { width: 1100, height: 800 } });
   await motionPage.goto(BASE);
   await motionPage.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await motionPage.locator('.ps-head .ps-settings-btn').click();
@@ -1092,7 +1093,7 @@ await page.waitForTimeout(500);
 // the full Properties sheet. This runs in a real coarse-pointer page because
 // viewport width alone does not activate the touch-only dock.
 {
-  const md = await browser.newPage({
+  const md = await isolatedBrowser.newPage({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
     isMobile: true,
@@ -1178,7 +1179,7 @@ await page.waitForTimeout(500);
 // "Need inspiration?" destination wasn't translated — the whole Tips panel had
 // shipped in English for all 12 locales.
 {
-  const fr = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+  const fr = await isolatedBrowser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
   await fr.goto(BASE);
   await fr.evaluate(() => localStorage.setItem('homedesigner.lang.v1', 'fr'));
   await fr.reload();
@@ -1232,7 +1233,7 @@ await page.waitForTimeout(500);
 // It lived only in Properties, which in 3D on a phone is behind the Edit tab AND
 // only appears with nothing selected — so in practice it was unreachable there.
 if (!process.env.SMOKE_SKIP_3D) {
-  const r3 = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+  const r3 = await isolatedBrowser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
   await r3.goto(BASE);
   await r3.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await r3.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
@@ -1260,7 +1261,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 // thing worth asserting is that the flag actually changes what renders: no slab
 // beneath, no ceiling above, and the outdoor material list instead of flooring.
 {
-  const od = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  const od = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await od.goto(BASE);
   await od.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await od.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
@@ -1313,7 +1314,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 // come for free. What must be asserted is that the flag genuinely takes the run
 // OUT of the building: no room, no roof, no cladding.
 {
-  const fp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  const fp = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await fp.goto(BASE);
   await fp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await fp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
@@ -1396,7 +1397,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 // tool and semantic flag so they stay visible in dollhouse mode and remain
 // distinguishable from non-structural fences.
 {
-  const hp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  const hp = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await hp.goto(BASE);
   await hp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await hp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
@@ -1457,7 +1458,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 // free/paid split: an outdoor category that is nearly empty and mostly locked
 // reads as bait, not as an upsell.
 {
-  const gp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  const gp = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await gp.goto(BASE);
   await gp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await gp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
@@ -1519,7 +1520,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 // ---- 6. No page errors ------------------------------------------------------
 // Old releases could leave a project JSON without a corresponding index row.
 // A reload must recover it so the next authenticated sync uploads it.
-const recoveryPage = await browser.newPage({ viewport: { width: 900, height: 700 } });
+const recoveryPage = await isolatedBrowser.newPage({ viewport: { width: 900, height: 700 } });
 await recoveryPage.goto(BASE);
 await recoveryPage.evaluate(() => {
   localStorage.setItem('homedesigner.project.recovered_legacy', JSON.stringify({
@@ -1544,7 +1545,7 @@ await recoveryPage.close();
 // Index recovery must never undo an intentional deletion. Storage removal can
 // fail (quota/private-browser edge cases) and older tabs can still leave stale
 // JSON behind, but the deletion tombstone is authoritative.
-const deletedRecoveryPage = await browser.newPage({ viewport: { width: 900, height: 700 } });
+const deletedRecoveryPage = await isolatedBrowser.newPage({ viewport: { width: 900, height: 700 } });
 await deletedRecoveryPage.goto(BASE);
 await deletedRecoveryPage.evaluate(() => {
   const id = 'deleted_plan';
@@ -1574,7 +1575,7 @@ await deletedRecoveryPage.close();
 // A stale editor can still have a trailing autosave queued after another tab
 // deletes its project. The tombstone must reject that write; otherwise the
 // old tab recreates the snapshot and index row that the deletion removed.
-const staleEditorPage = await browser.newPage({ viewport: { width: 900, height: 700 } });
+const staleEditorPage = await isolatedBrowser.newPage({ viewport: { width: 900, height: 700 } });
 await staleEditorPage.goto(BASE);
 await staleEditorPage.evaluate(() => {
   const id = 'deleted_stale_editor';
@@ -1613,7 +1614,7 @@ await staleEditorPage.close();
 // A fresh page with a version.json claiming a newer release. This is the whole
 // point of the feature and it is invisible to every other check.
 {
-  const upd = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  const upd = await isolatedBrowser.newPage({ viewport: { width: 1200, height: 800 } });
   let served = { version: '9.9.9' };
   await upd.route('**/version.json*', (r) =>
     r.fulfill({ contentType: 'application/json', body: JSON.stringify(served) }));
@@ -1648,7 +1649,7 @@ await staleEditorPage.close();
 // Its own page: the main one is deep in the 3D editor by now, and both of these
 // are first-run behaviours that need a clean projects screen.
 {
-  const sr = await browser.newPage({ viewport: { width: 390, height: 780 }, reducedMotion: 'reduce' });
+  const sr = await isolatedBrowser.newPage({ viewport: { width: 390, height: 780 }, reducedMotion: 'reduce' });
   await sr.goto(BASE);
   await sr.evaluate(() => {
     localStorage.setItem('homedesigner.tour.v1', 'done');
@@ -1717,7 +1718,7 @@ await staleEditorPage.close();
 // label, and is legible — the previous CSS tooltip used var(--text) as its
 // background, which in the dark theme is near-white text on near-white.
 {
-  const tp = await browser.newPage({ viewport: { width: 1280, height: 860 }, reducedMotion: 'reduce' });
+  const tp = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 860 }, reducedMotion: 'reduce' });
   await tp.goto(BASE);
   await tp.evaluate(() => {
     localStorage.setItem('homedesigner.tour.v1', 'done');
@@ -1770,7 +1771,7 @@ await staleEditorPage.close();
 // or scrolls. It runs at 390x740 — deliberately shorter than a real phone, so a
 // dialog that only just fits today still gets caught when a string grows.
 {
-  const dg = await browser.newPage({
+  const dg = await isolatedBrowser.newPage({
     viewport: { width: 390, height: 740 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
   });
   await dg.goto(BASE);
@@ -1840,7 +1841,7 @@ await staleEditorPage.close();
 // "a fence run can be drawn" check calls store.addWall() directly, so both the
 // mouse and touch paths were entirely uncovered.
 {
-  const dd = await browser.newPage({
+  const dd = await isolatedBrowser.newPage({
     viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
   });
   await dd.goto(BASE);
@@ -2173,7 +2174,7 @@ await staleEditorPage.close();
 // plan, hiding the object being edited. The ring replaces that; the panel must
 // now only appear when its Edit button is pressed.
 {
-  const sr = await browser.newPage({
+  const sr = await isolatedBrowser.newPage({
     viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
   });
   await sr.goto(BASE);
@@ -2292,7 +2293,7 @@ await staleEditorPage.close();
 // fires webglcontextrestored and the canvas stays black forever. Simulated here
 // with WEBGL_lose_context, which drives the same real events.
 {
-  const gl = await browser.newPage({ viewport: { width: 900, height: 780 }, reducedMotion: 'reduce' });
+  const gl = await isolatedBrowser.newPage({ viewport: { width: 900, height: 780 }, reducedMotion: 'reduce' });
   // Collected separately, NOT into the shared pageErrors gate: three.js throws
   // once from its own internals in the same tick the context dies (it compiles
   // against a now-null context), before React can unmount anything. That is the
@@ -2347,7 +2348,7 @@ await staleEditorPage.close();
 // badge must appear in step with it — the case a static badge would get right
 // by accident and the fresh-user case above would get wrong.
 {
-  const ps = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
+  const ps = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
   await ps.goto(BASE);
   await ps.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await ps.evaluate(() => {
@@ -2393,7 +2394,7 @@ await staleEditorPage.close();
 // sheet and paints over the grid. Its onTouchStart also freezes the auto-
 // dismiss, so a mis-hit both loses the tap and keeps the toast up.
 {
-  const tz = await browser.newPage({
+  const tz = await isolatedBrowser.newPage({
     viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
   });
   await tz.goto(BASE);
@@ -2471,7 +2472,7 @@ await staleEditorPage.close();
 
 check('zero page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));
 
-await browser.close();
+await isolatedBrowser.close();
 dev.kill();
 console.log(failures === 0 ? '\nSMOKE: all green' : `\nSMOKE: ${failures} failure(s)`);
 process.exit(failures === 0 ? 0 : 1);
