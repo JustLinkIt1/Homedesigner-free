@@ -28,6 +28,7 @@ import { useI18n } from '../../lib/i18n';
 import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
 import SelectionRing from '../SelectionRing';
 import { norm360, snapAngleTo } from '../Editor2D/editHandles';
+import { notifyPlacementComplete } from '../../lib/placementFeedback';
 
 /** cm -> m, matching DesignScene's M. */
 const M3 = 0.01;
@@ -976,6 +977,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
           st.select({ kind: 'furniture', id });
           st.setPendingFurniture(null);
           st.setTool('select');
+          notifyPlacementComplete(pending);
         }
       } else if (!entry?.opening && tap.kind === 'room' && tap.position && !isWallPlaceable(entry)) {
         const elevation = isSurfacePlaceable(entry)
@@ -985,6 +987,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         st.select({ kind: 'furniture', id });
         st.setPendingFurniture(null);
         st.setTool('select');
+        notifyPlacementComplete(pending);
       }
       // Placement mode owns surface taps; never open the paint palette while
       // the user is trying to add an object.

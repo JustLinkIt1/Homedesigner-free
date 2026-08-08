@@ -10,12 +10,12 @@ export interface Toast {
   id: string;
   message: string;
   kind: ToastKind;
-  action?: ToastAction;
+  actions?: ToastAction[];
 }
 
 interface ToastState {
   toasts: Toast[];
-  push: (message: string, kind?: ToastKind, action?: ToastAction) => void;
+  push: (message: string, kind?: ToastKind, actions?: ToastAction | ToastAction[]) => void;
   dismiss: (id: string) => void;
   /** Freeze/restart a toast's auto-dismiss (e.g. while a finger rests on it). */
   pause: (id: string) => void;
@@ -41,10 +41,11 @@ export const useToasts = create<ToastState>((set) => {
   };
   return {
     toasts: [],
-    push: (message, kind = 'info', action) => {
+    push: (message, kind = 'info', actions) => {
       const id = Math.random().toString(36).slice(2);
-      set((s) => ({ toasts: [...s.toasts, { id, message, kind, action }] }));
-      arm(id, action ? ACTION_TTL : TTL);
+      const normalized = actions ? (Array.isArray(actions) ? actions : [actions]) : undefined;
+      set((s) => ({ toasts: [...s.toasts, { id, message, kind, actions: normalized }] }));
+      arm(id, normalized?.length ? ACTION_TTL : TTL);
     },
     dismiss: (id) => {
       const t = timers.get(id);
@@ -68,6 +69,9 @@ export const toast = {
   /** Info toast with an inline action button (e.g. "Undo"). */
   action: (m: string, action: ToastAction, kind: ToastKind = 'info') =>
     useToasts.getState().push(m, kind, action),
+  /** Toast with multiple concise actions (e.g. "Undo" and "Place another"). */
+  actions: (m: string, actions: ToastAction[], kind: ToastKind = 'info') =>
+    useToasts.getState().push(m, kind, actions),
 };
 
 // ---------- Confirm dialog ----------

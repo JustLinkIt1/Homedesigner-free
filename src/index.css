@@ -4967,6 +4967,17 @@ button.brand:hover .brand-name {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
+@media (max-width: 520px) {
+  .toast {
+    flex-wrap: wrap;
+  }
+  .toast > span {
+    flex: 1 1 calc(100% - 76px);
+  }
+  .toast .toast-action {
+    flex: 1 1 auto;
+  }
+}
 
 /* ---------- Confirm dialog ---------- */
 /* Now a `.modal` variant, so surface/radius/shadow come from `.modal` and only

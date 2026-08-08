@@ -7,6 +7,7 @@ import { useDesign } from '../../store/designStore';
 import { getFoliageTexture, getBarkTexture } from '../../lib/textures';
 import type { FurnitureItem } from '../../types';
 import { isSurfacePlaceable, supportElevationAt } from '../../lib/furniturePlacement';
+import { notifyPlacementComplete } from '../../lib/placementFeedback';
 
 const M = 0.01; // cm -> m
 
@@ -162,6 +163,7 @@ export default function Furniture3D({
               st.select({ kind: 'furniture', id });
               st.setPendingFurniture(null);
               st.setTool('select');
+              notifyPlacementComplete(pending);
               return;
             }
             e.stopPropagation();

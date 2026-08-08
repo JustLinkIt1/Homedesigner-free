@@ -43,6 +43,7 @@ const NAME_LINE_H = 1.12;
 import { selectionTick, tapMedium } from '../../lib/haptics';
 import { useTheme, canvasColors } from '../../lib/theme';
 import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
+import { notifyPlacementComplete } from '../../lib/placementFeedback';
 import type { Point, Selection, Wall } from '../../types';
 import {
   resizeBox,
@@ -634,6 +635,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
           s.select({ kind: 'opening', id });
           s.setPendingFurniture(null);
           s.setTool('select');
+          notifyPlacementComplete(type);
         }
       } else {
         let position = snapped;
@@ -657,6 +659,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         // selected for moving/scaling instead of the next tap duplicating it.
         s.setPendingFurniture(null);
         s.setTool('select');
+        notifyPlacementComplete(type);
       }
     } else if (tool === 'measure') {
       if (!measureA) {

@@ -133,6 +133,9 @@ const authStoreSource = await readFile(join(root, 'src', 'store', 'authStore.ts'
 const proStoreSource = await readFile(join(root, 'src', 'store', 'proStore.ts'), 'utf8');
 const proSource = await readFile(join(root, 'src', 'lib', 'pro.ts'), 'utf8');
 const proUpsellSource = await readFile(join(root, 'src', 'components', 'ProUpsellModal.tsx'), 'utf8');
+const canvas2DSource = await readFile(join(root, 'src', 'components', 'Editor2D', 'Canvas2D.tsx'), 'utf8');
+const scene3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Scene3D.tsx'), 'utf8');
+const furniture3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Furniture3D.tsx'), 'utf8');
 const referralSource = await readFile(join(root, 'src', 'lib', 'referral.ts'), 'utf8');
 const workerSource = await readFile(join(root, 'workers', 'design-sync', 'src', 'index.ts'), 'utf8');
 const workerConfig = await readFile(join(root, 'workers', 'design-sync', 'wrangler.jsonc'), 'utf8');
@@ -178,10 +181,11 @@ check(
 );
 check(
   'native purchase flow cannot leave the Pro sheet spinning forever',
-  proSource.includes('PLAY_PURCHASE_TIMEOUT_MS') &&
+  proSource.includes('PURCHASE_TIMEOUT_MS') &&
     proSource.includes('Purchases.purchasePackage({ aPackage: pkg })') &&
-    proSource.includes('Purchases.getCustomerInfo()') &&
-    proSource.includes('use Restore purchase'),
+    proSource.includes('if (await this.sync().catch(() => false)) return true') &&
+    proSource.includes('tap Restore purchase') &&
+    proStoreSource.includes('settleStranded: async () =>'),
 );
 check(
   'desktop entitlement lookup uses a private RevenueCat v2 credential',
@@ -223,9 +227,15 @@ check(
     proSource.includes("packageKey: 'lifetime'") &&
     proSource.includes('webPackageForPlan(offerings, planID)'),
 );
+check(
+  'every interactive placement path confirms one-shot placement',
+  canvas2DSource.match(/notifyPlacementComplete\(/g)?.length === 2 &&
+    scene3DSource.match(/notifyPlacementComplete\(/g)?.length === 2 &&
+    furniture3DSource.match(/notifyPlacementComplete\(/g)?.length === 1,
+);
 
 // ---- 1. Projects screen renders, sample home opens -------------------------
-await page.goto(BASE);
+await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 90000 });
 check('projects screen renders', await page.waitForSelector('.projects-screen', { timeout: 20000 }).then(() => true).catch(() => false));
 // ---- the projects paywall is count-based, so the badge must be too ---------
 // `list.length >= 1 && requirePro('projects')` — your FIRST project is free
@@ -485,7 +495,49 @@ check('undo restores item', (await store(() => window.useDesign.getState().furni
   await page.waitForTimeout(150);
   check('an emptied box reverts on commit', (await widthOf()) === 10);
 }
+// Successful placement is one-shot, but the confirmation lets the homeowner
+// recover or explicitly repeat without reopening the catalogue.
+await page.evaluate(async () => {
+  const { notifyPlacementComplete } = await import('/src/lib/placementFeedback.ts');
+  const s = window.useDesign.getState();
+  const id = s.addFurniture('side_table', { x: 260, y: 260 });
+  s.select({ kind: 'furniture', id });
+  s.setPendingFurniture(null);
+  s.setTool('select');
+  notifyPlacementComplete('side_table');
+});
+const placedToast = page.locator('.toast.success', { hasText: 'Placed' }).last();
+check('placement confirmation offers Undo and Place another',
+  await placedToast.getByRole('button', { name: 'Undo' }).isVisible().catch(() => false) &&
+    await placedToast.getByRole('button', { name: 'Place another' }).isVisible().catch(() => false));
+await placedToast.getByRole('button', { name: 'Place another' }).click();
+const repeatState = await store(() => ({
+  pending: window.useDesign.getState().pendingFurnitureType,
+  tool: window.useDesign.getState().tool,
+  selection: window.useDesign.getState().selection.id,
+}));
+check('Place another explicitly re-arms the same item',
+  repeatState.pending === 'side_table' && repeatState.tool === 'furniture' && repeatState.selection === null,
+  JSON.stringify(repeatState));
+await store(() => {
+  const s = window.useDesign.getState();
+  s.setPendingFurniture(null);
+  s.setTool('select');
+});
 
+const beforePlacementUndo = await store(() => window.useDesign.getState().furniture.length);
+await page.evaluate(async () => {
+  const { notifyPlacementComplete } = await import('/src/lib/placementFeedback.ts');
+  const s = window.useDesign.getState();
+  const id = s.addFurniture('side_table', { x: 280, y: 280 });
+  s.select({ kind: 'furniture', id });
+  notifyPlacementComplete('side_table');
+});
+const undoPlacementToast = page.locator('.toast.success', { hasText: 'Placed' }).last();
+await undoPlacementToast.getByRole('button', { name: 'Undo' }).click();
+check('placement Undo removes only the new item and clears selection',
+  (await store(() => window.useDesign.getState().furniture.length)) === beforePlacementUndo &&
+    (await store(() => window.useDesign.getState().selection.id)) === null);
 const stairId = await store(() => {
   const s = window.useDesign.getState();
   const id = s.addFurniture('stairs', { x: 250, y: 250 });

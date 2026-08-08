@@ -1,5 +1,14 @@
 # WIP — current handoff
 
+> **One-shot placement feedback completed 2026-08-08:** successful placements
+> in 2D and 3D now confirm the translated item name and expose both Undo and
+> Place another. Furniture, doors/windows, wall-mounted models and décor placed
+> on another object all use the same helper. Placement still disarms after one
+> item, the new item stays selected, and only Place another explicitly re-arms
+> it. The existing placement pill still supplies Cancel before placement.
+> Re-run validation after the rebase completes. Next report item: P2 catalogue
+> preview metadata.
+
 > **UI plan rebased onto 1.22.4 on 2026-08-08:** the first three priorities in
 > `docs/UI_IMPROVEMENT_REPORT_2026-08-08.md` are implemented against Claude's
 > current interaction model. The existing object-anchored selection ring is

@@ -1,7 +1,7 @@
 # UI improvement report for the next Claude pass
 
 Date: 2026-08-08
-Status: first three priorities implemented; remaining guidance retained below
+Status: first four priorities implemented; remaining guidance retained below
 Evidence: current source, `CHANGELOG.md`, `.ai/WIP_CURRENT.md`, tester feedback, and a read-only Lazyweb reference-search trial
 
 ## Executive recommendation
@@ -30,10 +30,14 @@ These changes improve common paths without reopening geometry, rendering, authen
   without purchasing; one explicit CTA starts checkout. Exact RevenueCat price
   data drives truthful yearly comparisons, while lifetime and renewal wording
   remain distinct and Restore remains independent.
+- **P1 completion/placement feedback — implemented 2026-08-08.** All five
+  interactive placement paths now confirm the placed item with Undo and an
+  explicit Place another action. Placement remains one-shot and the existing
+  pre-placement Cancel control is preserved.
 - **Validation:** typecheck, lint, production build, catalogue geometry tests
   and the complete 108-check non-3D browser regression suite pass with zero
   page errors.
-- **Next:** P1 completion/placement feedback, then P2 preview metadata.
+- **Next:** P2 preview metadata.
 
 ## What the Lazyweb trial actually showed
 

@@ -46,6 +46,18 @@ changes and add an entry when you ship one.
 - Preserved independent Restore purchase access and the newer Play timeout,
   reconciliation and resume-recovery implementation from the current branch.
 
+### Placement feedback
+
+- Added a translated confirmation after successful furniture, opening, wall
+  and surface placement. The new item remains selected and placement stays
+  one-shot, while the confirmation offers both Undo and an explicit Place
+  another action.
+- Reused the existing history and pending-furniture state, including the
+  already-visible placement Cancel control. No second placement state machine
+  or automatic repeat mode was introduced.
+- Added browser coverage for all five interactive placement paths, explicit
+  repeat, exact undo recovery and cleared stale selections.
+
 ## 1.22.4 - 2026-08-08 (versionCode 12204)
 
 ### Google Play purchase configuration
