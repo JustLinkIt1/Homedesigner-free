@@ -673,7 +673,9 @@ if (process.env.SMOKE_SKIP_3D) {
     !!dockRect && dockRect.left >= 0 && dockRect.width > 100,
     JSON.stringify(dockRect),
   );
-  const sideTableCard = page.locator('.catalog.docked .cat-item[data-tip="Side Table"]');
+  // The same catalogue entry may also appear in Recent or Favourites. Exercise
+  // one visible instance instead of relying on there being only one DOM copy.
+  const sideTableCard = page.locator('.catalog.docked .cat-item[data-tip="Side Table"]').first();
   // 45s like the other clicks in this block: the docked 3D catalog has just
   // mounted a WebGL surface, and under software GL that compile stalls the main
   // thread well past the 30s default.

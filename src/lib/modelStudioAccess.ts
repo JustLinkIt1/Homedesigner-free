@@ -10,7 +10,7 @@ export function isModelStudioOwner(email: string | null | undefined): boolean {
 
 /**
  * Open the private production tool through a supported native browser surface.
- * Android WebViews may ignore window.open(), while Capacitor Browser reliably
+ * Android WebViews may ignore popup APIs, while Capacitor Browser reliably
  * hands the HTTPS page to a Custom Tab without navigating the editor away.
  */
 export async function openModelStudio(): Promise<void> {

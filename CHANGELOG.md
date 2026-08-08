@@ -9,6 +9,13 @@ changes and add an entry when you ship one.
 
 ## 1.22.5 - 2026-08-08 (versionCode 12205)
 
+### Release verification
+
+- Hardened the browser smoke suite for catalogue entries that legitimately
+  appear in both Recent/Favourites and their normal category. Native Model
+  Studio verification also now checks the implementation without matching
+  explanatory comment text.
+
 ### Pro checkout localization
 
 - Put the six existing plan-selector and purchase-state translations on their
