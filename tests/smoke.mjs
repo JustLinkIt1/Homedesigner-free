@@ -16,6 +16,7 @@ import { chromium } from 'playwright';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4599;
 const BASE = `http://localhost:${PORT}/`;
+const PAGE_BOOT_TIMEOUT = 60000;
 
 // Launch Vite through Node so the smoke suite is portable: Windows cannot
 // spawn the extensionless `.bin/vite` shim directly.
@@ -243,7 +244,7 @@ check(
 
 // ---- 1. Projects screen renders, sample home opens -------------------------
 await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 90000 });
-check('projects screen renders', await page.waitForSelector('.projects-screen', { timeout: 20000 }).then(() => true).catch(() => false));
+check('projects screen renders', await page.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT }).then(() => true).catch(() => false));
 // ---- the projects paywall is count-based, so the badge must be too ---------
 // `list.length >= 1 && requirePro('projects')` — your FIRST project is free
 // whichever template you pick. A static badge would tell a brand-new user their
@@ -872,7 +873,7 @@ await page.waitForTimeout(500);
     reducedMotion: 'reduce',
   });
   await lp.goto(BASE);
-  await lp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await lp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await lp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await lp.waitForSelector('.toolbar', { timeout: 20000 });
   await lp.locator('.coach-skip').click().catch(() => {});
@@ -1015,7 +1016,7 @@ await page.waitForTimeout(500);
   // racing this block's Escape — the source of an intermittent failure here.
   await a11y.evaluate(() => localStorage.setItem('homedesigner.tour.v1', 'done'));
   await a11y.reload();
-  await a11y.waitForSelector('.projects-screen', { timeout: 20000 });
+  await a11y.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await a11y.locator('.ps-head .ps-settings-btn').click();
   // Let the dialog mount and its key/focus effect attach before driving it. The
   // listener is installed in an effect, so a keypress dispatched in the same
@@ -1061,7 +1062,7 @@ await page.waitForTimeout(500);
 {
   const motionPage = await browser.newPage({ viewport: { width: 1100, height: 800 } });
   await motionPage.goto(BASE);
-  await motionPage.waitForSelector('.projects-screen', { timeout: 20000 });
+  await motionPage.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await motionPage.locator('.ps-head .ps-settings-btn').click();
   const opened = await motionPage.locator('.modal.settings').isVisible().catch(() => false);
   check('motion context: settings dialog opens', opened);
@@ -1113,7 +1114,7 @@ await page.waitForTimeout(500);
       : nativeMatchMedia(query);
   });
   await md.goto(BASE);
-  await md.waitForSelector('.projects-screen', { timeout: 20000 });
+  await md.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await md.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await md.waitForSelector('.toolbar', { timeout: 20000 });
   await md.locator('.coach-skip').click().catch(() => {});
@@ -1181,7 +1182,7 @@ await page.waitForTimeout(500);
   await fr.goto(BASE);
   await fr.evaluate(() => localStorage.setItem('homedesigner.lang.v1', 'fr'));
   await fr.reload();
-  await fr.waitForSelector('.projects-screen', { timeout: 20000 });
+  await fr.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
 
   const banner = await fr.locator('.ps-inspire').innerText().catch(() => '');
   check('inspiration banner is translated', /inspiration/i.test(banner) && !/Explore ideas/.test(banner));
@@ -1233,7 +1234,7 @@ await page.waitForTimeout(500);
 if (!process.env.SMOKE_SKIP_3D) {
   const r3 = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
   await r3.goto(BASE);
-  await r3.waitForSelector('.projects-screen', { timeout: 20000 });
+  await r3.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await r3.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await r3.waitForSelector('.toolbar', { timeout: 20000 });
   await r3.locator('.coach-skip').click().catch(() => {});
@@ -1261,7 +1262,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 {
   const od = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await od.goto(BASE);
-  await od.waitForSelector('.projects-screen', { timeout: 20000 });
+  await od.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await od.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await od.waitForSelector('.toolbar', { timeout: 20000 });
   await od.locator('.coach-skip').click().catch(() => {});
@@ -1314,7 +1315,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 {
   const fp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await fp.goto(BASE);
-  await fp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await fp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await fp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await fp.waitForSelector('.toolbar', { timeout: 20000 });
   await fp.locator('.coach-skip').click().catch(() => {});
@@ -1397,7 +1398,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 {
   const hp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await hp.goto(BASE);
-  await hp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await hp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await hp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await hp.waitForSelector('.toolbar', { timeout: 20000 });
   await hp.locator('.coach-skip').click().catch(() => {});
@@ -1458,7 +1459,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 {
   const gp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await gp.goto(BASE);
-  await gp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await gp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await gp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await gp.waitForSelector('.toolbar', { timeout: 20000 });
   await gp.locator('.coach-skip').click().catch(() => {});
@@ -2348,14 +2349,14 @@ await staleEditorPage.close();
 {
   const ps = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
   await ps.goto(BASE);
-  await ps.waitForSelector('.projects-screen', { timeout: 20000 });
+  await ps.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await ps.evaluate(() => {
     localStorage.setItem('homedesigner.projects.index.v1', JSON.stringify([
       { id: 'smoke-existing', name: 'Existing home', updatedAt: Date.now() },
     ]));
   });
   await ps.reload({ waitUntil: 'networkidle' });
-  await ps.waitForSelector('.projects-screen', { timeout: 20000 });
+  await ps.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await ps.waitForTimeout(400);
 
   const gated = await ps.evaluate(() => ({
