@@ -1,5 +1,23 @@
 # WIP — current handoff
 
+> **Play/RevenueCat purchase configuration repaired 2026-08-08:** the JSON
+> uploaded in RevenueCat belongs to
+> `revenuecat-service-account@shining-smoke-391115.iam.gserviceaccount.com`,
+> but that account was missing from Play Console; only the retired
+> `revenuecatbilling@...` account had access. The current account is now Active
+> with RevenueCat's three documented least-privilege Account permissions: view
+> app information/bulk reports, view financial data/orders/cancellation
+> responses, and manage orders/subscriptions. RevenueCat now reports **Valid
+> credentials** for Play receipt validation and both catalog checks. Android's
+> one-time `pro_unlock` product remains Active in 173 countries. No duplicate
+> checkout code was merged: releases 1.22.1 and 1.22.2 already contain the
+> longer purchase watchdog, store reconciliation, and resume-time stranded-flow
+> recovery that supersede the older local 1.12.2 patch. Build the next AAB from
+> this 1.22.3+ branch. The server-side credential repair is already live; a
+> license-tester purchase is still the final end-to-end check. Google developer
+> notifications remain unconnected and are a recommended follow-up, not a
+> blocker for the lifetime checkout.
+
 > **Emergency furniture-scale regression corrected live 2026-07-29:** restored
 > footprint-based proportional fitting for catalogue replacements, fixing the
 > tiny beds and baths, and restored the established dining-chair, wooden-chair,
