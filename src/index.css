@@ -2039,8 +2039,22 @@ button.brand:hover .brand-name {
 .draw-affordance {
   position: absolute;
   top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Centred WITHOUT translateX(-50%).
+     `left: 50%` alone makes an absolutely positioned box shrink-to-fit against
+     the space from the 50% mark to the RIGHT EDGE — half the container — and
+     the transform then slides it back over the other half. It looks centred,
+     but it was only ever allowed to be half as wide as it should be. Harmless
+     while the content is `nowrap`; the moment phones switch it to `normal` the
+     hint wraps inside that phantom half-width. Measured on a 412px viewport:
+     the pill capped at 245px and squeezed this hint to 38px across TEN lines,
+     while Finish/Cancel (deliberately `flex: none`) kept their full size.
+     Reported: "sometimes text overflows as in the attached screenshot."
+     Anchoring both edges and letting auto margins centre it gives the pill the
+     width it can actually see. */
+  left: 12px;
+  right: 12px;
+  width: fit-content;
+  margin-inline: auto;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2121,8 +2135,11 @@ button.brand:hover .brand-name {
 .placement-affordance {
   position: absolute;
   top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Same centring as .draw-affordance, and for the same reason — see there. */
+  left: 12px;
+  right: 12px;
+  width: fit-content;
+  margin-inline: auto;
   z-index: 9;
   display: flex;
   align-items: center;

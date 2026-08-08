@@ -5,6 +5,55 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## Unreleased
+
+### Text that overflowed its own box (Test Report No. 17)
+
+> *"Easy to understand and clean but I noticed the performance to be smoother in
+> 3D than in top-view 2D and sometimes text overflows as in the attached
+> screenshot."*
+
+Two separate causes behind the overflow, both measured rather than guessed.
+
+**The draw pill was only ever allowed half the screen.** Eleven overlays centre
+themselves with `left: 50%` + `translateX(-50%)`. For an absolutely positioned
+box, `left: 50%` makes shrink-to-fit resolve against the space from the 50% mark
+to the *right edge* — half the container — and the transform then slides it back
+over the other half. It looks centred, but it was never allowed to be more than
+half as wide. Harmless while the content is `nowrap`; the moment phones switch
+it to `normal`, the hint wraps inside that phantom half-width. Measured on a
+412px viewport: the pill capped at 245px and squeezed the hint to **38px across
+ten lines** while Finish/Cancel (deliberately `flex: none`) kept full size.
+Anchoring both edges and letting auto margins centre it: pill 388px, hint 180px,
+**two lines**. Applied to `.draw-affordance` and `.placement-affordance`.
+
+**Room labels rendered underneath the furniture.** The dimension pills were
+moved above the furniture layer long ago "so labels stay visible"; the room
+name/area labels were left behind in the rooms group. So the plate that exists
+precisely to lift a name off whatever is beneath it was itself painted over by
+every bed and rug. Labels now render in their own pass after furniture.
+
+While there, the label box had no relationship to the room holding it: a fixed
+168px-wide text box, and a plate sized from a `length * fontSize * 0.56`
+character-count guess. Measured on the suburban template, **8 of 13 plates hung
+over a neighbouring room** — which is the tester's screenshot, "Living R"
+printed across "Kitchen & Dining". Now the *plate* is clamped to the room
+(padding is added before the clamp, not after), widths come from real
+`measureText` via the new `src/lib/textMeasure.ts`, and plate and text derive
+from one number so truncation lands exactly at the plate edge.
+
+Fitting long names took three attempts, recorded because two of them were worse:
+clamping alone gave "Living Roo"; shrinking the font unconditionally gave
+"Sitting ..." at 73% — truncated *and* small, worse than truncated at full size.
+What works is wrapping to two lines with a modest shrink. And when even the
+longest single word will not fit — a 2.4m hallway at fit-the-plan zoom is 34
+screen px — Konva breaks mid-word into "Hal / lwa / y", so the label is dropped
+instead. No honest label exists at that zoom; the user can zoom in. Same rule
+for the area line, which was rendering "1…".
+
+Not addressed: the 2D-vs-3D performance half of the same report, and dimension
+pills can still overlap a room label.
+
 ## 1.22.3 - 2026-08-07 (versionCode 12203)
 
 ### Size boxes you can actually retype

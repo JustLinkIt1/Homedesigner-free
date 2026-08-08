@@ -36,6 +36,10 @@ import { computeWallPolygons } from '../../lib/wallGeometry';
 import { isFence, isHalfWall } from '../../lib/fence';
 import { wallDistances } from '../../lib/distanceGuides';
 import { formatLength, formatArea, type Units } from '../../lib/units';
+import { measureTextPx } from '../../lib/textMeasure';
+
+/** Konva's default line height is 1.0, which crowds a wrapped room name. */
+const NAME_LINE_H = 1.12;
 import { selectionTick, tapMedium } from '../../lib/haptics';
 import { useTheme, canvasColors } from '../../lib/theme';
 import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
@@ -1485,21 +1489,6 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
               ? r.texture.scaleCm
               : (texId ? MATERIAL_BY_ID[texId]?.scaleCm ?? 200 : 200);
             const sel = selection.kind === 'room' && selection.id === r.id;
-            const c = roomLabelCenters.get(r.id) ?? polygonCentroid(r.points);
-            // Label sizing is SCREEN-space: font + box scale by 1/zoom so names
-            // never wrap mid-word when zoomed out (the old fixed 100 cm box did
-            // exactly that — "Great Room" became "Gre / at / Roo / m").
-            const { min, max } = boundsOf(r.points);
-            const screenW = (max.x - min.x) * zoom;
-            const screenH = (max.y - min.y) * zoom;
-            const nameFs = 13 / zoom;
-            const areaFs = 11 / zoom;
-            const boxW = 168 / zoom; // ~168 screen px
-            const lineGap = 3 / zoom;
-            // Only show the label when the room is big enough on screen to hold
-            // it (avoids clipped text spilling out of tiny rooms).
-            const showName = screenW > 34 && screenH > 20;
-            const showArea = showName && screenH > 40;
             return (
               <Group key={r.id}>
                 <RoomFloorFill
@@ -1512,64 +1501,6 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
                   zoom={zoom}
                   onSelect={() => tool === 'select' && s.select({ kind: 'room', id: r.id })}
                 />
-                {showName && (() => {
-                  // A soft rounded plate lifts the name+area off any floor fill
-                  // or furniture beneath the centroid (same idea as the wall
-                  // dimension pills), sized to the wider of the two lines.
-                  const nameText = tr(r.name);
-                  const areaText = formatArea(polygonArea(r.points), units);
-                  const textW = Math.min(
-                    boxW,
-                    Math.max(nameText.length * nameFs * 0.56, showArea ? areaText.length * areaFs * 0.62 : 0),
-                  );
-                  const padX = 9 / zoom;
-                  const padY = 6 / zoom;
-                  const plateW = textW + padX * 2;
-                  const plateH = (showArea ? nameFs + areaFs + lineGap : nameFs) + padY * 2;
-                  return (
-                    <Rect
-                      x={c.x - plateW / 2}
-                      y={c.y - plateH / 2}
-                      width={plateW}
-                      height={plateH}
-                      cornerRadius={Math.min(plateH / 2, 10 / zoom)}
-                      fill={C.dimensionPlate}
-                      stroke={C.dimensionPlateStroke}
-                      strokeWidth={0.6 / zoom}
-                      listening={false}
-                    />
-                  );
-                })()}
-                {showName && (
-                  <Text
-                    x={c.x - boxW / 2}
-                    y={c.y - (showArea ? nameFs + lineGap / 2 : nameFs / 2)}
-                    width={boxW}
-                    align="center"
-                    text={tr(r.name)}
-                    fontSize={nameFs}
-                    fill={C.labelInk}
-                    fontStyle="bold"
-                    wrap="none"
-                    ellipsis
-                    listening={false}
-                  />
-                )}
-                {showArea && (
-                  <Text
-                    x={c.x - boxW / 2}
-                    y={c.y + lineGap / 2}
-                    width={boxW}
-                    align="center"
-                    text={formatArea(polygonArea(r.points), units)}
-                    fontSize={areaFs}
-                    fill={C.labelInk}
-                    opacity={0.72}
-                    wrap="none"
-                    ellipsis
-                    listening={false}
-                  />
-                )}
               </Group>
             );
           })}
@@ -2047,6 +1978,115 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
                         return null;
                       });
                     }}
+                  />
+                )}
+              </Group>
+            );
+          })}
+
+          {/* Room names — drawn HERE, above furniture, for the same reason the
+              dimension annotations below are. They used to render inside the
+              rooms group, so every sofa and bed drew straight over the label
+              that was supposed to be sitting on a plate above the floor: a bed
+              covered "Master Bedroom", a rug covered "Deck". */}
+          {rooms.map((r) => {
+            const c = roomLabelCenters.get(r.id) ?? polygonCentroid(r.points);
+            // Sizing is SCREEN-space: font and box scale by 1/zoom so names
+            // never wrap mid-word when zoomed out (a fixed cm box did exactly
+            // that — "Great Room" became "Gre / at / Roo / m").
+            const { min, max } = boundsOf(r.points);
+            const screenW = (max.x - min.x) * zoom;
+            const screenH = (max.y - min.y) * zoom;
+            // Only label a room big enough on screen to hold one.
+            if (!(screenW > 34 && screenH > 20)) return null;
+            const showArea = screenH > 40;
+            const areaFs = 11 / zoom;
+            const lineGap = 3 / zoom;
+            const nameText = tr(r.name);
+            const areaText = formatArea(polygonArea(r.points), units);
+            // Never wider than the room itself, so a long name in a narrow room
+            // is ellipsised instead of running into the room next door —
+            // "Living R" ended up printed across "Kitchen & Dining".
+            const padX = 9 / zoom;
+            const padY = 6 / zoom;
+            // Clamp the PLATE, not the text — padding is added after the text is
+            // sized, so clamping the text still let the plate itself overrun the
+            // room by 2x padX. Measured on the suburban template: 8 of 13 plates
+            // hung over a neighbouring room that way.
+            const maxPlateW = Math.min(186 / zoom, (max.x - min.x) * 0.94);
+            const avail = Math.max(0, maxPlateW - padX * 2);
+            // At the default fit-the-whole-plan zoom a 5m room is only ~70
+            // screen px wide, and "Sitting Room" needs ~85px at 13px bold. It
+            // does not fit on one line at any honest size, so it wraps rather
+            // than being cut to "Sittin…". Shrinking alone was tried and made it
+            // worse — truncated AND small reads worse than truncated at full
+            // size. Wrapping plus a modest shrink actually fits the longest word.
+            const wantW = measureTextPx(nameText, 13 / zoom, true);
+            const fit = wantW > 0 ? avail / wantW : 1;
+            const nameFs = (13 / zoom) * (fit >= 1 ? 1 : fit >= 0.75 ? fit : 0.78);
+            // Konva falls back to breaking mid-WORD when a single word is wider
+            // than the box, which turns a 2.4m hallway into "Hal / lwa / y". If
+            // the longest word cannot fit, no honest label exists at this zoom —
+            // drop it and let the user zoom in, rather than print debris.
+            const longestWordW = Math.max(
+              ...nameText.split(/\s+/).map((w) => measureTextPx(w, nameFs, true)),
+            );
+            if (longestWordW > avail) return null;
+            const nameLines = measureTextPx(nameText, nameFs, true) > avail ? 2 : 1;
+            // Same rule for the area line: a truncated "1…" says nothing, so it
+            // is shown only when it fits whole.
+            const areaW = showArea ? measureTextPx(areaText, areaFs) : 0;
+            const withArea = showArea && areaW <= avail;
+            // Measured, not estimated. The plate and the text derive from ONE
+            // width, so truncation lands exactly at the plate's inner edge and
+            // the name can never hang outside its own backing.
+            const textW = Math.max(0, Math.min(
+              avail,
+              Math.max(nameLines > 1 ? avail : measureTextPx(nameText, nameFs, true), withArea ? areaW : 0),
+            ));
+            const nameH = nameFs * NAME_LINE_H * nameLines;
+            const plateW = textW + padX * 2;
+            const plateH = (withArea ? nameH + areaFs + lineGap : nameH) + padY * 2;
+            return (
+              <Group key={`label-${r.id}`} listening={false}>
+                <Rect
+                  x={c.x - plateW / 2}
+                  y={c.y - plateH / 2}
+                  width={plateW}
+                  height={plateH}
+                  cornerRadius={Math.min(plateH / 2, 10 / zoom)}
+                  fill={C.dimensionPlate}
+                  stroke={C.dimensionPlateStroke}
+                  strokeWidth={0.6 / zoom}
+                  listening={false}
+                />
+                <Text
+                  x={c.x - textW / 2}
+                  y={c.y - (withArea ? (nameH + lineGap + areaFs) / 2 : nameH / 2)}
+                  width={textW}
+                  align="center"
+                  text={nameText}
+                  fontSize={nameFs}
+                  lineHeight={NAME_LINE_H}
+                  fill={C.labelInk}
+                  fontStyle="bold"
+                  wrap="word"
+                  ellipsis
+                  listening={false}
+                />
+                {withArea && (
+                  <Text
+                    x={c.x - textW / 2}
+                    y={c.y - (nameH + lineGap + areaFs) / 2 + nameH + lineGap}
+                    width={textW}
+                    align="center"
+                    text={areaText}
+                    fontSize={areaFs}
+                    fill={C.labelInk}
+                    opacity={0.72}
+                    wrap="none"
+                    ellipsis
+                    listening={false}
                   />
                 )}
               </Group>
