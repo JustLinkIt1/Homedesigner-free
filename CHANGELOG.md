@@ -7,6 +7,20 @@ changes and add an entry when you ship one.
 
 ## Unreleased
 
+### Google Play purchase configuration
+
+- Repaired RevenueCat's live Google Play access. Its current service account is
+  now Active in Play Console with only the documented account-reading,
+  financial-data and order/subscription permissions. RevenueCat reports
+  **Valid credentials** for receipt validation and both catalog checks.
+- Confirmed Android still sells the Active one-time `pro_unlock` product in 173
+  countries. No redundant spinner patch was added here: 1.22.1 and 1.22.2
+  already contain the bounded purchase, reconciliation and resume recovery that
+  supersede the older local implementation.
+- The credential repair is live without an app update. A Play license-tester
+  purchase remains the final end-to-end confirmation; real-time developer
+  notifications are still a recommended follow-up.
+
 ### Text that overflowed its own box (Test Report No. 17)
 
 > *"Easy to understand and clean but I noticed the performance to be smoother in
