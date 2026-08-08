@@ -1,5 +1,13 @@
 # WIP — current handoff
 
+> **Release 1.22.5 prepared 2026-08-08:** versionCode **12205** contains the
+> rebased mobile editing/catalogue/Pro improvements, one-shot placement
+> feedback, the touch-wall correction and restored owner-only mobile Model
+> Studio entry. GitHub CI's only failure was six Pro checkout translations
+> packed onto shared dictionary lines that its static scanner could not see.
+> Each key is now a separate entry in all 12 locales and the i18n suite is
+> green. Build, signature, merge and Drive delivery follow below.
+
 > **Mobile Model Studio entry repaired 2026-08-08:** the owner-only tool is now
 > available directly in the editor's More menu as well as the Account menu.
 > Android opens `https://homedesignerapp.com/app/model-studio/` through the

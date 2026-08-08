@@ -7,6 +7,15 @@ changes and add an entry when you ship one.
 
 ## Unreleased
 
+## 1.22.5 - 2026-08-08 (versionCode 12205)
+
+### Pro checkout localization
+
+- Put the six existing plan-selector and purchase-state translations on their
+  own dictionary lines in all 12 locales. This makes monthly/yearly units,
+  savings, processing and the lifetime-payment explanation visible to the
+  static coverage checker; the complete translation check is green again.
+
 ### Mobile Model Studio access
 
 - Restored a dependable owner-only route to Model Studio from the mobile
