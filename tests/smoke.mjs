@@ -790,7 +790,11 @@ if (process.env.SMOKE_SKIP_3D) {
     check('3D selection ring: no two buttons overlap', overlap.length === 0, overlap.join(', '));
 
     const r0 = await store(() => window.useDesign.getState().furniture[0].rotation);
-    await page.locator('.sel-ring button[aria-label^="Rotate"]').click();
+    // The ring tracks a projected 3D point, so under software WebGL it may move
+    // by subpixels forever and never satisfy Playwright's "stable" heuristic.
+    // Visibility and non-overlap are asserted above; dispatch to that exact
+    // visible control without waiting for a static bounding box.
+    await page.locator('.sel-ring button[aria-label^="Rotate"]').click({ force: true });
     await page.waitForTimeout(250);
     const r1 = await store(() => window.useDesign.getState().furniture[0].rotation);
     check('3D selection ring: rotate turns the object by 90°', (r1 - r0 + 360) % 360 === 90, `got ${r1 - r0}`);
