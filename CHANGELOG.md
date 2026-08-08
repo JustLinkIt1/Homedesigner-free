@@ -5,7 +5,7 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
-## Unreleased
+## 1.22.4 - 2026-08-08 (versionCode 12204)
 
 ### Google Play purchase configuration
 
