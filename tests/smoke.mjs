@@ -689,7 +689,9 @@ if (process.env.SMOKE_SKIP_3D) {
     'catalog card uses a lazy photoreal sprite when one exists',
     await sideTableCard.locator('.ci-sprite').isVisible().catch(() => false),
   );
-  await sideTableCard.locator('.ci-favorite').click();
+  // The docked catalogue shares the live 3D frame and can shift by subpixels
+  // under software rendering. The exact card is already visible above.
+  await sideTableCard.locator('.ci-favorite').click({ force: true });
   const savedFavorites = await page.evaluate(() => JSON.parse(localStorage.getItem('homedesigner.favorites.v1') ?? '[]'));
   check(
     'catalog favourites persist and appear as a shortcut row',
