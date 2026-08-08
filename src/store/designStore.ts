@@ -360,8 +360,12 @@ const loadInitial = (): DesignSnapshot => {
 // edit, one toast per minute is plenty).
 let lastPersistWarning = 0;
 const writeSnap = (snap: DesignSnapshot, id?: string) => {
-  const ok = projects.saveActive(snap, id);
-  if (!ok) {
+  const result = projects.saveActive(snap, id);
+  if (result === 'deleted') {
+    toast.error('This project was deleted in another tab and can no longer be saved.');
+    return;
+  }
+  if (result === 'failed') {
     const now = Date.now();
     if (now - lastPersistWarning > 60_000) {
       lastPersistWarning = now;

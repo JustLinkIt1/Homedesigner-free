@@ -1,5 +1,15 @@
 # WIP — current handoff
 
+> **UI plan rebased onto 1.22.4 on 2026-08-08:** the first three priorities in
+> `docs/UI_IMPROVEMENT_REPORT_2026-08-08.md` are implemented against Claude's
+> current interaction model. The existing object-anchored selection ring is
+> preserved; a separate contextual dock appears only for stairs, openings and
+> structural selections that need special actions. Catalogue aliases, validated
+> cloud search terms, result counts and empty-state recovery preserve the newer
+> Free-only filter. The Pro sheet separates plan selection from checkout and
+> uses exact RevenueCat prices without replacing the newer 1.22.x Play recovery
+> flow. Re-run validation after the rebase completes.
+
 > **Play/RevenueCat purchase configuration repaired 2026-08-08:** the JSON
 > uploaded in RevenueCat belongs to
 > `revenuecat-service-account@shining-smoke-391115.iam.gserviceaccount.com`,

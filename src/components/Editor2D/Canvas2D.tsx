@@ -2186,7 +2186,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
           thing you had just selected. Single furniture selection only: a
           multi-selection has no one anchor, and walls/rooms/openings are edited
           through Properties where their own controls live. */}
-      {IS_COARSE && tool === 'select' && !multi && draft.length === 0 && ringAnchor && (
+      {IS_COARSE && tool === 'select' && !multi && draft.length === 0 && ringAnchor &&
+        s.furniture.find((item) => item.id === ringAnchor.id)?.type !== 'stairs' && (
         <SelectionRing
           x={ringAnchor.x}
           y={ringAnchor.y}

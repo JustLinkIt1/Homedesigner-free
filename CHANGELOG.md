@@ -5,6 +5,47 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## Unreleased
+
+### Internal UI research
+
+- Added a UI improvement report based on the current source, tester feedback
+  and a read-only Lazyweb reference trial. It prioritises contextual mobile
+  selection controls, scalable catalogue search/navigation and deliberate Pro
+  plan selection while documenting the already-shipped flows that must not be
+  rebuilt.
+
+### Mobile editing controls
+
+- Added context-specific quick actions for selections not covered by the new
+  object-anchored selection ring. Stairs can be reversed and doors have direct
+  hinge and swing controls; structural selections retain reachable Delete and
+  More actions without automatically covering the plan with Properties.
+- Quick deletion uses the undo-capable deletion path, and the special dock is
+  suppressed whenever the Properties sheet is open.
+
+### Catalogue discovery
+
+- Added controlled catalogue aliases and normalized matching for names,
+  categories, object types, placement and approved cloud search terms while
+  preserving the newer Free-only filter. Common searches such as television,
+  media unit, wall-mounted TV, bedside tables and refrigerator now resolve the
+  intended existing objects without creating new categories.
+- Added a live result count and useful empty-state actions to clear filters or
+  switch between Room and Type browsing. Remote search terms are length- and
+  character-validated before entering the catalogue.
+
+### Pro plan selection
+
+- Changed the Pro sheet to separate plan selection from purchase. Users now
+  select monthly, yearly or lifetime first and confirm through one CTA that
+  names the chosen plan, reducing accidental checkout starts.
+- Added exact-price yearly comparisons when RevenueCat supplies compatible
+  currency and micro-price data. Misleading savings are omitted when the data
+  is incomplete, and lifetime is explicitly described as a one-time payment.
+- Preserved independent Restore purchase access and the newer Play timeout,
+  reconciliation and resume-recovery implementation from the current branch.
+
 ## 1.22.4 - 2026-08-08 (versionCode 12204)
 
 ### Google Play purchase configuration

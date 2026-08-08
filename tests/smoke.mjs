@@ -132,6 +132,7 @@ const mainSource = await readFile(join(root, 'src', 'main.tsx'), 'utf8');
 const authStoreSource = await readFile(join(root, 'src', 'store', 'authStore.ts'), 'utf8');
 const proStoreSource = await readFile(join(root, 'src', 'store', 'proStore.ts'), 'utf8');
 const proSource = await readFile(join(root, 'src', 'lib', 'pro.ts'), 'utf8');
+const proUpsellSource = await readFile(join(root, 'src', 'components', 'ProUpsellModal.tsx'), 'utf8');
 const referralSource = await readFile(join(root, 'src', 'lib', 'referral.ts'), 'utf8');
 const workerSource = await readFile(join(root, 'workers', 'design-sync', 'src', 'index.ts'), 'utf8');
 const workerConfig = await readFile(join(root, 'workers', 'design-sync', 'wrangler.jsonc'), 'utf8');
@@ -174,6 +175,13 @@ check(
 check(
   'linking Google retroactively syncs legacy Play purchases',
   proSource.includes('Purchases.syncPurchases()') && proSource.includes('Purchases.logIn({ appUserID })'),
+);
+check(
+  'native purchase flow cannot leave the Pro sheet spinning forever',
+  proSource.includes('PLAY_PURCHASE_TIMEOUT_MS') &&
+    proSource.includes('Purchases.purchasePackage({ aPackage: pkg })') &&
+    proSource.includes('Purchases.getCustomerInfo()') &&
+    proSource.includes('use Restore purchase'),
 );
 check(
   'desktop entitlement lookup uses a private RevenueCat v2 credential',
@@ -984,6 +992,92 @@ if (process.env.SMOKE_SKIP_3D) {
   await motionPage.close();
 }
 
+// ---- contextual mobile selection dock --------------------------------------
+// Keep high-frequency transforms reachable without forcing a phone user into
+// the full Properties sheet. This runs in a real coarse-pointer page because
+// viewport width alone does not activate the touch-only dock.
+{
+  const md = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'reduce',
+  });
+  await md.addInitScript(() => {
+    const nativeMatchMedia = window.matchMedia.bind(window);
+    window.matchMedia = (query) => query === '(pointer: coarse)'
+      ? {
+          matches: true,
+          media: query,
+          onchange: null,
+          addListener() {},
+          removeListener() {},
+          addEventListener() {},
+          removeEventListener() {},
+          dispatchEvent() { return false; },
+        }
+      : nativeMatchMedia(query);
+  });
+  await md.goto(BASE);
+  await md.waitForSelector('.projects-screen', { timeout: 20000 });
+  await md.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
+  await md.waitForSelector('.toolbar', { timeout: 20000 });
+  await md.locator('.coach-skip').click().catch(() => {});
+
+  const mobileStairId = await md.evaluate(() => {
+    const s = window.useDesign.getState();
+    s.setTool('select');
+    const id = s.addFurniture('stairs', { x: 250, y: 250 });
+    s.select({ kind: 'furniture', id });
+    return id;
+  });
+  const dock = md.getByRole('navigation', { name: 'Selected object actions' });
+  check('mobile selection dock appears for selected furniture', await dock.isVisible().catch(() => false));
+  check('stair dock exposes reverse, duplicate, delete and more',
+    await dock.getByRole('button').count() === 4);
+  await dock.getByRole('button', { name: 'Reverse' }).click();
+  check('mobile dock reverses stairs in one tap',
+    (await md.evaluate((id) => window.useDesign.getState().furniture.find((f) => f.id === id)?.rotation, mobileStairId)) === 180);
+
+  const mobileDoorId = await md.evaluate((stairId) => {
+    const s = window.useDesign.getState();
+    s.deleteById('furniture', stairId);
+    const id = s.addOpening(s.walls[0].id, 0.5, 'door');
+    s.select({ kind: 'opening', id });
+    return id;
+  }, mobileStairId);
+  await dock.getByRole('button', { name: 'Hinge' }).click();
+  await dock.getByRole('button', { name: 'In / out' }).click();
+  const flips = await md.evaluate((id) => {
+    const opening = window.useDesign.getState().openings.find((entry) => entry.id === id);
+    return { hinge: opening?.flipHinge, swing: opening?.flipSwing };
+  }, mobileDoorId);
+  check('mobile dock flips door hinge and swing', flips.hinge === true && flips.swing === true, JSON.stringify(flips));
+
+  await dock.getByRole('button', { name: 'More' }).click();
+  check('mobile dock More opens full Properties', await md.locator('.sidebar.right.open').isVisible().catch(() => false));
+  check('selection dock hides while Properties is open', !(await dock.isVisible().catch(() => false)));
+  await md.getByRole('button', { name: 'Edit' }).click();
+  await md.waitForTimeout(150);
+  await dock.getByRole('button', { name: 'Delete' }).click();
+  check('mobile dock delete uses undo-capable deletion',
+    await md.locator('.toast-action', { hasText: 'Undo' }).isVisible().catch(() => false));
+
+  await md.getByRole('button', { name: 'Objects' }).click();
+  const catalogSearch = md.locator('.cat-search input');
+  await catalogSearch.fill('bedside tables');
+  check('catalog aliases find the expected object',
+    await md.locator('.cat-item', { hasText: 'Nightstand' }).isVisible().catch(() => false));
+  check('catalog reports the filtered result count',
+    !/^0\s/.test(await md.locator('.catalog-result-count').innerText().catch(() => '0')));
+  await catalogSearch.fill('definitely-no-such-furniture');
+  check('empty catalog search offers recovery actions',
+    await md.getByRole('button', { name: 'Clear filters' }).isVisible().catch(() => false));
+  await md.getByRole('button', { name: 'Clear filters' }).click();
+  check('clear filters restores the catalogue', (await catalogSearch.inputValue()) === '');
+  await md.close();
+}
+
 // ---- onboarding: tour depth, and the Tips panel in a non-English locale -----
 // Testers reported the tour "isn't thorough enough" and that the home screen's
 // "Need inspiration?" destination wasn't translated — the whole Tips panel had
@@ -1343,8 +1437,83 @@ check(
   await recoveryPage.getByRole('button', { name: 'Open Recovered legacy plan' })
     .isVisible().catch(() => false),
 );
+check(
+  'desktop checkout separates plan selection from purchase',
+  proUpsellSource.includes('setSelectedPlanID(plan.id)') &&
+    proUpsellSource.includes('purchase(selectedPlan.id)') &&
+    proUpsellSource.includes('Subscription renews automatically until cancelled.') &&
+    proSource.includes('priceMicros'),
+);
 await recoveryPage.close();
 
+// Index recovery must never undo an intentional deletion. Storage removal can
+// fail (quota/private-browser edge cases) and older tabs can still leave stale
+// JSON behind, but the deletion tombstone is authoritative.
+const deletedRecoveryPage = await browser.newPage({ viewport: { width: 900, height: 700 } });
+await deletedRecoveryPage.goto(BASE);
+await deletedRecoveryPage.evaluate(() => {
+  const id = 'deleted_plan';
+  localStorage.clear();
+  localStorage.setItem(`homedesigner.project.${id}`, JSON.stringify({
+    projectName: 'Deleted plan must stay deleted',
+  }));
+  localStorage.setItem('homedesigner.project.v1', JSON.stringify({
+    projectName: 'Deleted legacy plan must stay deleted',
+  }));
+  localStorage.setItem('homedesigner.projects.deleted.v1', JSON.stringify([
+    { id, updatedAt: Date.now() },
+  ]));
+});
+await deletedRecoveryPage.reload();
+check(
+  'deleted stale project is not resurrected by index recovery',
+  !(await deletedRecoveryPage.getByRole('button', { name: 'Open Deleted plan must stay deleted' })
+    .isVisible().catch(() => false)),
+);
+check(
+  'deleted legacy rollback copy is not resurrected',
+  !(await deletedRecoveryPage.getByRole('button', { name: 'Open Deleted legacy plan must stay deleted' })
+    .isVisible().catch(() => false)),
+);
+await deletedRecoveryPage.close();
+// A stale editor can still have a trailing autosave queued after another tab
+// deletes its project. The tombstone must reject that write; otherwise the
+// old tab recreates the snapshot and index row that the deletion removed.
+const staleEditorPage = await browser.newPage({ viewport: { width: 900, height: 700 } });
+await staleEditorPage.goto(BASE);
+await staleEditorPage.evaluate(() => {
+  const id = 'deleted_stale_editor';
+  const snapshot = {
+    projectName: 'Project deleted elsewhere',
+    walls: [], rooms: [], furniture: [], openings: [], background: null,
+  };
+  localStorage.clear();
+  localStorage.setItem('homedesigner.projects.index.v1', JSON.stringify([
+    { id, name: snapshot.projectName, updatedAt: Date.now() - 1 },
+  ]));
+  localStorage.setItem(`homedesigner.project.${id}`, JSON.stringify(snapshot));
+  localStorage.setItem('homedesigner.activeProject.v1', id);
+});
+await staleEditorPage.reload();
+const staleSave = await staleEditorPage.evaluate(async () => {
+  const id = 'deleted_stale_editor';
+  localStorage.setItem('homedesigner.projects.deleted.v1', JSON.stringify([
+    { id, updatedAt: Date.now() },
+  ]));
+  localStorage.removeItem(`homedesigner.project.${id}`);
+  localStorage.setItem('homedesigner.projects.index.v1', '[]');
+  window.useDesign.getState().setProjectName('Stale edit must not restore this');
+  await new Promise((resolve) => setTimeout(resolve, 750));
+  return {
+    snapshotRestored: localStorage.getItem(`homedesigner.project.${id}`) !== null,
+    indexRestored: (JSON.parse(localStorage.getItem('homedesigner.projects.index.v1') || '[]'))
+      .some((project) => project.id === id),
+  };
+});
+check('stale editor autosave cannot resurrect a deleted project',
+  !staleSave.snapshotRestored && !staleSave.indexRestored,
+  JSON.stringify(staleSave));
+await staleEditorPage.close();
 // ---- update offer on startup ----------------------------------------------
 // A fresh page with a version.json claiming a newer release. This is the whole
 // point of the feature and it is invisible to every other check.
