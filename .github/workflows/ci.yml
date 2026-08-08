@@ -24,5 +24,7 @@ jobs:
         run: npm run build
       - name: Install Chromium
         run: npx playwright install chromium --with-deps
-      - name: Smoke test
+      - name: Test suite (PR gate)
+        env:
+          SMOKE_SKIP_3D: '1'
         run: npm test

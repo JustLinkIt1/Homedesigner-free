@@ -1,0 +1,22 @@
+name: Full 3D smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+jobs:
+  verify-3d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install chromium --with-deps
+      - name: Full test suite with software-rendered 3D
+        run: npm test
