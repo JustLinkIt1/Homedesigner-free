@@ -6,7 +6,13 @@
 > Studio entry. GitHub CI's only failure was six Pro checkout translations
 > packed onto shared dictionary lines that its static scanner could not see.
 > Each key is now a separate entry in all 12 locales and the i18n suite is
-> green. Build, signature, merge and Drive delivery follow below.
+> green. Signed artifact:
+> `android/app/build/outputs/bundle/release/app-release.aab`, 28,001,769 bytes,
+> SHA-256 `E4FF7DCB3C724AE3D75C2EC45A5C77EC25AB02E7C4091D3ECE784FFEED1833C5`.
+> `jarsigner` verifies it, and an independent archive check confirms native
+> 1.22.5/12205, web bundle 1.22.5 with no stray app version, 42 JavaScript files
+> and 63 bundled GLBs. The repository verifier itself requires Unix `unzip`, so
+> the equivalent checks were run through .NET's ZIP reader on Windows.
 
 > **Mobile Model Studio entry repaired 2026-08-08:** the owner-only tool is now
 > available directly in the editor's More menu as well as the Account menu.
