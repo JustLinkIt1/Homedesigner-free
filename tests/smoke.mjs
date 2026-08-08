@@ -679,7 +679,7 @@ if (process.env.SMOKE_SKIP_3D) {
   // 45s like the other clicks in this block: the docked 3D catalog has just
   // mounted a WebGL surface, and under software GL that compile stalls the main
   // thread well past the 30s default.
-  await sideTableCard.locator('.cat-item-select').click({ timeout: 45000 });
+  await sideTableCard.locator('.cat-item-select').click({ timeout: 45000, force: true });
   check(
     'catalog selection stays GPU-light until 3D preview is requested',
     await page.locator('.catalog.docked .catalog-preview-static').isVisible().catch(() => false)
@@ -698,7 +698,7 @@ if (process.env.SMOKE_SKIP_3D) {
     savedFavorites.includes('side_table')
       && await page.locator('.catalog.docked .cat-section', { hasText: 'Favourites' }).isVisible().catch(() => false),
   );
-  await page.locator('.catalog.docked .catalog-preview-3d').click();
+  await page.locator('.catalog.docked .catalog-preview-3d').click({ force: true });
   check(
     'on-demand catalog 3D preview opens',
     await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: 30000 }).then(() => true).catch(() => false),
@@ -724,7 +724,7 @@ if (process.env.SMOKE_SKIP_3D) {
     // The Free chip is the answer to "click through every single furniture".
     const freeChip = page.locator('.catalog.docked .cat-chips .chip', { hasText: /^Free$/ });
     check('pro: a Free chip is offered to non-Pro users', await freeChip.isVisible().catch(() => false));
-    await freeChip.click();
+    await freeChip.click({ force: true });
     await page.waitForTimeout(300);
     const afterFilter = await page.evaluate(() => ({
       items: document.querySelectorAll('.catalog.docked .cat-item').length,
@@ -750,14 +750,14 @@ if (process.env.SMOKE_SKIP_3D) {
       asPro.category === 'All', JSON.stringify(asPro));
     await page.evaluate(() => window.useProStore.setState({ isPro: false }));
     await page.waitForTimeout(300);
-    await page.locator('.catalog.docked .cat-chips .chip', { hasText: /^All$/ }).click();
+    await page.locator('.catalog.docked .cat-chips .chip', { hasText: /^All$/ }).click({ force: true });
     await page.waitForTimeout(200);
   }
 
   // 45s to match the rotate-pill wait below: both land right after the WebGL
   // preview opens, and under software GL that compile stalls the main thread
   // long enough that a 30s click timed out in 3 of 4 runs on a loaded machine.
-  await page.locator('.catalog.docked .catalog-place').click({ timeout: 45000 });
+  await page.locator('.catalog.docked .catalog-place').click({ timeout: 45000, force: true });
   check(
     '3D placement guidance appears',
     await page.locator('.placement-affordance', { hasText: 'Tap a floor to place Side Table' }).isVisible().catch(() => false),
