@@ -1,6 +1,6 @@
 # WIP — current handoff
 
-> **Community forum production handoff 2026-08-09:** Claude's D1 forum backend and web client are now completed for deployment. `/community/` is included in the assembled Pages output (with redirect and no-store headers), and the verified `COMMUNITY_ADMIN_EMAIL` owner receives a usable report queue for hiding posts, locking threads, seven-day bans and resolving reports. Default public handles are random rather than derived from email prefixes, and anonymous reads share one per-IP forum limit. The remaining live operations are D1 creation/migration, Worker deployment, Pages deployment and an owner sign-in smoke check.
+> **Community forum production handoff 2026-08-09:** Claude's D1 forum backend and web client are now completed for deployment. `/community/` is included in the assembled Pages output (with redirect and no-store headers), and the verified `COMMUNITY_ADMIN_EMAIL` owner receives a usable report queue for hiding posts, locking threads, seven-day bans and resolving reports. Default public handles are random rather than derived from email prefixes, and anonymous reads share one per-IP forum limit. D1 `homedesigner-community` was created in WEUR as `02230a9a-6b37-4d17-b46e-60f2fef95c47`; migration, Worker deployment, Pages deployment and an owner sign-in smoke check remain.
 
 > **Final CI repair 2026-08-08:** the release smoke test now selects one
 > visible copy of a catalogue item because Recent/Favourites can legitimately

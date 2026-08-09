@@ -29,7 +29,7 @@
     {
       "binding": "COMMUNITY",
       "database_name": "homedesigner-community",
-      "database_id": "REPLACE_WITH_D1_ID",
+      "database_id": "02230a9a-6b37-4d17-b46e-60f2fef95c47",
       "migrations_dir": "migrations"
     }
   ],

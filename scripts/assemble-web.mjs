@@ -21,7 +21,7 @@ const communityDir = resolve(output, 'community');
 await mkdir(communityDir, { recursive: true });
 await writeFile(
   resolve(communityDir, 'index.html'),
-  appHtml.replace('<head>', '<head>\n    <base href="/" />'),
+  appHtml.replace('<head>', '<head>\n    <base href="/app/" />'),
 );
 await cp(resolve(appDist, 'privacy.html'), resolve(output, 'privacy.html'));
 await cp(resolve(appDist, 'CNAME'), resolve(output, 'CNAME'));
