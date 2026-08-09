@@ -1,5 +1,105 @@
 # WIP — current handoff
 
+## Session handoff 2026-08-09 (Claude) — read this first
+
+### Where things are
+
+Branch `claude/home-design-app-2d-plans-12y5u5`, version **1.22.5**. The
+community forum is built and Codex has deployed it. Recent history worth
+knowing: PR #14 merged as 1.22.5 and its `src/lib/pro.ts` conflict was resolved
+CORRECTLY — the tree has both Claude's purchase hardening
+(`PURCHASE_TIMEOUT_MS`, `sync()`, bounded native calls, `settleStranded`) and
+Codex's `priceMicros`/`currency`. `node tests/billing.mjs` fences that; if it
+goes red, someone has dropped one half.
+
+### Three OPEN bugs, all reported by the owner, all diagnosed, none fixed
+
+They are all in the "open the forum from the app / sign in from a browser" path.
+
+1. **The forum link is in the About dialog, not Settings.** `SettingsDialog.tsx`
+   has no mention of it. Users look in Settings. Add it there (About can keep
+   its copy).
+
+2. **`AboutDialog.tsx:30` uses a bare `<a href target="_blank">`, which does
+   nothing in an Android WebView.** The correct pattern already exists in this
+   repo — `src/lib/modelStudioAccess.ts:19` uses `Browser.open({ url })` from
+   `@capacitor/browser` (a dependency since 1.22.5). Use it.
+
+3. **The app claims the WHOLE domain, so Google sign-in on the website bounces
+   into the app.** `android/app/src/main/AndroidManifest.xml` has an
+   `autoVerify="true"` intent-filter for `android:host="homedesignerapp.com"`
+   with **no `pathPrefix`**, so Android App Links captures every path —
+   including the OAuth redirect back to `/community`. Restrict it to the paths
+   the app should own (`/app`) and deliberately not `/community`. Android cannot
+   express "everything except", so list the prefixes explicitly.
+
+   Note (1) and (2) are web-bundle fixes, but (3) changes the native manifest:
+   **it needs a new AAB and a Play release before browser sign-in works.**
+   Codex's `9d97e0e` and `861d78b` are web-side attempts at the same symptom;
+   the manifest root cause is still there.
+
+### How to build and sign an AAB
+
+    npm run android:aab
+
+That is the whole thing: it runs `sync-version` (writes versionName/versionCode
+into build.gradle from package.json), `build`, `npx cap sync android`,
+`gradlew bundleRelease`, then `scripts/verify-aab.mjs`. Output lands at
+`android/app/build/outputs/bundle/release/app-release.aab`.
+
+Signing is automatic and needs no arguments. `android/app/build.gradle` reads
+`android/keystore.properties`, which points at
+`android/keystore/homedesigner-upload.jks`. **Both files are gitignored and must
+stay that way** — `android/.gitignore` covers `*.jks` and `keystore.properties`,
+and neither has ever been committed. Do not paste their contents into the repo,
+a commit message, a PR, or a doc. If they are missing from a fresh container the
+owner has to restore them; they cannot be regenerated, and losing the upload key
+means a Play support request.
+
+Verify the signer before shipping:
+
+    keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release.aab
+
+Expected upload certificate — `CN=Nathan Joppich`, SHA-256:
+
+    EE:D4:E3:A9:11:BC:92:9A:D3:CD:33:36:FF:BF:32:C0:22:4A:1F:C5:21:BE:B1:13:02:F5:A0:7E:5F:00:6A:00
+
+`97027CB7182958BBDEF3EDCFF598591C31EEED0A2075D170704B7CEC09521E93` is the **Play
+App Signing** key, not the upload key. Seeing that one instead is not an error.
+
+`scripts/verify-aab.mjs` checks BOTH halves of the bundle, and the second half
+matters: it was written after several releases shipped a **stale `dist/`**.
+`npx cap sync` only COPIES `dist/`, it never rebuilds, and `APP_VERSION` is baked
+in by Vite at build time — so testers were running old code under a new version
+number for weeks. Never hand over an AAB whose `verify-aab` did not print
+`web bundle was built at <version>`.
+
+### Hazards this session hit repeatedly
+
+* **The container rewinds itself to an old commit without warning** — roughly a
+  dozen times in one session, usually to 1.10.0. It ate an unpushed commit
+  outright. **Push early; do not sit on work.** After any surprising file
+  content, check `node -p "require('./package.json').version"` before trusting
+  anything you read, and restore with
+  `git fetch origin <branch> && git merge --ff-only origin/<branch>`.
+* Files copied aside "for safety" during a rewind can be from the OLD tree.
+  Re-applying them silently reverted ~1,100 lines once. Always read `git diff`
+  before committing recovered work.
+* `git reset --hard` and `git checkout -- <path>` are blocked by the permission
+  classifier. `git stash` then `git merge --ff-only` works.
+
+### Conventions worth keeping
+
+* **Fault-inject every new assertion.** Break the thing, watch the test fail,
+  restore. Three checks in `tests/billing.mjs` and seven in `tests/smoke.mjs`
+  were verified this way, and one injection that *passed* revealed a second
+  guard making the first test vacuous.
+* Measure before claiming. The 2D label and draw-pill fixes were both diagnosed
+  by reading real geometry out of the running app, not by reasoning about CSS.
+* The owner does not want a release per fix — batch work, and only cut a version
+  when asked.
+
+
 > **Community media/profile upgrade prepared 2026-08-09:** migration
 > `0002_community_media.sql` adds first-party avatar/post-image metadata and
 > contribution counts. Profile photos are opt-in uploads only; the API no
