@@ -16,8 +16,8 @@ changes and add an entry when you ship one.
   Studio verification also now checks the implementation without matching
   explanatory comment text.
 - Kept the pull-request gate fast and deterministic with typecheck, lint,
-  production build, geometry, localization, theme, model, sample, billing and
-  trace suites. The complete browser/3D suite now runs nightly and on demand,
+  production build, geometry, localization, theme, model, sample and billing
+  suites. The browser-based trace and complete 3D suite now run nightly and on demand,
   so software-rendering timing variance cannot hold up releases.
 
 ### Pro checkout localization

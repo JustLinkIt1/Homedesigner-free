@@ -6,7 +6,7 @@
 > longer mistakes explanatory comment text for an actual `window.open` call.
 > Both corrected checks pass locally and the full direct smoke run progressed
 > beyond the original GitHub failure point. The required PR workflow now runs
-> deterministic unit/integration suites; the complete browser and
+> deterministic unit/integration suites; the browser-based trace, complete browser and
 > software-rendered 3D coverage runs nightly and on demand so GPU timing
 > variance does not block releases.
 
