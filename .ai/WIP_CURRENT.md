@@ -20,8 +20,9 @@
 > **Community media deployed 2026-08-09:** D1 migration
 > `0002_community_media.sql` is applied and Worker version
 > `4651b419-f85f-49a4-8a04-944a50100afe` is live. Cloudflare Pages deployment
-> `https://8b864cde.homedesignerapp.pages.dev` serves the profile/media/rank UI
-> on the custom domain. A follow-up makes the lazy `/community/` route run the
+> production Pages deployment `https://9e359747.homedesignerapp.pages.dev`
+> serves the profile/media/rank UI and classic thread layout on the custom
+> domain. A follow-up makes the lazy `/community/` route run the
 > same cached-session validation as the editor before offering posting tools;
 > this prevents an expired web token from appearing signed in while all forum
 > writes fail.
@@ -41,6 +42,16 @@
 > right, collapsing to a compact stacked author strip on phones. The broken
 > root logo URL was replaced with the verified landing asset at
 > `/assets/brand-icon.png`.
+
+> **Community launch content published 2026-08-09:** the owner account
+> `@homedev` has published the FAQ, the illustrated 2D/3D quick-start tutorial
+> (`?thread=526d4286-91c0-475f-b12d-670b8c65eb53`) and the compliant 497-code
+> launch terms (`?thread=73bad328-3754-4644-99b0-053a61828d8a`). Four current
+> app screenshots are attached to the tutorial and two to the campaign through
+> the first-party media API. The one permitted monthly r/HowToMen promotion is
+> live at `https://www.reddit.com/r/HowToMen/comments/1vjs9s1/` with four
+> screenshots, direct Play/site/community links and the Brand Affiliate tag.
+> It explicitly says Play reviews are optional, unchecked and unrewarded.
 
 > **Community forum deployed 2026-08-09:** `/community/` is live with public reading, Google-authenticated posting, profiles, reporting and a usable owner moderation queue. D1 `homedesigner-community` is in WEUR (`02230a9a-6b37-4d17-b46e-60f2fef95c47`), migration `0001_community.sql` is applied, and Worker version `687c8e8f-b438-4d12-8ece-11fa2e603f18` is live. Pages deployment `9fe3918f-34d2-46da-a75d-2a5b10d44d74` fixed the route's `/app/` asset base. Chrome verified the live custom domain, empty report queue, privacy-safe random handle and owner `admin` access through the visible **Moderate** action. The community now uses a same-tab Google OAuth redirect because embedded browsers immediately closed its popup; the callback validates issuer, audience, nonce and expiry, removes credentials from history, then returns to `/community/`. The editor's web popup and Android native sign-in are unchanged. Default handles never derive from email prefixes and anonymous reads share one per-IP forum limit.
 
