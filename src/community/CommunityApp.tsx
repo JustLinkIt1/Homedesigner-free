@@ -418,6 +418,8 @@ function ModeratorPanel({ onClose }: { onClose: () => void }) {
 
 export default function CommunityApp() {
   const account = useAuthStore((s) => s.account);
+  const authReady = useAuthStore((s) => s.ready);
+  const restoreSession = useAuthStore((s) => s.restoreSession);
   const [route, setRoute] = useState(() => new URLSearchParams(window.location.search));
   const [categories, setCategories] = useState<Category[]>([]);
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
@@ -427,6 +429,12 @@ export default function CommunityApp() {
   const [composing, setComposing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [moderating, setModerating] = useState(false);
+
+  // The community is a separate lazy route, so App's startup effect never runs
+  // here. Restore (or clear) the cached Google session before offering posting
+  // controls; otherwise an expired desktop token looks signed in but every
+  // authenticated request fails.
+  useEffect(() => { void restoreSession(); }, [restoreSession]);
 
   useEffect(() => {
     const onPop = () => setRoute(new URLSearchParams(window.location.search));
@@ -499,12 +507,16 @@ export default function CommunityApp() {
               ))}
             </div>
 
-            {account
+            {!authReady
+              ? <p className="cm-muted">Checking sign-in…</p>
+              : me
               ? (composing
                 ? <Composer categories={categories} allowImages={canPostImages(me)}
                     onPosted={(id) => { setComposing(false); go(`?thread=${id}`); }} />
                 : <button className="btn primary" onClick={() => setComposing(true)}>Start a discussion</button>)
-              : <SignInPrompt what="post" />}
+              : account
+                ? <p className="cm-muted">Preparing your community profile…</p>
+                : <SignInPrompt what="post" />}
 
             {error && <p className="cm-error">{error}</p>}
             {threads.length === 0 && !error && (
