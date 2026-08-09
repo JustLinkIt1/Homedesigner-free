@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { LazyMotion, MotionConfig, domMax } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useProStore } from './store/proStore';
@@ -10,11 +11,19 @@ import { finishStrandedGooglePopup } from './lib/googleAuth';
 import './index.css';
 
 const ModelStudio = React.lazy(() => import('./model-studio/ModelStudio'));
+// The forum. Lazy AND web-only: Capacitor wraps this same bundle into the APK,
+// so a static import would ship a whole forum inside the Android app the owner
+// explicitly did not want it in — and would put user-generated content into the
+// Play data-safety declaration. On native this chunk is never requested.
+const CommunityApp = React.lazy(() => import('./community/CommunityApp'));
 
 // Complete OAuth before mounting the full editor. This is normally handled by
 // the provider popup itself; the fallback covers browsers that turn the popup
 // into an opener-less tab.
 const completedGooglePopup = finishStrandedGooglePopup();
+const communityRequested =
+  !Capacitor.isNativePlatform() &&
+  (window.location.pathname === '/community' || window.location.pathname.startsWith('/community/'));
 const modelStudioRequested =
   new URLSearchParams(window.location.search).get('studio') === 'models' ||
   window.location.pathname.startsWith('/app/model-studio');
@@ -66,7 +75,7 @@ if (!completedGooglePopup) {
         <LazyMotion features={domMax} strict>
           <MotionConfig reducedMotion="user">
             <React.Suspense fallback={null}>
-              {modelStudioRequested ? <ModelStudio /> : <App />}
+              {communityRequested ? <CommunityApp /> : modelStudioRequested ? <ModelStudio /> : <App />}
             </React.Suspense>
           </MotionConfig>
         </LazyMotion>

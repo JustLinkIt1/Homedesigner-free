@@ -1,6 +1,6 @@
 import { Info, ExternalLink, Mail } from 'lucide-react';
 import Modal from './Modal';
-import { APP_NAME, APP_TAGLINE, APP_VERSION, PRIVACY_URL, SUPPORT_EMAIL, CREDITS } from '../lib/appInfo';
+import { APP_NAME, APP_TAGLINE, APP_VERSION, PRIVACY_URL, COMMUNITY_URL, SUPPORT_EMAIL, CREDITS } from '../lib/appInfo';
 
 const supportHref = () =>
   `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} ${APP_VERSION} feedback`)}&body=${encodeURIComponent(
@@ -22,6 +22,13 @@ export default function AboutDialog({ open, onClose }: { open: boolean; onClose:
           <p className="muted">{APP_TAGLINE}. Your designs are stored on your device — see the{' '}
             <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
               privacy policy <ExternalLink className="icon" style={{ width: 12, height: 12 }} />
+            </a>
+            .
+          </p>
+          <p className="muted">
+            Questions, ideas or something broken? Ask in the{' '}
+            <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer">
+              community forum <ExternalLink className="icon" style={{ width: 12, height: 12 }} />
             </a>
             .
           </p>

@@ -18,6 +18,10 @@ export const SITE_URL = 'https://homedesignerapp.com';
 export const SITE_DOMAIN = 'homedesignerapp.com';
 
 export const PRIVACY_URL = 'https://homedesignerapp.com/privacy.html';
+/** The community forum. Web only by design — the app links OUT to it rather
+ *  than embedding it, so no user-generated content ships inside the APK and the
+ *  Play data-safety declaration is unaffected. */
+export const COMMUNITY_URL = 'https://homedesignerapp.com/community';
 
 export const SUPPORT_EMAIL = 'nathanjoppich@gmail.com';
 
