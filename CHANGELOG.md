@@ -10,6 +10,7 @@ changes and add an entry when you ship one.
 ### Community support forum
 
 - Added the public `/community/` support forum to the assembled Cloudflare Pages output, with discussion categories, Google-authenticated posting, profiles and report submission.
+- Replaced the community's popup-only Google sign-in with a same-tab OAuth redirect that returns to the forum. This avoids disappearing blank popups in embedded and mobile browsers while preserving the existing desktop-editor popup and Android native flow.
 - Added an owner-only moderator queue for reviewing reports, hiding posts, locking threads, temporary bans and dismissing reports. Moderator authority is enforced by the Worker using the configured verified Google email.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.

@@ -12,15 +12,24 @@ export interface GoogleAccount {
 /** Google OAuth Web client IDs are public identifiers, not secrets. Keeping it
  * in an env value lets development and production use separate Cloud projects. */
 const GOOGLE_WEB_CLIENT_ID = (import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID ?? '').trim();
+const GOOGLE_REDIRECT_URL = 'https://homedesignerapp.com/app/';
+const GOOGLE_OAUTH_PENDING_KEY = 'social_login_oauth_pending';
+const GOOGLE_PROVIDER_STATE_KEY = 'capgo_social_login_google_state';
+const GOOGLE_ACCOUNT_CACHE_KEY = 'homedesigner.google-account.v1';
+const GOOGLE_REDIRECT_RETURN_KEY = 'homedesigner.google-redirect-return.v1';
 
 let initializePromise: Promise<void> | null = null;
 let currentIdToken: string | null = null;
 
 interface GoogleTokenClaims {
   aud?: string;
+  email?: string;
   exp?: number;
   iss?: string;
+  name?: string;
   nonce?: string;
+  picture?: string;
+  sub?: string;
 }
 
 function readTokenClaims(token: string): GoogleTokenClaims | null {
@@ -51,15 +60,25 @@ export function isGoogleSignInConfigured(): boolean {
  * listens to. Native login is unaffected.
  */
 export function finishStrandedGooglePopup(): boolean {
-  if (Capacitor.isNativePlatform() || !window.location.hash.includes('id_token=')) return false;
+  if (
+    Capacitor.isNativePlatform() ||
+    (!window.location.hash.includes('id_token=') && !window.location.hash.includes('error='))
+  ) return false;
 
   try {
-    const pendingRaw = localStorage.getItem('social_login_oauth_pending');
+    const pendingRaw = localStorage.getItem(GOOGLE_OAUTH_PENDING_KEY);
     if (!pendingRaw) return false;
     const pending = JSON.parse(pendingRaw) as { provider?: string; nonce?: string };
     if (pending.provider !== 'google' || !pending.nonce) return false;
 
     const params = new URLSearchParams(window.location.hash.slice(1));
+    const returnTo = sessionStorage.getItem(GOOGLE_REDIRECT_RETURN_KEY);
+    if (params.get('error') && returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+      localStorage.removeItem(GOOGLE_OAUTH_PENDING_KEY);
+      sessionStorage.removeItem(GOOGLE_REDIRECT_RETURN_KEY);
+      window.location.replace(returnTo);
+      return true;
+    }
     const accessToken = params.get('access_token');
     const idToken = params.get('id_token');
     const claims = idToken ? readTokenClaims(idToken) : null;
@@ -81,6 +100,28 @@ export function finishStrandedGooglePopup(): boolean {
       accessToken: { token: accessToken },
       idToken,
     };
+
+    // Persist the same two values the provider normally stores after receiving
+    // its popup message. This makes a full-page redirect resumable and also
+    // protects opener-less popup tabs from a message-delivery race.
+    localStorage.setItem(GOOGLE_PROVIDER_STATE_KEY, JSON.stringify({ accessToken, idToken }));
+    localStorage.removeItem(GOOGLE_OAUTH_PENDING_KEY);
+
+    if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+      sessionStorage.removeItem(GOOGLE_REDIRECT_RETURN_KEY);
+      if (claims?.sub) {
+        localStorage.setItem(GOOGLE_ACCOUNT_CACHE_KEY, JSON.stringify({
+          subject: claims.sub,
+          email: claims.email ?? null,
+          name: claims.name ?? null,
+          imageUrl: claims.picture ?? null,
+        }));
+      }
+      // Replace the callback URL so bearer credentials never remain in history.
+      window.location.replace(returnTo);
+      return true;
+    }
+
     window.opener?.postMessage(message, window.location.origin);
     const channel = new BroadcastChannel(`google_oauth_${pending.nonce}`);
     channel.postMessage(message);
@@ -95,6 +136,30 @@ export function finishStrandedGooglePopup(): boolean {
   }
 }
 
+function startGooglePageRedirect(): Promise<GoogleAccount> {
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  const returnTo = `${window.location.pathname}${window.location.search}`;
+  localStorage.setItem(GOOGLE_OAUTH_PENDING_KEY, JSON.stringify({
+    provider: 'google',
+    loginType: 'online',
+    nonce,
+  }));
+  sessionStorage.setItem(GOOGLE_REDIRECT_RETURN_KEY, returnTo);
+  const params = new URLSearchParams({
+    client_id: GOOGLE_WEB_CLIENT_ID,
+    redirect_uri: GOOGLE_REDIRECT_URL,
+    response_type: 'token id_token',
+    scope: 'openid email profile',
+    include_granted_scopes: 'true',
+    state: 'community',
+    nonce,
+  });
+  window.location.assign(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+  // Navigation replaces this page; keeping the promise pending prevents the
+  // caller from clearing its busy state during the hand-off.
+  return new Promise(() => {});
+}
+
 async function initializeGoogle(): Promise<void> {
   if (!isGoogleSignInConfigured()) {
     throw new Error('Google Sign-In is not configured in this build.');
@@ -106,7 +171,7 @@ async function initializeGoogle(): Promise<void> {
     // production pinned to the URI registered in Google Cloud so navigation
     // to /app/index.html (or another route) cannot cause a redirect mismatch.
     ...(!Capacitor.isNativePlatform() && window.location.hostname === 'homedesignerapp.com'
-      ? { redirectUrl: 'https://homedesignerapp.com/app/' }
+      ? { redirectUrl: GOOGLE_REDIRECT_URL }
       : {}),
   };
   initializePromise ??= SocialLogin.initialize({
@@ -132,6 +197,9 @@ export async function signInWithGoogle(): Promise<GoogleAccount> {
   if (existing.isLoggedIn) {
     await SocialLogin.logout({ provider: 'google' }).catch(() => {});
     currentIdToken = null;
+  }
+  if (!Capacitor.isNativePlatform() && window.location.pathname.startsWith('/community')) {
+    return startGooglePageRedirect();
   }
   const { result } = await SocialLogin.login({
     provider: 'google',
