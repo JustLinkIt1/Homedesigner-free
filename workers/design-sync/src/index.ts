@@ -1,6 +1,11 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { fal } from '@fal-ai/client';
 
+import {
+  CommunityError, listThreads, readThread, readProfile, readMe, updateMe,
+  createThread, createPost, editPost, reportPost, moderate, listReports, erasePerson,
+} from './community';
+
 interface Env {
   USER_DATA: R2Bucket;
   MODEL_ASSETS: R2Bucket;
@@ -15,6 +20,8 @@ interface Env {
   MODEL_CATALOG_PUBLIC_BASE: string;
   USER_READ_LIMITER: RateLimit;
   USER_WRITE_LIMITER: RateLimit;
+  /** Forum storage. D1, not R2 — see migrations/0001_community.sql. */
+  COMMUNITY: D1Database;
 }
 
 interface AuthIdentity {
@@ -934,6 +941,31 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
     const url = new URL(request.url);
+
+    // Community reads are PUBLIC and are therefore matched before
+    // authenticate(). A support forum only signed-in people can read is not a
+    // support forum, and Google cannot index what it cannot fetch. Writes fall
+    // through to the authenticated block below.
+    if (request.method === 'GET' && url.pathname.startsWith('/v1/community/')) {
+      try {
+        // Anonymous readers have no subject to rate limit on, so the client IP
+        // stands in. Cloudflare sets this header at the edge; a caller cannot
+        // spoof it.
+        const ip = request.headers.get('CF-Connecting-IP') ?? 'anon';
+        const { success } = await env.USER_READ_LIMITER.limit({ key: `ip:${ip}:${url.pathname}` });
+        if (!success) return json(request, { error: 'Too many requests' }, 429, { 'Retry-After': '60' });
+
+        if (url.pathname === '/v1/community/threads') return json(request, await listThreads(env, url));
+        const thread = url.pathname.match(/^\/v1\/community\/threads\/([a-f0-9-]{36})$/);
+        if (thread) return json(request, await readThread(env, thread[1]));
+        const profile = url.pathname.match(/^\/v1\/community\/profiles\/([A-Za-z0-9_-]{3,24})$/);
+        if (profile) return json(request, await readProfile(env, profile[1]));
+      } catch (error) {
+        if (error instanceof CommunityError) return json(request, { error: error.message }, error.status);
+        throw error;
+      }
+    }
+
     try {
       const identity = await authenticate(request, env);
       const limiter = request.method === 'GET' ? env.USER_READ_LIMITER : env.USER_WRITE_LIMITER;
@@ -950,7 +982,49 @@ export default {
         for (let i = 0; i < objects.length; i += 1000) {
           await env.USER_DATA.delete(objects.slice(i, i + 1000).map((item) => item.key));
         }
+        // "Delete my account" has to mean the same thing everywhere. Leaving
+        // someone's posts up after they erased their designs would make that
+        // promise false — and the GDPR request unanswerable.
+        await erasePerson(env, identity.subject);
         return json(request, { deleted: objects.length });
+      }
+
+      if (url.pathname.startsWith('/v1/community/')) {
+        try {
+          const body = request.method === 'GET'
+            ? {}
+            : await request.json().catch(() => ({})) as Record<string, unknown>;
+          if (request.method === 'GET' && url.pathname === '/v1/community/me') {
+            return json(request, await readMe(env, identity));
+          }
+          if (request.method === 'POST' && url.pathname === '/v1/community/me') {
+            return json(request, await updateMe(env, identity, body));
+          }
+          if (request.method === 'POST' && url.pathname === '/v1/community/threads') {
+            return json(request, await createThread(env, identity, body), 201);
+          }
+          const reply = url.pathname.match(/^\/v1\/community\/threads\/([a-f0-9-]{36})\/posts$/);
+          if (request.method === 'POST' && reply) {
+            return json(request, await createPost(env, identity, reply[1], body), 201);
+          }
+          const post = url.pathname.match(/^\/v1\/community\/posts\/([a-f0-9-]{36})$/);
+          if (request.method === 'POST' && post) {
+            return json(request, await editPost(env, identity, post[1], body));
+          }
+          const report = url.pathname.match(/^\/v1\/community\/posts\/([a-f0-9-]{36})\/report$/);
+          if (request.method === 'POST' && report) {
+            return json(request, await reportPost(env, identity, report[1], body));
+          }
+          if (request.method === 'GET' && url.pathname === '/v1/community/reports') {
+            return json(request, await listReports(env, identity));
+          }
+          if (request.method === 'POST' && url.pathname === '/v1/community/moderate') {
+            return json(request, await moderate(env, identity, body));
+          }
+        } catch (error) {
+          if (error instanceof CommunityError) return json(request, { error: error.message }, error.status);
+          throw error;
+        }
       }
 
       if (url.pathname.startsWith('/v1/admin/models')) {

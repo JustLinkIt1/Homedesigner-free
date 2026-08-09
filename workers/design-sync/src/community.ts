@@ -1,0 +1,455 @@
+// Community forum routes.
+//
+// Split out of index.ts because the forum has a different shape to everything
+// else this Worker does: the rest is one signed-in user reading and writing
+// their OWN data, while a forum is mostly anonymous people reading everyone's.
+//
+// That difference drives the one structural rule here: **reads are public.**
+// index.ts authenticates before it routes, which is right for sync and
+// entitlement, but a forum nobody can read without signing in is not a forum —
+// and it would be invisible to Google, which is half the point of hosting it on
+// the site rather than on Discord. Public GETs are matched ahead of
+// authenticate(); everything that writes still goes through it.
+
+/** Structural copy of index.ts's AuthIdentity. Duplicated rather than imported
+ *  so this module has no import back into the router that calls it. */
+export interface AuthIdentity {
+  subject: string;
+  email: string | null;
+  emailVerified: boolean;
+}
+
+export interface CommunityEnv {
+  COMMUNITY: D1Database;
+  AI: Ai;
+}
+
+/** Fixed in code rather than a table: categories change with the product, not
+ *  with user activity, and a table would invite an admin CRUD screen nobody
+ *  needs. The ids are URL segments and must stay stable. */
+export const CATEGORIES = [
+  { id: 'help', name: 'Help & how-to', blurb: 'Stuck on something? Ask here.' },
+  { id: 'showcase', name: 'Show your design', blurb: 'Share a plan or a render.' },
+  { id: 'ideas', name: 'Feature ideas', blurb: 'What should we build next?' },
+  { id: 'bugs', name: 'Bug reports', blurb: 'Something broken or wrong?' },
+  { id: 'general', name: 'General', blurb: 'Anything else about the app.' },
+] as const;
+
+const CATEGORY_IDS = new Set<string>(CATEGORIES.map((c) => c.id));
+
+const TITLE_MAX = 140;
+const BODY_MAX = 8000;
+const BIO_MAX = 400;
+const DISPLAY_NAME_MAX = 40;
+const PAGE_SIZE = 30;
+const HANDLE_RE = /^[a-z0-9](?:[a-z0-9_-]{1,22})[a-z0-9]$/;
+
+export interface Profile {
+  subject: string;
+  handle: string;
+  display_name: string;
+  bio: string;
+  avatar_url: string | null;
+  role: string;
+  banned_until: number | null;
+}
+
+const isModerator = (p: Profile | null) => p?.role === 'moderator' || p?.role === 'admin';
+const isBanned = (p: Profile | null) => !!p?.banned_until && p.banned_until > Date.now();
+
+/** Thrown for anything the caller did wrong; index.ts maps it to a status. */
+export class CommunityError extends Error {
+  readonly status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+
+const uid = () => crypto.randomUUID();
+
+/**
+ * Handles are the one piece of identity a user picks, so they are the one place
+ * impersonation is cheap. Lowercase ASCII, digits, hyphen and underscore only:
+ * no spaces, no Unicode look-alikes (Cyrillic "а" reading as Latin "a"), no
+ * leading or trailing punctuation.
+ */
+function normaliseHandle(raw: unknown): string {
+  const value = String(raw ?? '').trim().toLowerCase();
+  if (!HANDLE_RE.test(value)) {
+    throw new CommunityError(
+      'Pick a handle 3-24 characters long, using letters, numbers, hyphen or underscore.',
+    );
+  }
+  return value;
+}
+
+function cleanText(raw: unknown, max: number, field: string): string {
+  // Normalise first: a decomposed string can pass a length check and then
+  // render far longer, and zero-width characters are a classic way to fake an
+  // empty-looking post or a duplicate-looking handle.
+  const value = String(raw ?? '').normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+  if (!value) throw new CommunityError(`${field} cannot be empty.`);
+  if (value.length > max) throw new CommunityError(`${field} must be ${max} characters or fewer.`);
+  return value;
+}
+
+export async function loadProfile(env: CommunityEnv, subject: string): Promise<Profile | null> {
+  return await env.COMMUNITY.prepare(
+    'SELECT subject, handle, display_name, bio, avatar_url, role, banned_until FROM profiles WHERE subject = ?',
+  ).bind(subject).first<Profile>();
+}
+
+/** The public shape of a profile. `subject` is the Google id and never leaves
+ *  the Worker — exposing it would let anyone correlate forum posts with the
+ *  sync API's user keys. */
+const publicProfile = (p: Profile) => ({
+  handle: p.handle,
+  displayName: p.display_name,
+  bio: p.bio,
+  avatarUrl: p.avatar_url,
+  role: p.role,
+});
+
+/**
+ * First write of any kind creates the profile. Registration is not a separate
+ * step the user has to find: they sign in with Google, and the first time they
+ * post they already have an identity they can then edit.
+ */
+async function ensureProfile(env: CommunityEnv, identity: AuthIdentity): Promise<Profile> {
+  const existing = await loadProfile(env, identity.subject);
+  if (existing) return existing;
+
+  const base = (identity.email?.split('@')[0] ?? 'member')
+    .toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20) || 'member';
+  const now = Date.now();
+  // Collisions are resolved by suffixing rather than failing: a first post
+  // should never be blocked because someone shares your email prefix.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const handle = attempt === 0 && base.length >= 3
+      ? base
+      : `${base}${Math.floor(Math.random() * 10000)}`.slice(0, 24);
+    if (!HANDLE_RE.test(handle)) continue;
+    try {
+      await env.COMMUNITY.prepare(
+        `INSERT INTO profiles (subject, handle, display_name, bio, avatar_url, role, created_at, updated_at)
+         VALUES (?, ?, ?, '', NULL, 'member', ?, ?)`,
+      ).bind(identity.subject, handle, handle, now, now).run();
+      return (await loadProfile(env, identity.subject))!;
+    } catch {
+      // UNIQUE violation on handle — try another suffix.
+    }
+  }
+  throw new CommunityError('Could not create a profile. Try again.', 500);
+}
+
+function requirePoster(profile: Profile): Profile {
+  if (isBanned(profile)) {
+    throw new CommunityError('Your account is suspended from posting.', 403);
+  }
+  return profile;
+}
+
+/**
+ * Ask Workers AI whether a reported post looks abusive. Advisory ONLY — it
+ * annotates the report queue so a human sees the worst first. It never hides
+ * anything by itself: a false positive that silently removes a real user's
+ * question is far more damaging to a small community than a rude post sitting
+ * up for an hour.
+ */
+async function screen(env: CommunityEnv, body: string): Promise<string | null> {
+  try {
+    const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      messages: [
+        {
+          role: 'system',
+          content: 'You moderate a home-design forum. Reply with one word: SPAM, ABUSE, ADULT, or OK.',
+        },
+        { role: 'user', content: body.slice(0, 2000) },
+      ],
+      max_tokens: 5,
+    } as never) as { response?: string };
+    const verdict = (result?.response ?? '').trim().toUpperCase().slice(0, 12);
+    return /^(SPAM|ABUSE|ADULT|OK)$/.test(verdict) ? verdict : null;
+  } catch {
+    // Moderation assistance is best-effort; never block a report on it.
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------- public reads
+
+export async function listThreads(env: CommunityEnv, url: URL) {
+  const category = url.searchParams.get('category');
+  if (category && !CATEGORY_IDS.has(category)) {
+    throw new CommunityError('Unknown category.', 404);
+  }
+  // Keyset pagination on the same column the index is sorted by. OFFSET would
+  // get slower with every page and can skip or repeat a thread when someone
+  // posts mid-scroll.
+  const before = Number(url.searchParams.get('before')) || Number.MAX_SAFE_INTEGER;
+  const rows = await env.COMMUNITY.prepare(
+    `SELECT t.id, t.category, t.title, t.created_at, t.last_post_at, t.reply_count,
+            t.locked, p.handle, p.display_name, p.avatar_url
+       FROM threads t JOIN profiles p ON p.subject = t.author
+      WHERE t.hidden = 0 AND t.last_post_at < ?${category ? ' AND t.category = ?' : ''}
+      ORDER BY t.last_post_at DESC LIMIT ?`,
+  ).bind(...(category ? [before, category, PAGE_SIZE] : [before, PAGE_SIZE])).all();
+
+  return {
+    categories: CATEGORIES,
+    threads: (rows.results ?? []).map((r: Record<string, unknown>) => ({
+      id: r.id,
+      category: r.category,
+      title: r.title,
+      createdAt: r.created_at,
+      lastPostAt: r.last_post_at,
+      replyCount: r.reply_count,
+      locked: !!r.locked,
+      author: { handle: r.handle, displayName: r.display_name, avatarUrl: r.avatar_url },
+    })),
+  };
+}
+
+export async function readThread(env: CommunityEnv, id: string) {
+  const thread = await env.COMMUNITY.prepare(
+    `SELECT t.id, t.category, t.title, t.created_at, t.locked, t.hidden,
+            p.handle, p.display_name, p.avatar_url
+       FROM threads t JOIN profiles p ON p.subject = t.author WHERE t.id = ?`,
+  ).bind(id).first<Record<string, unknown>>();
+  if (!thread || thread.hidden) throw new CommunityError('Thread not found.', 404);
+
+  const posts = await env.COMMUNITY.prepare(
+    `SELECT s.id, s.body, s.created_at, s.edited_at, s.hidden,
+            p.handle, p.display_name, p.avatar_url
+       FROM posts s JOIN profiles p ON p.subject = s.author
+      WHERE s.thread_id = ? ORDER BY s.created_at ASC LIMIT 500`,
+  ).bind(id).all();
+
+  return {
+    thread: {
+      id: thread.id,
+      category: thread.category,
+      title: thread.title,
+      createdAt: thread.created_at,
+      locked: !!thread.locked,
+      author: { handle: thread.handle, displayName: thread.display_name, avatarUrl: thread.avatar_url },
+    },
+    // A hidden post keeps its slot so the conversation still reads in order,
+    // but carries no body — moderation should be visible, not a memory hole.
+    posts: (posts.results ?? []).map((r: Record<string, unknown>) => (r.hidden ? {
+      id: r.id, hidden: true, createdAt: r.created_at,
+    } : {
+      id: r.id,
+      body: r.body,
+      createdAt: r.created_at,
+      editedAt: r.edited_at,
+      author: { handle: r.handle, displayName: r.display_name, avatarUrl: r.avatar_url },
+    })),
+  };
+}
+
+export async function readProfile(env: CommunityEnv, handle: string) {
+  const row = await env.COMMUNITY.prepare(
+    'SELECT subject, handle, display_name, bio, avatar_url, role, banned_until FROM profiles WHERE lower(handle) = ?',
+  ).bind(handle.toLowerCase()).first<Profile>();
+  if (!row) throw new CommunityError('Profile not found.', 404);
+  const threads = await env.COMMUNITY.prepare(
+    `SELECT id, title, category, last_post_at FROM threads
+      WHERE author = ? AND hidden = 0 ORDER BY last_post_at DESC LIMIT 20`,
+  ).bind(row.subject).all();
+  return { profile: publicProfile(row), threads: threads.results ?? [] };
+}
+
+// --------------------------------------------------------------- authed writes
+
+export async function readMe(env: CommunityEnv, identity: AuthIdentity) {
+  const profile = await ensureProfile(env, identity);
+  return { profile: publicProfile(profile), suspended: isBanned(profile) };
+}
+
+export async function updateMe(env: CommunityEnv, identity: AuthIdentity, input: Record<string, unknown>) {
+  const profile = await ensureProfile(env, identity);
+  const handle = input.handle === undefined ? profile.handle : normaliseHandle(input.handle);
+  const displayName = input.displayName === undefined
+    ? profile.display_name
+    : cleanText(input.displayName, DISPLAY_NAME_MAX, 'Display name');
+  // Bio is the only field allowed to be empty, so it does not go through
+  // cleanText's non-empty rule.
+  const bio = input.bio === undefined
+    ? profile.bio
+    : String(input.bio).normalize('NFC').trim().slice(0, BIO_MAX);
+  // Avatars are Google's picture URL or nothing. Accepting an arbitrary URL
+  // would turn every profile view into a request to a server the poster
+  // chooses — an IP-logging beacon, and a way to hotlink anything at all.
+  const avatarUrl = input.avatarUrl === undefined
+    ? profile.avatar_url
+    : (typeof input.avatarUrl === 'string' && /^https:\/\/lh3\.googleusercontent\.com\//.test(input.avatarUrl)
+      ? input.avatarUrl
+      : null);
+
+  try {
+    await env.COMMUNITY.prepare(
+      'UPDATE profiles SET handle = ?, display_name = ?, bio = ?, avatar_url = ?, updated_at = ? WHERE subject = ?',
+    ).bind(handle, displayName, bio, avatarUrl, Date.now(), identity.subject).run();
+  } catch {
+    throw new CommunityError('That handle is already taken.', 409);
+  }
+  return { profile: publicProfile((await loadProfile(env, identity.subject))!) };
+}
+
+export async function createThread(env: CommunityEnv, identity: AuthIdentity, input: Record<string, unknown>) {
+  const profile = requirePoster(await ensureProfile(env, identity));
+  const category = String(input.category ?? '');
+  if (!CATEGORY_IDS.has(category)) throw new CommunityError('Pick a category.');
+  const title = cleanText(input.title, TITLE_MAX, 'Title');
+  const body = cleanText(input.body, BODY_MAX, 'Message');
+
+  const now = Date.now();
+  const threadId = uid();
+  await env.COMMUNITY.batch([
+    env.COMMUNITY.prepare(
+      `INSERT INTO threads (id, category, title, author, created_at, last_post_at, reply_count)
+       VALUES (?, ?, ?, ?, ?, ?, 0)`,
+    ).bind(threadId, category, title, profile.subject, now, now),
+    env.COMMUNITY.prepare(
+      'INSERT INTO posts (id, thread_id, author, body, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).bind(uid(), threadId, profile.subject, body, now),
+  ]);
+  return { id: threadId };
+}
+
+export async function createPost(
+  env: CommunityEnv, identity: AuthIdentity, threadId: string, input: Record<string, unknown>,
+) {
+  const profile = requirePoster(await ensureProfile(env, identity));
+  const body = cleanText(input.body, BODY_MAX, 'Message');
+  const thread = await env.COMMUNITY.prepare(
+    'SELECT id, locked, hidden FROM threads WHERE id = ?',
+  ).bind(threadId).first<{ locked: number; hidden: number }>();
+  if (!thread || thread.hidden) throw new CommunityError('Thread not found.', 404);
+  if (thread.locked && !isModerator(profile)) throw new CommunityError('This thread is closed.', 403);
+
+  const now = Date.now();
+  const postId = uid();
+  await env.COMMUNITY.batch([
+    env.COMMUNITY.prepare(
+      'INSERT INTO posts (id, thread_id, author, body, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).bind(postId, threadId, profile.subject, body, now),
+    env.COMMUNITY.prepare(
+      'UPDATE threads SET last_post_at = ?, reply_count = reply_count + 1 WHERE id = ?',
+    ).bind(now, threadId),
+  ]);
+  return { id: postId };
+}
+
+export async function editPost(
+  env: CommunityEnv, identity: AuthIdentity, postId: string, input: Record<string, unknown>,
+) {
+  const profile = requirePoster(await ensureProfile(env, identity));
+  const post = await env.COMMUNITY.prepare(
+    'SELECT author FROM posts WHERE id = ? AND hidden = 0',
+  ).bind(postId).first<{ author: string }>();
+  if (!post) throw new CommunityError('Post not found.', 404);
+  if (post.author !== profile.subject && !isModerator(profile)) {
+    throw new CommunityError('You can only edit your own posts.', 403);
+  }
+  const body = cleanText(input.body, BODY_MAX, 'Message');
+  await env.COMMUNITY.prepare(
+    'UPDATE posts SET body = ?, edited_at = ? WHERE id = ?',
+  ).bind(body, Date.now(), postId).run();
+  return { ok: true };
+}
+
+export async function reportPost(
+  env: CommunityEnv, identity: AuthIdentity, postId: string, input: Record<string, unknown>,
+) {
+  const profile = requirePoster(await ensureProfile(env, identity));
+  const reason = cleanText(input.reason, 300, 'Reason');
+  const post = await env.COMMUNITY.prepare(
+    'SELECT body FROM posts WHERE id = ?',
+  ).bind(postId).first<{ body: string }>();
+  if (!post) throw new CommunityError('Post not found.', 404);
+
+  const verdict = await screen(env, post.body);
+  try {
+    await env.COMMUNITY.prepare(
+      'INSERT INTO reports (id, post_id, reporter, reason, ai_verdict, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    ).bind(uid(), postId, profile.subject, reason, verdict, Date.now()).run();
+  } catch {
+    // Already reported by this person — say thank you rather than error.
+  }
+  return { ok: true };
+}
+
+// ------------------------------------------------------------------ moderation
+
+export async function moderate(env: CommunityEnv, identity: AuthIdentity, input: Record<string, unknown>) {
+  const profile = await ensureProfile(env, identity);
+  if (!isModerator(profile)) throw new CommunityError('Not allowed.', 403);
+  const action = String(input.action ?? '');
+  const id = String(input.id ?? '');
+  if (!id) throw new CommunityError('Missing id.');
+
+  switch (action) {
+    case 'hidePost':
+    case 'showPost':
+      await env.COMMUNITY.prepare('UPDATE posts SET hidden = ? WHERE id = ?')
+        .bind(action === 'hidePost' ? 1 : 0, id).run();
+      return { ok: true };
+    case 'hideThread':
+    case 'showThread':
+      await env.COMMUNITY.prepare('UPDATE threads SET hidden = ? WHERE id = ?')
+        .bind(action === 'hideThread' ? 1 : 0, id).run();
+      return { ok: true };
+    case 'lock':
+    case 'unlock':
+      await env.COMMUNITY.prepare('UPDATE threads SET locked = ? WHERE id = ?')
+        .bind(action === 'lock' ? 1 : 0, id).run();
+      return { ok: true };
+    case 'ban': {
+      // `id` is a handle here — a moderator should never need to know or paste
+      // somebody's Google subject to act on them.
+      const days = Math.min(3650, Math.max(1, Number(input.days) || 7));
+      await env.COMMUNITY.prepare(
+        'UPDATE profiles SET banned_until = ? WHERE lower(handle) = ?',
+      ).bind(Date.now() + days * 86_400_000, id.toLowerCase()).run();
+      return { ok: true };
+    }
+    case 'unban':
+      await env.COMMUNITY.prepare('UPDATE profiles SET banned_until = NULL WHERE lower(handle) = ?')
+        .bind(id.toLowerCase()).run();
+      return { ok: true };
+    default:
+      throw new CommunityError('Unknown action.');
+  }
+}
+
+export async function listReports(env: CommunityEnv, identity: AuthIdentity) {
+  const profile = await ensureProfile(env, identity);
+  if (!isModerator(profile)) throw new CommunityError('Not allowed.', 403);
+  const rows = await env.COMMUNITY.prepare(
+    `SELECT r.id, r.post_id, r.reason, r.ai_verdict, r.created_at,
+            s.body, s.thread_id, p.handle
+       FROM reports r
+       JOIN posts s ON s.id = r.post_id
+       JOIN profiles p ON p.subject = s.author
+      WHERE r.resolved = 0 ORDER BY r.created_at DESC LIMIT 100`,
+  ).all();
+  return { reports: rows.results ?? [] };
+}
+
+/**
+ * Erase everything a person wrote. Called by the existing DELETE /v1/account so
+ * "delete my account" means the same thing across the app and the forum — a
+ * forum that kept your posts after you deleted your account would make that
+ * promise a lie, and the GDPR request unanswerable.
+ */
+export async function erasePerson(env: CommunityEnv, subject: string): Promise<void> {
+  await env.COMMUNITY.batch([
+    env.COMMUNITY.prepare('DELETE FROM reports WHERE reporter = ?').bind(subject),
+    env.COMMUNITY.prepare('DELETE FROM posts WHERE author = ?').bind(subject),
+    env.COMMUNITY.prepare('DELETE FROM threads WHERE author = ?').bind(subject),
+    env.COMMUNITY.prepare('DELETE FROM profiles WHERE subject = ?').bind(subject),
+  ]);
+}
