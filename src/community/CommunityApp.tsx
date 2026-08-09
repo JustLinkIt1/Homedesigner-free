@@ -280,24 +280,28 @@ function ThreadView({ id, me }: { id: string; me: CommunityProfile | null }) {
       <h1>{data.thread.title}</h1>
       <ol className="cm-posts">
         {data.posts.map((post) => (
-          <li key={post.id} className={post.hidden ? 'cm-post cm-hidden' : 'cm-post'}>
+          <li key={post.id} className={post.hidden ? 'cm-post cm-forum-post cm-hidden' : 'cm-post cm-forum-post'}>
             {post.hidden ? (
               <p className="cm-muted">This post was removed by a moderator.</p>
             ) : (
               <>
-                <div className="cm-post-head">
+                <aside className="cm-post-author">
                   <Avatar author={post.author} />
                   <button className="cm-linkish" onClick={() => go(`?profile=${post.author?.handle}`)}>
                     {post.author?.displayName}
                   </button>
                   {post.author && <MemberMeta author={post.author} />}
-                  <span className="cm-muted">{ago(post.createdAt)}{post.editedAt ? ' · edited' : ''}</span>
-                  {me && (
-                    <button className="cm-report" onClick={() => void report(post.id)}>Report</button>
-                  )}
-                </div>
-                <Body text={post.body ?? ''} />
-                <PostImages images={post.images} />
+                </aside>
+                <article className="cm-post-content">
+                  <div className="cm-post-head">
+                    <span className="cm-muted">{ago(post.createdAt)}{post.editedAt ? ' · edited' : ''}</span>
+                    {me && (
+                      <button className="cm-report" onClick={() => void report(post.id)}>Report</button>
+                    )}
+                  </div>
+                  <Body text={post.body ?? ''} />
+                  <PostImages images={post.images} />
+                </article>
               </>
             )}
           </li>
@@ -464,7 +468,7 @@ export default function CommunityApp() {
     <div className="cm-shell">
       <header className="cm-head">
         <a className="cm-brand" href="/">
-          <img src="/brand-icon.png" alt="" width="34" height="34" />
+          <img src="/assets/brand-icon.png" alt="" width="34" height="34" />
           <span>HomeDesigner</span>
         </a>
         <nav>
