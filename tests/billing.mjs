@@ -16,7 +16,7 @@
 //
 //   node tests/billing.mjs
 import { writeFileSync, mkdtempSync, rmSync, readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { build } from 'esbuild';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -33,12 +33,15 @@ export { setProProvider } from '${rootImport}/src/lib/pro.ts';
 const out = join(dir, 'bundle.mjs');
 let mod;
 try {
-  execFileSync(process.execPath, [
-    join(root, 'node_modules/esbuild/bin/esbuild'), entry,
-    '--bundle', '--format=esm', '--platform=node',
-    '--define:import.meta.env={"BASE_URL":"/","DEV":false,"PROD":true}',
-    `--outfile=${out}`,
-  ], { cwd: root, stdio: ['ignore', 'ignore', 'inherit'] });
+  // esbuild JS API, not the bin shim: on Unix the installer replaces
+  // node_modules/esbuild/bin/esbuild with the native binary, which `node`
+  // cannot run. The API works on every platform. Same trick as
+  // tests/geometry.mjs.
+  await build({
+    entryPoints: [entry], bundle: true, format: 'esm', platform: 'node',
+    define: { 'import.meta.env': '{"BASE_URL":"/","DEV":false,"PROD":true}' },
+    outfile: out,
+  });
   // The store reads localStorage and Capacitor's platform probe at import time.
   const store = new Map();
   globalThis.localStorage ??= {

@@ -15,7 +15,7 @@
 //
 //   node tests/models.mjs
 import { readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { build } from 'esbuild';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -31,10 +31,13 @@ export { CATALOG_BY_TYPE } from '${rootImport}/src/data/furnitureCatalog.ts';
 export { MODEL_FILE, MODEL_FIT, MODEL_YAW, MODEL_CORRECTIONS } from '${rootImport}/src/data/furnitureModels.ts';
 `);
 const bundle = join(dir, 'b.mjs');
-execFileSync(process.execPath, [
-  join(root, 'node_modules/esbuild/bin/esbuild'), entry, '--bundle', '--format=esm', '--platform=node',
-  '--define:import.meta.env.BASE_URL="/"', `--outfile=${bundle}`,
-], { stdio: 'pipe' });
+// esbuild JS API, not the bin shim: on Unix the installer replaces
+// node_modules/esbuild/bin/esbuild with the native binary, which `node` cannot
+// run. The API works on every platform. Same trick as tests/geometry.mjs.
+await build({
+  entryPoints: [entry], bundle: true, format: 'esm', platform: 'node',
+  define: { 'import.meta.env.BASE_URL': '"/"' }, outfile: bundle,
+});
 rmSync(entry, { force: true });
 const { CATALOG_BY_TYPE, MODEL_FILE, MODEL_FIT, MODEL_YAW, MODEL_CORRECTIONS } = await import(pathToFileURL(bundle));
 
