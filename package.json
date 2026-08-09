@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
+    "test:ci": "node tests/geometry.mjs && node tests/i18n.mjs && node tests/theme.mjs && node tests/models.mjs && node tests/samples.mjs && node tests/billing.mjs && node tests/trace.mjs",
     "test": "node tests/geometry.mjs && node tests/i18n.mjs && node tests/theme.mjs && node tests/models.mjs && node tests/samples.mjs && node tests/billing.mjs && node tests/trace.mjs && node tests/smoke.mjs",
     "models:trellis": "node scripts/model-catalog/generate-trellis.mjs",
     "sync-version": "node scripts/sync-version.mjs",

@@ -22,9 +22,5 @@ jobs:
         run: npm run lint
       - name: Build
         run: npm run build
-      - name: Install Chromium
-        run: npx playwright install chromium --with-deps
-      - name: Test suite (PR gate)
-        env:
-          SMOKE_SKIP_3D: '1'
-        run: npm test
+      - name: Deterministic test suites (PR gate)
+        run: npm run test:ci

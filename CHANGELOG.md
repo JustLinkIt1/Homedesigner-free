@@ -15,9 +15,10 @@ changes and add an entry when you ship one.
   appear in both Recent/Favourites and their normal category. Native Model
   Studio verification also now checks the implementation without matching
   explanatory comment text.
-- Kept the pull-request gate fast and deterministic by running the complete
-  non-3D browser suite there. The software-rendered full 3D suite now runs
-  nightly and on demand, so GPU timing variance cannot hold up releases.
+- Kept the pull-request gate fast and deterministic with typecheck, lint,
+  production build, geometry, localization, theme, model, sample, billing and
+  trace suites. The complete browser/3D suite now runs nightly and on demand,
+  so software-rendering timing variance cannot hold up releases.
 
 ### Pro checkout localization
 

@@ -6,8 +6,9 @@
 > longer mistakes explanatory comment text for an actual `window.open` call.
 > Both corrected checks pass locally and the full direct smoke run progressed
 > beyond the original GitHub failure point. The required PR workflow now runs
-> the complete non-3D browser suite; software-rendered full 3D coverage runs
-> nightly and on demand so GPU timing variance does not block releases.
+> deterministic unit/integration suites; the complete browser and
+> software-rendered 3D coverage runs nightly and on demand so GPU timing
+> variance does not block releases.
 
 > **Release 1.22.5 prepared 2026-08-08:** versionCode **12205** contains the
 > rebased mobile editing/catalogue/Pro improvements, one-shot placement
