@@ -31,6 +31,8 @@ export interface ProjectTombstone {
   updatedAt: number;
 }
 
+export type SaveActiveResult = 'saved' | 'deleted' | 'failed';
+
 const INDEX_KEY = 'homedesigner.projects.index.v1';
 const ACTIVE_KEY = 'homedesigner.activeProject.v1';
 const LEGACY_KEY = 'homedesigner.project.v1';
@@ -54,6 +56,15 @@ const writeJSON = (key: string, value: unknown): boolean => {
     return false;
   }
 };
+
+function tombstones(): ProjectTombstone[] {
+  const stored = readJSON<ProjectTombstone[]>(TOMBSTONES_KEY);
+  return Array.isArray(stored) ? stored : [];
+}
+
+function isTombstoned(id: string): boolean {
+  return tombstones().some((item) => item.id === id);
+}
 
 export function listProjects(): ProjectMeta[] {
   return readJSON<ProjectMeta[]>(INDEX_KEY) ?? [];
@@ -95,6 +106,11 @@ export function setActiveId(id: string): void {
 function repairProjectIndex(): void {
   const existing = listProjects();
   const byId = new Map(existing.map((meta) => [meta.id, meta]));
+  // A delete writes its tombstone before attempting to remove the snapshot.
+  // Never let index repair resurrect a project when that removal was blocked
+  // (or when an older tab still has a stale copy in localStorage).
+  const deletedTombstones = tombstones();
+  const deletedIds = new Set(deletedTombstones.map((item) => item.id));
   let changed = false;
 
   try {
@@ -102,7 +118,7 @@ function repairProjectIndex(): void {
       const key = localStorage.key(i);
       if (!key?.startsWith('homedesigner.project.')) continue;
       const id = key.slice('homedesigner.project.'.length);
-      if (!validStoredProjectId(id) || byId.has(id)) continue;
+      if (!validStoredProjectId(id) || byId.has(id) || deletedIds.has(id)) continue;
       const snapshot = readJSON<{ projectName?: string }>(key);
       if (!snapshot) continue;
       byId.set(id, {
@@ -117,7 +133,10 @@ function repairProjectIndex(): void {
   }
 
   const legacy = readJSON<{ projectName?: string }>(LEGACY_KEY);
-  if (legacy && byId.size === 0) {
+  // The legacy slot has no durable project id. Once a deletion tombstone
+  // exists, restoring it would be indistinguishable from reviving the last
+  // project the homeowner intentionally deleted.
+  if (legacy && byId.size === 0 && deletedTombstones.length === 0) {
     const activeId = getActiveId();
     const id = activeId && validStoredProjectId(activeId) ? activeId : uid();
     if (writeJSON(projectKey(id), legacy)) {
@@ -156,12 +175,14 @@ export function loadActive(): unknown | null {
 // (thumbnail-carrying) index each keystroke would be wasteful.
 let lastIndexWrite = 0;
 
-/** Persist the active project's snapshot. Returns false on quota failure.
+/** Persist the active project's snapshot. Refuses tombstoned projects so a
+ * stale editor tab cannot recreate a project deleted in another tab.
  *  `forceId` writes to a specific project (used by the store's coalesced
  *  autosave so a queued write always lands on the project it was captured for,
  *  even if the active project changed while it was pending). */
-export function saveActive(snap: { projectName: string }, forceId?: string): boolean {
+export function saveActive(snap: { projectName: string }, forceId?: string): SaveActiveResult {
   let id = forceId ?? getActiveId();
+  if (id && isTombstoned(id)) return 'deleted';
   if (!id) {
     // First save ever: mint the project on the fly.
     id = uid();
@@ -175,7 +196,7 @@ export function saveActive(snap: { projectName: string }, forceId?: string): boo
     touchMeta(id, { name: snap.projectName, updatedAt: now });
   }
   if (ok) notifyLocalChange();
-  return ok;
+  return ok ? 'saved' : 'failed';
 }
 
 function touchMeta(id: string, patch: Partial<ProjectMeta>): void {

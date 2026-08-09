@@ -682,6 +682,36 @@ button.brand:hover .brand-name {
 .cat-chips::-webkit-scrollbar {
   display: none;
 }
+.catalog-result-count {
+  margin: -5px 15px 8px;
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: right;
+}
+.catalog-empty {
+  padding: 28px 20px;
+}
+.catalog-empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.catalog-empty-actions button {
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 750;
+}
+.catalog-empty-actions button:first-child {
+  border-color: var(--brand);
+  color: var(--brand-600);
+}
 .catalog-preview {
   position: relative;
   margin: 0 12px 10px;
@@ -2569,6 +2599,11 @@ button.brand:hover .brand-name {
   border: 2px solid var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
+.pro-plan.selected {
+  border-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 13%, var(--surface));
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
 .pro-plan-badge {
   position: absolute;
   top: -9px;
@@ -2592,6 +2627,21 @@ button.brand:hover .brand-name {
 .pro-plan small {
   font-size: 10.5px;
   color: var(--text-3);
+}
+.pro-plan-comparison {
+  color: var(--ok) !important;
+  font-weight: 750;
+}
+.pro-continue {
+  width: 100%;
+  margin-top: 10px;
+}
+.pro-billing-terms {
+  margin: 8px 4px 0;
+  color: var(--text-3);
+  font-size: 10.5px;
+  line-height: 1.4;
+  text-align: center;
 }
 .pro-restore,
 .pro-later {
@@ -4601,26 +4651,61 @@ button.brand:hover .brand-name {
   .mobile-tabs.two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .mobile-selection-delete {
+  .mobile-selection-dock {
     position: fixed;
-    right: 18px;
+    right: 12px;
+    left: 12px;
     bottom: calc(76px + env(safe-area-inset-bottom));
     z-index: 82;
-    width: 52px;
-    height: 52px;
-    display: grid;
-    place-items: center;
-    border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
-    border-radius: 16px;
-    background: color-mix(in srgb, var(--danger) 14%, var(--surface));
-    color: var(--danger);
+    display: flex;
+    gap: 4px;
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 5px;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    backdrop-filter: blur(14px);
     box-shadow: var(--shadow-md);
   }
-  .mobile-selection-delete .icon { width: 23px; height: 23px; }
-  .mobile-selection-delete:active { transform: scale(0.94); }
+  .mobile-selection-dock button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 7px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-2);
+    font-size: 11px;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+  .mobile-selection-dock button:hover,
+  .mobile-selection-dock button:active {
+    background: var(--brand-soft);
+    color: var(--brand-600);
+  }
+  .mobile-selection-dock button.danger {
+    color: var(--danger);
+  }
+  .mobile-selection-dock button.danger:hover,
+  .mobile-selection-dock button.danger:active {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+  }
+  .mobile-selection-dock button:active { transform: scale(0.96); }
+  .mobile-selection-dock .icon { width: 18px; height: 18px; flex: none; }
   .welcome-cards {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 370px) {
+  .mobile-selection-dock button { flex-direction: column; gap: 1px; font-size: 9.5px; }
 }
 
 /* ---------- 3D decorate popover ---------- */
@@ -4881,6 +4966,17 @@ button.brand:hover .brand-name {
 .toast button:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+}
+@media (max-width: 520px) {
+  .toast {
+    flex-wrap: wrap;
+  }
+  .toast > span {
+    flex: 1 1 calc(100% - 76px);
+  }
+  .toast .toast-action {
+    flex: 1 1 auto;
+  }
 }
 
 /* ---------- Confirm dialog ---------- */

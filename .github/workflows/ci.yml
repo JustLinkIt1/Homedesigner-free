@@ -22,7 +22,5 @@ jobs:
         run: npm run lint
       - name: Build
         run: npm run build
-      - name: Install Chromium
-        run: npx playwright install chromium --with-deps
-      - name: Smoke test
-        run: npm test
+      - name: Deterministic test suites (PR gate)
+        run: npm run test:ci

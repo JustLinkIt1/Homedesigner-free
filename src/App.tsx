@@ -21,7 +21,6 @@ import {
   Crown,
   RotateCcw,
   RotateCw,
-  Trash2,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
 import ToolDock from './components/ToolDock';
@@ -40,6 +39,7 @@ import ProUpsellModal from './components/ProUpsellModal';
 import ProjectsScreen from './components/ProjectsScreen';
 import IntroVideo from './components/IntroVideo';
 import FurnitureLockIcon from './components/FurnitureLockIcon';
+import MobileSelectionDock from './components/MobileSelectionDock';
 import { useProStore } from './store/proStore';
 import { useAuthStore } from './store/authStore';
 import { requirePro } from './lib/pro';
@@ -75,7 +75,7 @@ export default function App() {
     kitchenUppers, setKitchenUppers,
     moveLock, setMoveLock,
     background, updateBackground,
-    rotateDesign, deleteById,
+    rotateDesign,
   } = useDesign(useShallow((s) => ({
     view: s.view,
     setView: s.setView,
@@ -108,9 +108,13 @@ export default function App() {
     updateBackground: s.updateBackground,
     setMoveLock: s.setMoveLock,
     rotateDesign: s.rotateDesign,
-    deleteById: s.deleteById,
   })));
   const t = useI18n();
+  const selectedFurnitureType = useDesign((s) =>
+    s.selection.kind === 'furniture'
+      ? s.furniture.find((item) => item.id === s.selection.id)?.type ?? null
+      : null,
+  );
   const isPro = useProStore((st) => st.isPro);
   const [showImport, setShowImport] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -148,45 +152,13 @@ export default function App() {
     }
   });
 
-  // --- Auto-open the Edit drawer when an object is selected on touch. ---
-  // Tapping furniture on a phone otherwise "does nothing" visible: the props
-  // panel lives behind the Edit tab. Auto-open it, but never fight the user:
-  //  - autoOpenedRef: only auto-close what we auto-opened
-  //  - suppressedIdRef: user closed while this id was selected → don't reopen
-  //  - pointerDownRef: drags select on pointerdown; defer opening to pointerup
+  // Touch selections stay in the plan and expose a reachable quick-action dock.
   const coarsePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-  const autoOpenedRef = useRef(false);
-  const suppressedIdRef = useRef<string | null>(null);
-  const pointerDownRef = useRef(false);
-  const drawerRef = useRef(drawer);
-  drawerRef.current = drawer;
-  useEffect(() => {
-    const down = () => { pointerDownRef.current = true; };
-    const up = () => { pointerDownRef.current = false; };
-    window.addEventListener('pointerdown', down, true);
-    window.addEventListener('pointerup', up, true);
-    window.addEventListener('pointercancel', up, true);
-    return () => {
-      window.removeEventListener('pointerdown', down, true);
-      window.removeEventListener('pointerup', up, true);
-      window.removeEventListener('pointercancel', up, true);
-    };
-  }, []);
-  // Selecting something on a phone no longer slides the full properties panel
-  // over the plan. That panel is full height, so it covered the very object you
-  // had just selected and you could not see your own edit. BOTH views now fan a
-  // small ring of actions over the object (SelectionRing), and its Edit button
-  // opens this panel deliberately. All that is left here is closing a panel we
-  // opened once the selection goes away.
-  useEffect(() => {
-    if (!coarsePointer || screen !== 'editor') return;
-    if (!selection.id) {
-      if (autoOpenedRef.current && drawerRef.current === 'props') setDrawer(null);
-      autoOpenedRef.current = false;
-      suppressedIdRef.current = null;
-    }
-    return;
-  }, [selection.id, coarsePointer, screen]);
+  // Regular furniture uses Claude's object-anchored SelectionRing. The dock is
+  // reserved for stairs/openings/structure, where contextual actions such as
+  // reverse, hinge and swing cannot be expressed by the generic ring.
+  const contextualDockSelection =
+    selection.kind !== 'furniture' || selectedFurnitureType === 'stairs';
 
   // First-run tour: only on entering the editor with a truly blank project
   // (the sample home loads walls before onOpenEditor, so it never shows).
@@ -484,10 +456,6 @@ export default function App() {
           {view === '2d' ? (
             <Canvas2D
               onEditSelection={() => {
-                // Deliberate, not automatic: the ring's Edit button is the only
-                // thing that opens the full panel on a phone now.
-                autoOpenedRef.current = true;
-                suppressedIdRef.current = null;
                 setDrawer('props');
               }}
             />
@@ -529,9 +497,6 @@ export default function App() {
             <Suspense fallback={<div className="stage-loading"><span className="spin" /> {t('Loading 3D…')}</div>}>
               <Scene3D
                 onEditSelection={() => {
-                  // Same deliberate open as the 2D ring's Edit button.
-                  autoOpenedRef.current = true;
-                  suppressedIdRef.current = null;
                   setDrawer('props');
                 }}
               />
@@ -967,10 +932,6 @@ export default function App() {
         <div
           className={`drawer-backdrop${drawer && drawer !== 'catalog' ? ' open' : ''}`}
           onClick={() => {
-            // A manual close while something is selected means "leave me
-            // alone about this object" — suppress re-auto-opening it.
-            if (drawer === 'props' && selection.id) suppressedIdRef.current = selection.id;
-            autoOpenedRef.current = false;
             setDrawer(null);
           }}
         />
@@ -996,11 +957,8 @@ export default function App() {
             className={drawer === 'props' ? 'active' : ''}
             onClick={() => {
               if (drawer === 'props') {
-                if (selection.id) suppressedIdRef.current = selection.id;
-                autoOpenedRef.current = false;
                 setDrawer(null);
               } else {
-                autoOpenedRef.current = false; // user-opened: never auto-close
                 setDrawer('props');
               }
             }}
@@ -1008,19 +966,13 @@ export default function App() {
             <SlidersHorizontal className="icon" /> <span className="mt-label">{t('Edit')}</span>
           </button>
         </div>
-        {coarsePointer && !walkMode && selection.id && selection.kind && (
-          <button
-            className="mobile-selection-delete"
-            onClick={() => {
-              deleteById(selection.kind, selection.id);
-              autoOpenedRef.current = false;
-              setDrawer(null);
+        {coarsePointer && !walkMode && !drawing && drawer === null && selection.id && selection.kind &&
+          contextualDockSelection && (view === '2d' || selection.kind !== 'furniture') && (
+          <MobileSelectionDock
+            onMore={() => {
+              setDrawer('props');
             }}
-            aria-label={t('Delete object')}
-            data-tip={t('Delete object')}
-          >
-            <Trash2 className="icon" />
-          </button>
+          />
         )}
       </div>
 

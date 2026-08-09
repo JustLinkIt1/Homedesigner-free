@@ -87,6 +87,15 @@ function cleanBytes(value: unknown): number | undefined {
     : undefined;
 }
 
+function cleanSearchTerms(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const terms = value.slice(0, 16).flatMap((candidate) => {
+    const text = cleanText(candidate, 40);
+    return text && /^[\p{L}\p{N}\s&+/'-]+$/u.test(text) ? [text] : [];
+  });
+  return terms.length ? [...new Set(terms)] : undefined;
+}
+
 function sameOriginUrl(value: unknown, manifestUrl: URL): string | null {
   if (typeof value !== 'string') return null;
   try {
@@ -243,6 +252,7 @@ function validateEntry(value: unknown, manifestUrl: URL): CatalogEntry | null {
     icon,
     pro: value.pro === false ? undefined : true,
     placement: value.placement === 'surface' || value.placement === 'wall' ? value.placement : undefined,
+    searchTerms: cleanSearchTerms(value.searchTerms),
     mountY: typeof value.mountY === 'number' && Number.isFinite(value.mountY) && value.mountY >= 0 && value.mountY <= 2_000
       ? value.mountY
       : undefined,

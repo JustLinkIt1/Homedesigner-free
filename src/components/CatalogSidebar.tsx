@@ -17,6 +17,7 @@ import SymbolIcon from './SymbolIcon';
 import ProTag from './ProTag';
 import { loadRemoteCatalog, useRemoteCatalog } from '../lib/remoteCatalog';
 import { FURNITURE_SPRITES, spriteUrl } from '../data/furnitureSprites';
+import { catalogEntryMatches } from '../lib/catalogSearch';
 
 // Keep Three.js out of the initial 2D editor path; load it only after a user
 // actually asks to inspect an object.
@@ -181,19 +182,13 @@ export default function CatalogSidebar({
   );
 
   const grouped = useMemo(() => {
-    const q = query.trim().toLowerCase();
     const items = catalog.filter((entry) => {
       const group = browseBy === 'room' ? entry.category : catalogGroupFor(entry);
       // FREE_ONLY is a pseudo-category: it cuts across every real one.
       if (category === FREE_ONLY && entry.pro) return false;
       return (
         (category === 'All' || category === FREE_ONLY || group === category) &&
-        (!q ||
-          entry.name.toLowerCase().includes(q) ||
-          t(entry.name).toLowerCase().includes(q) ||
-          entry.category.toLowerCase().includes(q) ||
-          t(entry.category).toLowerCase().includes(q) ||
-          catalogGroupFor(entry).toLowerCase().includes(q))
+        catalogEntryMatches(entry, query, t)
       );
     });
     const map = new Map<string, CatalogEntry[]>();
@@ -211,6 +206,11 @@ export default function CatalogSidebar({
     // t is stable for a language; avoid rebuilding on unrelated renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, category, browseBy, catalog]);
+
+  const resultCount = useMemo(
+    () => grouped.reduce((count, [, items]) => count + items.length, 0),
+    [grouped],
+  );
 
   const placePreviewed = () => {
     if (!previewEntry) return;
@@ -288,6 +288,9 @@ export default function CatalogSidebar({
             </button>
           ))}
         </div>
+        <div className="catalog-result-count" aria-live="polite">
+          {resultCount} {t('items')}
+        </div>
         {previewEntry && (
           <div className="catalog-preview">
             <div className="catalog-preview-visual">
@@ -341,8 +344,16 @@ export default function CatalogSidebar({
             </div>
           )}
           {grouped.length === 0 && (
-            <div className="empty-state" style={{ padding: '28px 20px' }}>
+            <div className="empty-state catalog-empty">
               <p>{t('No objects match')} “{query}”.</p>
+              <div className="catalog-empty-actions">
+                <button onClick={() => { setQuery(''); setCategory('All'); }}>
+                  {t('Clear filters')}
+                </button>
+                <button onClick={() => setBrowseBy(browseBy === 'room' ? 'type' : 'room')}>
+                  {browseBy === 'room' ? t('Browse by type') : t('Browse by room')}
+                </button>
+              </div>
             </div>
           )}
           {grouped.map(([group, items]) => (

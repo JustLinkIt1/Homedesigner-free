@@ -16,6 +16,7 @@ import { sunModel } from '../../lib/sun';
 import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
+import { requestReviewAfterPhotoSave } from '../../lib/appReview';
 
 const MAX_SAMPLES = 200;
 
@@ -238,6 +239,13 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
   const pct = Math.round((samples / MAX_SAMPLES) * 100);
   const canSave = mode === 'raster' || samples > 0;
 
+  const savePhoto = async () => {
+    const capture = photoCapture.current;
+    if (!capture) return;
+    await capture();
+    await requestReviewAfterPhotoSave();
+  };
+
   return (
     <div className="photo-overlay">
       {mode === 'trace' ? (
@@ -301,7 +309,7 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
           <button className="btn" onClick={onClose}>
             Close
           </button>
-          <button className="btn primary" disabled={!canSave} onClick={() => photoCapture.current?.()}>
+          <button className="btn primary" disabled={!canSave} onClick={() => void savePhoto()}>
             💾 Save photo
           </button>
         </div>

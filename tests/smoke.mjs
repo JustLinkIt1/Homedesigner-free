@@ -16,6 +16,7 @@ import { chromium } from 'playwright';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4599;
 const BASE = `http://localhost:${PORT}/`;
+const PAGE_BOOT_TIMEOUT = 60000;
 
 // Launch Vite through Node so the smoke suite is portable: Windows cannot
 // spawn the extensionless `.bin/vite` shim directly.
@@ -132,6 +133,11 @@ const mainSource = await readFile(join(root, 'src', 'main.tsx'), 'utf8');
 const authStoreSource = await readFile(join(root, 'src', 'store', 'authStore.ts'), 'utf8');
 const proStoreSource = await readFile(join(root, 'src', 'store', 'proStore.ts'), 'utf8');
 const proSource = await readFile(join(root, 'src', 'lib', 'pro.ts'), 'utf8');
+const proUpsellSource = await readFile(join(root, 'src', 'components', 'ProUpsellModal.tsx'), 'utf8');
+const canvas2DSource = await readFile(join(root, 'src', 'components', 'Editor2D', 'Canvas2D.tsx'), 'utf8');
+const modelStudioAccessSource = await readFile(join(root, 'src', 'lib', 'modelStudioAccess.ts'), 'utf8');
+const scene3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Scene3D.tsx'), 'utf8');
+const furniture3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Furniture3D.tsx'), 'utf8');
 const referralSource = await readFile(join(root, 'src', 'lib', 'referral.ts'), 'utf8');
 const workerSource = await readFile(join(root, 'workers', 'design-sync', 'src', 'index.ts'), 'utf8');
 const workerConfig = await readFile(join(root, 'workers', 'design-sync', 'wrangler.jsonc'), 'utf8');
@@ -140,6 +146,12 @@ const androidManifest = await readFile(join(root, 'android', 'app', 'src', 'main
 check(
   'Google login does not trigger the Android custom-scope guard',
   !/SocialLogin\.login\(\{[\s\S]{0,300}?scopes\s*:/.test(googleAuthSource),
+);
+check(
+  'mobile Model Studio uses the supported native browser instead of window.open',
+  modelStudioAccessSource.includes("from '@capacitor/browser'") &&
+    modelStudioAccessSource.includes('await Browser.open({ url: MODEL_STUDIO_URL })') &&
+    !modelStudioAccessSource.includes('window.open('),
 );
 check(
   'Google login avoids the plugin 8.3.38 invalid-JWT decoder',
@@ -174,6 +186,14 @@ check(
 check(
   'linking Google retroactively syncs legacy Play purchases',
   proSource.includes('Purchases.syncPurchases()') && proSource.includes('Purchases.logIn({ appUserID })'),
+);
+check(
+  'native purchase flow cannot leave the Pro sheet spinning forever',
+  proSource.includes('PURCHASE_TIMEOUT_MS') &&
+    proSource.includes('Purchases.purchasePackage({ aPackage: pkg })') &&
+    proSource.includes('if (await this.sync().catch(() => false)) return true') &&
+    proSource.includes('tap Restore purchase') &&
+    proStoreSource.includes('settleStranded: async () =>'),
 );
 check(
   'desktop entitlement lookup uses a private RevenueCat v2 credential',
@@ -215,10 +235,16 @@ check(
     proSource.includes("packageKey: 'lifetime'") &&
     proSource.includes('webPackageForPlan(offerings, planID)'),
 );
+check(
+  'every interactive placement path confirms one-shot placement',
+  canvas2DSource.match(/notifyPlacementComplete\(/g)?.length === 2 &&
+    scene3DSource.match(/notifyPlacementComplete\(/g)?.length === 2 &&
+    furniture3DSource.match(/notifyPlacementComplete\(/g)?.length === 1,
+);
 
 // ---- 1. Projects screen renders, sample home opens -------------------------
-await page.goto(BASE);
-check('projects screen renders', await page.waitForSelector('.projects-screen', { timeout: 20000 }).then(() => true).catch(() => false));
+await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 90000 });
+check('projects screen renders', await page.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT }).then(() => true).catch(() => false));
 // ---- the projects paywall is count-based, so the badge must be too ---------
 // `list.length >= 1 && requirePro('projects')` — your FIRST project is free
 // whichever template you pick. A static badge would tell a brand-new user their
@@ -477,7 +503,49 @@ check('undo restores item', (await store(() => window.useDesign.getState().furni
   await page.waitForTimeout(150);
   check('an emptied box reverts on commit', (await widthOf()) === 10);
 }
+// Successful placement is one-shot, but the confirmation lets the homeowner
+// recover or explicitly repeat without reopening the catalogue.
+await page.evaluate(async () => {
+  const { notifyPlacementComplete } = await import('/src/lib/placementFeedback.ts');
+  const s = window.useDesign.getState();
+  const id = s.addFurniture('side_table', { x: 260, y: 260 });
+  s.select({ kind: 'furniture', id });
+  s.setPendingFurniture(null);
+  s.setTool('select');
+  notifyPlacementComplete('side_table');
+});
+const placedToast = page.locator('.toast.success', { hasText: 'Placed' }).last();
+check('placement confirmation offers Undo and Place another',
+  await placedToast.getByRole('button', { name: 'Undo' }).isVisible().catch(() => false) &&
+    await placedToast.getByRole('button', { name: 'Place another' }).isVisible().catch(() => false));
+await placedToast.getByRole('button', { name: 'Place another' }).click();
+const repeatState = await store(() => ({
+  pending: window.useDesign.getState().pendingFurnitureType,
+  tool: window.useDesign.getState().tool,
+  selection: window.useDesign.getState().selection.id,
+}));
+check('Place another explicitly re-arms the same item',
+  repeatState.pending === 'side_table' && repeatState.tool === 'furniture' && repeatState.selection === null,
+  JSON.stringify(repeatState));
+await store(() => {
+  const s = window.useDesign.getState();
+  s.setPendingFurniture(null);
+  s.setTool('select');
+});
 
+const beforePlacementUndo = await store(() => window.useDesign.getState().furniture.length);
+await page.evaluate(async () => {
+  const { notifyPlacementComplete } = await import('/src/lib/placementFeedback.ts');
+  const s = window.useDesign.getState();
+  const id = s.addFurniture('side_table', { x: 280, y: 280 });
+  s.select({ kind: 'furniture', id });
+  notifyPlacementComplete('side_table');
+});
+const undoPlacementToast = page.locator('.toast.success', { hasText: 'Placed' }).last();
+await undoPlacementToast.getByRole('button', { name: 'Undo' }).click();
+check('placement Undo removes only the new item and clears selection',
+  (await store(() => window.useDesign.getState().furniture.length)) === beforePlacementUndo &&
+    (await store(() => window.useDesign.getState().selection.id)) === null);
 const stairId = await store(() => {
   const s = window.useDesign.getState();
   const id = s.addFurniture('stairs', { x: 250, y: 250 });
@@ -528,6 +596,25 @@ const dark = await page.evaluate(() => document.documentElement.getAttribute('da
 check('dark theme applies', dark === 'dark');
 await page.click('.seg button:has-text("System")');
 await page.click('.modal-foot .btn.primary');
+
+// The private production tool must remain reachable in the cramped editor
+// toolbar without requiring the owner to find the horizontally-scrolled
+// account avatar first.
+await page.evaluate(async () => {
+  const { useAuthStore } = await import('/src/store/authStore.ts');
+  useAuthStore.setState({
+    account: {
+      subject: 'owner-smoke',
+      email: ' NATHANJOPPICH@GMAIL.COM ',
+      name: 'Owner',
+      imageUrl: null,
+    },
+  });
+});
+await page.click('[aria-label="More"]');
+check('owner can reach Model Studio directly from the editor More menu',
+  await page.locator('.more-menu [role="menuitem"]:has-text("Model Studio")').isVisible().catch(() => false));
+await page.click('[aria-label="More"]');
 
 // ---- 5. 3D view -------------------------------------------------------------
 if (process.env.SMOKE_SKIP_3D) {
@@ -587,11 +674,13 @@ if (process.env.SMOKE_SKIP_3D) {
     !!dockRect && dockRect.left >= 0 && dockRect.width > 100,
     JSON.stringify(dockRect),
   );
-  const sideTableCard = page.locator('.catalog.docked .cat-item[data-tip="Side Table"]');
+  // The same catalogue entry may also appear in Recent or Favourites. Exercise
+  // one visible instance instead of relying on there being only one DOM copy.
+  const sideTableCard = page.locator('.catalog.docked .cat-item[data-tip="Side Table"]').first();
   // 45s like the other clicks in this block: the docked 3D catalog has just
   // mounted a WebGL surface, and under software GL that compile stalls the main
   // thread well past the 30s default.
-  await sideTableCard.locator('.cat-item-select').click({ timeout: 45000 });
+  await sideTableCard.locator('.cat-item-select').click({ timeout: 45000, force: true });
   check(
     'catalog selection stays GPU-light until 3D preview is requested',
     await page.locator('.catalog.docked .catalog-preview-static').isVisible().catch(() => false)
@@ -601,14 +690,16 @@ if (process.env.SMOKE_SKIP_3D) {
     'catalog card uses a lazy photoreal sprite when one exists',
     await sideTableCard.locator('.ci-sprite').isVisible().catch(() => false),
   );
-  await sideTableCard.locator('.ci-favorite').click();
+  // The docked catalogue shares the live 3D frame and can shift by subpixels
+  // under software rendering. The exact card is already visible above.
+  await sideTableCard.locator('.ci-favorite').click({ force: true });
   const savedFavorites = await page.evaluate(() => JSON.parse(localStorage.getItem('homedesigner.favorites.v1') ?? '[]'));
   check(
     'catalog favourites persist and appear as a shortcut row',
     savedFavorites.includes('side_table')
       && await page.locator('.catalog.docked .cat-section', { hasText: 'Favourites' }).isVisible().catch(() => false),
   );
-  await page.locator('.catalog.docked .catalog-preview-3d').click();
+  await page.locator('.catalog.docked .catalog-preview-3d').click({ force: true });
   check(
     'on-demand catalog 3D preview opens',
     await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: 30000 }).then(() => true).catch(() => false),
@@ -634,7 +725,7 @@ if (process.env.SMOKE_SKIP_3D) {
     // The Free chip is the answer to "click through every single furniture".
     const freeChip = page.locator('.catalog.docked .cat-chips .chip', { hasText: /^Free$/ });
     check('pro: a Free chip is offered to non-Pro users', await freeChip.isVisible().catch(() => false));
-    await freeChip.click();
+    await freeChip.click({ force: true });
     await page.waitForTimeout(300);
     const afterFilter = await page.evaluate(() => ({
       items: document.querySelectorAll('.catalog.docked .cat-item').length,
@@ -660,14 +751,14 @@ if (process.env.SMOKE_SKIP_3D) {
       asPro.category === 'All', JSON.stringify(asPro));
     await page.evaluate(() => window.useProStore.setState({ isPro: false }));
     await page.waitForTimeout(300);
-    await page.locator('.catalog.docked .cat-chips .chip', { hasText: /^All$/ }).click();
+    await page.locator('.catalog.docked .cat-chips .chip', { hasText: /^All$/ }).click({ force: true });
     await page.waitForTimeout(200);
   }
 
   // 45s to match the rotate-pill wait below: both land right after the WebGL
   // preview opens, and under software GL that compile stalls the main thread
   // long enough that a 30s click timed out in 3 of 4 runs on a loaded machine.
-  await page.locator('.catalog.docked .catalog-place').click({ timeout: 45000 });
+  await page.locator('.catalog.docked .catalog-place').click({ timeout: 45000, force: true });
   check(
     '3D placement guidance appears',
     await page.locator('.placement-affordance', { hasText: 'Tap a floor to place Side Table' }).isVisible().catch(() => false),
@@ -702,7 +793,11 @@ if (process.env.SMOKE_SKIP_3D) {
     check('3D selection ring: no two buttons overlap', overlap.length === 0, overlap.join(', '));
 
     const r0 = await store(() => window.useDesign.getState().furniture[0].rotation);
-    await page.locator('.sel-ring button[aria-label^="Rotate"]').click();
+    // The ring tracks a projected 3D point, so under software WebGL it may move
+    // by subpixels forever and never satisfy Playwright's "stable" heuristic.
+    // Visibility and non-overlap are asserted above; dispatch to that exact
+    // visible control without waiting for a static bounding box.
+    await page.locator('.sel-ring button[aria-label^="Rotate"]').click({ force: true });
     await page.waitForTimeout(250);
     const r1 = await store(() => window.useDesign.getState().furniture[0].rotation);
     check('3D selection ring: rotate turns the object by 90°', (r1 - r0 + 360) % 360 === 90, `got ${r1 - r0}`);
@@ -751,6 +846,15 @@ if (process.env.SMOKE_SKIP_3D) {
   check('rotate plan: four right turns restore the plan exactly', rot.backWalls === rot.beforeWalls);
 }
 
+// Keep the remaining fresh-page checks on a separate Chromium connection.
+// A software-rendered WebGL page can serialize teardown and navigation commands
+// in its own process even after the 3D assertions are complete.
+const isolatedBrowser = await chromium.launch({
+  executablePath: process.env.CHROMIUM_PATH || undefined,
+  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'],
+});
+browser.close().catch(() => {});
+
 // ---- long-press context menu ------------------------------------------------
 // Only needs the 2D Konva stage, so it no longer sits inside the 3D section and
 // still runs with SMOKE_SKIP_3D=1. On a phone this is the only route to
@@ -764,13 +868,13 @@ if (process.env.SMOKE_SKIP_3D) {
   // item slid out from under the menu. In a clean page the same gesture is
   // deterministic (verified 8/8 by hand, before and after the fix). Touch
   // simulation is sensitive to stage state, so give it an untouched stage.
-  const lp = await browser.newPage({
+  const lp = await isolatedBrowser.newPage({
     viewport: { width: 1280, height: 800 },
     hasTouch: true,
     reducedMotion: 'reduce',
   });
   await lp.goto(BASE);
-  await lp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await lp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await lp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await lp.waitForSelector('.toolbar', { timeout: 20000 });
   await lp.locator('.coach-skip').click().catch(() => {});
@@ -906,14 +1010,14 @@ if (process.env.SMOKE_SKIP_3D) {
 // the main `page` is deep in the 3D editor by now and its state is not worth
 // unwinding just to open a dialog.
 {
-  const a11y = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'reduce' });
+  const a11y = await isolatedBrowser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'reduce' });
   await a11y.goto(BASE);
   // Mark the first-run tour as seen BEFORE the app boots. CoachMarks installs a
   // document-level Escape handler of its own, and on a fresh profile it was
   // racing this block's Escape — the source of an intermittent failure here.
   await a11y.evaluate(() => localStorage.setItem('homedesigner.tour.v1', 'done'));
   await a11y.reload();
-  await a11y.waitForSelector('.projects-screen', { timeout: 20000 });
+  await a11y.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await a11y.locator('.ps-head .ps-settings-btn').click();
   // Let the dialog mount and its key/focus effect attach before driving it. The
   // listener is installed in an effect, so a keypress dispatched in the same
@@ -957,9 +1061,9 @@ if (process.env.SMOKE_SKIP_3D) {
 // animations were never wired up. This context leaves motion ON and checks that a
 // closing dialog actually lingers for a frame instead of vanishing instantly.
 {
-  const motionPage = await browser.newPage({ viewport: { width: 1100, height: 800 } });
+  const motionPage = await isolatedBrowser.newPage({ viewport: { width: 1100, height: 800 } });
   await motionPage.goto(BASE);
-  await motionPage.waitForSelector('.projects-screen', { timeout: 20000 });
+  await motionPage.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await motionPage.locator('.ps-head .ps-settings-btn').click();
   const opened = await motionPage.locator('.modal.settings').isVisible().catch(() => false);
   check('motion context: settings dialog opens', opened);
@@ -984,16 +1088,102 @@ if (process.env.SMOKE_SKIP_3D) {
   await motionPage.close();
 }
 
+// ---- contextual mobile selection dock --------------------------------------
+// Keep high-frequency transforms reachable without forcing a phone user into
+// the full Properties sheet. This runs in a real coarse-pointer page because
+// viewport width alone does not activate the touch-only dock.
+{
+  const md = await isolatedBrowser.newPage({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'reduce',
+  });
+  await md.addInitScript(() => {
+    const nativeMatchMedia = window.matchMedia.bind(window);
+    window.matchMedia = (query) => query === '(pointer: coarse)'
+      ? {
+          matches: true,
+          media: query,
+          onchange: null,
+          addListener() {},
+          removeListener() {},
+          addEventListener() {},
+          removeEventListener() {},
+          dispatchEvent() { return false; },
+        }
+      : nativeMatchMedia(query);
+  });
+  await md.goto(BASE);
+  await md.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
+  await md.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
+  await md.waitForSelector('.toolbar', { timeout: 20000 });
+  await md.locator('.coach-skip').click().catch(() => {});
+
+  const mobileStairId = await md.evaluate(() => {
+    const s = window.useDesign.getState();
+    s.setTool('select');
+    const id = s.addFurniture('stairs', { x: 250, y: 250 });
+    s.select({ kind: 'furniture', id });
+    return id;
+  });
+  const dock = md.getByRole('navigation', { name: 'Selected object actions' });
+  check('mobile selection dock appears for selected furniture', await dock.isVisible().catch(() => false));
+  check('stair dock exposes reverse, duplicate, delete and more',
+    await dock.getByRole('button').count() === 4);
+  await dock.getByRole('button', { name: 'Reverse' }).click();
+  check('mobile dock reverses stairs in one tap',
+    (await md.evaluate((id) => window.useDesign.getState().furniture.find((f) => f.id === id)?.rotation, mobileStairId)) === 180);
+
+  const mobileDoorId = await md.evaluate((stairId) => {
+    const s = window.useDesign.getState();
+    s.deleteById('furniture', stairId);
+    const id = s.addOpening(s.walls[0].id, 0.5, 'door');
+    s.select({ kind: 'opening', id });
+    return id;
+  }, mobileStairId);
+  await dock.getByRole('button', { name: 'Hinge' }).click();
+  await dock.getByRole('button', { name: 'In / out' }).click();
+  const flips = await md.evaluate((id) => {
+    const opening = window.useDesign.getState().openings.find((entry) => entry.id === id);
+    return { hinge: opening?.flipHinge, swing: opening?.flipSwing };
+  }, mobileDoorId);
+  check('mobile dock flips door hinge and swing', flips.hinge === true && flips.swing === true, JSON.stringify(flips));
+
+  await dock.getByRole('button', { name: 'More' }).click();
+  check('mobile dock More opens full Properties', await md.locator('.sidebar.right.open').isVisible().catch(() => false));
+  check('selection dock hides while Properties is open', !(await dock.isVisible().catch(() => false)));
+  await md.getByRole('button', { name: 'Edit' }).click();
+  await md.waitForTimeout(150);
+  await dock.getByRole('button', { name: 'Delete' }).click();
+  check('mobile dock delete uses undo-capable deletion',
+    await md.locator('.toast-action', { hasText: 'Undo' }).isVisible().catch(() => false));
+
+  await md.getByRole('button', { name: 'Objects' }).click();
+  const catalogSearch = md.locator('.cat-search input');
+  await catalogSearch.fill('bedside tables');
+  check('catalog aliases find the expected object',
+    await md.locator('.cat-item', { hasText: 'Nightstand' }).isVisible().catch(() => false));
+  check('catalog reports the filtered result count',
+    !/^0\s/.test(await md.locator('.catalog-result-count').innerText().catch(() => '0')));
+  await catalogSearch.fill('definitely-no-such-furniture');
+  check('empty catalog search offers recovery actions',
+    await md.getByRole('button', { name: 'Clear filters' }).isVisible().catch(() => false));
+  await md.getByRole('button', { name: 'Clear filters' }).click();
+  check('clear filters restores the catalogue', (await catalogSearch.inputValue()) === '');
+  await md.close();
+}
+
 // ---- onboarding: tour depth, and the Tips panel in a non-English locale -----
 // Testers reported the tour "isn't thorough enough" and that the home screen's
 // "Need inspiration?" destination wasn't translated — the whole Tips panel had
 // shipped in English for all 12 locales.
 {
-  const fr = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+  const fr = await isolatedBrowser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
   await fr.goto(BASE);
   await fr.evaluate(() => localStorage.setItem('homedesigner.lang.v1', 'fr'));
   await fr.reload();
-  await fr.waitForSelector('.projects-screen', { timeout: 20000 });
+  await fr.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
 
   const banner = await fr.locator('.ps-inspire').innerText().catch(() => '');
   check('inspiration banner is translated', /inspiration/i.test(banner) && !/Explore ideas/.test(banner));
@@ -1043,9 +1233,9 @@ if (process.env.SMOKE_SKIP_3D) {
 // It lived only in Properties, which in 3D on a phone is behind the Edit tab AND
 // only appears with nothing selected — so in practice it was unreachable there.
 if (!process.env.SMOKE_SKIP_3D) {
-  const r3 = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+  const r3 = await isolatedBrowser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
   await r3.goto(BASE);
-  await r3.waitForSelector('.projects-screen', { timeout: 20000 });
+  await r3.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await r3.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await r3.waitForSelector('.toolbar', { timeout: 20000 });
   await r3.locator('.coach-skip').click().catch(() => {});
@@ -1071,9 +1261,9 @@ if (!process.env.SMOKE_SKIP_3D) {
 // thing worth asserting is that the flag actually changes what renders: no slab
 // beneath, no ceiling above, and the outdoor material list instead of flooring.
 {
-  const od = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  const od = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await od.goto(BASE);
-  await od.waitForSelector('.projects-screen', { timeout: 20000 });
+  await od.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await od.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await od.waitForSelector('.toolbar', { timeout: 20000 });
   await od.locator('.coach-skip').click().catch(() => {});
@@ -1124,9 +1314,9 @@ if (!process.env.SMOKE_SKIP_3D) {
 // come for free. What must be asserted is that the flag genuinely takes the run
 // OUT of the building: no room, no roof, no cladding.
 {
-  const fp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  const fp = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await fp.goto(BASE);
-  await fp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await fp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await fp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await fp.waitForSelector('.toolbar', { timeout: 20000 });
   await fp.locator('.coach-skip').click().catch(() => {});
@@ -1207,9 +1397,9 @@ if (!process.env.SMOKE_SKIP_3D) {
 // tool and semantic flag so they stay visible in dollhouse mode and remain
 // distinguishable from non-structural fences.
 {
-  const hp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  const hp = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await hp.goto(BASE);
-  await hp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await hp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await hp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await hp.waitForSelector('.toolbar', { timeout: 20000 });
   await hp.locator('.coach-skip').click().catch(() => {});
@@ -1268,9 +1458,9 @@ if (!process.env.SMOKE_SKIP_3D) {
 // free/paid split: an outdoor category that is nearly empty and mostly locked
 // reads as bait, not as an upsell.
 {
-  const gp = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  const gp = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   await gp.goto(BASE);
-  await gp.waitForSelector('.projects-screen', { timeout: 20000 });
+  await gp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await gp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await gp.waitForSelector('.toolbar', { timeout: 20000 });
   await gp.locator('.coach-skip').click().catch(() => {});
@@ -1330,7 +1520,7 @@ if (!process.env.SMOKE_SKIP_3D) {
 // ---- 6. No page errors ------------------------------------------------------
 // Old releases could leave a project JSON without a corresponding index row.
 // A reload must recover it so the next authenticated sync uploads it.
-const recoveryPage = await browser.newPage({ viewport: { width: 900, height: 700 } });
+const recoveryPage = await isolatedBrowser.newPage({ viewport: { width: 900, height: 700 } });
 await recoveryPage.goto(BASE);
 await recoveryPage.evaluate(() => {
   localStorage.setItem('homedesigner.project.recovered_legacy', JSON.stringify({
@@ -1343,13 +1533,88 @@ check(
   await recoveryPage.getByRole('button', { name: 'Open Recovered legacy plan' })
     .isVisible().catch(() => false),
 );
+check(
+  'desktop checkout separates plan selection from purchase',
+  proUpsellSource.includes('setSelectedPlanID(plan.id)') &&
+    proUpsellSource.includes('purchase(selectedPlan.id)') &&
+    proUpsellSource.includes('Subscription renews automatically until cancelled.') &&
+    proSource.includes('priceMicros'),
+);
 await recoveryPage.close();
 
+// Index recovery must never undo an intentional deletion. Storage removal can
+// fail (quota/private-browser edge cases) and older tabs can still leave stale
+// JSON behind, but the deletion tombstone is authoritative.
+const deletedRecoveryPage = await isolatedBrowser.newPage({ viewport: { width: 900, height: 700 } });
+await deletedRecoveryPage.goto(BASE);
+await deletedRecoveryPage.evaluate(() => {
+  const id = 'deleted_plan';
+  localStorage.clear();
+  localStorage.setItem(`homedesigner.project.${id}`, JSON.stringify({
+    projectName: 'Deleted plan must stay deleted',
+  }));
+  localStorage.setItem('homedesigner.project.v1', JSON.stringify({
+    projectName: 'Deleted legacy plan must stay deleted',
+  }));
+  localStorage.setItem('homedesigner.projects.deleted.v1', JSON.stringify([
+    { id, updatedAt: Date.now() },
+  ]));
+});
+await deletedRecoveryPage.reload();
+check(
+  'deleted stale project is not resurrected by index recovery',
+  !(await deletedRecoveryPage.getByRole('button', { name: 'Open Deleted plan must stay deleted' })
+    .isVisible().catch(() => false)),
+);
+check(
+  'deleted legacy rollback copy is not resurrected',
+  !(await deletedRecoveryPage.getByRole('button', { name: 'Open Deleted legacy plan must stay deleted' })
+    .isVisible().catch(() => false)),
+);
+await deletedRecoveryPage.close();
+// A stale editor can still have a trailing autosave queued after another tab
+// deletes its project. The tombstone must reject that write; otherwise the
+// old tab recreates the snapshot and index row that the deletion removed.
+const staleEditorPage = await isolatedBrowser.newPage({ viewport: { width: 900, height: 700 } });
+await staleEditorPage.goto(BASE);
+await staleEditorPage.evaluate(() => {
+  const id = 'deleted_stale_editor';
+  const snapshot = {
+    projectName: 'Project deleted elsewhere',
+    walls: [], rooms: [], furniture: [], openings: [], background: null,
+  };
+  localStorage.clear();
+  localStorage.setItem('homedesigner.projects.index.v1', JSON.stringify([
+    { id, name: snapshot.projectName, updatedAt: Date.now() - 1 },
+  ]));
+  localStorage.setItem(`homedesigner.project.${id}`, JSON.stringify(snapshot));
+  localStorage.setItem('homedesigner.activeProject.v1', id);
+});
+await staleEditorPage.reload();
+const staleSave = await staleEditorPage.evaluate(async () => {
+  const id = 'deleted_stale_editor';
+  localStorage.setItem('homedesigner.projects.deleted.v1', JSON.stringify([
+    { id, updatedAt: Date.now() },
+  ]));
+  localStorage.removeItem(`homedesigner.project.${id}`);
+  localStorage.setItem('homedesigner.projects.index.v1', '[]');
+  window.useDesign.getState().setProjectName('Stale edit must not restore this');
+  await new Promise((resolve) => setTimeout(resolve, 750));
+  return {
+    snapshotRestored: localStorage.getItem(`homedesigner.project.${id}`) !== null,
+    indexRestored: (JSON.parse(localStorage.getItem('homedesigner.projects.index.v1') || '[]'))
+      .some((project) => project.id === id),
+  };
+});
+check('stale editor autosave cannot resurrect a deleted project',
+  !staleSave.snapshotRestored && !staleSave.indexRestored,
+  JSON.stringify(staleSave));
+await staleEditorPage.close();
 // ---- update offer on startup ----------------------------------------------
 // A fresh page with a version.json claiming a newer release. This is the whole
 // point of the feature and it is invisible to every other check.
 {
-  const upd = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  const upd = await isolatedBrowser.newPage({ viewport: { width: 1200, height: 800 } });
   let served = { version: '9.9.9' };
   await upd.route('**/version.json*', (r) =>
     r.fulfill({ contentType: 'application/json', body: JSON.stringify(served) }));
@@ -1384,7 +1649,7 @@ await recoveryPage.close();
 // Its own page: the main one is deep in the 3D editor by now, and both of these
 // are first-run behaviours that need a clean projects screen.
 {
-  const sr = await browser.newPage({ viewport: { width: 390, height: 780 }, reducedMotion: 'reduce' });
+  const sr = await isolatedBrowser.newPage({ viewport: { width: 390, height: 780 }, reducedMotion: 'reduce' });
   await sr.goto(BASE);
   await sr.evaluate(() => {
     localStorage.setItem('homedesigner.tour.v1', 'done');
@@ -1453,7 +1718,7 @@ await recoveryPage.close();
 // label, and is legible — the previous CSS tooltip used var(--text) as its
 // background, which in the dark theme is near-white text on near-white.
 {
-  const tp = await browser.newPage({ viewport: { width: 1280, height: 860 }, reducedMotion: 'reduce' });
+  const tp = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 860 }, reducedMotion: 'reduce' });
   await tp.goto(BASE);
   await tp.evaluate(() => {
     localStorage.setItem('homedesigner.tour.v1', 'done');
@@ -1506,7 +1771,7 @@ await recoveryPage.close();
 // or scrolls. It runs at 390x740 — deliberately shorter than a real phone, so a
 // dialog that only just fits today still gets caught when a string grows.
 {
-  const dg = await browser.newPage({
+  const dg = await isolatedBrowser.newPage({
     viewport: { width: 390, height: 740 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
   });
   await dg.goto(BASE);
@@ -1576,7 +1841,7 @@ await recoveryPage.close();
 // "a fence run can be drawn" check calls store.addWall() directly, so both the
 // mouse and touch paths were entirely uncovered.
 {
-  const dd = await browser.newPage({
+  const dd = await isolatedBrowser.newPage({
     viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
   });
   await dd.goto(BASE);
@@ -1657,6 +1922,7 @@ await recoveryPage.close();
     const target = world(bx, by);
     return {
       afterTap,
+      afterDrag: window.__draftPoints?.() ?? null,
       midPreview,
       panBefore,
       panAfter: { ...window.useDesign.getState().pan },
@@ -1678,9 +1944,16 @@ await recoveryPage.close();
     JSON.stringify({ before: drag.panBefore, during: drag.midPreview?.panNow }));
   check('drag-draw: nothing is committed until the finger lifts',
     drag.midPreview?.wallsSoFar === drag.wallsBefore);
+  check('drag-draw: release appends to the existing corner instead of triggering double-tap finish',
+    drag.afterTap === 1 && drag.afterDrag?.length === 2, JSON.stringify({ afterTap: drag.afterTap, afterDrag: drag.afterDrag }));
 
   // Finish and confirm the wall landed where the finger was RELEASED, not
   // where it pressed — the whole point of the gesture.
+  // A real user cannot lift and tap Finish in the same render frame. Give the
+  // drawBridge effect one human-scale beat to publish the final draft closure;
+  // otherwise a heavily loaded run can click the previous closure even though
+  // the completed preview is already painted.
+  await dd.waitForTimeout(150);
   await dd.locator('.finish-btn').click();
   await dd.waitForTimeout(300);
   const made = await dd.evaluate((t) => {
@@ -1689,11 +1962,11 @@ await recoveryPage.close();
     return { count: ws.length, end: w ? w.end : null, start: w ? w.start : null, t };
   }, drag.target);
   const near = (p, q, tol) => p && q && Math.hypot(p.x - q.x, p.y - q.y) <= tol;
-  check('drag-draw: a wall is committed on finish', made.count > drag.wallsBefore, JSON.stringify(made));
+  check('drag-draw: a wall is committed on finish', made.count > drag.wallsBefore, JSON.stringify({ ...made, afterTap: drag.afterTap, afterDrag: drag.afterDrag }));
   // Snapping can pull the corner onto a guide, so this is a generous radius —
   // it is asserting "the release point", not exact coordinates.
   check('drag-draw: the wall ends where the finger was released, not where it pressed',
-    near(made.end, made.t, 90) || near(made.start, made.t, 90), JSON.stringify(made));
+    near(made.end, made.t, 90) || near(made.start, made.t, 90), JSON.stringify({ ...made, afterTap: drag.afterTap, afterDrag: drag.afterDrag }));
 
   // Regression: two fingers must still zoom, and must never place a point.
   const pinched = await dd.evaluate(async () => {
@@ -1901,7 +2174,7 @@ await recoveryPage.close();
 // plan, hiding the object being edited. The ring replaces that; the panel must
 // now only appear when its Edit button is pressed.
 {
-  const sr = await browser.newPage({
+  const sr = await isolatedBrowser.newPage({
     viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
   });
   await sr.goto(BASE);
@@ -2020,7 +2293,7 @@ await recoveryPage.close();
 // fires webglcontextrestored and the canvas stays black forever. Simulated here
 // with WEBGL_lose_context, which drives the same real events.
 {
-  const gl = await browser.newPage({ viewport: { width: 900, height: 780 }, reducedMotion: 'reduce' });
+  const gl = await isolatedBrowser.newPage({ viewport: { width: 900, height: 780 }, reducedMotion: 'reduce' });
   // Collected separately, NOT into the shared pageErrors gate: three.js throws
   // once from its own internals in the same tick the context dies (it compiles
   // against a now-null context), before React can unmount anything. That is the
@@ -2075,16 +2348,16 @@ await recoveryPage.close();
 // badge must appear in step with it — the case a static badge would get right
 // by accident and the fresh-user case above would get wrong.
 {
-  const ps = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
+  const ps = await isolatedBrowser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
   await ps.goto(BASE);
-  await ps.waitForSelector('.projects-screen', { timeout: 20000 });
+  await ps.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await ps.evaluate(() => {
     localStorage.setItem('homedesigner.projects.index.v1', JSON.stringify([
       { id: 'smoke-existing', name: 'Existing home', updatedAt: Date.now() },
     ]));
   });
   await ps.reload({ waitUntil: 'networkidle' });
-  await ps.waitForSelector('.projects-screen', { timeout: 20000 });
+  await ps.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await ps.waitForTimeout(400);
 
   const gated = await ps.evaluate(() => ({
@@ -2121,7 +2394,7 @@ await recoveryPage.close();
 // sheet and paints over the grid. Its onTouchStart also freezes the auto-
 // dismiss, so a mis-hit both loses the tap and keeps the toast up.
 {
-  const tz = await browser.newPage({
+  const tz = await isolatedBrowser.newPage({
     viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce',
   });
   await tz.goto(BASE);
@@ -2199,7 +2472,7 @@ await recoveryPage.close();
 
 check('zero page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));
 
-await browser.close();
+await isolatedBrowser.close();
 dev.kill();
 console.log(failures === 0 ? '\nSMOKE: all green' : `\nSMOKE: ${failures} failure(s)`);
 process.exit(failures === 0 ? 0 : 1);

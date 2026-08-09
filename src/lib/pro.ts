@@ -15,6 +15,9 @@ export interface ProPlan {
   id: ProPlanID;
   label: string;
   priceLabel: string;
+  /** Exact web price data for truthful comparisons. Absent on native plans. */
+  priceMicros?: number;
+  currency?: string;
 }
 
 export function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
@@ -129,8 +132,15 @@ function webPackageForPlan(offerings: any, planID: ProPlanID): any | null {
 function webPlansFromOfferings(offerings: any): ProPlan[] {
   return WEB_PLAN_DEFINITIONS.flatMap((definition) => {
     const pkg = webPackageForPlan(offerings, definition.id);
-    const priceLabel = pkg?.webBillingProduct?.price?.formattedPrice;
-    return priceLabel ? [{ id: definition.id, label: definition.label, priceLabel }] : [];
+    const price = pkg?.webBillingProduct?.price;
+    const priceLabel = price?.formattedPrice;
+    return priceLabel ? [{
+      id: definition.id,
+      label: definition.label,
+      priceLabel,
+      priceMicros: typeof price.amountMicros === 'number' ? price.amountMicros : undefined,
+      currency: typeof price.currency === 'string' ? price.currency : undefined,
+    }] : [];
   });
 }
 

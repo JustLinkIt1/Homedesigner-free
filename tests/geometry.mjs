@@ -25,6 +25,7 @@ export { buildDxf, LAYERS } from '${sourceRoot}/src/lib/dxfExport.ts';
 export { flattenPath } from '${sourceRoot}/src/lib/svgPath.ts';
 export { importDxf } from '${sourceRoot}/src/lib/dxfImport.ts';
 export { isNewer } from '${sourceRoot}/src/lib/appUpdate.ts';
+export { reviewRequestDue, REVIEW_COOLDOWN_MS } from '${sourceRoot}/src/lib/appReview.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${sourceRoot}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${sourceRoot}/src/lib/roof.ts';
 export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT } from '${sourceRoot}/src/lib/fence.ts';
@@ -33,6 +34,8 @@ export { spriteBox, spriteReshaped } from '${sourceRoot}/src/lib/spriteFit.ts';
 export { scaleBox, resizeBox, snapAngleTo, norm360, cornerSign } from '${sourceRoot}/src/components/Editor2D/editHandles.ts';
 export { wallDistances } from '${sourceRoot}/src/lib/distanceGuides.ts';
 export { isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan } from '${sourceRoot}/src/lib/drawGesture.ts';
+export { catalogEntryMatches, normalizeCatalogText } from '${sourceRoot}/src/lib/catalogSearch.ts';
+export { CATALOG_BY_TYPE } from '${sourceRoot}/src/data/furnitureCatalog.ts';
 `);
 const out = join(dir, 'bundle.mjs');
 // platform=node so CommonJS-only deps (dxf-parser) resolve via "main";
@@ -46,11 +49,12 @@ const {
   buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
-  buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
+  buildDxf, LAYERS, flattenPath, importDxf, isNewer, reviewRequestDue, REVIEW_COOLDOWN_MS, rotatePoint, boundsOf,
   fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT,
   wallDistances, lockToAngle, ANGLE_LOCK_RAD, spriteBox, spriteReshaped,
   isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan,
   scaleBox, resizeBox, snapAngleTo, norm360, cornerSign,
+  catalogEntryMatches, normalizeCatalogText, CATALOG_BY_TYPE,
 } = await import(pathToFileURL(out).href);
 
 let fails = 0;
@@ -60,6 +64,31 @@ const check = (name, ok, detail = '') => {
 };
 const near = (a, b, tol = 1e-6) => Math.abs(a - b) <= tol;
 const rect = (w, h) => [ {x:0,y:0}, {x:w,y:0}, {x:w,y:h}, {x:0,y:h} ];
+
+// ---- catalogue discovery ------------------------------------------------
+{
+  const same = (value) => value;
+  check('catalog search: reviewed TV alias matches',
+    catalogEntryMatches(CATALOG_BY_TYPE.tv_stand, 'television', same));
+  check('catalog search: multi-word intent matches',
+    catalogEntryMatches(CATALOG_BY_TYPE.tv_stand, 'wall mounted tv', same));
+  check('catalog search: bedside-table synonym matches nightstand',
+    catalogEntryMatches(CATALOG_BY_TYPE.nightstand, 'bedside tables', same));
+  check('catalog search: accents and punctuation normalize',
+    normalizeCatalogText('Réfrigérateur / Freezer') === 'refrigerateur freezer');
+  check('catalog search: unrelated intent stays excluded',
+    !catalogEntryMatches(CATALOG_BY_TYPE.sofa, 'washing machine', same));
+}
+
+// ---- review prompt cadence ----------------------------------------------
+{
+  const now = Date.UTC(2026, 6, 31);
+  check('review: first success is eligible', reviewRequestDue(null, now));
+  check('review: recent request is suppressed', !reviewRequestDue(now - 1000, now));
+  check('review: cooldown expiry is eligible', reviewRequestDue(now - REVIEW_COOLDOWN_MS, now));
+  check('review: future/corrupt timestamps do not loop',
+    !reviewRequestDue(now + 1000, now) && !reviewRequestDue('not-a-time', now));
+}
 
 // ---- offsetPolygon -------------------------------------------------------
 {

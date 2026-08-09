@@ -43,6 +43,7 @@ const NAME_LINE_H = 1.12;
 import { selectionTick, tapMedium } from '../../lib/haptics';
 import { useTheme, canvasColors } from '../../lib/theme';
 import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
+import { notifyPlacementComplete } from '../../lib/placementFeedback';
 import type { Point, Selection, Wall } from '../../types';
 import {
   resizeBox,
@@ -634,6 +635,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
           s.select({ kind: 'opening', id });
           s.setPendingFurniture(null);
           s.setTool('select');
+          notifyPlacementComplete(type);
         }
       } else {
         let position = snapped;
@@ -657,6 +659,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         // selected for moving/scaling instead of the next tap duplicating it.
         s.setPendingFurniture(null);
         s.setTool('select');
+        notifyPlacementComplete(type);
       }
     } else if (tool === 'measure') {
       if (!measureA) {
@@ -793,6 +796,10 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   // --- press-drag-release drawing (touch) ---------------------------------
   /** This one-finger touch owns a drawing gesture, so it must never pan. */
   const drawDragRef = useRef(false);
+  // Some Android/WebView touchend events clear the stage pointer together
+  // with `touches`. Retain the last valid world point so release still commits
+  // where the finger visibly left the rubber band.
+  const lastDrawPointRef = useRef<Point | null>(null);
   const pendingPreviewRef = useRef<Point | null>(null);
   const previewRafRef = useRef<number | null>(null);
   // The rAF callback fires after the event that scheduled it, possibly after a
@@ -810,6 +817,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     if (previewRafRef.current !== null) cancelAnimationFrame(previewRafRef.current);
     previewRafRef.current = null;
     pendingPreviewRef.current = null;
+    lastDrawPointRef.current = null;
   };
 
   /** Coalesce to one snap+render per frame: touchmove fires faster than frames
@@ -885,7 +893,10 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         // Publish synchronously, not through the rAF: the rubber band and snap
         // marker have to appear the instant the finger lands, which is most of
         // what makes the gesture feel magnetic rather than blind.
-        if (wp) publishCursor(wp);
+        if (wp) {
+          lastDrawPointRef.current = wp;
+          publishCursor(wp);
+        }
       }
       if (tool === 'pan') {
         setIsPanning(true);
@@ -975,7 +986,10 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         }
         cancelLongPress();
         const wp = worldPointer();
-        if (wp) schedulePreview(wp);
+        if (wp) {
+          lastDrawPointRef.current = wp;
+          schedulePreview(wp);
+        }
         return;
       }
       if (!touchMoved.current) {
@@ -1014,7 +1028,10 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         longPressFired.current = false;
         endDrawDrag();
       } else if (drawDragRef.current) {
-        const p = worldPointer();
+        // Prefer the point captured from the final touchmove. Konva may retain
+        // a non-null but stale press position after the touch list is cleared,
+        // which would otherwise append the starting corner twice.
+        const p = lastDrawPointRef.current ?? worldPointer();
         // Cancel the queued frame BEFORE committing: otherwise it lands after
         // endDrawDrag's setCursor(null) and repaints a rubber band reaching for
         // a finger that has already lifted.
@@ -1174,6 +1191,23 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     }
     setDraft([]);
   };
+
+  // The browser regression suite needs to distinguish "the gesture never
+  // committed" from "Finish did not flush the draft" without exposing editor
+  // internals in production builds.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const testWindow = window as unknown as {
+      __draftLen?: () => number;
+      __draftPoints?: () => Point[];
+    };
+    testWindow.__draftLen = () => draft.length;
+    testWindow.__draftPoints = () => draft.map((point) => ({ ...point }));
+    return () => {
+      delete testWindow.__draftLen;
+      delete testWindow.__draftPoints;
+    };
+  }, [draft]);
 
   // Expose finish() + active state to the on-canvas "Finish" affordance.
   useEffect(() => {
@@ -1427,7 +1461,11 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         onDblClick={() => (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room') && finishDraft()}
         // Touch had no equivalent of double-click-to-finish: Konva emits
         // `dbltap`, which was never wired, so the pill was the only way out.
-        onDblTap={() => isDragDrawTool(tool) && tool !== 'kitchen' && finishDraft()}
+        // A common drag workflow starts the next segment at the previous
+        // corner. Konva also calls that a double-tap; only finish when the
+        // second gesture stayed a tap, otherwise it would erase the first
+        // corner just before the dragged endpoint is committed.
+        onDblTap={() => isDragDrawTool(tool) && tool !== 'kitchen' && !touchMoved.current && finishDraft()}
         onContextMenu={(e) => {
           e.evt.preventDefault();
           const p = worldPointer();
@@ -2186,7 +2224,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
           thing you had just selected. Single furniture selection only: a
           multi-selection has no one anchor, and walls/rooms/openings are edited
           through Properties where their own controls live. */}
-      {IS_COARSE && tool === 'select' && !multi && draft.length === 0 && ringAnchor && (
+      {IS_COARSE && tool === 'select' && !multi && draft.length === 0 && ringAnchor &&
+        s.furniture.find((item) => item.id === ringAnchor.id)?.type !== 'stairs' && (
         <SelectionRing
           x={ringAnchor.x}
           y={ringAnchor.y}

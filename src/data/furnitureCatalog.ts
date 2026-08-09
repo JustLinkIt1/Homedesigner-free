@@ -82,6 +82,8 @@ export interface CatalogEntry {
   /** Preferred placement target. Surface items may rest on furniture; wall
    * items snap to a wall face and use mountY (or the tapped height). */
   placement?: 'floor' | 'surface' | 'wall';
+  /** Optional reviewed aliases used only for catalogue search. */
+  searchTerms?: readonly string[];
   /** Optional real model. Remote catalog entries use an absolute R2 URL while
    *  bundled entries continue to resolve through GltfFurniture's local map. */
   model?: {

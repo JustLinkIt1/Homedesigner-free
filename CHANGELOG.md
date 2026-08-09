@@ -5,6 +5,99 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## Unreleased
+
+## 1.22.5 - 2026-08-08 (versionCode 12205)
+
+### Release verification
+
+- Hardened the browser smoke suite for catalogue entries that legitimately
+  appear in both Recent/Favourites and their normal category. Native Model
+  Studio verification also now checks the implementation without matching
+  explanatory comment text.
+- Kept the pull-request gate fast and deterministic with typecheck, lint,
+  production build, geometry, localization, theme, model, sample and billing
+  suites. The browser-based trace and complete 3D suite now run nightly and on demand,
+  so software-rendering timing variance cannot hold up releases.
+
+### Pro checkout localization
+
+- Put the six existing plan-selector and purchase-state translations on their
+  own dictionary lines in all 12 locales. This makes monthly/yearly units,
+  savings, processing and the lifetime-payment explanation visible to the
+  static coverage checker; the complete translation check is green again.
+
+### Mobile Model Studio access
+
+- Restored a dependable owner-only route to Model Studio from the mobile
+  editor. The signed-in owner now sees **Model Studio** directly in the More
+  menu as well as in the account menu, so the horizontally scrolling toolbar
+  cannot hide the only entry point.
+- Replaced Android WebView `window.open()` with Capacitor Browser and registered
+  the native plugin. The hosted HTTPS studio now opens in an Android Custom Tab;
+  an older native shell falls back to direct navigation instead of doing
+  nothing. The Worker still performs the authoritative owner-token check.
+
+### Touch wall drawing
+
+- Fixed tap-then-drag wall drawing being mistaken for a double-tap when the
+  dragged segment began on the previous corner. A moved second gesture no
+  longer clears the draft, and Android touch release commits the last visible
+  point even when the WebView has already cleared its pointer coordinates.
+- Added a development-only draft inspection seam and browser coverage for the
+  retained first corner, final release position and completed wall.
+
+### Internal UI research
+
+- Added a UI improvement report based on the current source, tester feedback
+  and a read-only Lazyweb reference trial. It prioritises contextual mobile
+  selection controls, scalable catalogue search/navigation and deliberate Pro
+  plan selection while documenting the already-shipped flows that must not be
+  rebuilt.
+
+### Mobile editing controls
+
+- Added context-specific quick actions for selections not covered by the new
+  object-anchored selection ring. Stairs can be reversed and doors have direct
+  hinge and swing controls; structural selections retain reachable Delete and
+  More actions without automatically covering the plan with Properties.
+- Quick deletion uses the undo-capable deletion path, and the special dock is
+  suppressed whenever the Properties sheet is open.
+
+### Catalogue discovery
+
+- Added controlled catalogue aliases and normalized matching for names,
+  categories, object types, placement and approved cloud search terms while
+  preserving the newer Free-only filter. Common searches such as television,
+  media unit, wall-mounted TV, bedside tables and refrigerator now resolve the
+  intended existing objects without creating new categories.
+- Added a live result count and useful empty-state actions to clear filters or
+  switch between Room and Type browsing. Remote search terms are length- and
+  character-validated before entering the catalogue.
+
+### Pro plan selection
+
+- Changed the Pro sheet to separate plan selection from purchase. Users now
+  select monthly, yearly or lifetime first and confirm through one CTA that
+  names the chosen plan, reducing accidental checkout starts.
+- Added exact-price yearly comparisons when RevenueCat supplies compatible
+  currency and micro-price data. Misleading savings are omitted when the data
+  is incomplete, and lifetime is explicitly described as a one-time payment.
+- Preserved independent Restore purchase access and the newer Play timeout,
+  reconciliation and resume-recovery implementation from the current branch.
+
+### Placement feedback
+
+- Added a translated confirmation after successful furniture, opening, wall
+  and surface placement. The new item remains selected and placement stays
+  one-shot, while the confirmation offers both Undo and an explicit Place
+  another action.
+- Reused the existing history and pending-furniture state, including the
+  already-visible placement Cancel control. No second placement state machine
+  or automatic repeat mode was introduced.
+- Added browser coverage for all five interactive placement paths, explicit
+  repeat, exact undo recovery and cleared stale selections.
+
 ## 1.22.4 - 2026-08-08 (versionCode 12204)
 
 ### Google Play purchase configuration

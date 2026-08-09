@@ -43,17 +43,18 @@ export function Toaster() {
             >
               <Icon className="icon" />
               <span>{t.message}</span>
-              {t.action && (
+              {t.actions?.map((action) => (
                 <button
+                  key={action.label}
                   className="toast-action"
                   onClick={() => {
-                    t.action?.onClick();
+                    action.onClick();
                     dismiss(t.id);
                   }}
                 >
-                  {t.action.label}
+                  {action.label}
                 </button>
-              )}
+              ))}
               <button aria-label="Dismiss" onClick={() => dismiss(t.id)}>
                 <X className="icon" style={{ width: 15, height: 15 }} />
               </button>
