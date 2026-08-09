@@ -22,6 +22,11 @@ export interface AuthIdentity {
 export interface CommunityEnv {
   COMMUNITY: D1Database;
   AI: Ai;
+  /** Bootstrap moderator, by verified Google email. Mirrors MODEL_ADMIN_EMAIL.
+   *  Without this the very first forum would have no moderator and no way to
+   *  appoint one: the report queue and every hide/lock/ban action are gated on
+   *  a role that only a moderator could otherwise grant. */
+  COMMUNITY_ADMIN_EMAIL?: string;
 }
 
 /** Fixed in code rather than a table: categories change with the product, not
@@ -116,9 +121,30 @@ const publicProfile = (p: Profile) => ({
  * step the user has to find: they sign in with Google, and the first time they
  * post they already have an identity they can then edit.
  */
+/**
+ * True when this signed-in person is the configured bootstrap moderator.
+ * `emailVerified` is required: the email claim alone is self-asserted at the
+ * provider, and without that check anyone able to set an unverified address to
+ * the owner's could hand themselves the ban button.
+ */
+function isBootstrapAdmin(env: CommunityEnv, identity: AuthIdentity): boolean {
+  const expected = env.COMMUNITY_ADMIN_EMAIL?.trim().toLowerCase();
+  return !!expected && identity.emailVerified && identity.email?.toLowerCase() === expected;
+}
+
 async function ensureProfile(env: CommunityEnv, identity: AuthIdentity): Promise<Profile> {
   const existing = await loadProfile(env, identity.subject);
-  if (existing) return existing;
+  if (existing) {
+    // Re-applied on every load rather than only at creation, so setting the
+    // variable promotes an account that already signed in — and so a
+    // demotion by hand cannot be silently undone by a stale row.
+    if (isBootstrapAdmin(env, identity) && existing.role !== 'admin') {
+      await env.COMMUNITY.prepare('UPDATE profiles SET role = ? WHERE subject = ?')
+        .bind('admin', identity.subject).run();
+      return { ...existing, role: 'admin' };
+    }
+    return existing;
+  }
 
   const base = (identity.email?.split('@')[0] ?? 'member')
     .toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20) || 'member';
@@ -133,8 +159,9 @@ async function ensureProfile(env: CommunityEnv, identity: AuthIdentity): Promise
     try {
       await env.COMMUNITY.prepare(
         `INSERT INTO profiles (subject, handle, display_name, bio, avatar_url, role, created_at, updated_at)
-         VALUES (?, ?, ?, '', NULL, 'member', ?, ?)`,
-      ).bind(identity.subject, handle, handle, now, now).run();
+         VALUES (?, ?, ?, '', NULL, ?, ?, ?)`,
+      ).bind(identity.subject, handle, handle,
+        isBootstrapAdmin(env, identity) ? 'admin' : 'member', now, now).run();
       return (await loadProfile(env, identity.subject))!;
     } catch {
       // UNIQUE violation on handle — try another suffix.

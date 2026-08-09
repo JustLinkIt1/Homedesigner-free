@@ -22,6 +22,8 @@ interface Env {
   USER_WRITE_LIMITER: RateLimit;
   /** Forum storage. D1, not R2 — see migrations/0001_community.sql. */
   COMMUNITY: D1Database;
+  /** Bootstrap forum moderator, by verified Google email. */
+  COMMUNITY_ADMIN_EMAIL: string;
 }
 
 interface AuthIdentity {
