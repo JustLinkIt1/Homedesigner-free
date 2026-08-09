@@ -5371,8 +5371,15 @@ button:focus:not(:focus-visible) {
   padding: 14px 20px; border-bottom: 1px solid var(--border);
 }
 .cm-foot { border-bottom: 0; border-top: 1px solid var(--border); margin-top: auto; flex-wrap: wrap; }
-.cm-brand { font-weight: 800; text-decoration: none; color: var(--text); }
-.cm-head nav { display: flex; align-items: center; gap: 16px; }
+.cm-brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 800; text-decoration: none; color: var(--text); }
+.cm-brand img { width: 34px; height: 34px; border-radius: 9px; }
+.cm-head nav { display: flex; align-items: center; gap: 8px; }
+.cm-nav-button {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  color: var(--text); text-decoration: none; font: inherit; font-size: 13px; cursor: pointer;
+}
+.cm-account-button .cm-avatar { width: 24px; height: 24px; font-size: 11px; }
 .cm-main { width: min(760px, 100% - 32px); margin: 0 auto; padding: 28px 0 48px; }
 .cm-main h1 { font-size: 26px; margin: 0 0 8px; }
 .cm-main h2 { font-size: 17px; margin: 24px 0 10px; }
@@ -5396,12 +5403,21 @@ button:focus:not(:focus-visible) {
   color: var(--text-2); font-weight: 700;
 }
 .cm-avatar-gone { background: var(--surface-2); display: block; }
+.cm-member-meta { display: flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 11px; flex-wrap: wrap; }
+.cm-member-meta > span:not(:last-child)::after { content: ''; }
+.cm-role { border: 1px solid var(--border); border-radius: 999px; padding: 2px 7px; background: var(--surface-2); }
+.cm-role-admin { color: #ffd45c; border-color: color-mix(in srgb, #ffd45c 45%, var(--border)); }
+.cm-role-moderator { color: #8fb4ff; border-color: color-mix(in srgb, #8fb4ff 45%, var(--border)); }
 .cm-posts { list-style: none; padding: 0; margin: 20px 0; }
 .cm-post { padding: 16px 0; border-top: 1px solid var(--border); }
 .cm-post-head { display: flex; align-items: center; gap: 10px; font-size: 13px; flex-wrap: wrap; }
 .cm-report { margin-left: auto; background: none; border: 0; color: var(--text-2); cursor: pointer; font-size: 12px; }
 /* Long-form text: cap the measure and preserve the author's paragraphs. */
 .cm-body p { margin: 10px 0 0; line-height: 1.6; max-width: 66ch; overflow-wrap: anywhere; }
+.cm-post-images { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.cm-post-images-1 { grid-template-columns: minmax(0, 1fr); }
+.cm-post-images a { display: block; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: var(--surface-2); }
+.cm-post-images img { display: block; width: 100%; max-height: 460px; object-fit: contain; }
 .cm-card {
   border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
   padding: 16px; margin: 18px 0; display: flex; flex-direction: column; gap: 12px;
@@ -5414,6 +5430,13 @@ button:focus:not(:focus-visible) {
 }
 .cm-card textarea { resize: vertical; }
 .cm-card .btn { align-self: flex-start; }
+.cm-avatar-editor { display: flex; gap: 12px; align-items: flex-start; }
+.cm-avatar-editor .cm-avatar { width: 56px; height: 56px; font-size: 18px; }
+.cm-avatar-editor p { margin: 3px 0 8px; font-size: 12px; }
+.cm-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.cm-upload-btn { position: relative; cursor: pointer; }
+.cm-upload-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.cm-file-field input[type='file'] { padding: 8px; }
 .cm-signin {
   border: 1px dashed var(--border); border-radius: 14px; padding: 16px;
   margin: 18px 0; display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
@@ -5422,3 +5445,13 @@ button:focus:not(:focus-visible) {
 .cm-profile-head { display: flex; align-items: center; gap: 14px; }
 .cm-profile-head h1 { margin: 0; }
 .cm-hidden { opacity: 0.7; }
+
+@media (max-width: 620px) {
+  .cm-head { align-items: flex-start; padding: 12px; }
+  .cm-head nav { justify-content: flex-end; flex-wrap: wrap; }
+  .cm-nav-button { min-height: 34px; padding: 6px 9px; }
+  .cm-nav-button:first-child { display: none; }
+  .cm-account-button span { display: none; }
+  .cm-main { width: min(100% - 24px, 760px); padding-top: 20px; }
+  .cm-post-images { grid-template-columns: minmax(0, 1fr); }
+}

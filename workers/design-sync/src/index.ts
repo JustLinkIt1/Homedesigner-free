@@ -4,6 +4,7 @@ import { fal } from '@fal-ai/client';
 import {
   CommunityError, listThreads, readThread, readProfile, readMe, updateMe,
   createThread, createPost, editPost, reportPost, moderate, listReports, erasePerson,
+  uploadCommunityImage, removeAvatar, readCommunityImage,
 } from './community';
 
 interface Env {
@@ -957,6 +958,15 @@ export default {
         const { success } = await env.USER_READ_LIMITER.limit({ key: `ip:${ip}:community` });
         if (!success) return json(request, { error: 'Too many requests' }, 429, { 'Retry-After': '60' });
 
+        const image = url.pathname.match(/^\/v1\/community\/images\/([a-f0-9-]{36})$/);
+        if (image) {
+          const { object, mimeType } = await readCommunityImage(env, image[1]);
+          const headers = new Headers(cors(request));
+          headers.set('Content-Type', mimeType);
+          headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+          if (object.httpEtag) headers.set('ETag', object.httpEtag);
+          return new Response(object.body, { headers });
+        }
         if (url.pathname === '/v1/community/threads') return json(request, await listThreads(env, url));
         const thread = url.pathname.match(/^\/v1\/community\/threads\/([a-f0-9-]{36})$/);
         if (thread) return json(request, await readThread(env, thread[1]));
@@ -993,6 +1003,13 @@ export default {
 
       if (url.pathname.startsWith('/v1/community/')) {
         try {
+          if (request.method === 'POST' && url.pathname === '/v1/community/images') {
+            const kind = url.searchParams.get('kind');
+            if (kind !== 'avatar' && kind !== 'post') {
+              return json(request, { error: 'Choose avatar or post image.' }, 400);
+            }
+            return json(request, await uploadCommunityImage(env, identity, request, kind), 201);
+          }
           const body = request.method === 'GET'
             ? {}
             : await request.json().catch(() => ({})) as Record<string, unknown>;
@@ -1001,6 +1018,9 @@ export default {
           }
           if (request.method === 'POST' && url.pathname === '/v1/community/me') {
             return json(request, await updateMe(env, identity, body));
+          }
+          if (request.method === 'POST' && url.pathname === '/v1/community/avatar/remove') {
+            return json(request, await removeAvatar(env, identity));
           }
           if (request.method === 'POST' && url.pathname === '/v1/community/threads') {
             return json(request, await createThread(env, identity, body), 201);

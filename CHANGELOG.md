@@ -9,6 +9,10 @@ changes and add an entry when you ship one.
 
 ### Community support forum
 
+- Added opt-in profile-picture uploads backed by the existing private Cloudflare R2 bucket. Google profile photos are never imported automatically; members keep an initial avatar unless they deliberately upload a PNG, JPEG or WebP and can remove it at any time.
+- Added moderator-only screenshot attachments for discussions and replies, with byte limits, file-signature validation, immutable first-party serving and no arbitrary image URLs or SVG/HTML uploads.
+- Added public contribution counts, member ranks and visible Member/Moderator/Admin roles across profiles and discussions, plus a branded logo header and touch-friendly account/moderation buttons.
+- Created a live Google Play one-time-product promotion for 497 lifetime `prounlock` codes through 8 August 2027. The campaign rewards an original HomeDesigner creation and useful forum feedback; Play ratings and reviews are explicitly not required or rewarded.
 - Added the public `/community/` support forum to the assembled Cloudflare Pages output, with discussion categories, Google-authenticated posting, profiles and report submission.
 - Replaced the community's popup-only Google sign-in with a same-tab OAuth redirect that returns to the forum. This avoids disappearing blank popups in embedded and mobile browsers while preserving the existing desktop-editor popup and Android native flow.
 - Added an owner-only moderator queue for reviewing reports, hiding posts, locking threads, temporary bans and dismissing reports. Moderator authority is enforced by the Worker using the configured verified Google email.

@@ -17,11 +17,13 @@ export interface CommunityAuthor {
   handle: string;
   displayName: string;
   avatarUrl: string | null;
+  role: string;
+  postCount: number;
+  rank: string;
 }
 
 export interface CommunityProfile extends CommunityAuthor {
   bio: string;
-  role: string;
 }
 
 export interface ThreadSummary {
@@ -39,6 +41,7 @@ export interface CommunityPost {
   id: string;
   hidden?: true;
   body?: string;
+  images?: string[];
   createdAt: number;
   editedAt?: number | null;
   author?: CommunityAuthor;
@@ -71,6 +74,29 @@ async function call<T>(path: string, init?: RequestInit & { auth?: boolean }): P
   return payload as T;
 }
 
+export function mediaUrl(path: string | null): string | null {
+  if (!path) return null;
+  return /^https:\/\//.test(path) ? path : `${BASE}${path}`;
+}
+
+export async function uploadImage(kind: 'avatar' | 'post', file: File) {
+  if (!isCommunityConfigured()) throw new Error('The community is not available yet.');
+  const response = await fetch(`${BASE}/v1/community/images?kind=${kind}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${await getGoogleIdToken()}`,
+      'Content-Type': file.type || 'application/octet-stream',
+    },
+    body: file,
+  });
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown> & { error?: string };
+  if (!response.ok) throw new Error(payload.error || `Upload failed (${response.status}).`);
+  return payload as {
+    profile?: CommunityProfile;
+    image?: { id: string; url: string; mimeType: string; byteSize: number };
+  };
+}
+
 const write = (path: string, body: unknown) =>
   call(path, { method: 'POST', body: JSON.stringify(body), auth: true });
 
@@ -91,14 +117,17 @@ export const readProfile = (handle: string) =>
 export const readMe = () =>
   call<{ profile: CommunityProfile; suspended: boolean }>('/v1/community/me', { auth: true });
 
-export const updateMe = (input: { handle?: string; displayName?: string; bio?: string; avatarUrl?: string | null }) =>
+export const updateMe = (input: { handle?: string; displayName?: string; bio?: string }) =>
   write('/v1/community/me', input) as Promise<{ profile: CommunityProfile }>;
 
-export const createThread = (input: { category: string; title: string; body: string }) =>
+export const removeAvatar = () =>
+  write('/v1/community/avatar/remove', {}) as Promise<{ profile: CommunityProfile }>;
+
+export const createThread = (input: { category: string; title: string; body: string; imageIds?: string[] }) =>
   write('/v1/community/threads', input) as Promise<{ id: string }>;
 
-export const createPost = (threadId: string, body: string) =>
-  write(`/v1/community/threads/${threadId}/posts`, { body }) as Promise<{ id: string }>;
+export const createPost = (threadId: string, body: string, imageIds?: string[]) =>
+  write(`/v1/community/threads/${threadId}/posts`, { body, imageIds }) as Promise<{ id: string }>;
 
 export const editPost = (postId: string, body: string) =>
   write(`/v1/community/posts/${postId}`, { body });

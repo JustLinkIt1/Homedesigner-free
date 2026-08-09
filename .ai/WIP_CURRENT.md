@@ -1,5 +1,22 @@
 # WIP — current handoff
 
+> **Community media/profile upgrade prepared 2026-08-09:** migration
+> `0002_community_media.sql` adds first-party avatar/post-image metadata and
+> contribution counts. Profile photos are opt-in uploads only; the API no
+> longer accepts Google or arbitrary remote avatar URLs. PNG/JPEG/WebP content
+> is checked by magic bytes, size limited, stored under the signed-in user's
+> private `USER_DATA` R2 prefix and served through opaque immutable image URLs.
+> Only moderators can attach up to four screenshots to posts for now. The UI
+> adds upload/remove controls, roles, ranks, post counts, branded header and
+> mobile-friendly account buttons. Root typecheck/lint/build and Worker check
+> pass; the deterministic CI suite reached the pre-existing Windows
+> `node_modules/.bin/esbuild` launcher issue after geometry/i18n/theme passed.
+> Google Play promotion `HomeDesigner Community Launch 2026` is live for 497
+> lifetime `prounlock` codes from 9 August 2026 to 8 August 2027. Do not tie a
+> code to a Play rating/review: Google prohibits incentivized reviews. The
+> compliant criterion is an original HomeDesigner screenshot plus useful forum
+> feedback; reviews are optional and unrewarded.
+
 > **Community forum deployed 2026-08-09:** `/community/` is live with public reading, Google-authenticated posting, profiles, reporting and a usable owner moderation queue. D1 `homedesigner-community` is in WEUR (`02230a9a-6b37-4d17-b46e-60f2fef95c47`), migration `0001_community.sql` is applied, and Worker version `687c8e8f-b438-4d12-8ece-11fa2e603f18` is live. Pages deployment `9fe3918f-34d2-46da-a75d-2a5b10d44d74` fixed the route's `/app/` asset base. Chrome verified the live custom domain, empty report queue, privacy-safe random handle and owner `admin` access through the visible **Moderate** action. The community now uses a same-tab Google OAuth redirect because embedded browsers immediately closed its popup; the callback validates issuer, audience, nonce and expiry, removes credentials from history, then returns to `/community/`. The editor's web popup and Android native sign-in are unchanged. Default handles never derive from email prefixes and anonymous reads share one per-IP forum limit.
 
 > **Final CI repair 2026-08-08:** the release smoke test now selects one

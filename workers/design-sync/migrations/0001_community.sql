@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   handle        TEXT NOT NULL UNIQUE,
   display_name  TEXT NOT NULL,
   bio           TEXT NOT NULL DEFAULT '',
-  -- Google's picture URL by default; users may clear it but not point it
-  -- anywhere else, so this can never become an arbitrary-image proxy.
+  -- Legacy field retained for migration compatibility. Profile pictures are
+  -- opt-in uploads referenced by avatar_image_id after migration 0002.
   avatar_url    TEXT,
   role          TEXT NOT NULL DEFAULT 'member',
   -- Epoch ms. Null means not banned; a past value means the ban has expired,

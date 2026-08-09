@@ -31,9 +31,43 @@ const go = (search: string) => {
 
 function Avatar({ author }: { author?: api.CommunityAuthor }) {
   if (!author) return <span className="cm-avatar cm-avatar-gone" aria-hidden />;
-  return author.avatarUrl
-    ? <img className="cm-avatar" src={author.avatarUrl} alt="" width={36} height={36} loading="lazy" />
+  const avatarUrl = api.mediaUrl(author.avatarUrl);
+  return avatarUrl
+    ? <img className="cm-avatar" src={avatarUrl} alt="" width={36} height={36} loading="lazy" />
     : <span className="cm-avatar cm-avatar-initial" aria-hidden>{author.displayName.charAt(0).toUpperCase()}</span>;
+}
+
+const canPostImages = (profile: CommunityProfile | null) =>
+  profile?.role === 'admin' || profile?.role === 'moderator';
+
+function MemberMeta({ author }: { author: api.CommunityAuthor }) {
+  const role = author.role === 'admin' ? 'Admin' : author.role === 'moderator' ? 'Moderator' : 'Member';
+  return (
+    <span className="cm-member-meta">
+      <span className={`cm-role cm-role-${author.role}`}>{role}</span>
+      <span>{author.rank}</span>
+      <span>{author.postCount} {author.postCount === 1 ? 'post' : 'posts'}</span>
+    </span>
+  );
+}
+
+function PostImages({ images }: { images?: string[] }) {
+  if (!images?.length) return null;
+  return (
+    <div className={`cm-post-images cm-post-images-${Math.min(images.length, 4)}`}>
+      {images.map((path) => (
+        <a key={path} href={api.mediaUrl(path) ?? '#'} target="_blank" rel="noopener noreferrer">
+          <img src={api.mediaUrl(path) ?? ''} alt="Attached community screenshot" loading="lazy" />
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function validateImage(file: File, maxBytes: number): string | null {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return 'Use a PNG, JPEG or WebP image.';
+  if (file.size > maxBytes) return `Image must be smaller than ${maxBytes / 1024 / 1024} MB.`;
+  return null;
 }
 
 /** Posts are plain text, rendered as paragraphs. NOT markdown and NOT HTML:
@@ -62,6 +96,7 @@ function ProfileEditor({ profile, onSaved }: { profile: CommunityProfile; onSave
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [bio, setBio] = useState(profile.bio);
   const [busy, setBusy] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
@@ -77,9 +112,55 @@ function ProfileEditor({ profile, onSaved }: { profile: CommunityProfile; onSave
     }
   };
 
+  const chooseAvatar = async (file?: File) => {
+    if (!file) return;
+    const problem = validateImage(file, 2 * 1024 * 1024);
+    if (problem) { setError(problem); return; }
+    setAvatarBusy(true);
+    setError(null);
+    try {
+      const result = await api.uploadImage('avatar', file);
+      if (result.profile) onSaved(result.profile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not upload profile picture.');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const clearAvatar = async () => {
+    setAvatarBusy(true);
+    setError(null);
+    try {
+      const { profile: saved } = await api.removeAvatar();
+      onSaved(saved);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not remove profile picture.');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
   return (
     <div className="cm-card">
       <h2>Your profile</h2>
+      <div className="cm-avatar-editor">
+        <Avatar author={profile} />
+        <div>
+          <strong>Profile picture</strong>
+          <p className="cm-muted">Optional. We never import your Google profile photo.</p>
+          <div className="cm-inline-actions">
+            <label className="btn cm-upload-btn">
+              {avatarBusy ? 'Uploading…' : profile.avatarUrl ? 'Replace photo' : 'Upload photo'}
+              <input type="file" accept="image/png,image/jpeg,image/webp" disabled={avatarBusy}
+                onChange={(e) => void chooseAvatar(e.target.files?.[0])} />
+            </label>
+            {profile.avatarUrl && (
+              <button className="btn" disabled={avatarBusy} onClick={() => void clearAvatar()}>Remove</button>
+            )}
+          </div>
+        </div>
+      </div>
       <label>Handle<input value={handle} maxLength={24} onChange={(e) => setHandle(e.target.value)} /></label>
       <label>Display name<input value={displayName} maxLength={40} onChange={(e) => setDisplayName(e.target.value)} /></label>
       <label>Bio<textarea value={bio} maxLength={400} rows={3} onChange={(e) => setBio(e.target.value)} /></label>
@@ -91,10 +172,13 @@ function ProfileEditor({ profile, onSaved }: { profile: CommunityProfile; onSave
   );
 }
 
-function Composer({ categories, onPosted }: { categories: Category[]; onPosted: (id: string) => void }) {
+function Composer({ categories, allowImages, onPosted }: {
+  categories: Category[]; allowImages: boolean; onPosted: (id: string) => void;
+}) {
   const [category, setCategory] = useState(categories[0]?.id ?? 'general');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [images, setImages] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +186,12 @@ function Composer({ categories, onPosted }: { categories: Category[]; onPosted: 
     setBusy(true);
     setError(null);
     try {
-      const { id } = await api.createThread({ category, title, body });
+      const imageIds: string[] = [];
+      for (const file of images) {
+        const uploaded = await api.uploadImage('post', file);
+        if (uploaded.image) imageIds.push(uploaded.image.id);
+      }
+      const { id } = await api.createThread({ category, title, body, imageIds });
       onPosted(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not post.');
@@ -121,6 +210,17 @@ function Composer({ categories, onPosted }: { categories: Category[]; onPosted: 
       </label>
       <label>Title<input value={title} maxLength={140} onChange={(e) => setTitle(e.target.value)} /></label>
       <label>Message<textarea value={body} maxLength={8000} rows={6} onChange={(e) => setBody(e.target.value)} /></label>
+      {allowImages && (
+        <label className="cm-file-field">Screenshots (optional, up to 4)
+          <input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={(e) => {
+            const selected = Array.from(e.target.files ?? []).slice(0, 4);
+            const problem = selected.map((file) => validateImage(file, 5 * 1024 * 1024)).find(Boolean);
+            if (problem) { setError(problem); return; }
+            setImages(selected);
+          }} />
+          {images.length > 0 && <span className="cm-muted">{images.length} image{images.length === 1 ? '' : 's'} selected</span>}
+        </label>
+      )}
       {error && <p className="cm-error">{error}</p>}
       <button className="btn primary" disabled={busy || !title.trim() || !body.trim()} onClick={() => void post()}>
         {busy ? 'Posting…' : 'Post'}
@@ -129,10 +229,11 @@ function Composer({ categories, onPosted }: { categories: Category[]; onPosted: 
   );
 }
 
-function ThreadView({ id, signedIn }: { id: string; signedIn: boolean }) {
+function ThreadView({ id, me }: { id: string; me: CommunityProfile | null }) {
   const [data, setData] = useState<{ thread: ThreadSummary; posts: CommunityPost[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState('');
+  const [images, setImages] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -146,8 +247,14 @@ function ThreadView({ id, signedIn }: { id: string; signedIn: boolean }) {
   const send = async () => {
     setBusy(true);
     try {
-      await api.createPost(id, reply);
+      const imageIds: string[] = [];
+      for (const file of images) {
+        const uploaded = await api.uploadImage('post', file);
+        if (uploaded.image) imageIds.push(uploaded.image.id);
+      }
+      await api.createPost(id, reply, imageIds);
       setReply('');
+      setImages([]);
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not reply.');
@@ -183,12 +290,14 @@ function ThreadView({ id, signedIn }: { id: string; signedIn: boolean }) {
                   <button className="cm-linkish" onClick={() => go(`?profile=${post.author?.handle}`)}>
                     {post.author?.displayName}
                   </button>
+                  {post.author && <MemberMeta author={post.author} />}
                   <span className="cm-muted">{ago(post.createdAt)}{post.editedAt ? ' · edited' : ''}</span>
-                  {signedIn && (
+                  {me && (
                     <button className="cm-report" onClick={() => void report(post.id)}>Report</button>
                   )}
                 </div>
                 <Body text={post.body ?? ''} />
+                <PostImages images={post.images} />
               </>
             )}
           </li>
@@ -196,9 +305,20 @@ function ThreadView({ id, signedIn }: { id: string; signedIn: boolean }) {
       </ol>
       {data.thread.locked ? (
         <p className="cm-muted">This discussion is closed.</p>
-      ) : signedIn ? (
+      ) : me ? (
         <div className="cm-card">
           <label>Reply<textarea value={reply} rows={5} maxLength={8000} onChange={(e) => setReply(e.target.value)} /></label>
+          {canPostImages(me) && (
+            <label className="cm-file-field">Screenshots (optional, up to 4)
+              <input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={(e) => {
+                const selected = Array.from(e.target.files ?? []).slice(0, 4);
+                const problem = selected.map((file) => validateImage(file, 5 * 1024 * 1024)).find(Boolean);
+                if (problem) { setError(problem); return; }
+                setImages(selected);
+              }} />
+              {images.length > 0 && <span className="cm-muted">{images.length} image{images.length === 1 ? '' : 's'} selected</span>}
+            </label>
+          )}
           <button className="btn primary" disabled={busy || !reply.trim()} onClick={() => void send()}>
             {busy ? 'Posting…' : 'Reply'}
           </button>
@@ -222,6 +342,7 @@ function ProfileView({ handle }: { handle: string }) {
         <div>
           <h1>{data.profile.displayName}</h1>
           <p className="cm-muted">@{data.profile.handle}</p>
+          <MemberMeta author={data.profile} />
         </div>
       </div>
       {data.profile.bio && <Body text={data.profile.bio} />}
@@ -334,14 +455,19 @@ export default function CommunityApp() {
   return (
     <div className="cm-shell">
       <header className="cm-head">
-        <a className="cm-brand" href="/">HomeDesigner</a>
+        <a className="cm-brand" href="/">
+          <img src="/brand-icon.png" alt="" width="34" height="34" />
+          <span>HomeDesigner</span>
+        </a>
         <nav>
-          <a href="/app/">Open the app</a>
+          <a className="cm-nav-button" href="/app/">Open the app</a>
           {me && (me.role === 'admin' || me.role === 'moderator') && (
-            <button className="cm-linkish" onClick={() => setModerating(true)}>Moderate</button>
+            <button className="cm-nav-button" onClick={() => setModerating(true)}>Moderate</button>
           )}
           {me
-            ? <button className="cm-linkish" onClick={() => setEditing((v) => !v)}>@{me.handle}</button>
+            ? <button className="cm-nav-button cm-account-button" onClick={() => setEditing((v) => !v)}>
+                <Avatar author={me} /><span>@{me.handle}</span>
+              </button>
             : null}
         </nav>
       </header>
@@ -352,7 +478,7 @@ export default function CommunityApp() {
         ) : moderating && me && (me.role === 'admin' || me.role === 'moderator') ? (
           <ModeratorPanel onClose={() => setModerating(false)} />
         ) : threadId ? (
-          <ThreadView id={threadId} signedIn={!!account} />
+          <ThreadView id={threadId} me={me} />
         ) : profileHandle ? (
           <ProfileView handle={profileHandle} />
         ) : (
@@ -375,7 +501,8 @@ export default function CommunityApp() {
 
             {account
               ? (composing
-                ? <Composer categories={categories} onPosted={(id) => { setComposing(false); go(`?thread=${id}`); }} />
+                ? <Composer categories={categories} allowImages={canPostImages(me)}
+                    onPosted={(id) => { setComposing(false); go(`?thread=${id}`); }} />
                 : <button className="btn primary" onClick={() => setComposing(true)}>Start a discussion</button>)
               : <SignInPrompt what="post" />}
 
@@ -391,6 +518,7 @@ export default function CommunityApp() {
                     <button className="cm-linkish cm-thread-title" onClick={() => go(`?thread=${t.id}`)}>
                       {t.title}
                     </button>
+                    <MemberMeta author={t.author} />
                     <p className="cm-muted">
                       {t.author.displayName} · {ago(t.lastPostAt)} · {t.replyCount} {t.replyCount === 1 ? 'reply' : 'replies'}
                       {t.locked ? ' · closed' : ''}

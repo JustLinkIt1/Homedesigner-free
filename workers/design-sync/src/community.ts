@@ -21,6 +21,7 @@ export interface AuthIdentity {
 
 export interface CommunityEnv {
   COMMUNITY: D1Database;
+  USER_DATA: R2Bucket;
   AI: Ai;
   /** Bootstrap moderator, by verified Google email. Mirrors MODEL_ADMIN_EMAIL.
    *  Without this the very first forum would have no moderator and no way to
@@ -47,6 +48,9 @@ const BODY_MAX = 8000;
 const BIO_MAX = 400;
 const DISPLAY_NAME_MAX = 40;
 const PAGE_SIZE = 30;
+const MAX_POST_IMAGES = 4;
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+const POST_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const HANDLE_RE = /^[a-z0-9](?:[a-z0-9_-]{1,22})[a-z0-9]$/;
 
 export interface Profile {
@@ -55,6 +59,8 @@ export interface Profile {
   display_name: string;
   bio: string;
   avatar_url: string | null;
+  avatar_image_id: string | null;
+  post_count: number;
   role: string;
   banned_until: number | null;
 }
@@ -101,19 +107,40 @@ function cleanText(raw: unknown, max: number, field: string): string {
 
 export async function loadProfile(env: CommunityEnv, subject: string): Promise<Profile | null> {
   return await env.COMMUNITY.prepare(
-    'SELECT subject, handle, display_name, bio, avatar_url, role, banned_until FROM profiles WHERE subject = ?',
+    `SELECT subject, handle, display_name, bio, avatar_url, avatar_image_id,
+            post_count, role, banned_until FROM profiles WHERE subject = ?`,
   ).bind(subject).first<Profile>();
 }
 
 /** The public shape of a profile. `subject` is the Google id and never leaves
  *  the Worker — exposing it would let anyone correlate forum posts with the
  *  sync API's user keys. */
+const imagePath = (id: string | null) => id ? `/v1/community/images/${id}` : null;
+
+function rankFor(postCount: number): string {
+  if (postCount >= 100) return 'Expert';
+  if (postCount >= 25) return 'Regular';
+  if (postCount >= 5) return 'Contributor';
+  return 'New member';
+}
+
 const publicProfile = (p: Profile) => ({
   handle: p.handle,
   displayName: p.display_name,
   bio: p.bio,
-  avatarUrl: p.avatar_url,
+  avatarUrl: imagePath(p.avatar_image_id),
   role: p.role,
+  postCount: p.post_count,
+  rank: rankFor(p.post_count),
+});
+
+const publicAuthor = (row: Record<string, unknown>) => ({
+  handle: row.handle,
+  displayName: row.display_name,
+  avatarUrl: imagePath(typeof row.avatar_image_id === 'string' ? row.avatar_image_id : null),
+  role: row.role,
+  postCount: Number(row.post_count) || 0,
+  rank: rankFor(Number(row.post_count) || 0),
 });
 
 /**
@@ -213,7 +240,7 @@ export async function listThreads(env: CommunityEnv, url: URL) {
   const before = Number(url.searchParams.get('before')) || Number.MAX_SAFE_INTEGER;
   const rows = await env.COMMUNITY.prepare(
     `SELECT t.id, t.category, t.title, t.created_at, t.last_post_at, t.reply_count,
-            t.locked, p.handle, p.display_name, p.avatar_url
+            t.locked, p.handle, p.display_name, p.avatar_image_id, p.role, p.post_count
        FROM threads t JOIN profiles p ON p.subject = t.author
       WHERE t.hidden = 0 AND t.last_post_at < ?${category ? ' AND t.category = ?' : ''}
       ORDER BY t.last_post_at DESC LIMIT ?`,
@@ -229,7 +256,7 @@ export async function listThreads(env: CommunityEnv, url: URL) {
       lastPostAt: r.last_post_at,
       replyCount: r.reply_count,
       locked: !!r.locked,
-      author: { handle: r.handle, displayName: r.display_name, avatarUrl: r.avatar_url },
+      author: publicAuthor(r),
     })),
   };
 }
@@ -237,17 +264,30 @@ export async function listThreads(env: CommunityEnv, url: URL) {
 export async function readThread(env: CommunityEnv, id: string) {
   const thread = await env.COMMUNITY.prepare(
     `SELECT t.id, t.category, t.title, t.created_at, t.locked, t.hidden,
-            p.handle, p.display_name, p.avatar_url
+            p.handle, p.display_name, p.avatar_image_id, p.role, p.post_count
        FROM threads t JOIN profiles p ON p.subject = t.author WHERE t.id = ?`,
   ).bind(id).first<Record<string, unknown>>();
   if (!thread || thread.hidden) throw new CommunityError('Thread not found.', 404);
 
   const posts = await env.COMMUNITY.prepare(
     `SELECT s.id, s.body, s.created_at, s.edited_at, s.hidden,
-            p.handle, p.display_name, p.avatar_url
+            p.handle, p.display_name, p.avatar_image_id, p.role, p.post_count
        FROM posts s JOIN profiles p ON p.subject = s.author
       WHERE s.thread_id = ? ORDER BY s.created_at ASC LIMIT 500`,
   ).bind(id).all();
+
+  const images = await env.COMMUNITY.prepare(
+    `SELECT id, post_id FROM community_images
+      WHERE post_id IN (SELECT id FROM posts WHERE thread_id = ?)
+      ORDER BY created_at ASC`,
+  ).bind(id).all<Record<string, unknown>>();
+  const imagesByPost = new Map<string, string[]>();
+  for (const image of images.results ?? []) {
+    const postId = String(image.post_id);
+    const list = imagesByPost.get(postId) ?? [];
+    list.push(imagePath(String(image.id))!);
+    imagesByPost.set(postId, list);
+  }
 
   return {
     thread: {
@@ -256,7 +296,7 @@ export async function readThread(env: CommunityEnv, id: string) {
       title: thread.title,
       createdAt: thread.created_at,
       locked: !!thread.locked,
-      author: { handle: thread.handle, displayName: thread.display_name, avatarUrl: thread.avatar_url },
+      author: publicAuthor(thread),
     },
     // A hidden post keeps its slot so the conversation still reads in order,
     // but carries no body — moderation should be visible, not a memory hole.
@@ -265,16 +305,18 @@ export async function readThread(env: CommunityEnv, id: string) {
     } : {
       id: r.id,
       body: r.body,
+      images: imagesByPost.get(String(r.id)) ?? [],
       createdAt: r.created_at,
       editedAt: r.edited_at,
-      author: { handle: r.handle, displayName: r.display_name, avatarUrl: r.avatar_url },
+      author: publicAuthor(r),
     })),
   };
 }
 
 export async function readProfile(env: CommunityEnv, handle: string) {
   const row = await env.COMMUNITY.prepare(
-    'SELECT subject, handle, display_name, bio, avatar_url, role, banned_until FROM profiles WHERE lower(handle) = ?',
+    `SELECT subject, handle, display_name, bio, avatar_url, avatar_image_id,
+            post_count, role, banned_until FROM profiles WHERE lower(handle) = ?`,
   ).bind(handle.toLowerCase()).first<Profile>();
   if (!row) throw new CommunityError('Profile not found.', 404);
   const threads = await env.COMMUNITY.prepare(
@@ -302,23 +344,145 @@ export async function updateMe(env: CommunityEnv, identity: AuthIdentity, input:
   const bio = input.bio === undefined
     ? profile.bio
     : String(input.bio).normalize('NFC').trim().slice(0, BIO_MAX);
-  // Avatars are Google's picture URL or nothing. Accepting an arbitrary URL
-  // would turn every profile view into a request to a server the poster
-  // chooses — an IP-logging beacon, and a way to hotlink anything at all.
-  const avatarUrl = input.avatarUrl === undefined
-    ? profile.avatar_url
-    : (typeof input.avatarUrl === 'string' && /^https:\/\/lh3\.googleusercontent\.com\//.test(input.avatarUrl)
-      ? input.avatarUrl
-      : null);
-
+  // Profile pictures are managed only by the explicit first-party upload endpoints.
   try {
     await env.COMMUNITY.prepare(
-      'UPDATE profiles SET handle = ?, display_name = ?, bio = ?, avatar_url = ?, updated_at = ? WHERE subject = ?',
-    ).bind(handle, displayName, bio, avatarUrl, Date.now(), identity.subject).run();
+      'UPDATE profiles SET handle = ?, display_name = ?, bio = ?, updated_at = ? WHERE subject = ?',
+    ).bind(handle, displayName, bio, Date.now(), identity.subject).run();
   } catch {
     throw new CommunityError('That handle is already taken.', 409);
   }
   return { profile: publicProfile((await loadProfile(env, identity.subject))!) };
+}
+
+type CommunityImageKind = 'avatar' | 'post';
+
+function detectedImageType(bytes: Uint8Array): string | null {
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return 'image/png';
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes.length >= 12 && String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF'
+    && String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP') return 'image/webp';
+  return null;
+}
+
+export async function uploadCommunityImage(
+  env: CommunityEnv, identity: AuthIdentity, request: Request, kind: CommunityImageKind,
+) {
+  const profile = requirePoster(await ensureProfile(env, identity));
+  if (kind === 'post' && !isModerator(profile)) {
+    throw new CommunityError('Only moderators can add images to posts right now.', 403);
+  }
+  const maxBytes = kind === 'avatar' ? AVATAR_MAX_BYTES : POST_IMAGE_MAX_BYTES;
+  const statedLength = Number(request.headers.get('Content-Length')) || 0;
+  if (statedLength > maxBytes) {
+    throw new CommunityError(`Image must be smaller than ${maxBytes / 1024 / 1024} MB.`, 413);
+  }
+  const body = await request.arrayBuffer();
+  if (!body.byteLength || body.byteLength > maxBytes) {
+    throw new CommunityError(`Image must be smaller than ${maxBytes / 1024 / 1024} MB.`, 413);
+  }
+  const mimeType = detectedImageType(new Uint8Array(body));
+  if (!mimeType) throw new CommunityError('Use a PNG, JPEG or WebP image.', 415);
+
+  const id = uid();
+  const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
+  const objectKey = `users/${identity.subject}/community/${kind}/${id}.${extension}`;
+  await env.USER_DATA.put(objectKey, body, {
+    httpMetadata: { contentType: mimeType, cacheControl: 'public, max-age=31536000, immutable' },
+  });
+
+  try {
+    await env.COMMUNITY.prepare(
+      `INSERT INTO community_images (id, owner, kind, object_key, mime_type, byte_size, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(id, identity.subject, kind, objectKey, mimeType, body.byteLength, Date.now()).run();
+  } catch (error) {
+    await env.USER_DATA.delete(objectKey);
+    throw error;
+  }
+
+  if (kind === 'avatar') {
+    const previousId = profile.avatar_image_id;
+    let previousKey: string | null = null;
+    if (previousId) {
+      const previous = await env.COMMUNITY.prepare(
+        'SELECT object_key FROM community_images WHERE id = ? AND owner = ?',
+      ).bind(previousId, identity.subject).first<{ object_key: string }>();
+      previousKey = previous?.object_key ?? null;
+    }
+    await env.COMMUNITY.batch([
+      env.COMMUNITY.prepare(
+        'UPDATE profiles SET avatar_image_id = ?, avatar_url = NULL, updated_at = ? WHERE subject = ?',
+      ).bind(id, Date.now(), identity.subject),
+      ...(previousId ? [env.COMMUNITY.prepare('DELETE FROM community_images WHERE id = ? AND owner = ?')
+        .bind(previousId, identity.subject)] : []),
+    ]);
+    if (previousKey) await env.USER_DATA.delete(previousKey);
+    return { profile: publicProfile((await loadProfile(env, identity.subject))!) };
+  }
+
+  return { image: { id, url: imagePath(id), mimeType, byteSize: body.byteLength } };
+}
+
+export async function removeAvatar(env: CommunityEnv, identity: AuthIdentity) {
+  const profile = await ensureProfile(env, identity);
+  const imageId = profile.avatar_image_id;
+  if (imageId) {
+    const image = await env.COMMUNITY.prepare(
+      'SELECT object_key FROM community_images WHERE id = ? AND owner = ?',
+    ).bind(imageId, identity.subject).first<{ object_key: string }>();
+    await env.COMMUNITY.batch([
+      env.COMMUNITY.prepare(
+        'UPDATE profiles SET avatar_image_id = NULL, avatar_url = NULL, updated_at = ? WHERE subject = ?',
+      ).bind(Date.now(), identity.subject),
+      env.COMMUNITY.prepare('DELETE FROM community_images WHERE id = ? AND owner = ?')
+        .bind(imageId, identity.subject),
+    ]);
+    if (image?.object_key) await env.USER_DATA.delete(image.object_key);
+  }
+  return { profile: publicProfile((await loadProfile(env, identity.subject))!) };
+}
+
+export async function readCommunityImage(env: CommunityEnv, id: string) {
+  const image = await env.COMMUNITY.prepare(
+    'SELECT object_key, mime_type FROM community_images WHERE id = ?',
+  ).bind(id).first<{ object_key: string; mime_type: string }>();
+  if (!image) throw new CommunityError('Image not found.', 404);
+  const object = await env.USER_DATA.get(image.object_key);
+  if (!object) throw new CommunityError('Image not found.', 404);
+  return { object, mimeType: image.mime_type };
+}
+
+function parseImageIds(input: unknown): string[] {
+  if (input === undefined) return [];
+  if (!Array.isArray(input) || input.length > MAX_POST_IMAGES) {
+    throw new CommunityError(`Add up to ${MAX_POST_IMAGES} images.`);
+  }
+  const ids = [...new Set(input.map(String))];
+  if (ids.length !== input.length || ids.some((id) => !/^[a-f0-9-]{36}$/.test(id))) {
+    throw new CommunityError('Invalid image attachment.');
+  }
+  return ids;
+}
+
+async function attachImages(
+  env: CommunityEnv, profile: Profile, imageIds: string[], postId: string,
+): Promise<D1PreparedStatement[]> {
+  if (!imageIds.length) return [];
+  if (!isModerator(profile)) throw new CommunityError('Only moderators can add images to posts right now.', 403);
+  const placeholders = imageIds.map(() => '?').join(',');
+  const images = await env.COMMUNITY.prepare(
+    `SELECT id FROM community_images
+      WHERE owner = ? AND kind = 'post' AND post_id IS NULL AND id IN (${placeholders})`,
+  ).bind(profile.subject, ...imageIds).all<{ id: string }>();
+  if ((images.results ?? []).length !== imageIds.length) {
+    throw new CommunityError('An image is missing, already used, or belongs to another account.', 409);
+  }
+  return imageIds.map((id) => env.COMMUNITY.prepare(
+    `UPDATE community_images SET post_id = ?
+      WHERE id = ? AND owner = ? AND kind = 'post' AND post_id IS NULL`,
+  ).bind(postId, id, profile.subject));
 }
 
 export async function createThread(env: CommunityEnv, identity: AuthIdentity, input: Record<string, unknown>) {
@@ -327,9 +491,12 @@ export async function createThread(env: CommunityEnv, identity: AuthIdentity, in
   if (!CATEGORY_IDS.has(category)) throw new CommunityError('Pick a category.');
   const title = cleanText(input.title, TITLE_MAX, 'Title');
   const body = cleanText(input.body, BODY_MAX, 'Message');
+  const imageIds = parseImageIds(input.imageIds);
 
   const now = Date.now();
   const threadId = uid();
+  const postId = uid();
+  const imageStatements = await attachImages(env, profile, imageIds, postId);
   await env.COMMUNITY.batch([
     env.COMMUNITY.prepare(
       `INSERT INTO threads (id, category, title, author, created_at, last_post_at, reply_count)
@@ -337,7 +504,10 @@ export async function createThread(env: CommunityEnv, identity: AuthIdentity, in
     ).bind(threadId, category, title, profile.subject, now, now),
     env.COMMUNITY.prepare(
       'INSERT INTO posts (id, thread_id, author, body, created_at) VALUES (?, ?, ?, ?, ?)',
-    ).bind(uid(), threadId, profile.subject, body, now),
+    ).bind(postId, threadId, profile.subject, body, now),
+    env.COMMUNITY.prepare('UPDATE profiles SET post_count = post_count + 1 WHERE subject = ?')
+      .bind(profile.subject),
+    ...imageStatements,
   ]);
   return { id: threadId };
 }
@@ -347,6 +517,7 @@ export async function createPost(
 ) {
   const profile = requirePoster(await ensureProfile(env, identity));
   const body = cleanText(input.body, BODY_MAX, 'Message');
+  const imageIds = parseImageIds(input.imageIds);
   const thread = await env.COMMUNITY.prepare(
     'SELECT id, locked, hidden FROM threads WHERE id = ?',
   ).bind(threadId).first<{ locked: number; hidden: number }>();
@@ -355,6 +526,7 @@ export async function createPost(
 
   const now = Date.now();
   const postId = uid();
+  const imageStatements = await attachImages(env, profile, imageIds, postId);
   await env.COMMUNITY.batch([
     env.COMMUNITY.prepare(
       'INSERT INTO posts (id, thread_id, author, body, created_at) VALUES (?, ?, ?, ?, ?)',
@@ -362,6 +534,9 @@ export async function createPost(
     env.COMMUNITY.prepare(
       'UPDATE threads SET last_post_at = ?, reply_count = reply_count + 1 WHERE id = ?',
     ).bind(now, threadId),
+    env.COMMUNITY.prepare('UPDATE profiles SET post_count = post_count + 1 WHERE subject = ?')
+      .bind(profile.subject),
+    ...imageStatements,
   ]);
   return { id: postId };
 }
@@ -475,6 +650,7 @@ export async function listReports(env: CommunityEnv, identity: AuthIdentity) {
 export async function erasePerson(env: CommunityEnv, subject: string): Promise<void> {
   await env.COMMUNITY.batch([
     env.COMMUNITY.prepare('DELETE FROM reports WHERE reporter = ?').bind(subject),
+    env.COMMUNITY.prepare('DELETE FROM community_images WHERE owner = ?').bind(subject),
     env.COMMUNITY.prepare('DELETE FROM posts WHERE author = ?').bind(subject),
     env.COMMUNITY.prepare('DELETE FROM threads WHERE author = ?').bind(subject),
     env.COMMUNITY.prepare('DELETE FROM profiles WHERE subject = ?').bind(subject),
