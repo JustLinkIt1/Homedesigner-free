@@ -12,6 +12,7 @@ changes and add an entry when you ship one.
 - Added the public `/community/` support forum to the assembled Cloudflare Pages output, with discussion categories, Google-authenticated posting, profiles and report submission.
 - Added an owner-only moderator queue for reviewing reports, hiding posts, locking threads, temporary bans and dismissing reports. Moderator authority is enforced by the Worker using the configured verified Google email.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
+- Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
 ## 1.22.5 - 2026-08-08 (versionCode 12205)
 
