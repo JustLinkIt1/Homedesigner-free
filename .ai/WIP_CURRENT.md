@@ -26,6 +26,14 @@
 > this prevents an expired web token from appearing signed in while all forum
 > writes fail.
 
+> **Mobile community OAuth return repaired 2026-08-09:** the fixed Google
+> redirect URI remains `/app/`, but the requested forum return path now travels
+> inside the existing nonce-bound local OAuth transaction as well as the
+> original tab's session storage. This covers mobile providers that complete in
+> a separate tab/context. The callback accepts only a single-slash relative
+> path, still validates issuer/audience/nonce/expiry, and removes credentials
+> from browser history before returning to `/community/`.
+
 > **Community forum deployed 2026-08-09:** `/community/` is live with public reading, Google-authenticated posting, profiles, reporting and a usable owner moderation queue. D1 `homedesigner-community` is in WEUR (`02230a9a-6b37-4d17-b46e-60f2fef95c47`), migration `0001_community.sql` is applied, and Worker version `687c8e8f-b438-4d12-8ece-11fa2e603f18` is live. Pages deployment `9fe3918f-34d2-46da-a75d-2a5b10d44d74` fixed the route's `/app/` asset base. Chrome verified the live custom domain, empty report queue, privacy-safe random handle and owner `admin` access through the visible **Moderate** action. The community now uses a same-tab Google OAuth redirect because embedded browsers immediately closed its popup; the callback validates issuer, audience, nonce and expiry, removes credentials from history, then returns to `/community/`. The editor's web popup and Android native sign-in are unchanged. Default handles never derive from email prefixes and anonymous reads share one per-IP forum limit.
 
 > **Final CI repair 2026-08-08:** the release smoke test now selects one

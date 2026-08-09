@@ -68,12 +68,19 @@ export function finishStrandedGooglePopup(): boolean {
   try {
     const pendingRaw = localStorage.getItem(GOOGLE_OAUTH_PENDING_KEY);
     if (!pendingRaw) return false;
-    const pending = JSON.parse(pendingRaw) as { provider?: string; nonce?: string };
+    const pending = JSON.parse(pendingRaw) as { provider?: string; nonce?: string; returnTo?: string };
     if (pending.provider !== 'google' || !pending.nonce) return false;
 
     const params = new URLSearchParams(window.location.hash.slice(1));
-    const returnTo = sessionStorage.getItem(GOOGLE_REDIRECT_RETURN_KEY);
-    if (params.get('error') && returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+    // Mobile browsers can complete OAuth in a different tab/context, where
+    // sessionStorage from the forum tab is unavailable. Keep the return path
+    // inside the nonce-bound local transaction as well, and accept only a
+    // same-origin relative path before navigating to it.
+    const storedReturnTo = pending.returnTo ?? sessionStorage.getItem(GOOGLE_REDIRECT_RETURN_KEY);
+    const returnTo = storedReturnTo?.startsWith('/') && !storedReturnTo.startsWith('//')
+      ? storedReturnTo
+      : null;
+    if (params.get('error') && returnTo) {
       localStorage.removeItem(GOOGLE_OAUTH_PENDING_KEY);
       sessionStorage.removeItem(GOOGLE_REDIRECT_RETURN_KEY);
       window.location.replace(returnTo);
@@ -107,7 +114,7 @@ export function finishStrandedGooglePopup(): boolean {
     localStorage.setItem(GOOGLE_PROVIDER_STATE_KEY, JSON.stringify({ accessToken, idToken }));
     localStorage.removeItem(GOOGLE_OAUTH_PENDING_KEY);
 
-    if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+    if (returnTo) {
       sessionStorage.removeItem(GOOGLE_REDIRECT_RETURN_KEY);
       if (claims?.sub) {
         localStorage.setItem(GOOGLE_ACCOUNT_CACHE_KEY, JSON.stringify({
@@ -143,6 +150,7 @@ function startGooglePageRedirect(): Promise<GoogleAccount> {
     provider: 'google',
     loginType: 'online',
     nonce,
+    returnTo,
   }));
   sessionStorage.setItem(GOOGLE_REDIRECT_RETURN_KEY, returnTo);
   const params = new URLSearchParams({
