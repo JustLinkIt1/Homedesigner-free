@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import * as api from '../lib/community';
-import type { Category, CommunityPost, CommunityProfile, ThreadSummary } from '../lib/community';
+import type { Category, CommunityPost, CommunityProfile, CommunityReport, ThreadSummary } from '../lib/community';
 
 const ago = (ts: number): string => {
   const mins = Math.max(1, Math.round((Date.now() - ts) / 60000));
@@ -237,6 +237,64 @@ function ProfileView({ handle }: { handle: string }) {
   );
 }
 
+function ModeratorPanel({ onClose }: { onClose: () => void }) {
+  const [reports, setReports] = useState<CommunityReport[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    setError(null);
+    api.listReports().then((data) => setReports(data.reports)).catch((err) => {
+      setError(err instanceof Error ? err.message : 'Could not load reports.');
+    });
+  }, []);
+  useEffect(load, [load]);
+
+  const act = async (report: CommunityReport, action: string, id: string, extra?: Record<string, unknown>) => {
+    setBusy(report.id);
+    setError(null);
+    try {
+      await api.moderate(action, id, extra);
+      if (action !== 'resolveReport') await api.moderate('resolveReport', report.id);
+      setReports((current) => current.filter((item) => item.id !== report.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Moderation action failed.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <>
+      <button className="cm-back" onClick={onClose}>← Community</button>
+      <h1>Moderator queue</h1>
+      <p className="cm-muted">AI labels only help prioritise reports. Every action below is decided by you.</p>
+      {error && <p className="cm-error">{error}</p>}
+      {reports.length === 0 && !error && <p className="cm-muted">No unresolved reports.</p>}
+      <ul className="cm-posts">
+        {reports.map((report) => (
+          <li key={report.id} className="cm-post">
+            <div className="cm-post-head">
+              <strong>@{report.handle}</strong>
+              <span className="cm-muted">{ago(report.created_at)}</span>
+              {report.ai_verdict && <span className="cm-muted">AI: {report.ai_verdict}</span>}
+            </div>
+            <p><strong>Report:</strong> {report.reason}</p>
+            <Body text={report.body} />
+            <div className="cm-cats">
+              <button disabled={busy === report.id} onClick={() => go(`?thread=${report.thread_id}`)}>Open thread</button>
+              <button disabled={busy === report.id} onClick={() => void act(report, 'hidePost', report.post_id)}>Hide post</button>
+              <button disabled={busy === report.id} onClick={() => void act(report, 'lock', report.thread_id)}>Lock thread</button>
+              <button disabled={busy === report.id} onClick={() => void act(report, 'ban', report.handle, { days: 7 })}>Ban 7 days</button>
+              <button disabled={busy === report.id} onClick={() => void act(report, 'resolveReport', report.id)}>Dismiss report</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 export default function CommunityApp() {
   const account = useAuthStore((s) => s.account);
   const [route, setRoute] = useState(() => new URLSearchParams(window.location.search));
@@ -247,6 +305,7 @@ export default function CommunityApp() {
   const [me, setMe] = useState<CommunityProfile | null>(null);
   const [composing, setComposing] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [moderating, setModerating] = useState(false);
 
   useEffect(() => {
     const onPop = () => setRoute(new URLSearchParams(window.location.search));
@@ -278,6 +337,9 @@ export default function CommunityApp() {
         <a className="cm-brand" href="/">HomeDesigner</a>
         <nav>
           <a href="/app/">Open the app</a>
+          {me && (me.role === 'admin' || me.role === 'moderator') && (
+            <button className="cm-linkish" onClick={() => setModerating(true)}>Moderate</button>
+          )}
           {me
             ? <button className="cm-linkish" onClick={() => setEditing((v) => !v)}>@{me.handle}</button>
             : null}
@@ -287,6 +349,8 @@ export default function CommunityApp() {
       <main className="cm-main">
         {!api.isCommunityConfigured() ? (
           <p className="cm-error">The community is not available yet.</p>
+        ) : moderating && me && (me.role === 'admin' || me.role === 'moderator') ? (
+          <ModeratorPanel onClose={() => setModerating(false)} />
         ) : threadId ? (
           <ThreadView id={threadId} signedIn={!!account} />
         ) : profileHandle ? (

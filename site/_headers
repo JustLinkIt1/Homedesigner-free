@@ -21,6 +21,12 @@
 /app/model-studio/index.html
   Cache-Control: no-store
 
+/community/
+  Cache-Control: no-store
+
+/community/index.html
+  Cache-Control: no-store
+
 /app/version.json
   Cache-Control: no-store
 

@@ -17,6 +17,12 @@ await writeFile(
   resolve(studioDir, 'index.html'),
   appHtml.replace('<head>', '<head>\n    <base href="/app/" />'),
 );
+const communityDir = resolve(output, 'community');
+await mkdir(communityDir, { recursive: true });
+await writeFile(
+  resolve(communityDir, 'index.html'),
+  appHtml.replace('<head>', '<head>\n    <base href="/" />'),
+);
 await cp(resolve(appDist, 'privacy.html'), resolve(output, 'privacy.html'));
 await cp(resolve(appDist, 'CNAME'), resolve(output, 'CNAME'));
 

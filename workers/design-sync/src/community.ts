@@ -146,15 +146,11 @@ async function ensureProfile(env: CommunityEnv, identity: AuthIdentity): Promise
     return existing;
   }
 
-  const base = (identity.email?.split('@')[0] ?? 'member')
-    .toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20) || 'member';
   const now = Date.now();
-  // Collisions are resolved by suffixing rather than failing: a first post
-  // should never be blocked because someone shares your email prefix.
+  // Never derive a public handle from an email address. Even exposing only the
+  // local part can identify someone; the user can choose a handle afterwards.
   for (let attempt = 0; attempt < 6; attempt++) {
-    const handle = attempt === 0 && base.length >= 3
-      ? base
-      : `${base}${Math.floor(Math.random() * 10000)}`.slice(0, 24);
+    const handle = `member-${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
     if (!HANDLE_RE.test(handle)) continue;
     try {
       await env.COMMUNITY.prepare(
@@ -446,6 +442,10 @@ export async function moderate(env: CommunityEnv, identity: AuthIdentity, input:
     case 'unban':
       await env.COMMUNITY.prepare('UPDATE profiles SET banned_until = NULL WHERE lower(handle) = ?')
         .bind(id.toLowerCase()).run();
+      return { ok: true };
+    case 'resolveReport':
+      await env.COMMUNITY.prepare('UPDATE reports SET resolved = 1 WHERE id = ?')
+        .bind(id).run();
       return { ok: true };
     default:
       throw new CommunityError('Unknown action.');

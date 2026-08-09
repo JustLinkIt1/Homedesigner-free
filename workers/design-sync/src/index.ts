@@ -954,7 +954,7 @@ export default {
         // stands in. Cloudflare sets this header at the edge; a caller cannot
         // spoof it.
         const ip = request.headers.get('CF-Connecting-IP') ?? 'anon';
-        const { success } = await env.USER_READ_LIMITER.limit({ key: `ip:${ip}:${url.pathname}` });
+        const { success } = await env.USER_READ_LIMITER.limit({ key: `ip:${ip}:community` });
         if (!success) return json(request, { error: 'Too many requests' }, 429, { 'Retry-After': '60' });
 
         if (url.pathname === '/v1/community/threads') return json(request, await listThreads(env, url));

@@ -46,6 +46,17 @@ export interface CommunityPost {
 
 export interface Category { id: string; name: string; blurb: string }
 
+export interface CommunityReport {
+  id: string;
+  post_id: string;
+  thread_id: string;
+  reason: string;
+  ai_verdict: string | null;
+  created_at: number;
+  body: string;
+  handle: string;
+}
+
 /** The Worker answers errors as `{ error }` with a real status. Surfacing that
  *  message verbatim matters: "That handle is already taken" is the entire value
  *  of the response, and a generic "Request failed" would throw it away. */
@@ -94,3 +105,9 @@ export const editPost = (postId: string, body: string) =>
 
 export const reportPost = (postId: string, reason: string) =>
   write(`/v1/community/posts/${postId}/report`, { reason });
+
+export const listReports = () =>
+  call<{ reports: CommunityReport[] }>('/v1/community/reports', { auth: true });
+
+export const moderate = (action: string, id: string, extra: Record<string, unknown> = {}) =>
+  write('/v1/community/moderate', { action, id, ...extra }) as Promise<{ ok: true }>;
