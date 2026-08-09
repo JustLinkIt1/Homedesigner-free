@@ -1,6 +1,80 @@
 # WIP — current handoff
 
-## Session handoff 2026-08-09 (Claude) — read this first
+## Session handoff 2026-08-09 #2 (Claude) — read this first
+
+Supersedes the entry below it. Version **1.22.6**, commit `a72767b`, branch
+`claude/home-design-app-2d-plans-12y5u5`.
+
+### The three forum-access bugs are CLOSED. Do not re-fix them.
+
+The previous handoff listed three open bugs. Codex fixed all three in
+`a72767b`, and each was verified against the tree rather than taken on trust:
+
+1. The forum link is now in `SettingsDialog.tsx`, not only About.
+2. `src/lib/communityAccess.ts` opens the forum with `Browser.open()` on native,
+   falling back to `window.location.assign` on web and on older native shells.
+   The `<a href>` is kept and only intercepted via `onClick` when native — so
+   the web keeps middle-click, open-in-new-tab and a real href for crawlers.
+   This is better than the plan it replaced, which would have swapped the anchor
+   for a button and lost all three.
+3. The `autoVerify` intent-filter is **gone entirely** — the manifest no longer
+   references `homedesignerapp.com` at all, so Android App Links cannot capture
+   the Google OAuth redirect to `/community`.
+
+Trade-off recorded for (3): the app now claims **nothing** on the domain, so no
+URL on homedesignerapp.com can deep-link into the installed app. That is fine
+today (the site's "Open the app" points at `/app/`, a web page, and users launch
+from the launcher). If deep links are ever wanted back, the filter returns with
+an explicit `pathPrefix` for `/app` and deliberately not `/community`.
+
+### What is NOT yet confirmed
+
+* **This tree has not been seen to typecheck cleanly.** The last container was
+  missing `@capacitor/browser` and `@capawesome/capacitor-app-review` from
+  `node_modules` — a stale install, not a code fault, but it means
+  `npm run typecheck` was never green on `a72767b`. Run
+  `npm install && npm run typecheck && npm run lint` first.
+* **No AAB has been verified at 1.22.6 by this project's checker.** Bug (3) is a
+  native manifest change, so a web deploy does NOT ship it — it needs a new AAB
+  and a Play release before browser sign-in works on a phone.
+
+### Suggested next steps
+
+1. `npm install && npm run typecheck && npm run lint`
+2. `npm test` (or `npm run test:ci` for the fast suite without the 3D smoke)
+3. `npm run android:aab`, confirm it prints `web bundle was built at 1.22.6`
+4. Verify the signer, hand the AAB to the owner, and note it needs a Play
+   release for the App Links fix to take effect.
+
+Beyond that there is no assigned work. Open threads the owner has parked, in
+their own words, so they are not re-raised as if new:
+
+* **Free-tier rebalance** — free is currently 1 project, 1 floor, ~40% of the
+  catalog. The owner was told this is likely why nobody converts, asked to shelve
+  it ("let's wait on this"), and it stays shelved until they raise it.
+* **3-day trial → $4/mo subscription** — scoped and deferred "until the app is
+  better". The one prerequisite already identified: `purchase()` in
+  `src/lib/pro.ts` selects `firstAvailablePackage()` and ignores the plan id, so
+  it MUST be fixed before a second product exists in the RevenueCat offering or
+  people will be charged for the wrong thing.
+* **AI features on a budget** — recommendation on record: auto-furnish a room by
+  style, using Workers AI (already bound) for a small structured-output call,
+  validated locally by the geometry rules in `tests/samples.mjs` and rejected on
+  failure. Gate it behind Pro so cost scales with revenue, not installs. Avoid
+  image generation.
+* **Test Report No. 17's other half** — 2D pans less smoothly than 3D. Never
+  profiled. Dimension pills can also still overlap a room label.
+* **The one-roof limitation** — `normalizeRoofs` keeps a single roof on the top
+  storey, so any single-storey wing (garage, extension, porch) renders open to
+  the sky. It forced a design compromise in the "Suburban classic" template and
+  it will hit any user who draws an L-shaped house.
+
+Everything else in the superseded entry below — AAB signing, the container
+rewind hazard, git recovery, and the fault-injection convention — still applies
+verbatim.
+
+
+## Session handoff 2026-08-09 (Claude) — SUPERSEDED, kept for context
 
 ### Where things are
 
