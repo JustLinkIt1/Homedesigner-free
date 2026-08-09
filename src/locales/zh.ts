@@ -822,4 +822,5 @@ export const ZH: Record<string, string> = {
   'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': '已登录，但云同步未能完成。联网后我们会重试。',
   'Sync couldn\'t finish. Check your connection and try again.': '同步未能完成。请检查网络连接后重试。',
   'Reload 3D': '重新加载 3D',
+  'Community & support': '社区与支持',
 };

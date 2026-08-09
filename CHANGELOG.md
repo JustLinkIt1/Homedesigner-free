@@ -23,6 +23,57 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.6 - 2026-08-09 (versionCode 12206)
+
+### Google Play checkout reliability
+
+- Changed the Android activity launch mode from `singleTask` to RevenueCat's
+  supported `singleTop` mode. This preserves HomeDesigner while Google Play or
+  a banking app temporarily takes over and lets the purchase result return to
+  the RevenueCat SDK instead of leaving **Unlock Pro** waiting indefinitely.
+- Made Google sign-in a deliberate first step before native checkout. Signed-out
+  users now sign in, see the priced **Unlock Pro** action, and explicitly confirm
+  the purchase; new entitlements are therefore attached to a stable account for
+  cross-device Android and desktop access instead of an anonymous install.
+- Upgraded `@revenuecat/purchases-capacitor` from 13.2.1 to 13.4.0, including
+  the current RevenueCat Android SDK dependency line.
+- Added billing regression checks for the native account gate, account-bound
+  restore path and RevenueCat-compatible Android activity mode.
+- Made the model and billing test bundles invoke esbuild through Node's
+  cross-platform entry point, so the deterministic release suite also runs on
+  Windows instead of failing on the Unix-only `.bin/esbuild` launcher.
+- Made `npm run android:aab` cross-platform: it now selects the correct Gradle
+  wrapper and verifies the bundle ZIP in-process instead of requiring the Unix
+  `unzip` command.
+- Re-verified the live stores without changing commercial settings: Play lists
+  `pro_unlock` as a published one-time product with its backwards-compatible
+  purchase option active in 173 regions, and RevenueCat lists the same product
+  as a published non-consumable attached to the `Pro` entitlement and Android
+  lifetime package.
+
+### Mobile account and support routes
+
+- Added a direct **Community & support** action to Settings. Android opens the
+  hosted forum in a supported Custom Tab, while web builds navigate to the
+  first-party community page.
+- Routed the About-dialog forum link through the same native Custom Tab path
+  instead of relying on an Android WebView `target="_blank"` navigation.
+- Added an owner-only **Model Studio** action to Settings in addition to the
+  existing account and More-menu entries. The client only shows it to the
+  configured admin email and the Worker remains the authoritative access check.
+- Replaced popup login on the hosted Model Studio with the same mobile-safe,
+  full-page Google flow used by the forum. OAuth state now carries a
+  nonce-bound, same-origin return path, so mobile login returns to the exact
+  forum thread or Model Studio page even when browser storage is not shared
+  across the Google hand-off.
+- Deployed the updated web shell to Cloudflare Pages production and verified
+  both `/community/` and `/app/model-studio/` on the custom domain serve the
+  new immutable asset namespace.
+- Removed the unused whole-domain Android App Link claim. HomeDesigner had no
+  native URL handler, but the claim intercepted Google's `/app/` web callback
+  and reopened the Android editor; forum and Model Studio authentication now
+  remain in the browser that initiated them.
+
 ## 1.22.5 - 2026-08-08 (versionCode 12205)
 
 ### Release verification

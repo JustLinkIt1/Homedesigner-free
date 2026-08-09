@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Monitor, Sun, Moon, ExternalLink, LogOut, Trash2, RefreshCw } from 'lucide-react';
+import { Settings, Monitor, Sun, Moon, ExternalLink, LogOut, Trash2, RefreshCw, MessageCircle, WandSparkles } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { hapticsEnabled, setHapticsEnabled, tapLight } from '../lib/haptics';
@@ -9,6 +9,8 @@ import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
 import { APP_NAME, APP_VERSION, PRIVACY_URL } from '../lib/appInfo';
 import { useAuthStore } from '../store/authStore';
+import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
+import { openCommunityForum } from '../lib/communityAccess';
 import { deleteCloudProjects } from '../lib/cloudSync';
 import { toast } from '../lib/ui';
 import Modal from './Modal';
@@ -71,6 +73,7 @@ export default function SettingsDialog({
   const signOut = useAuthStore((s) => s.signOut);
   const syncNow = useAuthStore((s) => s.syncNow);
   const t = useI18n();
+  const canOpenModelStudio = isModelStudioOwner(account?.email);
 
   return (
     <Modal open={open} onClose={onClose} className="settings" labelledBy="settings-title">
@@ -254,9 +257,21 @@ export default function SettingsDialog({
 
           <section>
             <h3>{t('Help')}</h3>
-            <button className="btn block" onClick={onReplayTour}>
-              {t('Replay the intro tour')}
-            </button>
+            <div className="settings-actions">
+              <button className="btn block" onClick={onReplayTour}>
+                {t('Replay the intro tour')}
+              </button>
+              <button className="btn block" onClick={() => void openCommunityForum()}>
+                <MessageCircle className="icon" /> {t('Community & support')}
+                <ExternalLink className="icon" style={{ marginLeft: 'auto' }} />
+              </button>
+              {canOpenModelStudio ? (
+                <button className="btn block" onClick={() => void openModelStudio()}>
+                  <WandSparkles className="icon" /> Model Studio
+                  <ExternalLink className="icon" style={{ marginLeft: 'auto' }} />
+                </button>
+              ) : null}
+            </div>
           </section>
 
           <p className="settings-meta">

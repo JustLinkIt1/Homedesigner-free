@@ -822,4 +822,5 @@ export const KO: Record<string, string> = {
   'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': '로그인했지만 클라우드 동기화를 완료하지 못했습니다. 온라인이 되면 다시 시도합니다.',
   'Sync couldn\'t finish. Check your connection and try again.': '동기화를 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요.',
   'Reload 3D': '3D 다시 불러오기',
+  'Community & support': '커뮤니티 및 지원',
 };

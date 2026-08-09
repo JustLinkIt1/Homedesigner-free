@@ -822,4 +822,5 @@ export const DE: Record<string, string> = {
   'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'Angemeldet, aber die Cloud-Synchronisierung konnte nicht abgeschlossen werden. Wir versuchen es erneut, wenn du online bist.',
   'Sync couldn\'t finish. Check your connection and try again.': 'Synchronisierung konnte nicht abgeschlossen werden. Prüfe deine Verbindung und versuche es erneut.',
   'Reload 3D': '3D neu laden',
+  'Community & support': 'Community und Support',
 };

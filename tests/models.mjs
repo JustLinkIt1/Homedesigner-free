@@ -18,23 +18,25 @@ import { readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync } from 'n
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const root = process.cwd();
+const rootImport = root.replaceAll('\\', '/');
 
 // --- catalogue (via esbuild, same trick as tests/geometry.mjs) ---------------
 const dir = mkdtempSync(join(tmpdir(), 'hdmodels-'));
 const entry = join(root, '.models-entry.tmp.ts');
 writeFileSync(entry, `
-export { CATALOG_BY_TYPE } from '${root}/src/data/furnitureCatalog.ts';
-export { MODEL_FILE, MODEL_FIT, MODEL_YAW, MODEL_CORRECTIONS } from '${root}/src/data/furnitureModels.ts';
+export { CATALOG_BY_TYPE } from '${rootImport}/src/data/furnitureCatalog.ts';
+export { MODEL_FILE, MODEL_FIT, MODEL_YAW, MODEL_CORRECTIONS } from '${rootImport}/src/data/furnitureModels.ts';
 `);
 const bundle = join(dir, 'b.mjs');
-execFileSync(join(root, 'node_modules/.bin/esbuild'), [
-  entry, '--bundle', '--format=esm', '--platform=node',
+execFileSync(process.execPath, [
+  join(root, 'node_modules/esbuild/bin/esbuild'), entry, '--bundle', '--format=esm', '--platform=node',
   '--define:import.meta.env.BASE_URL="/"', `--outfile=${bundle}`,
 ], { stdio: 'pipe' });
 rmSync(entry, { force: true });
-const { CATALOG_BY_TYPE, MODEL_FILE, MODEL_FIT, MODEL_YAW, MODEL_CORRECTIONS } = await import(bundle);
+const { CATALOG_BY_TYPE, MODEL_FILE, MODEL_FIT, MODEL_YAW, MODEL_CORRECTIONS } = await import(pathToFileURL(bundle));
 
 let fails = 0;
 const check = (name, ok, detail = '') => {

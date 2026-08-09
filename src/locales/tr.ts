@@ -822,4 +822,5 @@ export const TR: Record<string, string> = {
   'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'Oturum açıldı, ancak bulut eşitlemesi tamamlanamadı. Çevrimiçi olduğunuzda yeniden deneyeceğiz.',
   'Sync couldn\'t finish. Check your connection and try again.': 'Eşitleme tamamlanamadı. Bağlantınızı kontrol edip yeniden deneyin.',
   'Reload 3D': '3B görünümü yeniden yükle',
+  'Community & support': 'Topluluk ve destek',
 };

@@ -19,20 +19,22 @@ import { writeFileSync, mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const root = process.cwd();
+const rootImport = root.replaceAll('\\', '/');
 const dir = mkdtempSync(join(tmpdir(), 'hdbilling-'));
 const entry = join(root, '.billing-entry.tmp.ts');
 writeFileSync(entry, `
-export { useProStore } from '${root}/src/store/proStore.ts';
-export { setProProvider } from '${root}/src/lib/pro.ts';
+export { useProStore } from '${rootImport}/src/store/proStore.ts';
+export { setProProvider } from '${rootImport}/src/lib/pro.ts';
 `);
 
 const out = join(dir, 'bundle.mjs');
 let mod;
 try {
-  execFileSync(join(root, 'node_modules/.bin/esbuild'), [
-    entry,
+  execFileSync(process.execPath, [
+    join(root, 'node_modules/esbuild/bin/esbuild'), entry,
     '--bundle', '--format=esm', '--platform=node',
     '--define:import.meta.env={"BASE_URL":"/","DEV":false,"PROD":true}',
     `--outfile=${out}`,
@@ -46,7 +48,7 @@ try {
   };
   globalThis.window ??= globalThis;
   globalThis.document ??= { documentElement: { lang: 'en' } };
-  mod = await import(`file://${out}`);
+  mod = await import(pathToFileURL(out));
 } finally {
   rmSync(entry, { force: true });
 }
@@ -243,6 +245,28 @@ const reset = (isPro) => {
   // .race stops us waiting, it cannot cancel a transaction Play already took.
   check('a timed-out purchase re-checks entitlement before reporting failure',
     /!== PURCHASE_TIMEOUT[\s\S]{0,600}?this\.sync\(\)/.test(src));
+}
+
+// --- checkout identity and Android Activity contract -----------------------
+// RevenueCat can sell to an anonymous install, but that entitlement cannot be
+// found by email or followed safely to desktop/another phone. The Pro sheet
+// must therefore make Google identity a distinct step before checkout.
+//
+// RevenueCat's Capacitor Android integration also requires `standard` or
+// `singleTop`: Play and banking apps can background HomeDesigner during a
+// purchase, and `singleTask` can prevent the result reaching the SDK.
+{
+  const modal = readFileSync(join(root, 'src/components/ProUpsellModal.tsx'), 'utf8');
+  check('native checkout signs the user in before starting Play Billing',
+    modal.includes('const requiresAccount = native || webBilling') &&
+      modal.includes('const needsAccount = requiresAccount && !account') &&
+      modal.includes('const onPrimaryAction = needsAccount ? signIn : purchase'));
+  check('restore is attached to an identified account',
+    modal.includes('{(native || webBilling) && account && ('));
+
+  const manifest = readFileSync(join(root, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
+  check('Android uses RevenueCat-compatible singleTop launch mode',
+    manifest.includes('android:launchMode="singleTop"') && !manifest.includes('android:launchMode="singleTask"'));
 }
 
 // --- the buy button must always stop spinning -------------------------------

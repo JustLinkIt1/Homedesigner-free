@@ -12,9 +12,10 @@ CORRECTLY — the tree has both Claude's purchase hardening
 Codex's `priceMicros`/`currency`. `node tests/billing.mjs` fences that; if it
 goes red, someone has dropped one half.
 
-### Three OPEN bugs, all reported by the owner, all diagnosed, none fixed
+### Three forum-access bugs — resolved in 1.22.6
 
-They are all in the "open the forum from the app / sign in from a browser" path.
+These were all in the "open the forum from the app / sign in from a browser"
+path. The 1.22.6 handoff immediately below records their completed fixes.
 
 1. **The forum link is in the About dialog, not Settings.** `SettingsDialog.tsx`
    has no mention of it. Users look in Settings. Add it there (About can keep
@@ -29,14 +30,15 @@ They are all in the "open the forum from the app / sign in from a browser" path.
    into the app.** `android/app/src/main/AndroidManifest.xml` has an
    `autoVerify="true"` intent-filter for `android:host="homedesignerapp.com"`
    with **no `pathPrefix`**, so Android App Links captures every path —
-   including the OAuth redirect back to `/community`. Restrict it to the paths
-   the app should own (`/app`) and deliberately not `/community`. Android cannot
-   express "everything except", so list the prefixes explicitly.
+   including the OAuth redirect through `/app/`. Because the app has no native
+   URL handler and `/app/` is the required web callback, 1.22.6 removes this
+   unused whole-domain intent-filter rather than narrowing it to another web
+   route that Android should not capture.
 
    Note (1) and (2) are web-bundle fixes, but (3) changes the native manifest:
    **it needs a new AAB and a Play release before browser sign-in works.**
    Codex's `9d97e0e` and `861d78b` are web-side attempts at the same symptom;
-   the manifest root cause is still there.
+   1.22.6 resolves the manifest root cause as well.
 
 ### How to build and sign an AAB
 
@@ -99,6 +101,49 @@ number for weeks. Never hand over an AAB whose `verify-aab` did not print
 * The owner does not want a release per fix — batch work, and only cut a version
   when asked.
 
+> **Android support/Model Studio routing repaired for 1.22.6 on 2026-08-09:**
+> Settings now links directly to the hosted community through Capacitor Browser
+> on Android and exposes Model Studio only when the signed-in email matches the
+> configured owner. The existing Worker admin check is unchanged. Hosted
+> `/community` and `/app/model-studio` sign-ins now use a full-page Google flow;
+> the exact relative page/query is carried in OAuth state and accepted only
+> after issuer, audience, nonce and expiry validation. This fixes mobile forum
+> login landing in `/app/` and avoids the disappearing popup that prevented the
+> Android Model Studio browser tab from authenticating.
+> A final native fix removes the manifest's unused whole-domain App Link
+> intent-filter. It had no matching in-app URL handler and intercepted the
+> fixed `/app/` Google callback before the browser could process it. The About
+> link now also uses Capacitor Browser rather than a bare WebView `_blank`
+> anchor. This manifest change is why the replacement AAB is required.
+> Cloudflare Pages production deployment `a544415c` is live on the custom
+> domain and both routes serve asset namespace `20260809162848082`. The signed
+> AAB is `android/app/build/outputs/bundle/release/app-release.aab`, 28,175,889
+> bytes, SHA-256
+> `570BEAD59CD9B452267C630E5B4212566423550D543446E4EF17AEF7EAA4BE18`;
+> the repository archive verifier and `jarsigner` both pass.
+> A stable copy is at `outputs/HomeDesigner-1.22.6-12206.aab`.
+> The identical 28,175,889-byte artifact is uploaded to Drive under
+> `HomeDesigner/Releases/HomeDesigner-1.22.6-12206.aab` (file id
+> `1inSoKnOqJrrvRIn-zK2vWWssW2EbQ4pE`).
+
+> **Release 1.22.6 purchase repair prepared 2026-08-09:** a production user
+> reported that **Unlock Pro** kept spinning and eventually showed “Still
+> waiting for the Play Store.” Read-only dashboard checks found no broken
+> commercial configuration: production is currently 1.22.4/12204; Google Play
+> shows `pro_unlock` published with its backwards-compatible purchase option
+> Active in 173 regions; RevenueCat shows the same product Published,
+> Non-consumable, attached to `Pro`, and present in the Android lifetime
+> package. The reporter was not discoverable as an identified RevenueCat
+> customer, consistent with the app previously allowing anonymous checkout.
+> The concrete client defect was `MainActivity` using `singleTask`, which
+> RevenueCat's Capacitor instructions exclude because Play or a banking app can
+> background the host during payment. Version 1.22.6/12206 switches to
+> `singleTop`, upgrades `@revenuecat/purchases-capacitor` 13.2.1 → 13.4.0, and
+> makes Google sign-in a separate first step before Android purchase/restore so
+> new Pro ownership is attached to the same stable account used on desktop and
+> other devices. Billing regression checks cover the identity gate and launch
+> mode. A real Play-installed purchase remains the final end-to-end check; do
+> not use a sideloaded APK for it.
 
 > **Community media/profile upgrade prepared 2026-08-09:** migration
 > `0002_community_media.sql` adds first-party avatar/post-image metadata and

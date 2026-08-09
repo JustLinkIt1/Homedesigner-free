@@ -822,4 +822,5 @@ export const NL: Record<string, string> = {
   'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'Ingelogd, maar cloudsynchronisatie kon niet worden voltooid. We proberen het opnieuw als je online bent.',
   'Sync couldn\'t finish. Check your connection and try again.': 'Synchronisatie kon niet worden voltooid. Controleer je verbinding en probeer opnieuw.',
   'Reload 3D': '3D opnieuw laden',
+  'Community & support': 'Community en ondersteuning',
 };

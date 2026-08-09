@@ -12,8 +12,8 @@
 //   node scripts/verify-aab.mjs [path/to/app-release.aab]
 
 import { readFileSync, existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
+import { unzipSync } from 'fflate';
 
 const root = process.cwd();
 const aab = process.argv[2]
@@ -31,14 +31,17 @@ if (!existsSync(aab)) {
   process.exit(1);
 }
 
+// Read the ZIP container in-process. The old verifier shelled out to Unix
+// `unzip`, which made every otherwise-valid Windows release fail verification.
+const archive = unzipSync(new Uint8Array(readFileSync(aab)));
+
 /** versionCode from the semver, matching scripts/sync-version.mjs. */
 const [major, minor, patch] = expected.split('.').map(Number);
 const expectedCode = major * 10000 + minor * 100 + patch;
 
 // --- native half: the proto AndroidManifest --------------------------------
-const manifest = execFileSync('unzip', ['-p', aab, 'base/manifest/AndroidManifest.xml'], {
-  maxBuffer: 1 << 26,
-});
+const manifestEntry = archive['base/manifest/AndroidManifest.xml'];
+const manifest = manifestEntry ? Buffer.from(manifestEntry) : Buffer.alloc(0);
 const varint = (n) => {
   const b = [];
   for (;;) {
@@ -55,10 +58,8 @@ check(`native versionCode is ${expectedCode}`, manifest.includes(varint(expected
 // APP_VERSION is injected by Vite `define` from package.json at BUILD time, so
 // the literal appearing here proves when dist/ was built — which is the whole
 // point of this script.
-const listing = execFileSync('unzip', ['-l', aab], { encoding: 'utf8', maxBuffer: 1 << 26 });
-const jsFiles = listing
-  .split('\n')
-  .map((l) => l.trim().split(/\s+/).pop())
+const files = Object.keys(archive);
+const jsFiles = files
   .filter((f) => f && f.startsWith('base/assets/public/assets/') && f.endsWith('.js'));
 
 check('the AAB contains a web bundle', jsFiles.length > 0, `${jsFiles.length} js files`);
@@ -66,7 +67,7 @@ check('the AAB contains a web bundle', jsFiles.length > 0, `${jsFiles.length} js
 let sawExpected = false;
 const strays = new Set();
 for (const f of jsFiles) {
-  const src = execFileSync('unzip', ['-p', aab, f], { encoding: 'latin1', maxBuffer: 1 << 26 });
+  const src = Buffer.from(archive[f]).toString('latin1');
   if (src.includes(`"${expected}"`)) sawExpected = true;
   // Any OTHER app-shaped version literal in the entry chunk is the stale-dist
   // signature. Library versions live in vendor chunks, so only look at index-*.
@@ -82,7 +83,7 @@ check('no other app version is baked into the entry chunk', strays.size === 0,
   [...strays].join(', '));
 
 // --- the assets the app loads at runtime -----------------------------------
-const glbs = (listing.match(/base\/assets\/public\/models\/[^\s]+\.glb/g) ?? []).length;
+const glbs = files.filter((f) => /^base\/assets\/public\/models\/.+\.glb$/.test(f)).length;
 check('bundled models are present', glbs > 0, `${glbs} .glb`);
 
 console.log(fails ? `\nAAB: ${fails} FAILED` : `\nAAB: all green (${expected} / ${expectedCode})`);

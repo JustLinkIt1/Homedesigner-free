@@ -58,6 +58,13 @@ export default function ProUpsellModal() {
 
   const native = Capacitor.isNativePlatform();
   const webBilling = !native && isWebBillingConfigured();
+  // An anonymous Play purchase works on this phone, but it cannot be followed
+  // reliably to another device or to the desktop app. Make identity a visible
+  // first step, then let the user review the price and explicitly buy. This
+  // also gives support a searchable RevenueCat customer instead of an opaque
+  // anonymous install when checkout fails.
+  const requiresAccount = native || webBilling;
+  const needsAccount = requiresAccount && !account;
   const actionBusy = busy || authBusy;
   const showPlanChoices = webBilling && !!account && plans.length > 0;
   const [selectedPlanID, setSelectedPlanID] = useState<'monthly' | 'yearly' | 'lifetime' | null>(null);
@@ -88,12 +95,14 @@ export default function ProUpsellModal() {
   }, [plans]);
   const copy = feature ? FEATURE_COPY[feature] : null;
   const Icon = copy?.icon;
-  const buyLabel = native || (webBilling && account)
+  const buyLabel = needsAccount
+    ? t('Sign in with Google')
+    : native || (webBilling && account)
     ? `${t('Unlock Pro')}${priceLabel ? ` — ${priceLabel}` : ''}`
     : webBilling
       ? t('Sign in with Google')
       : t('Get the Android app');
-  const onPrimaryAction = native || !webBilling || account ? purchase : signIn;
+  const onPrimaryAction = needsAccount ? signIn : purchase;
   const benefits = [
     ...CORE_BENEFITS,
     webBilling ? 'Monthly, yearly or lifetime — your choice' : 'One-time purchase — no subscription',
@@ -180,7 +189,7 @@ export default function ProUpsellModal() {
               </p>
             </>
           )}
-          {(native || (webBilling && account)) && (
+          {(native || webBilling) && account && (
             <button className="pro-restore" onClick={restore} disabled={actionBusy}>
               {t('Restore purchase')}
             </button>

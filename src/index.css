@@ -2750,6 +2750,10 @@ button.brand:hover .brand-name {
   color: var(--text-2);
   margin-bottom: 8px;
 }
+.settings-actions {
+  display: grid;
+  gap: 8px;
+}
 .seg {
   display: flex;
   gap: 4px;

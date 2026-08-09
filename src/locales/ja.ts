@@ -822,4 +822,5 @@ export const JA: Record<string, string> = {
   'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'サインインしましたが、クラウド同期を完了できませんでした。オンラインになったら再試行します。',
   'Sync couldn\'t finish. Check your connection and try again.': '同期を完了できませんでした。接続を確認して再試行してください。',
   'Reload 3D': '3Dを再読み込み',
+  'Community & support': 'コミュニティとサポート',
 };

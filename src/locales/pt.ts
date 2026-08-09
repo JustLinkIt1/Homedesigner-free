@@ -822,4 +822,5 @@ export const PT: Record<string, string> = {
   'Signed in, but cloud sync couldn\'t finish. We\'ll retry when you\'re online.': 'Sessão iniciada, mas a sincronização na nuvem não terminou. Tentaremos de novo quando estiver online.',
   'Sync couldn\'t finish. Check your connection and try again.': 'A sincronização não terminou. Verifique a ligação e tente novamente.',
   'Reload 3D': 'Recarregar 3D',
+  'Community & support': 'Comunidade e suporte',
 };

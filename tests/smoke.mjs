@@ -136,6 +136,9 @@ const proSource = await readFile(join(root, 'src', 'lib', 'pro.ts'), 'utf8');
 const proUpsellSource = await readFile(join(root, 'src', 'components', 'ProUpsellModal.tsx'), 'utf8');
 const canvas2DSource = await readFile(join(root, 'src', 'components', 'Editor2D', 'Canvas2D.tsx'), 'utf8');
 const modelStudioAccessSource = await readFile(join(root, 'src', 'lib', 'modelStudioAccess.ts'), 'utf8');
+const communityAccessSource = await readFile(join(root, 'src', 'lib', 'communityAccess.ts'), 'utf8');
+const settingsSource = await readFile(join(root, 'src', 'components', 'SettingsDialog.tsx'), 'utf8');
+const aboutSource = await readFile(join(root, 'src', 'components', 'AboutDialog.tsx'), 'utf8');
 const scene3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Scene3D.tsx'), 'utf8');
 const furniture3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Furniture3D.tsx'), 'utf8');
 const referralSource = await readFile(join(root, 'src', 'lib', 'referral.ts'), 'utf8');
@@ -154,6 +157,23 @@ check(
     !modelStudioAccessSource.includes('window.open('),
 );
 check(
+  'Settings links to support and exposes Model Studio only to its owner',
+  settingsSource.includes('openCommunityForum') &&
+    settingsSource.includes('Community & support') &&
+    settingsSource.includes('isModelStudioOwner(account?.email)') &&
+    settingsSource.includes('{canOpenModelStudio ? (') &&
+    settingsSource.includes('void openModelStudio()'),
+);
+check(
+  'Android forum links use Capacitor Browser and website OAuth stays in the browser',
+  communityAccessSource.includes("from '@capacitor/browser'") &&
+    communityAccessSource.includes('await Browser.open({ url: COMMUNITY_URL })') &&
+    settingsSource.includes('void openCommunityForum()') &&
+    aboutSource.includes('void openCommunityForum()') &&
+    !androidManifest.includes('android:autoVerify="true"') &&
+    !androidManifest.includes('android:host="homedesignerapp.com"'),
+);
+check(
   'Google login avoids the plugin 8.3.38 invalid-JWT decoder',
   !googleAuthSource.includes('SocialLogin.decodeIdToken') && googleAuthSource.includes('result.profile.id'),
 );
@@ -166,10 +186,18 @@ check(
 check(
   'desktop OAuth callback recovers from an opener-less popup tab',
   googleAuthSource.includes('finishStrandedGooglePopup') &&
-    googleAuthSource.includes('claims?.nonce !== pending.nonce') &&
+    googleAuthSource.includes('claims?.nonce !== (pending?.nonce ?? redirectState?.nonce)') &&
     googleAuthSource.includes("claims?.aud !== GOOGLE_WEB_CLIENT_ID") &&
-    googleAuthSource.includes('new BroadcastChannel(`google_oauth_${pending.nonce}`)') &&
+    googleAuthSource.includes('new BroadcastChannel(`google_oauth_${pending?.nonce ?? redirectState?.nonce}`)') &&
     mainSource.includes('const completedGooglePopup = finishStrandedGooglePopup()'),
+);
+check(
+  'mobile web OAuth returns to the exact forum or Model Studio page',
+  googleAuthSource.includes("window.location.pathname.startsWith('/community')") &&
+    googleAuthSource.includes("window.location.pathname.startsWith('/app/model-studio')") &&
+    googleAuthSource.includes('state: JSON.stringify({ version: 1, nonce, returnTo }') &&
+    googleAuthSource.includes('const redirectState = readRedirectState(params.get(\'state\'))') &&
+    googleAuthSource.includes('window.location.replace(returnTo)'),
 );
 check(
   'desktop session restore rejects an expired persisted Google token',

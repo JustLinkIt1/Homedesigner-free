@@ -1,6 +1,8 @@
 import { Info, ExternalLink, Mail } from 'lucide-react';
 import Modal from './Modal';
 import { APP_NAME, APP_TAGLINE, APP_VERSION, PRIVACY_URL, COMMUNITY_URL, SUPPORT_EMAIL, CREDITS } from '../lib/appInfo';
+import { Capacitor } from '@capacitor/core';
+import { openCommunityForum } from '../lib/communityAccess';
 
 const supportHref = () =>
   `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} ${APP_VERSION} feedback`)}&body=${encodeURIComponent(
@@ -27,7 +29,16 @@ export default function AboutDialog({ open, onClose }: { open: boolean; onClose:
           </p>
           <p className="muted">
             Questions, ideas or something broken? Ask in the{' '}
-            <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer">
+            <a
+              href={COMMUNITY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => {
+                if (!Capacitor.isNativePlatform()) return;
+                event.preventDefault();
+                void openCommunityForum();
+              }}
+            >
               community forum <ExternalLink className="icon" style={{ width: 12, height: 12 }} />
             </a>
             .

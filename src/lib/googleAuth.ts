@@ -32,6 +32,30 @@ interface GoogleTokenClaims {
   sub?: string;
 }
 
+interface GoogleRedirectState {
+  nonce: string;
+  returnTo: string;
+  version: 1;
+}
+
+function safeReturnPath(value: unknown): string | null {
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')
+    ? value
+    : null;
+}
+
+function readRedirectState(value: string | null): GoogleRedirectState | null {
+  if (!value) return null;
+  try {
+    const state = JSON.parse(value) as Partial<GoogleRedirectState>;
+    const returnTo = safeReturnPath(state.returnTo);
+    if (state.version !== 1 || typeof state.nonce !== 'string' || !state.nonce || !returnTo) return null;
+    return { version: 1, nonce: state.nonce, returnTo };
+  } catch {
+    return null;
+  }
+}
+
 function readTokenClaims(token: string): GoogleTokenClaims | null {
   try {
     const encoded = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -66,20 +90,24 @@ export function finishStrandedGooglePopup(): boolean {
   ) return false;
 
   try {
-    const pendingRaw = localStorage.getItem(GOOGLE_OAUTH_PENDING_KEY);
-    if (!pendingRaw) return false;
-    const pending = JSON.parse(pendingRaw) as { provider?: string; nonce?: string; returnTo?: string };
-    if (pending.provider !== 'google' || !pending.nonce) return false;
-
     const params = new URLSearchParams(window.location.hash.slice(1));
-    // Mobile browsers can complete OAuth in a different tab/context, where
-    // sessionStorage from the forum tab is unavailable. Keep the return path
-    // inside the nonce-bound local transaction as well, and accept only a
-    // same-origin relative path before navigating to it.
-    const storedReturnTo = pending.returnTo ?? sessionStorage.getItem(GOOGLE_REDIRECT_RETURN_KEY);
-    const returnTo = storedReturnTo?.startsWith('/') && !storedReturnTo.startsWith('//')
-      ? storedReturnTo
+    const redirectState = readRedirectState(params.get('state'));
+    const pendingRaw = localStorage.getItem(GOOGLE_OAUTH_PENDING_KEY);
+    const pending = pendingRaw
+      ? JSON.parse(pendingRaw) as { provider?: string; nonce?: string; returnTo?: string }
       : null;
+    if (pending && (pending.provider !== 'google' || !pending.nonce)) return false;
+    if (!pending?.nonce && !redirectState?.nonce) return false;
+    if (pending?.nonce && redirectState?.nonce && pending.nonce !== redirectState.nonce) return false;
+
+    // Mobile browsers can complete OAuth in a different tab/context, where
+    // local/session storage from the forum tab can be unavailable. Google
+    // echoes `state`, and the ID token binds the same nonce, so carrying the
+    // validated relative return path there makes the hand-off reliable without
+    // allowing an open redirect.
+    const returnTo = redirectState?.returnTo ??
+      safeReturnPath(pending?.returnTo) ??
+      safeReturnPath(sessionStorage.getItem(GOOGLE_REDIRECT_RETURN_KEY));
     if (params.get('error') && returnTo) {
       localStorage.removeItem(GOOGLE_OAUTH_PENDING_KEY);
       sessionStorage.removeItem(GOOGLE_REDIRECT_RETURN_KEY);
@@ -94,7 +122,7 @@ export function finishStrandedGooglePopup(): boolean {
       !accessToken ||
       !idToken ||
       claims?.aud !== GOOGLE_WEB_CLIENT_ID ||
-      claims?.nonce !== pending.nonce ||
+      claims?.nonce !== (pending?.nonce ?? redirectState?.nonce) ||
       !trustedIssuer ||
       !tokenIsFresh(idToken)
     ) {
@@ -130,7 +158,7 @@ export function finishStrandedGooglePopup(): boolean {
     }
 
     window.opener?.postMessage(message, window.location.origin);
-    const channel = new BroadcastChannel(`google_oauth_${pending.nonce}`);
+    const channel = new BroadcastChannel(`google_oauth_${pending?.nonce ?? redirectState?.nonce}`);
     channel.postMessage(message);
     channel.close();
 
@@ -159,7 +187,10 @@ function startGooglePageRedirect(): Promise<GoogleAccount> {
     response_type: 'token id_token',
     scope: 'openid email profile',
     include_granted_scopes: 'true',
-    state: 'community',
+    // Carry the exact page through mobile OAuth. Some Android browser hand-offs
+    // do not preserve the originating tab's storage, so localStorage alone is
+    // not a reliable return address.
+    state: JSON.stringify({ version: 1, nonce, returnTo } satisfies GoogleRedirectState),
     nonce,
   });
   window.location.assign(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
@@ -206,7 +237,10 @@ export async function signInWithGoogle(): Promise<GoogleAccount> {
     await SocialLogin.logout({ provider: 'google' }).catch(() => {});
     currentIdToken = null;
   }
-  if (!Capacitor.isNativePlatform() && window.location.pathname.startsWith('/community')) {
+  const needsFullPageRedirect =
+    window.location.pathname.startsWith('/community') ||
+    window.location.pathname.startsWith('/app/model-studio');
+  if (!Capacitor.isNativePlatform() && needsFullPageRedirect) {
     return startGooglePageRedirect();
   }
   const { result } = await SocialLogin.login({
