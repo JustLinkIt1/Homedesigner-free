@@ -78,6 +78,23 @@ const REVENUECAT_WEB_KEY = (import.meta.env.VITE_REVENUECAT_WEB_KEY ?? '').trim(
 /** Preferred entitlement identifier. Kept resilient below: any active
  *  entitlement counts as Pro, so a dashboard rename can't lock buyers out. */
 const ENTITLEMENT_ID = 'Pro';
+/** The Google Play products this app SELLS, one per plan, cheapest first.
+ *  Android checkout must be handed a package backed by one of THESE and nothing
+ *  else — see `playPackage()`.
+ *
+ *  `pro_unlock` is deliberately absent. It is the original $6.99 lifetime
+ *  unlock, and it still grants the `Pro` entitlement — every past buyer and
+ *  every redeemed community promo code keeps working, because entitlement is
+ *  what `isEntitled()`/`restore()` read, not this list. But Google will not
+ *  reprice a product with a live promotion attached, and the community
+ *  campaign's 497 codes run to Aug 2027, so the sellable lifetime product is
+ *  `pro_lifetime` and `pro_unlock` survives for redemptions only. Play product
+ *  ids can never be renamed, reused or deleted — only deactivated. */
+const PLAY_PLAN_PRODUCTS: ReadonlyArray<{ id: ProPlanID; label: string; productID: string }> = [
+  { id: 'monthly', label: 'Monthly', productID: 'pro_monthly' },
+  { id: 'yearly', label: 'Yearly', productID: 'pro_yearly' },
+  { id: 'lifetime', label: 'Lifetime', productID: 'pro_lifetime' },
+];
 
 /** True only when the customer holds the product's configured Pro entitlement.
  * Other RevenueCat entitlements must not silently unlock this app. */
@@ -88,13 +105,73 @@ function hasProEntitlement(customerInfo: any): boolean {
 
 /** First purchasable package across ALL offerings, preferring the current one.
  *  Guards against the wrong offering being marked "current" in the dashboard:
- *  if current has no store-valid packages, we scan the rest. */
+ *  if current has no packages at all, we scan the rest.
+ *
+ *  WEB ONLY — last resort when no named plan package matches. Never use this on
+ *  Android: position tells you nothing about which store owns the product, and
+ *  buying a non-Play product hangs the sheet forever. Use `playPackage()`. */
 function firstAvailablePackage(offerings: any): any | null {
   const pools: any[] = [];
   if (offerings?.current) pools.push(offerings.current);
   for (const off of Object.values(offerings?.all ?? {})) pools.push(off);
   for (const off of pools) {
     const pkg = (off as any)?.availablePackages?.[0];
+    if (pkg) return pkg;
+  }
+  return null;
+}
+
+/**
+ * The package Google Play can actually sell, chosen by product identifier
+ * rather than by position.
+ *
+ * A RevenueCat package holds one product PER app, so a single offering can
+ * carry a Play product, a Web Billing product and a Test Store product side by
+ * side. Taking `availablePackages[0]` therefore says nothing about which store
+ * the product belongs to, and this project's CURRENT offering (`default`) is
+ * populated entirely with non-Play products — the Play `pro_unlock` lives in a
+ * different, non-current offering. `firstAvailablePackage` only skips offerings
+ * that are EMPTY, so a current offering full of products Play cannot sell walks
+ * straight past it.
+ *
+ * Handing `purchasePackage` one of those is not an error the SDK reports: Play
+ * is asked to open a sheet for a product it has never heard of, so no sheet
+ * appears and the promise never settles. That is indistinguishable from "the
+ * button hangs" — reported on 1.22.4 and again on 1.22.6 as "clicking on the
+ * 'unlock pro' button hangs for a long time, then a message reads 'still
+ * waiting for the play store'", with no purchase ever reaching RevenueCat.
+ *
+ * Returning null when the Play product is absent is deliberate: "Pro upgrade is
+ * not available right now" is a far better outcome than a spinner that cannot
+ * end, and it can never charge for the wrong thing.
+ *
+ * Selecting by id rather than by `offering.monthly`/`.annual`/`.lifetime` is the
+ * same argument: those accessors report the package SLOT, which says nothing
+ * about which store owns the product sitting in it.
+ */
+function playPackageForProduct(offerings: any, productID: string): any | null {
+  for (const off of offeringPools(offerings)) {
+    for (const pkg of (off as any)?.availablePackages ?? []) {
+      const id: unknown = pkg?.product?.identifier;
+      // Play appends the purchase option / base plan to a product id
+      // (`pro_unlock:prounlock`, `pro_yearly:pro-yearly`).
+      if (typeof id === 'string' && (id === productID || id.startsWith(`${productID}:`))) {
+        return pkg;
+      }
+    }
+  }
+  return null;
+}
+
+export function playPackage(offerings: any, planID?: ProPlanID): any | null {
+  // With no plan named, prefer the best-value end of the ladder — lifetime, then
+  // yearly, then monthly — so a build whose subscriptions are not live yet still
+  // sells the one-time unlock rather than nothing.
+  const wanted = planID
+    ? PLAY_PLAN_PRODUCTS.filter((plan) => plan.id === planID)
+    : [...PLAY_PLAN_PRODUCTS].reverse();
+  for (const plan of wanted) {
+    const pkg = playPackageForProduct(offerings, plan.productID);
     if (pkg) return pkg;
   }
   return null;
@@ -188,20 +265,39 @@ class RevenueCatProvider implements ProProvider {
     const Purchases = await this.sdk();
     const offerings = await withTimeout(
       Purchases.getOfferings(), STORE_TIMEOUT_MS, 'Timed out loading store products');
-    const pkg = firstAvailablePackage(offerings);
+    // Must be the SAME package checkout will use, or the sheet promises a price
+    // Play is not about to charge.
+    const pkg = playPackage(offerings);
     return pkg?.product.priceString ?? null;
   }
 
   async getPlans(): Promise<ProPlan[]> {
-    const priceLabel = await this.getPrice();
-    return priceLabel ? [{ id: 'lifetime', label: 'Lifetime', priceLabel }] : [];
-  }
-
-  async purchase(_planID?: ProPlanID): Promise<boolean> {
     const Purchases = await this.sdk();
     const offerings = await withTimeout(
       Purchases.getOfferings(), STORE_TIMEOUT_MS, 'Timed out loading store products');
-    const pkg = firstAvailablePackage(offerings);
+    // Only plans Play can actually sell are offered. A plan whose product is
+    // missing (not yet live, or unavailable in this country) is left out rather
+    // than shown and then failing at checkout.
+    return PLAY_PLAN_PRODUCTS.flatMap(({ id, label, productID }) => {
+      const product = playPackageForProduct(offerings, productID)?.product;
+      if (!product?.priceString) return [];
+      return [{
+        id,
+        label,
+        priceLabel: product.priceString,
+        // Play reports a plain number plus a currency code; the upsell's
+        // yearly-saving maths compares micros within one currency.
+        priceMicros: typeof product.price === 'number' ? Math.round(product.price * 1_000_000) : undefined,
+        currency: typeof product.currencyCode === 'string' ? product.currencyCode : undefined,
+      }];
+    });
+  }
+
+  async purchase(planID?: ProPlanID): Promise<boolean> {
+    const Purchases = await this.sdk();
+    const offerings = await withTimeout(
+      Purchases.getOfferings(), STORE_TIMEOUT_MS, 'Timed out loading store products');
+    const pkg = playPackage(offerings, planID);
     if (!pkg) throw new Error('Pro upgrade is not available right now. Please try again later.');
     let customerInfo;
     try {

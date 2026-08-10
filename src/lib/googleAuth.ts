@@ -192,6 +192,11 @@ function startGooglePageRedirect(): Promise<GoogleAccount> {
     // not a reliable return address.
     state: JSON.stringify({ version: 1, nonce, returnTo } satisfies GoogleRedirectState),
     nonce,
+    // Always show the chooser. With an active Google session and no `prompt`,
+    // Google skips it and re-issues for whichever account is already signed in,
+    // so "sign in" after a sign-out silently returned the PREVIOUS account and
+    // switching accounts was impossible.
+    prompt: 'select_account',
   });
   window.location.assign(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
   // Navigation replaces this page; keeping the promise pending prevents the
@@ -289,17 +294,45 @@ export async function hasGoogleSession(): Promise<boolean> {
   return false;
 }
 
+/** Drop the provider's PERSISTED credential, not just the in-memory copy.
+ *
+ *  `handleGoogleRedirectCallback` writes GOOGLE_PROVIDER_STATE_KEY itself, to
+ *  mimic what the plugin stores after a popup message. Clearing it is therefore
+ *  our responsibility too — the plugin's own logout does not reliably remove a
+ *  record it did not create.
+ *
+ *  Observed on the live site while the UI showed "Sign in with Google": the
+ *  account cache was null, yet this key still held an UNEXPIRED access + ID
+ *  token for the previously signed-in address. Two consequences, both reported:
+ *  `isLoggedIn()` reads that token and claims a session, so signing in as a
+ *  DIFFERENT account either silently reused the old one or threw on the
+ *  unexpected login response; and a live Google credential outlived sign-out in
+ *  localStorage, which on a shared machine is a credential leak.
+ */
+function clearPersistedGoogleCredential(): void {
+  try {
+    localStorage.removeItem(GOOGLE_PROVIDER_STATE_KEY);
+    localStorage.removeItem(GOOGLE_OAUTH_PENDING_KEY);
+    sessionStorage.removeItem(GOOGLE_REDIRECT_RETURN_KEY);
+  } catch {
+    /* storage unavailable — the in-memory token is still cleared below */
+  }
+}
+
 export async function signOutFromGoogle(): Promise<void> {
   // Clear first so no in-flight cloud request can reuse the credential while
   // the provider is taking time to finish its own logout.
   currentIdToken = null;
+  clearPersistedGoogleCredential();
   try {
     await initializeGoogle();
     await SocialLogin.logout({ provider: 'google' });
   } finally {
-    // Never let an in-memory credential survive a local sign-out, even when
-    // the provider's remote logout call is temporarily unavailable.
+    // Never let a credential survive a local sign-out, even when the provider's
+    // remote logout call is temporarily unavailable. Repeated deliberately: the
+    // plugin can re-persist its state while logging out.
     currentIdToken = null;
+    clearPersistedGoogleCredential();
   }
 }
 

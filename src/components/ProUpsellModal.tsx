@@ -66,7 +66,12 @@ export default function ProUpsellModal() {
   const requiresAccount = native || webBilling;
   const needsAccount = requiresAccount && !account;
   const actionBusy = busy || authBusy;
-  const showPlanChoices = webBilling && !!account && plans.length > 0;
+  // Android sells the same monthly/yearly/lifetime ladder as the web build, so
+  // the choice grid is no longer web-only. Gated on more than ONE plan so a
+  // store that currently offers only the lifetime unlock — a country the
+  // subscriptions are not live in, or a build predating them — still gets the
+  // single "Unlock Pro — <price>" button rather than a grid of one.
+  const showPlanChoices = requiresAccount && !!account && plans.length > 1;
   const [selectedPlanID, setSelectedPlanID] = useState<'monthly' | 'yearly' | 'lifetime' | null>(null);
   useEffect(() => {
     if (!showPlanChoices) return;
@@ -103,9 +108,13 @@ export default function ProUpsellModal() {
       ? t('Sign in with Google')
       : t('Get the Android app');
   const onPrimaryAction = needsAccount ? signIn : purchase;
+  // Web knows its ladder before sign-in; native only learns it from the store,
+  // so fall back to the one-time claim until the plans are actually loaded.
   const benefits = [
     ...CORE_BENEFITS,
-    webBilling ? 'Monthly, yearly or lifetime — your choice' : 'One-time purchase — no subscription',
+    webBilling || plans.length > 1
+      ? 'Monthly, yearly or lifetime — your choice'
+      : 'One-time purchase — no subscription',
   ];
 
   return (

@@ -21,3 +21,6 @@ tsconfig.tsbuildinfo
 .claude/
 .wrangler/
 site-dist
+
+# Release artifacts (AAB copies) stay local; Drive/Play hold the canonical ones.
+outputs/

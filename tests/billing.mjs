@@ -27,7 +27,7 @@ const dir = mkdtempSync(join(tmpdir(), 'hdbilling-'));
 const entry = join(root, '.billing-entry.tmp.ts');
 writeFileSync(entry, `
 export { useProStore } from '${rootImport}/src/store/proStore.ts';
-export { setProProvider } from '${rootImport}/src/lib/pro.ts';
+export { setProProvider, playPackage } from '${rootImport}/src/lib/pro.ts';
 `);
 
 const out = join(dir, 'bundle.mjs');
@@ -56,7 +56,7 @@ try {
   rmSync(entry, { force: true });
 }
 
-const { useProStore, setProProvider } = mod;
+const { useProStore, setProProvider, playPackage } = mod;
 
 let failures = 0;
 const check = (name, ok, detail = '') => {
@@ -267,9 +267,85 @@ const reset = (isPro) => {
   check('restore is attached to an identified account',
     modal.includes('{(native || webBilling) && account && ('));
 
+  // Android now sells the same ladder as web, so the plan grid must not be
+  // web-only — but a store offering only the lifetime unlock keeps the single
+  // button rather than rendering a grid of one.
+  check('the plan grid is offered on Android too',
+    modal.includes('const showPlanChoices = requiresAccount && !!account && plans.length > 1'));
+
   const manifest = readFileSync(join(root, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
   check('Android uses RevenueCat-compatible singleTop launch mode',
     manifest.includes('android:launchMode="singleTop"') && !manifest.includes('android:launchMode="singleTask"'));
+}
+
+// --- Android must only ever be handed a package Play can sell ---------------
+//
+// A RevenueCat package holds one product PER app, so one offering can carry a
+// Play product, a Web Billing product and a Test Store product side by side.
+// This project's CURRENT offering (`default`) carries only the latter two; the
+// Play `pro_unlock` sits in a different, non-current offering. Selecting
+// `availablePackages[0]` therefore picks a product Play has never heard of —
+// and Play does not report that as an error. No sheet opens, the promise never
+// settles, and the buy button spins until the 180s bound: reported twice as
+// "clicking on the 'unlock pro' button hangs ... 'still waiting for the play
+// store'", with $0 ever reaching RevenueCat.
+//
+// Fault-injected: reverting either call site to firstAvailablePackage fails
+// this, and so does dropping the identifier match.
+{
+  const whole = readFileSync(join(root, 'src/lib/pro.ts'), 'utf8');
+  const from = whole.indexOf('class RevenueCatProvider');
+  const to = whole.indexOf('class WebRevenueCatProvider');
+  const native = whole.slice(from, to);
+
+  check('Android selects its package by Play product id, not by position',
+    /const PLAY_PLAN_PRODUCTS/.test(whole) && /function playPackage\(/.test(whole));
+  check('Android checkout never falls back to a positional package',
+    !/firstAvailablePackage/.test(native),
+    'firstAvailablePackage still reachable from the native provider');
+  check('every Play plan maps to a distinct product id',
+    new Set(['pro_monthly', 'pro_yearly', 'pro_lifetime']
+      .filter((id) => whole.includes(`productID: '${id}'`))).size === 3);
+  // pro_unlock is promo-only: Google will not reprice a product with a live
+  // promotion, so it must never be offered for sale again — while still
+  // granting Pro to everyone who already holds it, via the entitlement.
+  check('the promo-only pro_unlock is never sellable',
+    !/productID: 'pro_unlock'/.test(whole));
+
+  // Play appends the purchase option / base plan to a product id, so an exact
+  // match alone would miss `pro_unlock:prounlock`.
+  check('the Play product match tolerates the purchase-option suffix',
+    /startsWith\(`\$\{productID\}:`\)/.test(whole));
+
+  // Exercise the real selector against the shape the dashboard actually serves.
+  const pkgs = (...ids) => ({ availablePackages: ids.map((id) => ({ product: { identifier: id } })) });
+  const webOnlyCurrent = {
+    current: pkgs('pro_monthly_web'),
+    all: { default: pkgs('pro_monthly_web'), 'Pro unlcok': pkgs('pro_lifetime') },
+  };
+  check('a web-only current offering still resolves to the Play product',
+    playPackage(webOnlyCurrent)?.product.identifier === 'pro_lifetime');
+  check('a suffixed Play product id still resolves',
+    playPackage({ all: { o: pkgs('pro_lifetime:prolifetime') } })?.product.identifier === 'pro_lifetime:prolifetime');
+  check('no Play product means no purchase attempt at all',
+    playPackage({ current: webOnlyCurrent.current, all: { default: webOnlyCurrent.all.default } }) === null);
+
+  // The ladder: each plan must resolve to ITS OWN product, never a neighbour's —
+  // charging for the wrong tier is the one outcome worse than not selling.
+  const ladder = { current: pkgs('pro_monthly', 'pro_yearly', 'pro_lifetime'), all: {} };
+  check('each plan buys its own Play product',
+    playPackage(ladder, 'monthly')?.product.identifier === 'pro_monthly' &&
+      playPackage(ladder, 'yearly')?.product.identifier === 'pro_yearly' &&
+      playPackage(ladder, 'lifetime')?.product.identifier === 'pro_lifetime');
+  check('an unnamed plan defaults to lifetime, not to the first package',
+    playPackage(ladder)?.product.identifier === 'pro_lifetime');
+  check('a plan whose product is missing never silently buys another',
+    playPackage({ current: pkgs('pro_lifetime'), all: {} }, 'yearly') === null);
+
+  // The legacy unlock must not be resellable even when the store still offers it.
+  check('a lingering pro_unlock package is never selected',
+    playPackage({ current: pkgs('pro_unlock'), all: {} }) === null &&
+      playPackage({ current: pkgs('pro_unlock'), all: {} }, 'lifetime') === null);
 }
 
 // --- the buy button must always stop spinning -------------------------------
