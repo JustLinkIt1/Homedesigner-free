@@ -241,6 +241,11 @@ export async function signInWithGoogle(): Promise<GoogleAccount> {
   if (existing.isLoggedIn) {
     await SocialLogin.logout({ provider: 'google' }).catch(() => {});
     currentIdToken = null;
+    // Also drop the record WE persisted. Without this, anyone already carrying a
+    // stale credential from before that key was cleaned up on sign-out stays
+    // stuck: `signOut()` early-returns when no account is cached, so this login
+    // path is their only route back to a clean session.
+    clearPersistedGoogleCredential();
   }
   const needsFullPageRedirect =
     window.location.pathname.startsWith('/community') ||
