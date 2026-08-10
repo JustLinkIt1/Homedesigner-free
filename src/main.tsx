@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { useProStore } from './store/proStore';
 import { useDesign } from './store/designStore';
 import { initTheme } from './lib/theme';
+import { toast } from './lib/ui';
 import { finishStrandedGooglePopup } from './lib/googleAuth';
 import './index.css';
 
@@ -31,6 +32,63 @@ const modelStudioRequested =
 // A lightweight shell marker makes production startup observable and ensures
 // each app-shell revision receives a fresh immutable asset fingerprint.
 document.documentElement.dataset.appShell = 'ready';
+
+/**
+ * Recover a tab left behind by a deployment.
+ *
+ * Every build gets its own `assets/<namespace>/` directory and Pages serves only
+ * the newest deployment on the custom domain, so a tab opened before a deploy
+ * 404s on its next lazy import. The most visible casualty is the Social Login
+ * web implementation, which Capacitor only fetches on the first "Sign in with
+ * Google" click — the failure therefore lands on the sign-in path and reads as
+ * "Failed to fetch dynamically imported module", which tells the user nothing.
+ *
+ * The page cannot continue either way, so reload into the current build rather
+ * than dead-ending. The guard is a timestamp, not a once-per-session flag: a
+ * genuinely missing chunk fails again immediately, so a repeat inside the window
+ * means "broken deploy, stop and tell the user", while a tab left open across a
+ * second deploy hours later still recovers on its own.
+ */
+const STALE_CHUNK_KEY = 'homedesigner.stale-chunk-reload.v1';
+const STALE_CHUNK_RETRY_MS = 60_000;
+const STALE_CHUNK_PATTERN =
+  /failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed/i;
+
+function recoverFromStaleChunk(): void {
+  const now = Date.now();
+  let last = 0;
+  try {
+    last = Number(sessionStorage.getItem(STALE_CHUNK_KEY)) || 0;
+  } catch {
+    /* private mode — fall through and reload */
+  }
+  if (now - last < STALE_CHUNK_RETRY_MS) {
+    toast.error('Some of the app failed to load. Please refresh the page.');
+    return;
+  }
+  try {
+    sessionStorage.setItem(STALE_CHUNK_KEY, String(now));
+  } catch {
+    /* best effort */
+  }
+  window.location.reload();
+}
+
+// Vite raises this for any dynamic import it emitted; preventDefault stops it
+// from also becoming an unhandled rejection.
+window.addEventListener('vite:preloadError', ((event: Event) => {
+  event.preventDefault();
+  recoverFromStaleChunk();
+}) as EventListener);
+
+// Not every failed import routes through Vite's preload helper, so match the
+// browser's own message as a backstop.
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason as { message?: unknown } | null;
+  if (STALE_CHUNK_PATTERN.test(String(reason?.message ?? reason ?? ''))) {
+    recoverFromStaleChunk();
+  }
+});
 
 // Apply the persisted (or OS) theme before first paint to avoid a flash.
 initTheme();
