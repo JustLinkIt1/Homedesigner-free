@@ -142,6 +142,66 @@ export function finishStrandedGooglePopup(): boolean {
     localStorage.setItem(GOOGLE_PROVIDER_STATE_KEY, JSON.stringify({ accessToken, idToken }));
     localStorage.removeItem(GOOGLE_OAUTH_PENDING_KEY);
 
+    // Being a popup decides the hand-off, and it MUST be checked before
+    // `returnTo`. `window.open()` clones the opener's sessionStorage, so a tab
+    // that ever signed in through the full-page redirect (/community,
+    // /app/model-studio) leaves GOOGLE_REDIRECT_RETURN_KEY behind for every
+    // later popup to inherit. Ordering these the other way round sent the popup
+    // down `window.location.replace()` instead of posting its message — and the
+    // provider resolves ONLY on that message, while polling `popup.closed` every
+    // second and rejecting with "Popup closed" when the window goes away
+    // without one. That is the reported error, exactly.
+    const isPopup = (() => {
+      try {
+        return !!window.opener && window.opener !== window;
+      } catch {
+        return false; // cross-origin opener — treat as a redirect
+      }
+    })();
+
+    if (isPopup) {
+      const channel = (() => {
+        try {
+          return new BroadcastChannel(`google_oauth_${pending?.nonce ?? redirectState?.nonce}`);
+        } catch {
+          return null; // unsupported — postMessage alone still delivers
+        }
+      })();
+      const deliver = () => {
+        try {
+          window.opener?.postMessage(message, window.location.origin);
+        } catch {
+          /* opener navigated away */
+        }
+        try {
+          channel?.postMessage(message);
+        } catch {
+          /* channel already closed */
+        }
+      };
+      // Deliver more than once, and do NOT tear the channel down in the same
+      // tick: closing a BroadcastChannel immediately after posting can drop the
+      // message, and a single post followed by close() is a race against the
+      // opener's listener that only shows up on the fast path, when Google skips
+      // the consent screen and returns almost instantly.
+      deliver();
+      const retries = [120, 350, 800].map((ms) => window.setTimeout(deliver, ms));
+      // Remove bearer credentials from the address bar/history immediately.
+      history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      // The provider closes this window once it has the message; self-close is
+      // only the fallback for when it never listened at all.
+      window.setTimeout(() => {
+        retries.forEach((id) => window.clearTimeout(id));
+        try {
+          channel?.close();
+        } catch {
+          /* already closed */
+        }
+        window.close();
+      }, 1500);
+      return true;
+    }
+
     if (returnTo) {
       sessionStorage.removeItem(GOOGLE_REDIRECT_RETURN_KEY);
       if (claims?.sub) {
@@ -157,14 +217,9 @@ export function finishStrandedGooglePopup(): boolean {
       return true;
     }
 
-    window.opener?.postMessage(message, window.location.origin);
-    const channel = new BroadcastChannel(`google_oauth_${pending?.nonce ?? redirectState?.nonce}`);
-    channel.postMessage(message);
-    channel.close();
-
-    // Remove bearer credentials from the address bar/history immediately.
+    // Neither a popup nor a redirect with a known return path: the credential is
+    // already persisted above, so let the app boot normally on a clean URL.
     history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-    window.setTimeout(() => window.close(), 0);
     return true;
   } catch {
     return false;
