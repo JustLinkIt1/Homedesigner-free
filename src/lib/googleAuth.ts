@@ -257,7 +257,18 @@ export async function signInWithGoogle(): Promise<GoogleAccount> {
     provider: 'google',
     // Android adds openid/email/profile itself. Supplying `scopes` here makes
     // the plugin require a custom MainActivity even for those defaults.
-    options: {},
+    //
+    // `prompt` IS safe to pass, unlike `scopes`: the plugin documents it as web
+    // only, and mobile keeps using its native chooser. Captured from the real
+    // popup, the URL the plugin builds carries client_id, scope, nonce, state
+    // and response_type but NO prompt — and Google's default is to prompt "only
+    // the first time your project requests access". So with a live Google
+    // session it skipped the chooser and re-issued for the account already
+    // signed in, which is why signing in as a different address was impossible
+    // after a sign-out. Note this is a different code path from
+    // `startGooglePageRedirect` below, which builds its own URL: fixing that one
+    // did nothing for the popup used by /app/.
+    options: { prompt: 'select_account' },
   });
   if (result.responseType !== 'online') {
     throw new Error('Google Sign-In did not return an identity profile.');
