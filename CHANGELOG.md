@@ -23,6 +23,53 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.8 - 2026-08-11 (versionCode 12208)
+
+### Release identification
+
+- Bumped the version so an installed build can be identified with certainty.
+  1.22.7 carried the Play checkout fix and its version bump in the same commit,
+  which left no way to distinguish a build containing that fix from an earlier
+  artefact reporting the same version string. A device showing **1.22.8** in
+  About is necessarily built from this tree.
+- Restored `package-lock.json` to the release version. It was left at 1.22.6 by
+  the previous two bumps, so the three version locations the release procedure
+  requires to agree had silently drifted apart.
+- No application code changes. Play checkout behaves exactly as in 1.22.7.
+
+## 1.22.7 - 2026-08-10 (versionCode 12207)
+
+### Google Play checkout
+
+- Fixed **Unlock Pro** spinning forever with no purchase ever completing. The
+  current RevenueCat offering held only Test Store and Web Billing products, so
+  Android was handed a package Play has never heard of: Play opens no sheet and
+  never calls back, which is indistinguishable from a hang.
+  `firstAvailablePackage` skipped only EMPTY offerings, so a current offering
+  full of unsellable products walked straight past it.
+- Selected the Play package by product id rather than by position.
+  `playPackage()` resolves each plan to its own Play product across all
+  offerings and tolerates Play's `id:base-plan` suffix. An absent product now
+  reports "not available right now" instead of an unbounded spinner, and it can
+  never charge for the wrong tier.
+- Kept `pro_unlock` deliberately unsellable. It still grants Pro through the
+  entitlement, so earlier buyers and the 497 community codes continue to work,
+  but Google will not reprice a product carrying a live promotion; `pro_lifetime`
+  is the sellable one-time product.
+- Showed the monthly/yearly/lifetime plan grid on Android too, falling back to
+  the single button when a store offers only one plan.
+
+### Web sign-in
+
+- Cleared the provider's Google credential on sign-out. `handleGoogleRedirect-
+  Callback` wrote that key but nothing removed it, so the site showed "Sign in
+  with Google" while localStorage still held an unexpired access and ID token
+  for the previous account; `isLoggedIn()` then claimed a session and signing in
+  as a different account reused or threw on the stale one.
+- Sent `prompt=select_account` so the redirect flow stops silently re-picking
+  the already signed-in account, and recovered a tab stranded by a deployment
+  instead of dead-ending it.
+
 ## 1.22.6 - 2026-08-09 (versionCode 12206)
 
 ### Google Play checkout reliability
