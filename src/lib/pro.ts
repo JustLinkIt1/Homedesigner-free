@@ -155,9 +155,24 @@ function playPackageForProduct(offerings: any, productID: string): any | null {
       const id: unknown = pkg?.product?.identifier;
       // Play appends the purchase option / base plan to a product id
       // (`pro_unlock:prounlock`, `pro_yearly:pro-yearly`).
-      if (typeof id === 'string' && (id === productID || id.startsWith(`${productID}:`))) {
-        return pkg;
-      }
+      if (typeof id !== 'string' || !(id === productID || id.startsWith(`${productID}:`))) continue;
+      // A matching id is not sufficient. RevenueCat derives a one-time
+      // product's price from Play's BACKWARDS-COMPATIBLE purchase option alone
+      // — `ProductDetails.getOneTimePurchaseOfferDetails()`, the singular
+      // accessor; the `...List()` one that carries purchase options and
+      // discount offers is never read by the SDK we ship. When Play has
+      // nothing to report through it (a new purchase option that has not
+      // propagated, one unavailable in this country, or one the legacy
+      // accessor cannot express) the package still arrives — just priceless.
+      //
+      // Handing THAT to `purchasePackage` reproduces the exact hang this
+      // function exists to prevent: Play opens no sheet and the promise never
+      // settles. `getPlans` already declines to advertise a priceless product,
+      // so checkout has to decline to buy one too. Otherwise the two disagree
+      // about what is sellable, and the disagreement reaches the user as a
+      // three-minute spinner instead of a sentence they can act on.
+      if (typeof pkg?.product?.priceString !== 'string' || pkg.product.priceString === '') continue;
+      return pkg;
     }
   }
   return null;
@@ -238,10 +253,19 @@ class RevenueCatProvider implements ProProvider {
     if (!REVENUECAT_ANDROID_KEY) {
       throw new Error('Billing is not available in this build (no RevenueCat key).');
     }
-    const { Purchases } = await import('@revenuecat/purchases-capacitor');
+    const { Purchases, LOG_LEVEL } = await import('@revenuecat/purchases-capacitor');
     if (!this.configured) {
       this.configuring ??= withTimeout(
-        Purchases.configure({ apiKey: REVENUECAT_ANDROID_KEY }),
+        // Log level BEFORE configure(), or the configure/BillingClient handshake
+        // is the one part that never reaches logcat — and that handshake is
+        // exactly what goes quiet when the Play sheet never opens. A purchase
+        // that hangs produces no error, no callback and no sheet, so the SDK's
+        // own log is the only witness to where it stopped. RevenueCat writes to
+        // logcat only (never to the UI, never off-device), so this is invisible
+        // to users and costs them nothing.
+        Purchases.setLogLevel({ level: LOG_LEVEL.VERBOSE })
+          .catch(() => { /* logging is diagnostic; never block configure on it */ })
+          .then(() => Purchases.configure({ apiKey: REVENUECAT_ANDROID_KEY })),
         8000,
         'Could not connect to the store. Check your connection and try again.',
       ).then(() => { this.configured = true; }).finally(() => { this.configuring = null; });
@@ -297,8 +321,42 @@ class RevenueCatProvider implements ProProvider {
     const Purchases = await this.sdk();
     const offerings = await withTimeout(
       Purchases.getOfferings(), STORE_TIMEOUT_MS, 'Timed out loading store products');
+    // Logged BEFORE selection, so it is captured on the "not available right
+    // now" path too — that path throws, and the offerings that produced it are
+    // otherwise gone. This is the ground truth the dashboard cannot give us:
+    // what Play actually returned to THIS device, in THIS country, for THIS
+    // account. RevenueCat's Android SDK drops any product Play does not know,
+    // so a product missing here is missing in Play, not in our selection code.
+    console.warn('[pro] offerings', JSON.stringify({
+      current: offerings?.current?.identifier ?? null,
+      offerings: Object.fromEntries(Object.entries(offerings?.all ?? {}).map(([name, off]: [string, any]) =>
+        [name, (off?.availablePackages ?? []).map((p: any) =>
+          `${p?.identifier}/${p?.product?.identifier}@${p?.product?.priceString ?? 'NO PRICE'}`)])),
+    }));
     const pkg = playPackage(offerings, planID);
     if (!pkg) throw new Error('Pro upgrade is not available right now. Please try again later.');
+    // Breadcrumb for "it spins and no Play sheet ever appears". Capacitor
+    // mirrors console.* into logcat, so this lands beside RevenueCat's own
+    // VERBOSE lines and answers the question the SDK's silence cannot: which
+    // package did we actually hand over?
+    //
+    // It logs the fields that DECIDE the outcome, which are not the ones this
+    // file selects on. purchasePackage sends the native side only `identifier`
+    // and `presentedOfferingContext` (see the plugin's PurchasesPlugin.kt) —
+    // `product` is never transmitted. The SDK then looks the package up again
+    // in its own cached offering. So a package can match on product id and
+    // carry a perfectly good price, and still name an offering/identifier pair
+    // the SDK cannot resolve — at which point Play is never asked to open
+    // anything. `console.warn`, not `.log`: the lint gate allows only warn/error.
+    console.warn('[pro] purchasePackage', JSON.stringify({
+      planID: planID ?? '(default)',
+      packageID: pkg?.identifier,
+      offering: pkg?.presentedOfferingContext?.offeringIdentifier ?? pkg?.offeringIdentifier,
+      productID: pkg?.product?.identifier,
+      price: pkg?.product?.priceString,
+      productType: pkg?.product?.productType,
+      hasDefaultOption: !!pkg?.product?.defaultOption,
+    }));
     let customerInfo;
     try {
       ({ customerInfo } = await withTimeout(

@@ -273,6 +273,28 @@ const reset = (isPro) => {
   check('the plan grid is offered on Android too',
     modal.includes('const showPlanChoices = requiresAccount && !!account && plans.length > 1'));
 
+  // The buy button must not be gated on auth-store busy. `authBusy` also covers
+  // BACKGROUND account sync, and while it was OR'd into the button's state a
+  // sync that never settled left the primary button rendering a bare spinner
+  // AND disabled. Reported with a screenshot of a spinning "Unlock Pro" and
+  // "No but i never click anything": no purchase was ever started, so no Play
+  // sheet could ever open and nothing ever timed out. Sign-in may wait on auth;
+  // buying may not.
+  check('the buy button is not disabled by background account sync',
+    modal.includes('const actionBusy = needsAccount ? authBusy : busy;'),
+    'actionBusy folds authBusy into checkout again');
+
+  // The strand itself: unbounded network. Every `busy` flag clears in a
+  // `finally`, which is worthless if the awaited promise never settles.
+  const cloud = readFileSync(join(root, 'src/lib/cloudSync.ts'), 'utf8');
+  check('every cloud request is bounded',
+    !/[^h]\bfetch\(`\$\{SYNC_URL\}/.test(cloud) && cloud.includes('function fetchWithTimeout'),
+    'a raw fetch() to the sync Worker can hang forever');
+  const auth = readFileSync(join(root, 'src/store/authStore.ts'), 'utf8');
+  check('no auth path awaits an unbounded promise',
+    !/await Promise\.allSettled/.test(auth) && !/await signInWithGoogle\(\)/.test(auth),
+    'an unbounded await can strand busy and freeze the Pro sheet');
+
   const manifest = readFileSync(join(root, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
   check('Android uses RevenueCat-compatible singleTop launch mode',
     manifest.includes('android:launchMode="singleTop"') && !manifest.includes('android:launchMode="singleTask"'));
@@ -318,7 +340,11 @@ const reset = (isPro) => {
     /startsWith\(`\$\{productID\}:`\)/.test(whole));
 
   // Exercise the real selector against the shape the dashboard actually serves.
-  const pkgs = (...ids) => ({ availablePackages: ids.map((id) => ({ product: { identifier: id } })) });
+  // A real package always carries a price; `priceless` below covers the case
+  // where Play could not supply one.
+  const pkgs = (...ids) => ({
+    availablePackages: ids.map((id) => ({ product: { identifier: id, priceString: '$64.99' } })),
+  });
   const webOnlyCurrent = {
     current: pkgs('pro_monthly_web'),
     all: { default: pkgs('pro_monthly_web'), 'Pro unlcok': pkgs('pro_lifetime') },
@@ -341,6 +367,31 @@ const reset = (isPro) => {
     playPackage(ladder)?.product.identifier === 'pro_lifetime');
   check('a plan whose product is missing never silently buys another',
     playPackage({ current: pkgs('pro_lifetime'), all: {} }, 'yearly') === null);
+
+  // RevenueCat reads a one-time product's price from Play's backwards-compatible
+  // purchase option alone (getOneTimePurchaseOfferDetails, singular). When Play
+  // has none to report the package still arrives — just priceless — and handing
+  // that to purchasePackage opens no sheet and never settles: the 180-second
+  // spinner reported as "infinite spin before I even get a buy button".
+  // getPlans already refuses to advertise a priceless product; checkout has to
+  // refuse to buy one, or the two disagree about what is sellable.
+  const priceless = { current: { availablePackages: [{ product: { identifier: 'pro_lifetime' } }] }, all: {} };
+  check('a priceless Play package is never handed to checkout',
+    playPackage(priceless) === null && playPackage(priceless, 'lifetime') === null);
+  check('an empty price string is refused as well as a missing one',
+    playPackage({ current: { availablePackages: [{ product: { identifier: 'pro_lifetime', priceString: '' } }] }, all: {} },
+      'lifetime') === null);
+  // A priceless package must be SKIPPED, not abort the search: the sellable
+  // product may sit behind it in another offering.
+  check('a priceless package does not mask a sellable one behind it',
+    playPackage({
+      current: { availablePackages: [{ product: { identifier: 'pro_lifetime' } }] },
+      all: { 'Pro unlcok': pkgs('pro_lifetime') },
+    }, 'lifetime')?.product.priceString === '$64.99');
+  check('checkout and the plan list agree on what is sellable',
+    /priceString/.test(whole.slice(whole.indexOf('function playPackageForProduct'),
+      whole.indexOf('export function playPackage'))),
+    'playPackageForProduct no longer requires a price');
 
   // The legacy unlock must not be resellable even when the store still offers it.
   check('a lingering pro_unlock package is never selected',

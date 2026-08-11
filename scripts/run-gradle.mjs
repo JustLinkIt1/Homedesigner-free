@@ -6,7 +6,15 @@ import { join } from 'node:path';
 
 const androidDir = join(process.cwd(), 'android');
 const windows = process.platform === 'win32';
-const wrapper = windows ? 'gradlew.bat' : './gradlew';
+// An ABSOLUTE path, not a bare `gradlew.bat`. `cwd` alone is not enough: with
+// `shell: true` Windows runs the command through cmd.exe, and cmd only searches
+// the working directory when `NoDefaultCurrentDirectoryInExePath` is unset —
+// several shells (Git Bash among them) export it, and then a bare wrapper name
+// fails with "'gradlew.bat' is not recognized as an internal or external
+// command" even though the file is sitting right there in `cwd`. Quoted because
+// an absolute path may contain spaces.
+const wrapperPath = join(androidDir, windows ? 'gradlew.bat' : 'gradlew');
+const wrapper = windows ? `"${wrapperPath}"` : wrapperPath;
 const args = process.argv.slice(2);
 const env = { ...process.env };
 

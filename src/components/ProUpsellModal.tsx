@@ -65,7 +65,14 @@ export default function ProUpsellModal() {
   // anonymous install when checkout fails.
   const requiresAccount = native || webBilling;
   const needsAccount = requiresAccount && !account;
-  const actionBusy = busy || authBusy;
+  // Deliberately NOT `busy || authBusy`. `authBusy` also covers background
+  // account sync, which has nothing to do with checkout — and while it was
+  // folded in here, a sync that never settled rendered this sheet's primary
+  // button as a bare spinner AND disabled it. The user could not buy, and had
+  // pressed nothing: the button was already spinning when the sheet opened.
+  // Each flag now gates only the action it actually describes — sign-in waits
+  // on auth, buying and restoring wait on the Pro store.
+  const actionBusy = needsAccount ? authBusy : busy;
   // Android sells the same monthly/yearly/lifetime ladder as the web build, so
   // the choice grid is no longer web-only. Gated on more than ONE plan so a
   // store that currently offers only the lifetime unlock — a country the

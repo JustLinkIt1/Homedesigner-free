@@ -15,6 +15,34 @@ import { startProjectSync, syncProjects } from '../lib/cloudSync';
 const ACCOUNT_CACHE_KEY = 'homedesigner.google-account.v1';
 let stopProjectSync: (() => void) | null = null;
 
+/** Account work that runs WITHOUT a human in the loop. */
+const SYNC_TIMEOUT_MS = 20_000;
+/** Sign-in opens Google's account picker and waits for a person to choose an
+ *  account and possibly type a password. Cutting that short is its own bug, so
+ *  it gets the same minutes-long bound the Play sheet gets in `lib/pro.ts`. */
+const INTERACTIVE_TIMEOUT_MS = 180_000;
+
+/**
+ * A backstop so `busy` can never strand. Every `busy` flag here already clears
+ * in a `finally`, which is worthless if the awaited promise never settles —
+ * and `Promise.allSettled` does not settle while any member is pending.
+ *
+ * That is what shipped: a stalled request left `busy` true forever, and the Pro
+ * sheet spins its primary button (and DISABLES it) while any auth work is busy.
+ * The user then cannot buy anything, having pressed nothing. The underlying
+ * unbounded `fetch` is fixed in `lib/cloudSync.ts`; this bounds the store too,
+ * because sign-in and RevenueCat linking go through dependencies whose hangs we
+ * do not control, and a stuck spinner must never be one library away again.
+ */
+function bounded<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    promise,
+    // Resolve null rather than reject: a timeout here means "could not finish",
+    // never "failed" — it must not discard a valid account or entitlement.
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
 async function syncAccountData(): Promise<number> {
   stopProjectSync?.();
   stopProjectSync = startProjectSync();
@@ -87,7 +115,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
       set({ account: cached });
-      await Promise.allSettled([linkPurchases(cached), syncAccountData()]);
+      // Bounded like the rest: this one gates `ready`, and a startup that never
+      // becomes ready is the same class of stuck UI.
+      await bounded(Promise.allSettled([linkPurchases(cached), syncAccountData()]), SYNC_TIMEOUT_MS);
     } catch {
       // Offline startup must not discard a valid cached account or entitlement.
       set({ account: cached });
@@ -100,11 +130,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (get().busy || !get().configured) return;
     set({ busy: true });
     try {
-      const account = await signInWithGoogle();
+      const account = await bounded(signInWithGoogle(), INTERACTIVE_TIMEOUT_MS);
+      // Null means the picker never came back. Fail the sign-in rather than
+      // writing a null account over a perfectly good cached one.
+      if (!account) throw new Error(t('Google Sign-In did not complete.'));
       writeAccount(account);
       set({ account, ready: true });
-      const [purchases, plans] = await Promise.allSettled([linkPurchases(account), syncAccountData()]);
-      if (purchases.status === 'fulfilled' && plans.status === 'fulfilled') {
+      const settled = await bounded(
+        Promise.allSettled([linkPurchases(account), syncAccountData()]), SYNC_TIMEOUT_MS);
+      const purchases = settled?.[0];
+      const plans = settled?.[1];
+      if (purchases?.status === 'fulfilled' && plans?.status === 'fulfilled') {
         const imported = plans.value;
         toast.success(imported
           ? t('Signed in — your plans and Pro access are synced.')
@@ -153,8 +189,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (get().busy || !account) return;
     set({ busy: true });
     try {
-      const [purchases, plans] = await Promise.allSettled([linkPurchases(account), syncAccountData()]);
-      if (purchases.status === 'fulfilled' && plans.status === 'fulfilled') {
+      const settled = await bounded(
+        Promise.allSettled([linkPurchases(account), syncAccountData()]), SYNC_TIMEOUT_MS);
+      if (settled?.[0].status === 'fulfilled' && settled[1].status === 'fulfilled') {
         toast.success(t('Sync complete — plans and Pro access are up to date.'));
       } else {
         toast.error(t("Sync couldn't finish. Check your connection and try again."));
