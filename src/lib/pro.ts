@@ -42,7 +42,7 @@ export function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Pr
  * Read-shaped calls get a short bound; anything that opens the Play sheet gets
  * a long one, because a human is typing a password into it.
  */
-const STORE_TIMEOUT_MS = 12_000;
+export const STORE_TIMEOUT_MS = 12_000;
 export const PURCHASE_TIMEOUT_MS = 180_000;
 /** Sentinel: a purchase that ran out of time is NOT a purchase that failed. */
 const PURCHASE_TIMEOUT = 'homedesigner:purchase-timeout';
@@ -176,6 +176,46 @@ function playPackageForProduct(offerings: any, productID: string): any | null {
     }
   }
   return null;
+}
+
+/**
+ * Why checkout found nothing, in a sentence a user can paste to support.
+ *
+ * "Pro upgrade is not available right now" is honest but inert: it is identical
+ * whether the store returned nothing at all, returned only products this app
+ * does not sell, or returned the right product priceless. Those have completely
+ * different fixes, and the difference lives in data no user can reach and — with
+ * device logs off the table for anyone but us — that nobody can retrieve after
+ * the fact. Reported by multiple users at once, which is exactly when a
+ * self-reporting error is worth more than a tidy one.
+ *
+ * Deliberately short and free of raw dumps: enough to name the cause, not a
+ * stack trace pasted into a review.
+ */
+export function describeMissingProduct(offerings: any, planID?: ProPlanID): string {
+  const base = 'Pro upgrade is not available right now.';
+  const products: string[] = [];
+  let priceless = 0;
+  for (const off of offeringPools(offerings)) {
+    for (const pkg of (off as any)?.availablePackages ?? []) {
+      const id = pkg?.product?.identifier;
+      if (typeof id !== 'string') continue;
+      products.push(id);
+      if (!pkg?.product?.priceString) priceless += 1;
+    }
+  }
+  if (products.length === 0) {
+    return `${base} The store returned no products for this account or country. Please try again later.`;
+  }
+  const wanted = planID
+    ? PLAY_PLAN_PRODUCTS.filter((p) => p.id === planID).map((p) => p.productID)
+    : PLAY_PLAN_PRODUCTS.map((p) => p.productID);
+  const matched = products.some((id) => wanted.some((w) => id === w || id.startsWith(`${w}:`)));
+  if (matched && priceless > 0) {
+    return `${base} The store listed it without a price, so it cannot be sold here yet. Please try again later.`;
+  }
+  return `${base} The store is offering ${products.length} product(s), none of them the one this app sells. `
+    + 'This is a store configuration problem — please report it.';
 }
 
 export function playPackage(offerings: any, planID?: ProPlanID): any | null {
@@ -334,7 +374,7 @@ class RevenueCatProvider implements ProProvider {
           `${p?.identifier}/${p?.product?.identifier}@${p?.product?.priceString ?? 'NO PRICE'}`)])),
     }));
     const pkg = playPackage(offerings, planID);
-    if (!pkg) throw new Error('Pro upgrade is not available right now. Please try again later.');
+    if (!pkg) throw new Error(describeMissingProduct(offerings, planID));
     // Breadcrumb for "it spins and no Play sheet ever appears". Capacitor
     // mirrors console.* into logcat, so this lands beside RevenueCat's own
     // VERBOSE lines and answers the question the SDK's silence cannot: which

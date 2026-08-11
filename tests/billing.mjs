@@ -27,7 +27,7 @@ const dir = mkdtempSync(join(tmpdir(), 'hdbilling-'));
 const entry = join(root, '.billing-entry.tmp.ts');
 writeFileSync(entry, `
 export { useProStore } from '${rootImport}/src/store/proStore.ts';
-export { setProProvider, playPackage } from '${rootImport}/src/lib/pro.ts';
+export { setProProvider, playPackage, describeMissingProduct } from '${rootImport}/src/lib/pro.ts';
 `);
 
 const out = join(dir, 'bundle.mjs');
@@ -56,7 +56,7 @@ try {
   rmSync(entry, { force: true });
 }
 
-const { useProStore, setProProvider, playPackage } = mod;
+const { useProStore, setProProvider, playPackage, describeMissingProduct } = mod;
 
 let failures = 0;
 const check = (name, ok, detail = '') => {
@@ -392,6 +392,21 @@ const reset = (isPro) => {
     /priceString/.test(whole.slice(whole.indexOf('function playPackageForProduct'),
       whole.indexOf('export function playPackage'))),
     'playPackageForProduct no longer requires a price');
+
+  // With device logs unavailable for anyone but us, and multiple users hitting
+  // this at once, the "not available" error has to name its own cause. The three
+  // causes have completely different fixes and were previously indistinguishable.
+  check('an empty store says the store returned nothing',
+    /returned no products/.test(describeMissingProduct({ current: null, all: {} })));
+  check('a store offering only foreign products says so',
+    / 1 product\(s\), none of them the one this app sells/.test(
+      describeMissingProduct({ current: pkgs('pro_unlock'), all: {} })));
+  check('a priceless but correct product is reported as priceless, not missing',
+    /without a price/.test(describeMissingProduct(
+      { current: { availablePackages: [{ product: { identifier: 'pro_lifetime' } }] }, all: {} })));
+  check('the cause is named per plan, not just for the default',
+    /without a price/.test(describeMissingProduct(
+      { current: { availablePackages: [{ product: { identifier: 'pro_yearly' } }] }, all: {} }, 'yearly')));
 
   // The legacy unlock must not be resellable even when the store still offers it.
   check('a lingering pro_unlock package is never selected',

@@ -2,7 +2,7 @@
 // snapshots feed undo/persist, and entitlement must never ride along.
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
-import { getProProvider, type ProFeature, type ProPlan, type ProPlanID } from '../lib/pro';
+import { getProProvider, STORE_TIMEOUT_MS, type ProFeature, type ProPlan, type ProPlanID } from '../lib/pro';
 import {
   isValidReferralCode,
   markReferralRedeemed,
@@ -206,9 +206,17 @@ export const useProStore = create<ProState>((set, get) => ({
     // what "it hangs" felt like to the tester. Say something instead: the sheet
     // is still the only thing that can finish this, but the user now knows the
     // app is waiting on Play rather than broken, and "Maybe later" stays live.
+    //
+    // MUST stay above the provider's STORE_TIMEOUT_MS (12s), which bounds the
+    // getOfferings() call that runs BEFORE any sheet exists. At 12s the two
+    // raced, so a store lookup that simply timed out announced itself as "still
+    // waiting for the Play Store" — telling the user (and three debugging
+    // sessions) that Play was holding a sheet open when Play had never been
+    // asked for one. This toast may only appear once a sheet is genuinely the
+    // thing being waited on; anything earlier reports its own failure.
     const slow = setTimeout(() => {
       if (get().busy) toast.info(t('Still waiting for the Play Store…'));
-    }, 12_000);
+    }, STORE_TIMEOUT_MS + 8_000);
     try {
       const ok = await getProProvider().purchase(planID);
       if (ok) {
