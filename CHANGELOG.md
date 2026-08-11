@@ -23,6 +23,42 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.10 - 2026-08-11 (versionCode 12210)
+
+### Google Play checkout
+
+- Fixed **Unlock Pro** rendering a spinner and ignoring taps, with no Play sheet
+  and no timeout. This was never a billing bug. The button was already spinning
+  when the sheet opened, before anything had been clicked — which is also why
+  nothing ever timed out and why no purchase ever reached RevenueCat.
+- `ProUpsellModal` computed `actionBusy = busy || authBusy`, and `authBusy`
+  covers **background account sync**, not just sign-in. The button is `disabled`
+  while `actionBusy`, so once `authBusy` stuck true the button was inert: no
+  purchase was ever started, so Play was never asked to open anything. Sign-in
+  now waits on auth; buying and restoring wait on the Pro store.
+- `authBusy` stuck because nothing bounded the wait. `signIn`/`syncNow` await
+  `Promise.allSettled([...])`, which never settles while any member is pending,
+  over cloud-sync `fetch` calls that had no timeout at all. A phone's connection
+  does not fail cleanly — a dead cell handoff or a captive portal leaves `fetch`
+  pending rather than rejecting — so one stalled request left `busy` true
+  forever. Every busy flag already cleared in a `finally`, which is worthless
+  against a promise that never settles.
+- Bounded all three cloud-sync requests at 15s, aborting the socket rather than
+  leaking it, and backstopped the auth store: 20s for background sync, 180s for
+  interactive sign-in, because cutting a real Google account picker short is its
+  own bug. A timeout resolves null and never rejects, so it can never discard a
+  valid account or entitlement.
+- Added RevenueCat verbose logging and two purchase breadcrumbs. Play package
+  selection is unchanged in behaviour — it was not at fault — but this bug
+  survived three sessions of debugging the wrong subsystem while the app emitted
+  no diagnostics at all.
+- Fixed the Windows release build: `run-gradle` now passes an absolute `gradlew`
+  path, since `cmd.exe` does not search the working directory when
+  `NoDefaultCurrentDirectoryInExePath` is set.
+
+*(1.22.9 was an internal-testing build only and was never committed; its
+`priceString` guard on Play package selection is included here.)*
+
 ## 1.22.8 - 2026-08-11 (versionCode 12208)
 
 ### Release identification
