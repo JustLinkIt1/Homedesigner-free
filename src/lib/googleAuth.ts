@@ -21,6 +21,23 @@ const GOOGLE_REDIRECT_RETURN_KEY = 'homedesigner.google-redirect-return.v1';
 let initializePromise: Promise<void> | null = null;
 let currentIdToken: string | null = null;
 
+/** Every call below crosses the Capacitor bridge into the social-login plugin,
+ *  and a native call that never calls back is a promise that never settles —
+ *  not an error anyone can catch. Callers await these behind a `busy` flag that
+ *  only clears in a `finally`, so one silent native hang froze the UI outright
+ *  (see the stranded Pro buy button fixed in 1.22.10). Bound them here, at the
+ *  boundary that knows they are native calls, rather than relying on every
+ *  caller to remember. Token work is non-interactive, so the bound is short. */
+const NATIVE_TIMEOUT_MS = 12_000;
+
+function withNativeTimeout<T>(promise: Promise<T>, what: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${what} did not respond.`)), NATIVE_TIMEOUT_MS)),
+  ]);
+}
+
 interface GoogleTokenClaims {
   aud?: string;
   email?: string;
@@ -416,7 +433,8 @@ export async function getGoogleIdToken(): Promise<string> {
   // The web provider persists its ID token and exposes it here. Its refresh()
   // method is deliberately unimplemented, so calling refresh first breaks
   // cloud sync every time the desktop app is reloaded.
-  const cached = await SocialLogin.getAuthorizationCode({ provider: 'google' });
+  const cached = await withNativeTimeout(
+    SocialLogin.getAuthorizationCode({ provider: 'google' }), 'Google sign-in');
   if (cached.jwt && tokenIsFresh(cached.jwt)) {
     currentIdToken = cached.jwt;
     return cached.jwt;
@@ -426,8 +444,10 @@ export async function getGoogleIdToken(): Promise<string> {
     throw new Error('Google session expired. Sign in again to sync your plans.');
   }
 
-  await SocialLogin.refresh({ provider: 'google', options: {} });
-  const refreshed = await SocialLogin.getAuthorizationCode({ provider: 'google' });
+  await withNativeTimeout(
+    SocialLogin.refresh({ provider: 'google', options: {} }), 'Google session refresh');
+  const refreshed = await withNativeTimeout(
+    SocialLogin.getAuthorizationCode({ provider: 'google' }), 'Google sign-in');
   if (!refreshed.jwt) throw new Error('Google session needs to be refreshed.');
   currentIdToken = refreshed.jwt;
   return refreshed.jwt;

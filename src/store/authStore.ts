@@ -34,6 +34,27 @@ const INTERACTIVE_TIMEOUT_MS = 180_000;
  * because sign-in and RevenueCat linking go through dependencies whose hangs we
  * do not control, and a stuck spinner must never be one library away again.
  */
+/** Which half of the account handshake failed, and why. `undefined` means the
+ *  pair never settled at all — it hit the bound above. */
+function describeAccountFailure(
+  purchases: PromiseSettledResult<void> | undefined,
+  plans: PromiseSettledResult<number> | undefined,
+): string {
+  const why = (r: PromiseSettledResult<unknown> | undefined) => {
+    if (!r) return 'timed out';
+    if (r.status === 'rejected') {
+      return r.reason instanceof Error ? r.reason.message : String(r.reason ?? 'failed');
+    }
+    return null;
+  };
+  const purchaseWhy = why(purchases);
+  const planWhy = why(plans);
+  if (purchaseWhy && planWhy) return `Signed in, but Pro access and plan sync both failed: ${purchaseWhy}`;
+  if (purchaseWhy) return `Signed in, but Pro access didn't link: ${purchaseWhy}`;
+  if (planWhy) return `Signed in, but plan sync didn't finish: ${planWhy}`;
+  return t("Signed in, but cloud sync couldn't finish. We'll retry when you're online.");
+}
+
 function bounded<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([
     promise,
@@ -146,7 +167,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           ? t('Signed in — your plans and Pro access are synced.')
           : t('Signed in — plans and Pro access will sync across devices.'));
       } else {
-        toast.info(t("Signed in, but cloud sync couldn't finish. We'll retry when you're online."));
+        // Name WHICH half failed. These two have very different consequences —
+        // a failed project sync is cosmetic and retries itself, while failed
+        // purchase linking means RevenueCat never learned who this customer is,
+        // which affects the plan list and checkout. One shared "cloud sync
+        // couldn't finish" for both sent debugging at the wrong subsystem.
+        toast.info(describeAccountFailure(purchases, plans));
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
@@ -194,7 +220,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (settled?.[0].status === 'fulfilled' && settled[1].status === 'fulfilled') {
         toast.success(t('Sync complete — plans and Pro access are up to date.'));
       } else {
-        toast.error(t("Sync couldn't finish. Check your connection and try again."));
+        toast.error(describeAccountFailure(settled?.[0], settled?.[1]));
       }
     } finally {
       set({ busy: false });
