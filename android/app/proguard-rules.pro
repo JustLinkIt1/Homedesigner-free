@@ -65,6 +65,24 @@
 # so nothing was keeping these names. R8 was switched on in 1.21.0 (8d2fda7)
 # and no purchase has completed since.
 #
-# These are the same two rules RevenueCat ships in its own Android sample app.
+# The coroutines library ships DIFFERENT rules for R8 vs ProGuard. Its
+# r8-from-1.6.0/coroutines.pro deliberately omits all ServiceLoader keeps and
+# uses -assumenosideeffects to disable the fast ServiceLoader path, trusting
+# R8's native ServiceLoader optimization to directly instantiate the
+# implementations. That optimization demonstrably failed here: in 1.22.14 the
+# META-INF/services file was RENAMED (to q4.h0), not inlined — R8 never
+# replaced the ServiceLoader call. The interface name rule (1.22.15) fixed the
+# file lookup, but without keeping the IMPLEMENTATION classes R8 is free to
+# rename or remove AndroidDispatcherFactory, breaking instantiation even when
+# the file is found.
+#
+# These rules mirror what the library itself ships in its ProGuard variant
+# (META-INF/proguard/coroutines.pro and r8-upto-3.0.0/coroutines.pro) but
+# omits from the R8 >= 3.0.0 variant.
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+-keep class kotlinx.coroutines.android.AndroidDispatcherFactory { *; }
+-keep class kotlinx.coroutines.android.AndroidExceptionPreHandler { *; }
+-keepclassmembers class kotlinx.coroutines.** {
+    volatile <fields>;
+}

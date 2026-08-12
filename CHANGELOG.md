@@ -23,6 +23,23 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.18 - 2026-08-12 (versionCode 12218)
+
+### R8 coroutines — keep the implementation classes too
+
+- Added `-keep` rules for `AndroidDispatcherFactory` and
+  `AndroidExceptionPreHandler` alongside the existing `-keepnames` for their
+  ServiceLoader interfaces. The coroutines library's own R8 rules
+  (`r8-from-1.6.0/coroutines.pro`) deliberately omit these keeps, trusting
+  R8's ServiceLoader optimization to inline them directly — but that
+  optimization demonstrably failed in this project (the META-INF/services file
+  was renamed in 1.22.14 instead of being inlined). Without the implementation
+  classes kept, R8 can rename or remove `AndroidDispatcherFactory` even when
+  the service file is found, leaving `MissingMainCoroutineDispatcher` in place
+  and silently killing every RevenueCat callback.
+- Added `-keepclassmembers` for volatile fields in `kotlinx.coroutines.**`,
+  matching the library's ProGuard-variant rules.
+
 ## 1.22.17 - 2026-08-12 (versionCode 12217)
 
 ### Store diagnostics
