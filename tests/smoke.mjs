@@ -373,6 +373,17 @@ check('desktop header Settings opens', await page.locator('.modal.settings').isV
   check('long-pressing the version in Settings copies a store diagnostic',
     typeof copied === 'string' && /^app \S+/m.test(copied) && /^platform /m.test(copied),
     JSON.stringify(copied));
+
+  // Android must NOT take the clipboard path. `navigator.clipboard` needs
+  // transient user activation, and this runs from a 1.2s timer with an awaited
+  // store round trip after it — the write rejects and the clipboard keeps
+  // whatever it held before, which is exactly what the owner hit: a paste that
+  // produced the PREVIOUS clipboard contents instead of the report.
+  const holdSource = await readFile(join(root, 'src', 'components', 'useStoreDiagnosticHold.ts'), 'utf8');
+  check('Android delivers the diagnostic through the share sheet, not the clipboard',
+    holdSource.includes("Capacitor.isNativePlatform()") &&
+      holdSource.includes("@capacitor/share") &&
+      holdSource.indexOf('Share.share') < holdSource.indexOf('navigator.clipboard.writeText'));
 }
 
 await page.locator('.modal.settings .modal-foot .btn.primary').click();

@@ -1,6 +1,37 @@
 import { useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { collectStoreDiagnostics } from '../lib/pro';
 import { toast } from '../lib/ui';
+
+/**
+ * Hand the report to the user.
+ *
+ * Android does NOT go through `navigator.clipboard`. That needs transient user
+ * activation, and this fires from a 1.2s timer with an awaited store round trip
+ * after it — the activation is long gone by then, so the write rejects and the
+ * clipboard keeps whatever it held before. Reported as a paste that produced
+ * the previous clipboard contents instead of the report.
+ *
+ * The native share sheet has no activation requirement, and it also beats the
+ * clipboard for the actual job: the report has to reach someone else.
+ */
+async function deliver(report: string): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { Share } = await import('@capacitor/share');
+      await Share.share({
+        title: 'HomeDesigner store diagnostics',
+        text: report,
+        dialogTitle: 'Send store diagnostics',
+      });
+      return;
+    } catch {
+      // Sheet dismissed or unavailable — fall through and try the clipboard
+      // rather than losing the report entirely.
+    }
+  }
+  await navigator.clipboard.writeText(report);
+}
 
 /** How long the version has to be held. Comfortably past Android's own
  *  long-press so an ordinary tap or a scroll that starts on the text cannot
@@ -37,10 +68,14 @@ export function useStoreDiagnosticHold() {
       setBusy(true);
       void collectStoreDiagnostics()
         .then(async (report) => {
-          await navigator.clipboard.writeText(report);
-          toast.success('Store diagnostics copied — paste them to support.');
+          await deliver(report);
+          toast.success(
+            Capacitor.isNativePlatform()
+              ? 'Store diagnostics ready to send.'
+              : 'Store diagnostics copied — paste them to support.',
+          );
         })
-        .catch(() => toast.error("Couldn't copy diagnostics."))
+        .catch(() => toast.error("Couldn't share diagnostics."))
         .finally(() => setBusy(false));
     }, HOLD_MS);
   };

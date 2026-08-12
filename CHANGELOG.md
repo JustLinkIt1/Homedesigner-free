@@ -23,6 +23,20 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.16 - 2026-08-12 (versionCode 12216)
+
+### Store diagnostics
+
+- Delivered the store diagnostic through the native share sheet on Android
+  instead of the clipboard. `navigator.clipboard.writeText` needs transient user
+  activation, and the copy runs from a 1.2s long-press timer with an awaited
+  store round trip after it — the activation is long gone, so the write rejects
+  and the clipboard keeps whatever it held before. The owner hit exactly that:
+  pasting produced the previous clipboard contents instead of the report.
+- The share sheet has no activation requirement and suits the job better, since
+  the report has to reach someone else. The clipboard remains the web path and
+  the fallback if the sheet is dismissed or unavailable.
+
 ## 1.22.15 - 2026-08-12 (versionCode 12215)
 
 ### Google Play checkout
