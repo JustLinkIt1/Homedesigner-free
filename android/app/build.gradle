@@ -25,8 +25,8 @@ android {
         applicationId "com.homedesigner.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 12214
-        versionName "1.22.14"
+        versionCode 12215
+        versionName "1.22.15"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

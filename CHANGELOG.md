@@ -23,6 +23,35 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.15 - 2026-08-12 (versionCode 12215)
+
+### Google Play checkout
+
+- Kept the `kotlinx.coroutines` ServiceLoader names through R8. This is the
+  reason no Play sheet ever opened on a release build while every server-side
+  check was correct: RevenueCat's SDK is Kotlin and delivers its callbacks
+  through `Dispatchers.Main`, which coroutines resolves by reading the resource
+  `META-INF/services/kotlinx.coroutines.internal.MainDispatcherFactory` as a
+  **literal** string. R8 had renamed that file to `META-INF/services/q4.h0`, so
+  the lookup missed and `MissingMainCoroutineDispatcher` stayed in place — every
+  main-thread dispatch then throws, and each SDK callback dies where nothing
+  reports it. No sheet, no products, no error, no timeout.
+- Found by diffing against RevenueCat's own Android sample app, which ships
+  exactly these two rules. Their SDK's consumer rules *are* applied here
+  (`-keep class com.revenuecat.**` appears in R8's merged configuration), but
+  the coroutines ones are not — grepping that configuration for
+  `MainDispatcherFactory` returned nothing, so no rule was keeping the names.
+- R8 was enabled in 1.21.0 (`8d2fda7`) and no purchase has completed since —
+  $0 across 369 customers.
+- Verified by comparison of the built bundles rather than by inference: 1.22.14
+  contains `META-INF/services/q4.h0`, 1.22.15 contains
+  `META-INF/services/kotlinx.coroutines.internal.MainDispatcherFactory`.
+- Ruled out along the way, each by measurement rather than argument: product
+  identifiers and API key (queried RevenueCat's API with the app's own key —
+  `default → pro_lifetime` is served correctly), package name, Amazon store
+  selection (`store = if (useAmazon == true) … else Store.PLAY_STORE`, and it is
+  never passed), and R8 removing RevenueCat or Play Billing classes.
+
 ## 1.22.14 - 2026-08-12 (versionCode 12214)
 
 ### Store diagnostics
