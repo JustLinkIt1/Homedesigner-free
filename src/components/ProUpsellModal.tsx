@@ -115,6 +115,10 @@ export default function ProUpsellModal() {
       ? t('Sign in with Google')
       : t('Get the Android app');
   const onPrimaryAction = needsAccount ? signIn : purchase;
+  // A plan only carries `originalPriceLabel` when a discount is genuinely
+  // applied to the price beside it, so the struck-through price disappears by
+  // itself when the offer ends rather than needing a second edit here.
+  const offerPlan = plans.find((plan) => plan.originalPriceLabel);
   // Web knows its ladder before sign-in; native only learns it from the store,
   // so fall back to the one-time claim until the plans are actually loaded.
   const benefits = [
@@ -148,6 +152,13 @@ export default function ProUpsellModal() {
             </li>
           ))}
         </ul>
+        {offerPlan && (
+          <p className="pro-offer">
+            <span className="pro-offer-badge">{t('Limited time')}</span>
+            <span className="pro-offer-was">{offerPlan.originalPriceLabel}</span>
+            <strong>{offerPlan.priceLabel}</strong>
+          </p>
+        )}
         <div className="pro-actions">
           {showPlanChoices ? (
             <div className="pro-plan-grid" aria-label="Choose a Pro plan">
@@ -162,6 +173,9 @@ export default function ProUpsellModal() {
                 >
                   {plan.id === 'yearly' && <span className="pro-plan-badge">{t('Best value')}</span>}
                   <span className="pro-plan-name">{t(plan.label)}</span>
+                  {plan.originalPriceLabel && (
+                    <span className="pro-offer-was">{plan.originalPriceLabel}</span>
+                  )}
                   <strong>{plan.priceLabel}</strong>
                   <small>
                     {plan.id === 'monthly' ? t('per month') : plan.id === 'yearly' ? t('per year') : t('one payment')}

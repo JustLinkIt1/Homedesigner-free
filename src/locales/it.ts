@@ -313,6 +313,7 @@ export const IT: Record<string, string> = {
   Undo: 'Annulla',
   Placed: 'Posizionato',
   'Place another': 'Posizionane un altro',
+  'Limited time': 'Tempo limitato',
   'Still waiting for the Play Store…': 'In attesa del Play Store…',
   'Pro unlocked — thank you!': 'Pro sbloccato — grazie!',
   'Pro unlocked with your referral code!': 'Pro sbloccato con il tuo codice invito!',

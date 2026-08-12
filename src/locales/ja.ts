@@ -313,6 +313,7 @@ export const JA: Record<string, string> = {
   Undo: '元に戻す',
   Placed: '配置しました',
   'Place another': 'もう1つ配置',
+  'Limited time': '期間限定',
   'Still waiting for the Play Store…': 'Play ストアの応答を待っています…',
   'Pro unlocked — thank you!': 'Pro が有効になりました。ありがとうございます!',
   'Pro unlocked with your referral code!': '紹介コードでProが解放されました！',

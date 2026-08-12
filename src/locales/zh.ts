@@ -313,6 +313,7 @@ export const ZH: Record<string, string> = {
   Undo: '撤销',
   Placed: '已放置',
   'Place another': '再放置一个',
+  'Limited time': '限时优惠',
   'Still waiting for the Play Store…': '正在等待 Play 商店…',
   'Pro unlocked — thank you!': 'Pro 已解锁，感谢支持！',
   'Pro unlocked with your referral code!': '已通过邀请码解锁 Pro！',

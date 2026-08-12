@@ -313,6 +313,7 @@ export const NL: Record<string, string> = {
   Undo: 'Ongedaan maken',
   Placed: 'Geplaatst',
   'Place another': 'Nog een plaatsen',
+  'Limited time': 'Tijdelijk aanbod',
   'Still waiting for the Play Store…': 'Nog steeds wachten op de Play Store…',
   'Pro unlocked — thank you!': 'Pro ontgrendeld — bedankt!',
   'Pro unlocked with your referral code!': 'Pro ontgrendeld met je verwijzingscode!',

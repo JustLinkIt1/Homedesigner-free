@@ -2554,6 +2554,40 @@ button.brand:hover .brand-name {
   color: var(--ok);
   flex: none;
 }
+.pro-offer {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 22px 0;
+}
+.pro-offer strong {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ok);
+}
+.pro-offer-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* The price the customer is NOT paying. Struck through and de-emphasised so it
+   can never be mistaken for the amount that will be charged. */
+.pro-offer-was {
+  text-decoration: line-through;
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+.pro-plan .pro-offer-was {
+  display: block;
+  font-size: 11px;
+}
 .pro-actions {
   display: flex;
   flex-direction: column;

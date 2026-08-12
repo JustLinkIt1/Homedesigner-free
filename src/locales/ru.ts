@@ -313,6 +313,7 @@ export const RU: Record<string, string> = {
   Undo: 'Отменить',
   Placed: 'Размещено',
   'Place another': 'Разместить ещё',
+  'Limited time': 'Ограниченное время',
   'Still waiting for the Play Store…': 'Ожидание ответа от Play Маркета…',
   'Pro unlocked — thank you!': 'Pro активирован — спасибо!',
   'Pro unlocked with your referral code!': 'Pro активирован реферальным кодом!',

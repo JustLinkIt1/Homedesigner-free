@@ -313,6 +313,7 @@ export const ES: Record<string, string> = {
   Undo: 'Deshacer',
   Placed: 'Colocado',
   'Place another': 'Colocar otro',
+  'Limited time': 'Tiempo limitado',
   'Still waiting for the Play Store…': 'Seguimos esperando a Play Store…',
   'Pro unlocked — thank you!': 'Pro desbloqueado: ¡gracias!',
   'Pro unlocked with your referral code!': '¡Pro desbloqueado con tu código de invitación!',

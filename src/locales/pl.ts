@@ -313,6 +313,7 @@ export const PL: Record<string, string> = {
   Undo: 'Cofnij',
   Placed: 'Umieszczono',
   'Place another': 'Umieść kolejny',
+  'Limited time': 'Oferta ograniczona czasowo',
   'Still waiting for the Play Store…': 'Wciąż czekamy na Sklep Play…',
   'Pro unlocked — thank you!': 'Pro odblokowane — dziękujemy!',
   'Pro unlocked with your referral code!': 'Pro odblokowane kodem polecającym!',

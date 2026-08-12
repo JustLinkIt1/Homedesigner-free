@@ -313,6 +313,7 @@ export const TR: Record<string, string> = {
   Undo: 'Geri al',
   Placed: 'Yerleştirildi',
   'Place another': 'Bir tane daha yerleştir',
+  'Limited time': 'Sınırlı süre',
   'Still waiting for the Play Store…': 'Play Store hâlâ bekleniyor…',
   'Pro unlocked — thank you!': 'Pro etkinleştirildi — teşekkürler!',
   'Pro unlocked with your referral code!': 'Davet kodunuzla Pro açıldı!',

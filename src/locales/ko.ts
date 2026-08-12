@@ -313,6 +313,7 @@ export const KO: Record<string, string> = {
   Undo: '실행 취소',
   Placed: '배치됨',
   'Place another': '하나 더 배치',
+  'Limited time': '한정 기간',
   'Still waiting for the Play Store…': 'Play 스토어를 기다리는 중…',
   'Pro unlocked — thank you!': 'Pro가 활성화되었습니다. 감사합니다!',
   'Pro unlocked with your referral code!': '추천 코드로 Pro가 잠금 해제되었습니다!',

@@ -15,6 +15,9 @@ export interface ProPlan {
   id: ProPlanID;
   label: string;
   priceLabel: string;
+  /** The undiscounted list price, present ONLY when a discount is actually
+   *  applied to `priceLabel`. Rendered struck through beside the live price. */
+  originalPriceLabel?: string;
   /** Exact web price data for truthful comparisons. Absent on native plans. */
   priceMicros?: number;
   currency?: string;
@@ -261,18 +264,83 @@ function webPackageForPlan(offerings: any, planID: ProPlanID): any | null {
   return null;
 }
 
-function webPlansFromOfferings(offerings: any): ProPlan[] {
+/**
+ * The automatic Web Billing discount, mirrored from the RevenueCat dashboard.
+ *
+ * This has to be duplicated here, and that is worth understanding before
+ * touching it. RevenueCat applies the discount at CHECKOUT, but the web SDK
+ * does not expose it: every `discount` field in `purchases-js` is marked
+ * "Excluded from this release type", so `price.formattedPrice` is always the
+ * undiscounted list price. Without mirroring it, the app advertises 59.99 and
+ * then charges 29.99 — the customer only discovers the offer at the payment
+ * sheet, which is the one place it cannot persuade anyone to start.
+ *
+ * THIS MUST BE KEPT IN SYNC WITH THE DASHBOARD. It is a claim about price made
+ * without the ability to verify it: if the `launch-offer-50` discount is
+ * deactivated or changed in RevenueCat and this is not, the app advertises a
+ * price the checkout will not honour. Set `percent: 0` the moment the dashboard
+ * discount ends, and the struck-through price disappears on its own.
+ */
+const WEB_DISCOUNT = {
+  /** RevenueCat dashboard identifier, for whoever has to reconcile these. */
+  id: 'launch-offer-50',
+  percent: 50,
+  /** Only these products carry the discount in the dashboard. */
+  productIDs: ['pro_lifetime_web_v2'],
+};
+
+/** Re-format `amountMicros` in the SAME currency and locale conventions the
+ *  store used, so the discounted price cannot disagree with the list price it
+ *  sits beside (currency symbol, separators, fraction digits). */
+function formatWebPrice(amountMicros: number, currency: string): string | null {
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency })
+      .format(amountMicros / 1_000_000);
+  } catch {
+    // An unknown currency code must not take the price label down with it.
+    return null;
+  }
+}
+
+export function webPlansFromOfferings(offerings: any): ProPlan[] {
   return WEB_PLAN_DEFINITIONS.flatMap((definition) => {
     const pkg = webPackageForPlan(offerings, definition.id);
     const price = pkg?.webBillingProduct?.price;
     const priceLabel = price?.formattedPrice;
-    return priceLabel ? [{
+    if (!priceLabel) return [];
+    const micros = typeof price.amountMicros === 'number' ? price.amountMicros : undefined;
+    const currency = typeof price.currency === 'string' ? price.currency : undefined;
+
+    // Only claim a discount for the products the dashboard actually discounts,
+    // and only when the arithmetic produces a real, formattable price.
+    const productID: unknown = pkg?.webBillingProduct?.identifier;
+    const eligible = WEB_DISCOUNT.percent > 0
+      && typeof productID === 'string'
+      && WEB_DISCOUNT.productIDs.includes(productID)
+      && micros !== undefined && currency !== undefined;
+    // Rounded UP to the whole cent, deliberately. A percentage off a .99 price
+    // lands on a half cent ($59.99 → $29.995) and the payment processor's own
+    // rounding is not something this app can see. Rounding up can only ever
+    // advertise a price at or above what is charged — the customer pays the same
+    // or a cent less. Rounding down would advertise a price the checkout does
+    // not honour, which is the one outcome worth designing against.
+    const discountedMicros = eligible && micros !== undefined
+      ? Math.ceil((micros * (100 - WEB_DISCOUNT.percent) / 100) / 10_000) * 10_000
+      : undefined;
+    const discounted = discountedMicros !== undefined && currency !== undefined
+      ? formatWebPrice(discountedMicros, currency)
+      : null;
+
+    return [{
       id: definition.id,
       label: definition.label,
-      priceLabel,
-      priceMicros: typeof price.amountMicros === 'number' ? price.amountMicros : undefined,
-      currency: typeof price.currency === 'string' ? price.currency : undefined,
-    }] : [];
+      priceLabel: discounted ?? priceLabel,
+      ...(discounted ? { originalPriceLabel: priceLabel } : {}),
+      // The comparison maths (yearly saving) must use what the customer is
+      // actually charged, not the struck-through price.
+      priceMicros: discounted ? discountedMicros : micros,
+      currency,
+    }];
   });
 }
 
