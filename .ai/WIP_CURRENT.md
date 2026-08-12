@@ -1,5 +1,67 @@
 # WIP — current handoff
 
+## Session handoff 2026-08-12 (Claude) — PURCHASES: read this before touching billing
+
+Version **1.22.18**, branch `claude/home-designer-release-verify-npwmwu`.
+
+### The purchase failure is a Play Console setting, not app code
+
+Twelve releases of app-side fixes did not move it because the cause is upstream
+of the app. The chain, each link verified rather than reasoned about:
+
+1. **RevenueCat's backend serves the product with no purchase-option suffix.**
+   Queried the live offerings endpoint with the app's own Android key:
+   `default → $rc_lifetime → platform_product_identifier: "pro_lifetime"`.
+2. **RevenueCat 10.16.0 reads a one-time product's price only through the
+   legacy singular accessor.** Decompiled
+   `com/revenuecat/purchases/google/StoreProductConversionsKt` out of
+   `purchases-10.16.0.aar`: exactly one call to
+   `ProductDetails.getOneTimePurchaseOfferDetails()`, and **zero** calls to
+   `getOneTimePurchaseOfferDetailsList()`.
+3. **Null from that accessor drops the product entirely.** Same bytecode:
+   `getOneTimePurchaseOfferDetails() → ifnull → aconst_null; areturn`. The
+   package does not arrive priceless — it does not arrive.
+4. **Google only fills that accessor for the `legacyCompatible` purchase
+   option.** With none eligible, `queryProductDetailsAsync` reports
+   `NO_ELIGIBLE_OFFER` and returns no product.
+5. **There is no SDK upgrade out of this.** `@revenuecat/purchases-capacitor`
+   13.4.0 is the newest published version and we are already on it.
+
+**The fix to try first:** Play Console → Monetize → Products → One-time
+products → `pro_lifetime` → the `prolifetime` purchase option → confirm it is
+marked **backwards compatible / legacy compatible**, and that the tester's
+country is in its region list.
+
+**The measurement that settles it:** install from internal testing, open
+Settings, long-press the version line ~1.2s. A dialog shows the store report.
+`offering default: (empty)` = product dropped (this diagnosis).
+`…/pro_lifetime@NO PRICE/INAPP` = returned priceless (pricing not propagated).
+`…/pro_lifetime@$X.XX/INAPP` = catalog is fine, look at the purchase call.
+
+### Retracted — do not re-derive these
+
+* **R8 / kotlinx.coroutines (1.22.15, 1.22.18) is NOT the cause.** R8 rewrites a
+  service file's contents when it renames the implementation, so a renamed
+  `AndroidDispatcherFactory` still resolves. The real 1.22.14 breakage was the
+  filename, and 1.22.15's `-keepnames` already fixed it — purchases still
+  failed afterwards. The keep rules stay as hardening; they are labelled as
+  such in `android/app/proguard-rules.pro`. They fix no known purchase.
+* **Sideloading is NOT the cause.** The owner installs every test build from the
+  Play internal-testing track.
+
+### Still unverified
+
+* Nobody has yet run the on-device diagnostic. Every release so far shipped
+  without that measurement, which is why the loop lasted this long.
+* Whether `prolifetime` actually lacks the `legacyCompatible` flag is visible
+  only in Play Console (or via the Play Developer API
+  `monetization.onetimeproducts` service). If the flag turns out to be set, the
+  same `NO_ELIGIBLE_OFFER` can come from regional ineligibility instead.
+* If the diagnostic returns `(empty)`, the app should show "The store returned
+  no products for this account or country" (`describeMissingProduct`,
+  `src/lib/pro.ts:198`) rather than a spinner. If a spinner appears instead,
+  `getOfferings()` is hanging rather than returning empty — a separate bug.
+
 ## Session handoff 2026-08-09 #2 (Claude) — read this first
 
 Supersedes the entry below it. Version **1.22.6**, commit `a72767b`, branch

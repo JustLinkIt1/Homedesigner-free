@@ -25,20 +25,38 @@ changes and add an entry when you ship one.
 
 ## 1.22.18 - 2026-08-12 (versionCode 12218)
 
-### R8 coroutines — keep the implementation classes too
+### R8 coroutines keeps (hardening — NOT a purchase fix)
 
 - Added `-keep` rules for `AndroidDispatcherFactory` and
   `AndroidExceptionPreHandler` alongside the existing `-keepnames` for their
-  ServiceLoader interfaces. The coroutines library's own R8 rules
-  (`r8-from-1.6.0/coroutines.pro`) deliberately omit these keeps, trusting
-  R8's ServiceLoader optimization to inline them directly — but that
-  optimization demonstrably failed in this project (the META-INF/services file
-  was renamed in 1.22.14 instead of being inlined). Without the implementation
-  classes kept, R8 can rename or remove `AndroidDispatcherFactory` even when
-  the service file is found, leaving `MissingMainCoroutineDispatcher` in place
-  and silently killing every RevenueCat callback.
-- Added `-keepclassmembers` for volatile fields in `kotlinx.coroutines.**`,
-  matching the library's ProGuard-variant rules.
+  ServiceLoader interfaces, plus `-keepclassmembers` for volatile fields in
+  `kotlinx.coroutines.**`. These mirror what the coroutines library ships in
+  its ProGuard variant but omits from its R8 >= 3.0.0 variant.
+- **These were initially shipped as the fix for purchases. They are not, and
+  the claim is retracted.** R8 rewrites a service file's contents when it
+  renames the implementation, so a renamed `AndroidDispatcherFactory` would
+  still have resolved; the real 1.22.14 breakage was the filename, which
+  1.22.15's `-keepnames` already fixed — and purchases still failed after it.
+  The rules are kept because the gap they close is real, not because any
+  purchase is known to depend on them.
+
+### Root cause of the purchase failure, finally identified (no code change)
+
+- RevenueCat 10.16.0 reads a one-time product's price **only** through the
+  legacy singular `ProductDetails.getOneTimePurchaseOfferDetails()`. Verified
+  in the shipped `purchases-10.16.0.aar`: exactly one call to it and **zero**
+  to `getOneTimePurchaseOfferDetailsList()`. When it returns null the SDK
+  returns null for the entire `StoreProduct`, so the product is **dropped from
+  the offering** rather than listed without a price.
+- Google returns a value through that accessor only for the purchase option
+  marked `legacyCompatible`. With no eligible one, `queryProductDetailsAsync`
+  reports `NO_ELIGIBLE_OFFER` and the product is not returned at all.
+- So if `pro_lifetime`'s `prolifetime` purchase option is not flagged
+  backwards-compatible (or is unavailable in the tester's country), the app has
+  nothing to sell and no sheet can open. This is Play Console product
+  configuration, upstream of every app-side change made since 1.21.0 — which
+  is why none of them moved it. Fix and verification steps are in
+  `.ai/WIP_CURRENT.md`.
 
 ## 1.22.17 - 2026-08-12 (versionCode 12217)
 

@@ -48,8 +48,11 @@
 # ---------------------------------------------------------------------------
 # kotlinx.coroutines
 #
-# The failure: no Play sheet, no products, no error, no timeout — the store
-# simply never answered, on a build where every server-side check was correct.
+# HARDENING, NOT THE PURCHASE FIX. Read this before crediting these rules with
+# anything: the "no Play sheet" failure was later traced to Play product
+# configuration, not to R8 (see the note at the end of this section). These
+# rules close a real ServiceLoader gap and should stay, but no purchase has
+# ever been shown to depend on them.
 #
 # RevenueCat's SDK is Kotlin and delivers its callbacks through
 # Dispatchers.Main. Coroutines resolves that at runtime by reading the resource
@@ -69,16 +72,28 @@
 # r8-from-1.6.0/coroutines.pro deliberately omits all ServiceLoader keeps and
 # uses -assumenosideeffects to disable the fast ServiceLoader path, trusting
 # R8's native ServiceLoader optimization to directly instantiate the
-# implementations. That optimization demonstrably failed here: in 1.22.14 the
-# META-INF/services file was RENAMED (to q4.h0), not inlined — R8 never
-# replaced the ServiceLoader call. The interface name rule (1.22.15) fixed the
-# file lookup, but without keeping the IMPLEMENTATION classes R8 is free to
-# rename or remove AndroidDispatcherFactory, breaking instantiation even when
-# the file is found.
+# implementations. That optimization did not run here: in 1.22.14 the
+# META-INF/services file was RENAMED (to q4.h0), not inlined.
 #
-# These rules mirror what the library itself ships in its ProGuard variant
-# (META-INF/proguard/coroutines.pro and r8-upto-3.0.0/coroutines.pro) but
-# omits from the R8 >= 3.0.0 variant.
+# The implementation keeps below mirror what the library ships in its ProGuard
+# variant (META-INF/proguard/coroutines.pro and r8-upto-3.0.0/coroutines.pro)
+# but omits from the R8 >= 3.0.0 variant.
+#
+# WHY THEY ARE NOT THE PURCHASE FIX, so nobody re-derives it: R8 rewrites a
+# service file's CONTENTS when it renames the implementation, so a renamed
+# AndroidDispatcherFactory would still have resolved. The genuine 1.22.14
+# breakage was the FILENAME, and the -keepnames rule above already fixed that
+# in 1.22.15 — which shipped, and purchases still failed.
+#
+# The actual cause is upstream of this file entirely. RevenueCat 10.16.0 reads
+# a one-time product's price only through the legacy singular accessor
+# ProductDetails.getOneTimePurchaseOfferDetails() (verified in the 10.16.0 aar:
+# one call, and zero to getOneTimePurchaseOfferDetailsList()), and returns null
+# for the whole StoreProduct when it is null — so the product is DROPPED, not
+# listed priceless. Google returns that accessor's value only for the purchase
+# option flagged `legacyCompatible`; with none eligible the query yields
+# NO_ELIGIBLE_OFFER and no product at all. That is a Play Console setting on
+# the product, which is why twelve releases of app-side changes moved nothing.
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -keep class kotlinx.coroutines.android.AndroidDispatcherFactory { *; }
