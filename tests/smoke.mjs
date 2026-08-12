@@ -346,6 +346,35 @@ check('desktop header Settings opens', await page.locator('.modal.settings').isV
   await page.setViewportSize({ width: 1280, height: 800 });
 }
 
+// --- the store diagnostic has to be reachable from Settings ----------------
+// It was added to About only, and About opens from exactly one place: the
+// editor's More menu. The owner went looking and reported "In about? There's
+// settings but I don't see about" — so the one tool built for diagnosing a
+// checkout failure in the field could not be found by the person who needed it.
+{
+  await page.evaluate(() => {
+    window.__copied = null;
+    navigator.clipboard.writeText = async (text) => {
+      window.__copied = text;
+    };
+  });
+  const version = page.locator('.settings-meta span').first();
+  // The version sits at the bottom of the dialog's scrolling body, so without
+  // this the pointer lands on whatever is on screen at those coordinates and no
+  // event ever reaches it — measured: zero pointer events.
+  await version.scrollIntoViewIfNeeded();
+  const box = await version.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(1500); // hold past HOLD_MS (1200ms)
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  const copied = await page.evaluate(() => window.__copied);
+  check('long-pressing the version in Settings copies a store diagnostic',
+    typeof copied === 'string' && /^app \S+/m.test(copied) && /^platform /m.test(copied),
+    JSON.stringify(copied));
+}
+
 await page.locator('.modal.settings .modal-foot .btn.primary').click();
 await page.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
 check('editor opens', await page.waitForSelector('.toolbar', { timeout: 15000 }).then(() => true).catch(() => false));

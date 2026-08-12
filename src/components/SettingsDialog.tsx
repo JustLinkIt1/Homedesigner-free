@@ -8,6 +8,7 @@ import { qualityPref, setQualityPref, detectTier, type QualityPref, type PerfTie
 import { useI18n } from '../lib/i18n';
 import LanguagePicker from './LanguagePicker';
 import { APP_NAME, APP_VERSION, PRIVACY_URL } from '../lib/appInfo';
+import { useStoreDiagnosticHold } from './useStoreDiagnosticHold';
 import { useAuthStore } from '../store/authStore';
 import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
 import { openCommunityForum } from '../lib/communityAccess';
@@ -74,6 +75,7 @@ export default function SettingsDialog({
   const syncNow = useAuthStore((s) => s.syncNow);
   const t = useI18n();
   const canOpenModelStudio = isModelStudioOwner(account?.email);
+  const { busy: diagBusy, holdProps } = useStoreDiagnosticHold();
 
   return (
     <Modal open={open} onClose={onClose} className="settings" labelledBy="settings-title">
@@ -275,7 +277,16 @@ export default function SettingsDialog({
           </section>
 
           <p className="settings-meta">
-            {APP_NAME} v{APP_VERSION} ·{' '}
+            {/* Long-press the version for a store diagnostic — the same
+                affordance as About. It has to be here too: About opens only
+                from the editor's More menu, while this is the version line
+                people actually find. */}
+            {APP_NAME}{' '}
+            <span {...holdProps}>
+              v{APP_VERSION}
+              {diagBusy ? '…' : ''}
+            </span>{' '}
+            ·{' '}
             <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
               {t('Privacy policy')} <ExternalLink className="icon" style={{ width: 11, height: 11 }} />
             </a>
