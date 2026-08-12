@@ -32,11 +32,50 @@ products → `pro_lifetime` → the `prolifetime` purchase option → confirm it
 marked **backwards compatible / legacy compatible**, and that the tester's
 country is in its region list.
 
+**RevenueCat says the same thing independently.** Their own "why are offerings
+empty" checklist ends with: "Finally, double check your products are marked as
+**Backwards Compatible** in the Google Play Console." That is this diagnosis,
+from the vendor, arrived at from the opposite direction.
+
 **The measurement that settles it:** install from internal testing, open
 Settings, long-press the version line ~1.2s. A dialog shows the store report.
 `offering default: (empty)` = product dropped (this diagnosis).
 `…/pro_lifetime@NO PRICE/INAPP` = returned priceless (pricing not propagated).
 `…/pro_lifetime@$X.XX/INAPP` = catalog is fine, look at the purchase call.
+
+### Already checked against this tree — do not re-check
+
+From RevenueCat's official empty-offerings checklist, the items that are
+verifiable from the repo, all confirmed good:
+
+* **API key is the Android one** — `goog_…`, not an iOS key and not a `test_`
+  Test Store key (a Test Store key on a real device opens no sheet by design).
+* **`com.android.vending.BILLING` permission** is present in the shipped
+  manifest (merged from the billing library; not declared in source, which is
+  correct).
+* **No Proxy objects cross the bridge.** RevenueCat documents that Vue
+  `reactive`/`readonly` proxies passed to plugin methods make the promise never
+  resolve — the exact "no sheet, no error, no callback" signature
+  (purchases-capacitor#279, #243, #420). We use plain Zustand with no immer,
+  no valtio and no `new Proxy`, and `pkg` goes straight from `getOfferings()`
+  back into `purchasePackage` without touching a store. Not our bug.
+* **The `allowSharingPlayStoreAccount` deadlock** (purchases-capacitor#546) is
+  fixed in purchases-android 9.8.1; we resolve 10.16.0. Not our bug.
+* **Package name** `com.homedesigner.app` matches Play Console, lowercase.
+
+Items only the owner can check, in the order worth checking them:
+
+1. `prolifetime` marked **backwards compatible**, and the tester's country in
+   its region list.
+2. The tester account is a **license tester** (Play Console → Settings →
+   License testing) *and* enrolled on the track, and has **opened the opt-in
+   URL** — RevenueCat: "If you don't complete this step, products will not
+   load."
+3. Only **one** Google account signed in on the test device. RevenueCat warns
+   multiple accounts break purchases, and Play bills "the account that
+   downloaded the app".
+4. If the product was created or changed recently, allow **up to 24 hours**;
+   clearing the Play Store app's cache speeds it up.
 
 ### Retracted — do not re-derive these
 
