@@ -5,7 +5,7 @@
 // Builds without a Web Billing key retain the old Play Store link.
 import { Capacitor } from '@capacitor/core';
 import { useProStore } from '../store/proStore';
-import { PLAY_STORE_URL } from './appInfo';
+import { APP_VERSION, PLAY_STORE_URL } from './appInfo';
 import { getCloudProEntitlement } from './cloudSync';
 
 export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects';
@@ -342,6 +342,59 @@ export function webPlansFromOfferings(offerings: any): ProPlan[] {
       currency,
     }];
   });
+}
+
+/**
+ * A pasteable description of what the STORE returned, for diagnosing "I can't
+ * buy" reports from users whose devices we will never attach a cable to.
+ *
+ * Deliberately safe to hand to a stranger, because it will be: a diagnostics
+ * affordance is discoverable no matter how it is hidden, and obscurity is not a
+ * security control. Safety here comes from CONTENT, not from where the button
+ * lives. So this reports store CONFIGURATION only:
+ *
+ *   included — offering/package/product identifiers, price strings, currency,
+ *     product type, app version, platform. Every one of these is already public
+ *     in the Play listing or already rendered on the paywall.
+ *   EXCLUDED — any auth token (a leaked Google ID token is replayable against
+ *     the sync Worker until it expires), the account email, the Google subject,
+ *     and the RevenueCat app user ID derived from it. People paste diagnostics
+ *     into public forums.
+ *
+ * It grants an attacker nothing: purchases are verified server-side by Play and
+ * RevenueCat, so knowing a product id buys no entitlement.
+ */
+export async function collectStoreDiagnostics(): Promise<string> {
+  const lines: string[] = [
+    `app ${APP_VERSION}`,
+    `platform ${Capacitor.isNativePlatform() ? 'android' : 'web'}`,
+  ];
+  try {
+    const provider = getProProvider();
+    await provider.init();
+    const plans = await provider.getPlans();
+    lines.push(`plans ${plans.length ? plans.map((p) => `${p.id}=${p.priceLabel}`).join(' ') : '(none)'}`);
+  } catch (err) {
+    lines.push(`plans FAILED: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
+      const offerings: any = await withTimeout(
+        Purchases.getOfferings(), STORE_TIMEOUT_MS, 'getOfferings timed out');
+      lines.push(`current offering: ${offerings?.current?.identifier ?? '(none)'}`);
+      for (const [name, off] of Object.entries(offerings?.all ?? {})) {
+        const pkgs = ((off as any)?.availablePackages ?? []).map((p: any) =>
+          `${p?.identifier}/${p?.product?.identifier}`
+          + `@${p?.product?.priceString || 'NO PRICE'}`
+          + `/${p?.product?.productType ?? '?'}`);
+        lines.push(`offering ${name}: ${pkgs.length ? pkgs.join(' ') : '(empty)'}`);
+      }
+    } catch (err) {
+      lines.push(`offerings FAILED: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  return lines.join('\n');
 }
 
 export function isWebBillingConfigured(): boolean {

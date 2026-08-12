@@ -27,7 +27,7 @@ const dir = mkdtempSync(join(tmpdir(), 'hdbilling-'));
 const entry = join(root, '.billing-entry.tmp.ts');
 writeFileSync(entry, `
 export { useProStore } from '${rootImport}/src/store/proStore.ts';
-export { setProProvider, playPackage, describeMissingProduct, webPlansFromOfferings } from '${rootImport}/src/lib/pro.ts';
+export { setProProvider, playPackage, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics } from '${rootImport}/src/lib/pro.ts';
 `);
 
 const out = join(dir, 'bundle.mjs');
@@ -56,7 +56,7 @@ try {
   rmSync(entry, { force: true });
 }
 
-const { useProStore, setProProvider, playPackage, describeMissingProduct, webPlansFromOfferings } = mod;
+const { useProStore, setProProvider, playPackage, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics } = mod;
 
 let failures = 0;
 const check = (name, ok, detail = '') => {
@@ -430,6 +430,26 @@ const reset = (isPro) => {
   const undiscounted = webPlansFromOfferings({ current: webPkg('pro_lifetime_web', '$59.99', 59990000), all: {} })[0];
   check('a product outside the discount is never shown as discounted',
     undiscounted?.originalPriceLabel === undefined && undiscounted?.priceLabel === '$59.99');
+
+  // --- the pasteable store diagnostic ---------------------------------------
+  // Users paste diagnostics into public forums, and the affordance is
+  // discoverable no matter how it is hidden. Safety comes from CONTENT: store
+  // configuration only, never identity and never a credential. A leaked Google
+  // ID token is replayable against the sync Worker until it expires.
+  {
+    const p = fakeProvider({});
+    p.getPlans = async () => [{ id: 'lifetime', label: 'Lifetime', priceLabel: '$30.00' }];
+    setProProvider(p);
+    const report = await collectStoreDiagnostics();
+    check('the diagnostic reports the store configuration',
+      /app \d/.test(report) && /platform /.test(report) && /lifetime=\$30\.00/.test(report),
+      JSON.stringify(report));
+    // The safety promise, asserted rather than trusted to review.
+    const leaks = ['@', 'token', 'jwt', 'Bearer', 'subject', 'appUserID', 'google:', 'email'];
+    const found = leaks.filter((needle) => report.toLowerCase().includes(needle.toLowerCase()));
+    check('the diagnostic carries no identity, account or credential data',
+      found.length === 0, `leaked: ${found.join(', ')}`);
+  }
 
   // The legacy unlock must not be resellable even when the store still offers it.
   check('a lingering pro_unlock package is never selected',
