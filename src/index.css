@@ -23,6 +23,15 @@
 }
 
 :root {
+  /* Device safe-area insets, indirected through variables so they can be
+     simulated in a test — `env()` cannot be overridden, which is why the
+     dialog-under-the-navigation-bar bug below was never covered. Behaviour is
+     identical to using `env()` directly; the fallback keeps them 0 on desktop.
+     Only the modal shell reads these; existing `env()` call sites are
+     unchanged. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
   /* Surfaces — warm, light, refined */
   --bg: #eef0ee;
   --surface: #ffffff;
@@ -2356,7 +2365,15 @@ button.brand:hover .brand-name {
   justify-content: center;
   z-index: 100;
   backdrop-filter: blur(4px);
-  padding: 20px;
+  /* The backdrop is `inset: 0`, so on Android 15+ (targetSdk 36 forces
+     edge-to-edge and there is no native opt-out) it extends UNDER the system
+     navigation bar. A plain 20px pad therefore measures to the physical screen
+     edge, not to anything the user can see or touch: the ~48px navigation bar
+     ate the gap and part of the dialog footer, which is how two testers found
+     Settings with its Done button covered. Padding by the inset centres the
+     dialog in the visible area instead. */
+  padding: calc(20px + var(--safe-top)) calc(20px + env(safe-area-inset-right, 0px))
+    calc(20px + var(--safe-bottom)) calc(20px + env(safe-area-inset-left, 0px));
 }
 .modal {
   background: var(--surface);
@@ -2373,8 +2390,11 @@ button.brand:hover .brand-name {
      happened to be the ones documenting pinch-to-zoom, so they reported the
      gesture as missing when it had shipped all along.
      Only `.settings` and `.shopping-list` used to carry this; it belongs on
-     the shell so no dialog can ever be added without it. */
-  max-height: calc(100dvh - 40px);
+     the shell so no dialog can ever be added without it.
+     The insets match the backdrop's padding: `100dvh` counts the area behind
+     the system bars, so without subtracting them a full-height dialog is capped
+     to a height it cannot actually show. */
+  max-height: calc(100dvh - 40px - var(--safe-top) - var(--safe-bottom));
   display: flex;
   flex-direction: column;
 }

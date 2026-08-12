@@ -292,6 +292,60 @@ const desktopSettings = page.locator('.ps-head .ps-settings-btn');
 check('desktop header shows Settings beside Language', await desktopSettings.isVisible().catch(() => false));
 await desktopSettings.click();
 check('desktop header Settings opens', await page.locator('.modal.settings').isVisible().catch(() => false));
+
+// --- a dialog has to clear the device's safe area ---------------------------
+// Android 15+ forces edge-to-edge (targetSdk 36, and there is no native opt
+// out) while `.modal-backdrop` is `inset: 0`, so the system navigation bar sits
+// ON TOP of the dialog unless the shell pads for it. Two testers reported
+// Settings with its Done button covered. `env()` cannot be simulated in a
+// browser, which is why the shell reads `--safe-bottom` instead.
+{
+  const NAV = 48; // a 3-button Android navigation bar
+  // Short on purpose. A dialog whose content fits is simply centred and clears
+  // the bar unaided — measured at 390x844, where it passed against the unfixed
+  // CSS too. Only a dialog pinned to its height cap puts the footer where the
+  // navigation bar actually is; the body's ~974px of content guarantees that
+  // here.
+  await page.setViewportSize({ width: 360, height: 480 });
+  await page.evaluate((px) => {
+    document.documentElement.style.setProperty('--safe-bottom', `${px}px`);
+  }, NAV);
+  // Measure only once layout has settled. Reading straight after a resize
+  // catches the dialog mid-reflow and reports a height short of its cap, which
+  // looks exactly like the vacuous case the guard below is meant to catch.
+  await page
+    .waitForFunction(() => {
+      const m = document.querySelector('.modal.settings');
+      if (!m) return false;
+      return Math.abs(m.getBoundingClientRect().height - parseFloat(getComputedStyle(m).maxHeight)) <= 1;
+    }, { timeout: 2000 })
+    .catch(() => {});
+  const geom = await page.evaluate((px) => {
+    const modal = document.querySelector('.modal.settings');
+    const foot = modal?.querySelector('.modal-foot');
+    if (!modal || !foot) return null;
+    return {
+      modalH: Math.round(modal.getBoundingClientRect().height),
+      capH: Math.round(parseFloat(getComputedStyle(modal).maxHeight)),
+      footBottom: Math.round(foot.getBoundingClientRect().bottom),
+      viewH: window.innerHeight,
+      inset: px,
+    };
+  }, NAV);
+  // Guard against a vacuous pass: a dialog SHORTER than the height cap is just
+  // centred and clears the navigation bar on its own, so it would pass against
+  // the unfixed CSS too. Comparing against the COMPUTED cap rather than a
+  // guessed height keeps this honest as the dialog's contents change.
+  check('the settings dialog is pinned to its height cap, so the next check is real',
+    !!geom && Math.abs(geom.modalH - geom.capH) <= 1, JSON.stringify(geom));
+  check('a dialog footer clears the device navigation bar',
+    !!geom && geom.footBottom <= geom.viewH - geom.inset, JSON.stringify(geom));
+  await page.evaluate(() => {
+    document.documentElement.style.removeProperty('--safe-bottom');
+  });
+  await page.setViewportSize({ width: 1280, height: 800 });
+}
+
 await page.locator('.modal.settings .modal-foot .btn.primary').click();
 await page.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
 check('editor opens', await page.waitForSelector('.toolbar', { timeout: 15000 }).then(() => true).catch(() => false));

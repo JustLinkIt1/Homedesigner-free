@@ -23,6 +23,31 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.13 - 2026-08-12 (versionCode 12213)
+
+### Dialogs under the navigation bar
+
+- Fixed every dialog being partly hidden behind the Android navigation bar.
+  Two Phase 1 testers reported it independently — "the settings page is covered
+  by andriod tab" with a screenshot, and "some issues with the settings view and
+  scrollbars" — and Settings shows it worst because it is the tallest dialog, so
+  its **Done** button was the part covered.
+- `targetSdk` 36 means Android 15+ forces edge-to-edge with no native opt-out,
+  and `.modal-backdrop` is `inset: 0`, so its 20px padding measured to the
+  physical screen edge rather than to anything visible or touchable. A ~48px
+  navigation bar ate that gap and 28px of the dialog — measured, not estimated.
+  The backdrop now pads by the safe-area insets and `.modal`'s height cap
+  subtracts them, so a dialog is centred and capped within the visible area.
+- Fixed on the modal shell rather than in Settings, so every current and future
+  dialog inherits it — the same reasoning that put the height cap there.
+- The insets are read through `--safe-top`/`--safe-bottom` rather than `env()`
+  directly. Behaviour is identical, but `env()` cannot be simulated in a
+  browser, which is why this class of bug had never been covered by a test.
+  Regression coverage now simulates a 48px navigation bar and asserts the
+  footer clears it, with a companion assertion that the dialog is pinned to its
+  height cap — without which the check passes against the unfixed CSS, because
+  a dialog short enough to be centred clears the bar unaided.
+
 ## 1.22.12 - 2026-08-11 (versionCode 12212)
 
 ### Store diagnostics
