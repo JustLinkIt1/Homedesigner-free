@@ -17,6 +17,13 @@ import { toast } from '../lib/ui';
  */
 async function deliver(report: string): Promise<void> {
   if (Capacitor.isNativePlatform()) {
+    // Put it ON SCREEN first. Every channel tried so far could fail silently —
+    // the clipboard write rejected without activation, and a share sheet can be
+    // dismissed — leaving the user certain they had triggered it and holding
+    // nothing. A dialog cannot fail that way, and a screenshot of it carries the
+    // whole report, which is how this app's problems have actually been reported
+    // all along.
+    window.alert(report);
     try {
       const { Share } = await import('@capacitor/share');
       await Share.share({
@@ -24,11 +31,11 @@ async function deliver(report: string): Promise<void> {
         text: report,
         dialogTitle: 'Send store diagnostics',
       });
-      return;
     } catch {
-      // Sheet dismissed or unavailable — fall through and try the clipboard
-      // rather than losing the report entirely.
+      // Dismissed or unavailable. The report was already shown, so there is
+      // nothing to recover.
     }
+    return;
   }
   await navigator.clipboard.writeText(report);
 }

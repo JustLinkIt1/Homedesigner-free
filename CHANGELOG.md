@@ -23,6 +23,26 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.17 - 2026-08-12 (versionCode 12217)
+
+### Store diagnostics
+
+- Show the store diagnostic on screen as well as offering the share sheet.
+  Every delivery channel tried so far could fail silently — the clipboard write
+  rejected without user activation, and a share sheet can be dismissed —
+  leaving the report nowhere. A dialog cannot fail that way, and a screenshot
+  of it carries the whole report.
+
+### Play package selection
+
+- Recorded why there is deliberately no "just purchase whatever the offering
+  hands us" fallback, which is what RevenueCat's sample app does and reads as
+  the obvious simplification. It was tried and reverted: Web Billing products
+  carry a `priceString` too, so neither presence nor price distinguishes them
+  from a Play product, and `purchasePackage` on one opens no sheet and never
+  settles — the 1.22.7 hang. Selecting by product id is the only signal that
+  separates them. No behaviour change; the reasoning is now in the code.
+
 ## 1.22.16 - 2026-08-12 (versionCode 12216)
 
 ### Store diagnostics

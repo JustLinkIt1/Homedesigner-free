@@ -232,6 +232,13 @@ export function playPackage(offerings: any, planID?: ProPlanID): any | null {
     const pkg = playPackageForProduct(offerings, plan.productID);
     if (pkg) return pkg;
   }
+  // Deliberately NO "just take whatever the offering hands us" fallback, which
+  // is what RevenueCat's sample app does and looks like the obvious
+  // simplification. Tried, and it reintroduces the 1.22.7 hang: Web Billing
+  // products carry a priceString too (`pro_monthly_web` at $64.99 in the
+  // fixtures), so neither presence nor price distinguishes them from a Play
+  // product, and `purchasePackage` on one opens no sheet and never settles.
+  // Selecting by product id is the only signal that does.
   return null;
 }
 
