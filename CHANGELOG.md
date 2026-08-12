@@ -23,6 +23,24 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.14 - 2026-08-12 (versionCode 12214)
+
+### Store diagnostics
+
+- Put the long-press store diagnostic on the version line in **Settings**, not
+  just About. About opens from exactly one place — the editor's More menu — so
+  the one tool built for diagnosing a checkout failure in the field could not be
+  found by the person who needed it: "In about? There's settings but I don't see
+  about." Settings is the version line people actually find.
+- Extracted the hold into `useStoreDiagnosticHold` so both dialogs share one
+  implementation rather than copying the timer logic.
+- Added regression coverage that holds the version for 1.5s and asserts a report
+  reaches the clipboard, with `writeText` stubbed so it needs no clipboard
+  permission. It scrolls the version into view first: the version sits at the
+  bottom of the dialog's scrolling body, and without that the pointer lands on
+  whatever occupies those coordinates — measured as zero pointer events reaching
+  the element, which is how this test first failed against working code.
+
 ## 1.22.13 - 2026-08-12 (versionCode 12213)
 
 ### Dialogs under the navigation bar
