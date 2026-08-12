@@ -23,6 +23,80 @@ changes and add an entry when you ship one.
 - Prevented generated public handles from revealing Gmail address prefixes, applied one shared anonymous-read rate limit across forum routes, and added explicit report resolution.
 - Deployed the forum schema to Cloudflare D1 and the authenticated API to the existing sync Worker; verified the production custom-domain route and owner moderation access in Chrome.
 
+## 1.22.12 - 2026-08-11 (versionCode 12212)
+
+### Store diagnostics
+
+- Added a pasteable store diagnostic behind a ~1.5s long-press on the version in
+  About. Most people hitting a checkout problem are on a phone nobody will ever
+  attach a cable to, and Capacitor does not forward `console.*` to logcat in a
+  release build, so this is the only report they can produce. It carries
+  offering, package and product identifiers, price strings, currency, product
+  type, app version and platform — all already public in the Play listing or
+  already rendered on the paywall. It deliberately excludes every auth token,
+  the account email, the Google subject and the RevenueCat app user ID, because
+  people paste diagnostics into public forums.
+- Added env-gated diagnostic build switches, off unless `HD_DEBUG_BUILD=1` is
+  set at `cap sync` time. `loggingBehavior: 'production'` is the one that
+  matters: Capacitor defaults to `'debug'`, which forwards `console.*` to logcat
+  only in debug builds — exactly why the `[pro]` breadcrumbs added in 1.22.10
+  produced zero Capacitor/Console lines across two full logcat captures.
+  `webContentsDebuggingEnabled` lets `chrome://inspect` attach to the release
+  WebView. A plain `npm run android:aab` leaves both off, since shipping them
+  would make every user's WebView inspectable by anything with adb access.
+
+### Web checkout
+
+- Showed the launch discount as a struck-through list price. RevenueCat applies
+  the 50% offer at checkout, but the web SDK never exposes it — every `discount`
+  field in `purchases-js` is excluded from the release type — so the app
+  advertised 59.99 and charged 30.00, and the customer only discovered the offer
+  on the payment sheet, the one place it cannot persuade anyone to start. A plan
+  carries `originalPriceLabel` only when a discount genuinely applies, so the
+  strike-through disappears on its own when the offer ends.
+
+### Release identification
+
+- Realigned `package-lock.json`, which "Cut 1.22.11" left at 1.22.10.
+- Cut this version so the diagnostic build is identifiable. The three commits
+  above landed *after* 1.22.11 was cut without a further bump, so "1.22.11"
+  described two different builds — one with the long-press diagnostic and one
+  without — and About could not distinguish them. Same ambiguity 1.22.8 was cut
+  to remove.
+
+## 1.22.11 - 2026-08-11 (versionCode 12211)
+
+### Account handshake
+
+- Bounded the three native calls in `getGoogleIdToken` at 12s each. A native
+  call that never calls back is a promise that never settles rather than an
+  error anyone can catch — the same defect class as the unbounded cloud-sync
+  fetches fixed in 1.22.10, reached by the same callers behind the same `busy`
+  flag. Bounded at the boundary that knows they are native calls, rather than
+  relying on every caller to remember.
+- Made each half of the account handshake name itself. "Signed in, but cloud
+  sync couldn't finish" covered both `linkPurchases` (RevenueCat identify) and
+  project sync, which have very different consequences: a failed project sync is
+  cosmetic and retries itself, while failed purchase linking means RevenueCat
+  never learned who the customer is, affecting the plan list and checkout.
+  Reporting them identically sent debugging at the wrong subsystem. `syncNow`
+  shared the blind spot and gets the same treatment.
+
+### Checkout errors
+
+- Made the checkout failure name its own cause. "Pro upgrade is not available
+  right now" was identical whether the store returned nothing, returned only
+  products this app does not sell, or returned the right product with no price.
+  Those have completely different fixes, and with device logs unusable in the
+  field — Capacitor does not forward `console.*` to logcat in release builds and
+  the release WebView is not inspectable — the error message is the only
+  diagnostic channel that reaches anyone. Each case now says which it was, in a
+  sentence a user can repeat.
+- Stopped the slow-purchase toast racing the store lookup. It fired at 12s and
+  `STORE_TIMEOUT_MS` is 12s, so a `getOfferings()` call that simply timed out
+  announced itself as "Still waiting for the Play Store" — reporting that Play
+  was holding a sheet open when Play had never been asked for one.
+
 ## 1.22.10 - 2026-08-11 (versionCode 12210)
 
 ### Google Play checkout
