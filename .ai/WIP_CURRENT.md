@@ -1,6 +1,69 @@
 # WIP — current handoff
 
-## Session handoff 2026-08-12 (Claude) — PURCHASES: read this before touching billing
+## Session handoff 2026-08-14 (Claude) — PURCHASES: this supersedes the 08-12 entry
+
+Version **1.22.18**, branch `claude/home-design-app-2d-plans-12y5u5`, fix commit
+`33b47d8`.
+
+> **Full write-up: [`docs/REVENUECAT_PLAYSTORE_GUIDE.md`](../docs/REVENUECAT_PLAYSTORE_GUIDE.md)**
+> — evidence chain, the plugin source that proves it, adb capture procedure, and
+> the ruled-out list. Read that before touching billing.
+>
+> **Vendor reference supplied by the owner, to be used instead of memory:**
+> <https://sdk.revenuecat.com/android/10.16.2/index.html>
+
+### The 08-12 root cause is RETRACTED. So is R8. The catalog is fine.
+
+The entry below says the failure is a Play Console setting — `pro_lifetime` not
+marked backwards compatible. **It is marked backwards compatible** (Play Console,
+`prolifetime`: Active, Backwards compatible, 173 countries), and the diagnosis is
+wrong regardless, because it predicts the wrong symptom:
+
+* A dropped/priceless product throws **instantly** at `pro.ts:505` with "Pro
+  upgrade is not available right now."
+* The measured symptom is the buy button spinning the **full 180s** and ending
+  in "The Play Store didn't answer" — only reachable **after** `playPackage()`
+  returns a package. So `getOfferings()` succeeded **with a price**.
+
+R8 goes with it: a dead `Dispatchers.Main` would break `getOfferings()`'s
+callback too, giving the 12s read timeout. It doesn't. Keep the `-keep` rules as
+hardening; they are not a purchase fix.
+
+Every server-side layer was verified in the dashboards and is correct — Play
+Console, RevenueCat product/offering/package, and entitlement `Pro` (3 products,
+matching `ENTITLEMENT_ID`). **Do not re-check these.**
+
+### The actual fault, and the fix in `33b47d8`
+
+`purchasePackage` requires `presentedOfferingContext` and makes the native side
+re-find the package **by identifier inside the offering that context names**;
+when that resolution fails Play is never asked to open a sheet and the promise
+never settles. `purchaseStoreProduct` resolves **by product id**, context
+optional, no offering lookup. Proven from `PurchasesPlugin.kt` 245-295 of
+purchases-capacitor 13.4.0 — see the guide for the quoted source.
+
+Android now buys through `purchaseStoreProduct`, falling back to
+`purchasePackage` only when `productCategory` is null (the plugin reads it with
+`getStringOrReject` and would reject the call).
+
+### Status: UNVERIFIED ON DEVICE — this is the next step
+
+Typecheck, lint and all 13 billing checks pass, and the unbounded-native-call
+guard in `tests/billing.mjs` now covers `purchaseStoreProduct` (fault-injected:
+unwrapping the call makes it name both purchase methods). **No device has run
+it.** The owner is testing with adb logcat — §2 of the guide has the commands.
+
+The single decisive observation: **does a `BillingClient: Launching in-app
+billing flow` line follow the `[pro] purchaseStoreProduct` breadcrumb?** Absent
+before the fix, present after. If it is present and no sheet appears, the fault
+is below RevenueCat. If `productCategory` logs as null, the fallback took the
+old path and that is the next thing to fix.
+
+A build is needed to test: the container has no keystore, and Play needs a higher
+versionCode, so this wants a version cut before it can be installed.
+
+
+## Session handoff 2026-08-12 (Claude) — SUPERSEDED by the entry above
 
 Version **1.22.18**, branch `claude/home-designer-release-verify-npwmwu`.
 
@@ -101,7 +164,7 @@ Items only the owner can check, in the order worth checking them:
   `src/lib/pro.ts:198`) rather than a spinner. If a spinner appears instead,
   `getOfferings()` is hanging rather than returning empty — a separate bug.
 
-## Session handoff 2026-08-09 #2 (Claude) — read this first
+## Session handoff 2026-08-09 #2 (Claude) — SUPERSEDED, kept for the forum-bug record
 
 Supersedes the entry below it. Version **1.22.6**, commit `a72767b`, branch
 `claude/home-design-app-2d-plans-12y5u5`.
