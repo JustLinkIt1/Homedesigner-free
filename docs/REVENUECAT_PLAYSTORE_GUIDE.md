@@ -15,20 +15,26 @@
 > bumping to it is safe hardening but is **not** a fix for the current symptom.
 > The fix is a Play Console setting — see "Root cause" below.
 
-## TL;DR
+## TL;DR — status 2026-08-14
 
-The Pro purchase has failed across a dozen app-side releases because the cause is
-**upstream of the app**: the one-time product `pro_lifetime` is not exposed to
-the SDK in a form 10.16.x can read. RevenueCat 10.16.x reads a one-time
-product's price only through Google's **legacy** singular accessor, which Google
-fills only for a purchase option flagged **backwards compatible**. With none
-eligible, Play returns `NO_ELIGIBLE_OFFER`, the SDK drops the product, and the
-offering arrives empty — no sheet, no error.
-
-**Fix:** Play Console → Monetize → Products → One-time products → `pro_lifetime`
-→ the purchase option → mark it **backwards compatible / legacy compatible**, and
-confirm the tester's country is in its region list. Then verify with the in-app
-store diagnostic (long-press the version line in Settings ~1.2s).
+> **The backwards-compatible fix below is ALREADY APPLIED.** Play Console shows
+> `pro_lifetime` → purchase option `prolifetime`: **Active**, tagged
+> **Backwards compatible**, **173 countries/regions**, last updated
+> **12 Aug 2026**. So the WIP's headline action item is closed, and the
+> mechanism in §2 cannot still be failing for the reason it gave.
+>
+> That leaves two live possibilities, and **nothing on record distinguishes
+> them** because no device test is known to have run after 12 Aug:
+>
+> 1. **It is already fixed and untested.** The flag was set the same day the
+>    diagnosis was written. If the last failing test predates it, there may be
+>    nothing left to fix.
+> 2. **The diagnosis was wrong and the cause is still open** — including R8,
+>    which was retracted on weaker evidence than it looks (see §2a).
+>
+> **Do this first, before any further theorising:** ship 1.22.18 to internal
+> testing, install from Play, long-press the version line in **Settings** ~1.2s,
+> and read the report (§4). It settles which case we are in, in one measurement.
 
 ---
 
@@ -108,29 +114,68 @@ read path to the public flow. The lever is the Play Console product setting.
 
 ---
 
-## 3. The fix (owner action in Play Console)
+## 2a. Why R8 is NOT conclusively excluded
 
-1. Play Console → **Monetize → Products → One-time products → `pro_lifetime`**.
-2. Open its purchase option (`prolifetime`) and mark it
-   **Backwards compatible / legacy compatible**.
-3. Confirm the **tester's country is in that option's region list**.
-4. Confirm the tester account is a **license tester**
-   (Play Console → Settings → License testing).
-5. Give Play a few minutes to propagate, then re-test from an **internal testing**
-   install (not a sideloaded APK).
+The retraction in 1.22.18 argued: "1.22.15's `-keepnames` already fixed the
+filename, and purchases still failed after it shipped." That is true but does not
+cover the current build:
+
+* **1.22.15** kept only the *names of the two interfaces*
+  (`MainDispatcherFactory`, `CoroutineExceptionHandler`).
+* **1.22.18** additionally keeps the **implementation classes**
+  (`AndroidDispatcherFactory`, `AndroidExceptionPreHandler`) and volatile fields
+  in `kotlinx.coroutines.**`.
+
+Those are materially different builds. The evidence retiring the R8 theory comes
+from a build that lacked the implementation keeps, so **1.22.18 has never been
+field-tested against a real purchase.** Treat R8 as *unproven*, not *excluded*,
+until the §4 report comes back from a 1.22.18 install.
+
+## 3. Play Console configuration — verified 2026-08-14
+
+| Item | State | Source |
+|------|-------|--------|
+| Product `pro_lifetime` | exists, `HomeDesigner Pro Lifetime` | Play Console |
+| Purchase option `prolifetime` | **Active** | Play Console |
+| Backwards compatible | ✅ **tagged** | Play Console |
+| Countries/regions | **173** | Play Console |
+| Last updated | **12 Aug 2026** | Play Console |
+
+Items still only the owner can confirm:
+
+1. The **tester's country is one of the 173** on that option.
+2. The tester account is a **license tester**
+   (Play Console → Settings → License testing) **and** opted into the track.
+3. The installed build came from **internal testing**, not a sideload — a
+   sideloaded APK resolves no products regardless of catalog state.
+4. The installed **versionCode is actually published** on a track.
+
+> Note the coincidence worth resolving first: the option's *last updated* date
+> (12 Aug 2026) is the same day the failing diagnosis was written. Establish
+> whether any device test has run **since** that change before concluding
+> anything is still broken.
 
 ---
 
 ## 4. Verify — the in-app store diagnostic
 
 Install from internal testing, open **Settings**, long-press the **version line**
-~1.2s. A dialog shows the store report. Read it as:
+~1.2s. A dialog shows the store report. It is built in `src/lib/pro.ts`
+(`plans` line, then `current offering:`, then one `offering <name>:` line per
+offering, each package rendered as
+`packageId/productId@priceString/productType`).
 
-| Report shows | Meaning |
-|--------------|---------|
-| `offering default: (empty)` | Product dropped — **this diagnosis** (fix step 3). |
-| `…/pro_lifetime@NO PRICE/INAPP` | Product returned priceless — pricing not propagated to the tester's region. |
-| `…/pro_lifetime@$X.XX/INAPP` | Catalog is fine — investigate the purchase call, not the catalog. |
+Read it as:
+
+| Report shows | Meaning | Next step |
+|--------------|---------|-----------|
+| `offering default: (empty)` | Product dropped by the SDK — the §2 mechanism. | Catalog/eligibility: §3 items 1–4. |
+| `…/pro_lifetime@NO PRICE/INAPP` | Product returned **priceless** — `playPackageForProduct` skips it by design (`pro.ts:177`), so checkout declines. | Pricing not propagated to the tester's region. |
+| `…/pro_lifetime@$4.99/INAPP` | **Catalog is healthy.** | Fault is in the purchase call / R8 (§2a), not the catalog. |
+| `plans FAILED: …` / `offerings FAILED: …` | The SDK call itself threw or timed out. | Read the message — this is the R8 / dispatcher signature. |
+
+The `plans` line is the fastest read: `plans lifetime=$4.99` means the whole
+chain works; `plans (none)` means nothing sellable reached the UI.
 
 ---
 
