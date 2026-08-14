@@ -509,26 +509,60 @@ class RevenueCatProvider implements ProProvider {
     // package did we actually hand over?
     //
     // It logs the fields that DECIDE the outcome, which are not the ones this
-    // file selects on. purchasePackage sends the native side only `identifier`
-    // and `presentedOfferingContext` (see the plugin's PurchasesPlugin.kt) —
-    // `product` is never transmitted. The SDK then looks the package up again
-    // in its own cached offering. So a package can match on product id and
-    // carry a perfectly good price, and still name an offering/identifier pair
-    // the SDK cannot resolve — at which point Play is never asked to open
-    // anything. `console.warn`, not `.log`: the lint gate allows only warn/error.
-    console.warn('[pro] purchasePackage', JSON.stringify({
+    // file selects on. `console.warn`, not `.log`: the lint gate allows only
+    // warn/error.
+    //
+    // We buy through purchaseStoreProduct, NOT purchasePackage, and the
+    // difference is the whole bug. Read PurchasesPlugin.kt 245-295 of
+    // @revenuecat/purchases-capacitor 13.4.0:
+    //
+    //   purchasePackage      requires `presentedOfferingContext`
+    //                        (getObjectOrReject — no context, no call) and then
+    //                        purchasePackageCommon must re-find the package BY
+    //                        IDENTIFIER INSIDE THE OFFERING that context names.
+    //   purchaseStoreProduct takes the context as OPTIONAL (optJSONObject) and
+    //                        calls purchaseProduct(activity, productIdentifier,
+    //                        type, ...) — resolved by product id against the
+    //                        store, with no offering lookup in the path.
+    //
+    // Neither transmits the product object itself; both re-resolve natively. So
+    // a package can match on product id and carry a perfectly good price, and
+    // still name an offering/identifier pair the SDK cannot resolve — at which
+    // point Play is never asked to open anything and the promise never settles.
+    // That is the observed failure, measured rather than assumed: the store
+    // returns `pro_lifetime` PRICED (getOfferings succeeds and playPackage()
+    // finds it, or line 505 would have thrown "not available right now"), and
+    // then the buy button spins the full 180s and reports "didn't answer".
+    // A dropped or priceless product cannot produce that — it throws instantly.
+    //
+    // Resolving by product id uses the one lookup already proven to work on the
+    // failing devices. The offering context is still forwarded when the product
+    // carries one, so RevenueCat keeps its offering attribution.
+    console.warn('[pro] purchaseStoreProduct', JSON.stringify({
       planID: planID ?? '(default)',
       packageID: pkg?.identifier,
       offering: pkg?.presentedOfferingContext?.offeringIdentifier ?? pkg?.offeringIdentifier,
       productID: pkg?.product?.identifier,
       price: pkg?.product?.priceString,
       productType: pkg?.product?.productType,
+      // The plugin reads `productCategory` with getStringOrReject: absent, the
+      // call is REJECTED rather than left hanging, so this distinguishes "the
+      // product object was malformed" from "Play never opened a sheet".
+      productCategory: pkg?.product?.productCategory,
       hasDefaultOption: !!pkg?.product?.defaultOption,
     }));
     let customerInfo;
     try {
+      // `productCategory` is typed PRODUCT_CATEGORY | null, and the plugin reads
+      // it with getStringOrReject — a null one REJECTS the call outright. That
+      // is a fast, named error rather than the 180s silence, but it is still no
+      // purchase, so fall back to the package path when the field is missing
+      // instead of trading one dead end for another.
       ({ customerInfo } = await withTimeout(
-        Purchases.purchasePackage({ aPackage: pkg }), PURCHASE_TIMEOUT_MS, PURCHASE_TIMEOUT));
+        pkg?.product?.productCategory
+          ? Purchases.purchaseStoreProduct({ product: pkg.product })
+          : Purchases.purchasePackage({ aPackage: pkg }),
+        PURCHASE_TIMEOUT_MS, PURCHASE_TIMEOUT));
     } catch (err) {
       if (!(err instanceof Error) || err.message !== PURCHASE_TIMEOUT) throw err;
       // Running out of time is not the same as failing. Play may still have

@@ -209,7 +209,7 @@ const reset = (isPro) => {
   const to = whole.indexOf('class WebRevenueCatProvider');
   if (from < 0 || to < 0 || to < from) throw new Error('pro.ts no longer has the two provider classes');
   const src = whole.slice(from, to);
-  const GUARDED = /Purchases\.(getCustomerInfo|getOfferings|purchasePackage|restorePurchases|syncPurchases|logIn|logOut|setEmail|setDisplayName|configure)\s*\(/g;
+  const GUARDED = /Purchases\.(getCustomerInfo|getOfferings|purchasePackage|purchaseStoreProduct|restorePurchases|syncPurchases|logIn|logOut|setEmail|setDisplayName|configure)\s*\(/g;
 
   /** True when `idx` sits inside the argument list of some `withTimeout(`. */
   const insideWithTimeout = (text, idx) => {

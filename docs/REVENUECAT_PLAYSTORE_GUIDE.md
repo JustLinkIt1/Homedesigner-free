@@ -15,7 +15,38 @@
 > bumping to it is safe hardening but is **not** a fix for the current symptom.
 > The fix is a Play Console setting — see "Root cause" below.
 
-## TL;DR — status 2026-08-14
+## SUPERSEDED — read this box first (2026-08-14, later the same day)
+
+**The root cause below (§2) is wrong, and so is the R8 theory. Both are retired.**
+
+The owner reported the live symptom: the buy button spins the **full ~3 minutes**
+and ends in *"The Play Store didn't answer."* That outcome is only reachable
+**after** `playPackage()` returns a package — `pro.ts:505` throws instantly with
+*"Pro upgrade is not available right now"* when the product is missing or
+priceless. So `getOfferings()` succeeded and returned `pro_lifetime` **priced**.
+A dropped product cannot produce a 180-second spin.
+
+That also clears R8: a dead `Dispatchers.Main` would kill `getOfferings()`'s
+callback too, giving the 12s "Timed out loading store products" instead.
+
+Every server-side link was then verified in the dashboards — Play Console
+(`prolifetime` Active / Backwards compatible / 173 countries), RevenueCat
+(`pro_lifetime` Published, package `$rc_lifetime`, entitlement `Pro` with 3
+products). **The catalog is healthy end to end.**
+
+**The actual fault is the client-side package lookup.** In
+`@revenuecat/purchases-capacitor` 13.4.0, `purchasePackage` requires
+`presentedOfferingContext` and makes the native side re-find the package *inside
+the offering that context names*; when that resolution fails, Play is never asked
+to open a sheet and the promise never settles. `purchaseStoreProduct` resolves by
+**product id** with no offering lookup. The app now buys through the latter, with
+`purchasePackage` kept as a fallback when `productCategory` is null.
+
+Sections §2/§3 below are kept only as the record of what was ruled out.
+
+---
+
+## TL;DR — status 2026-08-14 (earlier; superseded by the box above)
 
 > **The backwards-compatible fix below is ALREADY APPLIED.** Play Console shows
 > `pro_lifetime` → purchase option `prolifetime`: **Active**, tagged

@@ -7,6 +7,40 @@ changes and add an entry when you ship one.
 
 ## Unreleased
 
+### Google Play checkout — the hang is the package lookup, not the catalog
+
+- Buy through `purchaseStoreProduct` instead of `purchasePackage` on Android.
+  Read `PurchasesPlugin.kt` 245-295 of `@revenuecat/purchases-capacitor` 13.4.0:
+  `purchasePackage` **requires** `presentedOfferingContext` (`getObjectOrReject`)
+  and then `purchasePackageCommon` must re-find the package *by identifier
+  inside the offering that context names*; `purchaseStoreProduct` treats the
+  context as optional (`optJSONObject`) and calls `purchaseProduct(activity,
+  productIdentifier, type, …)`, resolving by product id with no offering lookup
+  in the path. Neither transmits the product object — both re-resolve natively —
+  so the difference is precisely which lookup has to succeed.
+- Falls back to `purchasePackage` when `productCategory` is absent: it is typed
+  `PRODUCT_CATEGORY | null` and the plugin reads it with `getStringOrReject`, so
+  a null one rejects the call outright. A fast named error beats 180s of
+  silence, but it is still no purchase, so the old path stays as the fallback.
+- **This retracts the 1.22.18 root cause.** That diagnosis predicted the product
+  was *dropped from the offering*, which throws instantly with "Pro upgrade is
+  not available right now" at `pro.ts:505`. The measured symptom is the
+  opposite: the buy button spins the **full 180s** and reports "didn't answer",
+  which is only reachable *after* `playPackage()` returns a package — so
+  `getOfferings()` succeeded and returned `pro_lifetime` **with a price**.
+- It also retires the R8/coroutines theory on better evidence than either
+  earlier argument: a dead `Dispatchers.Main` would break `getOfferings()`'s
+  callback too, giving the 12s "Timed out loading store products". It doesn't.
+- Every server-side link was verified against the dashboards rather than
+  assumed: Play Console `pro_lifetime` → `prolifetime` **Active, Backwards
+  compatible, 173 countries**; RevenueCat Play app product `pro_lifetime`
+  **Published** with 1 entitlement; offering package `$rc_lifetime` carrying the
+  Play `pro_lifetime` beside the web `pro_lifetime_web_v2`; entitlement `Pro`
+  active with 3 products, matching `ENTITLEMENT_ID`. The catalog is healthy.
+- Added `purchaseStoreProduct` to the source-walking guard in `tests/billing.mjs`
+  that fails any unbounded native store call. Verified by fault injection:
+  unwrapping the call makes the check name both purchase methods.
+
 ### Community support forum
 
 - Added opt-in profile-picture uploads backed by the existing private Cloudflare R2 bucket. Google profile photos are never imported automatically; members keep an initial avatar unless they deliberately upload a PNG, JPEG or WebP and can remove it at any time.
