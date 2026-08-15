@@ -1,79 +1,90 @@
-# AI points: pricing, balancing, and where the profit comes from
+# AI points: verified costs, loss-proofing, and keeping the fal balance funded
 
-Draft **2026-08-15**. fal.ai 3D prices and Pro pricing are read from this repo
-(`src/model-studio/modelStudioApi.ts`, `src/lib/pro.ts`). Image-generation and
-Workers AI figures are **estimates and marked as such** — they are the one input
-here not yet grounded in a configured value.
+Draft **2026-08-15**. fal prices below were read from fal.ai's model pages on
+that date, **not estimated**. Pro pricing is from `src/lib/pro.ts`; what we
+actually send to fal is from `workers/design-sync/src/index.ts`.
 
-**Model:** one points currency across every AI feature. Everyone gets a free
-grant on sign-in. Anyone can buy points; **Pro buyers pay 30% less**. Point costs
-per feature and the price per point are balanced so every feature profits.
+**Model:** one points currency across every AI feature. Free grant on sign-in.
+Anyone can buy points at list; **Pro buyers pay 30% less**. Point costs and point
+price are balanced so that no spending pattern loses money.
 
 ---
 
-## 1. The point scale, and the one rule that keeps it honest
+## 1. Verified fal costs
 
-Set the internal cost basis at **$0.000375 of real spend per point**. That number
-is not arbitrary — it falls out of the two fal 3D prices already configured, and
-it makes them consistent with each other:
+| Model | Base | Add-ons |
+|---|---|---|
+| Hunyuan 3D **Rapid** | **$0.225** | PBR +$0.15 |
+| Hunyuan 3D **Pro** | **$0.375** | PBR +$0.15 · multi-view +$0.15 · **custom face count +$0.15** |
+| Image — Seedream V4 | **$0.03** / image | — |
+| Image — Flux Kontext Pro | **$0.04** / image | — |
+| Image — Qwen | **$0.02** / megapixel | — |
 
-| Generator | fal cost | Points | Cost per point |
+### We are paying an avoidable $0.15 on every Pro generation
+
+`workers/design-sync/src/index.ts:557` always sends an explicit face count:
+
+```ts
+face_count: Number(input.face_count ?? 40_000),
+```
+
+fal charges **+$0.15 for a custom face count**. That is why the repo records
+Pro's `basePrice` as **0.525** — it is fal's $0.375 base plus the surcharge we
+always trigger. Rapid sends no face count and correctly costs $0.225.
+
+**Dropping the explicit `face_count` would cut Pro from $0.525 → $0.375 — a 29%
+cost reduction on the single most expensive thing we serve**, if the default mesh
+density is acceptable. This is the cheapest available win in the whole plan and
+should be tested before any of the billing work.
+
+Worst case today is **$0.675** (Pro + PBR + face count). Worst case *available*
+is **$0.825** if multi-view is ever enabled — it is not currently, and §4 G4
+exists to make sure enabling it can never quietly go unpriced.
+
+---
+
+## 2. The point scale
+
+Internal cost basis: **$0.000375 of real spend per point**. **List: $1.00 =
+1,000 points.**
+
+| Feature | Real cost | **Points** | Notes |
 |---|---|---|---|
-| Hunyuan 3D **Rapid** | $0.225 | **600** | $0.000375 |
-| Hunyuan 3D **Pro** | $0.525 | **1,400** | $0.000375 |
-| Hunyuan 3D Pro + PBR | $0.675 | **1,800** | $0.000375 |
+| Wall detection on import | $0 | **free** | client-side CV, never metered |
+| Room auto-naming | ~$0.0002 | **10** | Workers AI |
+| Colour / material scheme | ~$0.0005 | **25** | Workers AI |
+| Listing or share description | ~$0.0005 | **25** | Workers AI |
+| Auto-furnish a room by style | ~$0.001 | **50** | Workers AI, geometry-validated |
+| Text → layout ("describe your room") | ~$0.002 | **100** | Workers AI, geometry-validated |
+| **AI render from a view** | $0.03–0.04 | **200** | fal image |
+| 3D model — Rapid | $0.225 | **600** | |
+| 3D model — Rapid + PBR | $0.375 | **1,000** | |
+| 3D model — Pro | $0.525 *(→ $0.375 if face count dropped)* | **1,400** | |
+| 3D model — Pro + PBR | $0.675 | **1,800** | |
+| *(reserved)* Pro + PBR + multi-view | $0.825 | **2,200** | not currently offered |
 
-**List price: $1.00 = 1,000 points.** So a point sells for $0.001 and costs at
-most $0.000375 to honour.
-
-> **The rule: price the points against the *worst-case* feature.**
-> A user may spend every point they own on the single most expensive thing we
-> offer. If the scale is profitable at $0.000375/point, it is profitable no
-> matter what they choose. Every cheaper feature is upside.
-
-Margin check at list, through Play (15%):
-
-| | Per 1,000 points |
-|---|---|
-| Gross | $1.00 |
-| Play cut −15% | $0.85 net |
-| Worst-case fal cost | $0.375 |
-| **Gross margin** | **$0.475 · 56%** |
+Workers AI figures remain estimates — they are the only ones here not verified.
+They are also the least dangerous, being ~1/500th of a 3D generation.
 
 ---
 
-## 2. The 30% Pro discount — and the floor it must not cross
+## 3. Margins, at both Play tiers
 
-**Every user can buy points, in any pack size. Pro is a 30% discount, not a
-gate.** A free user who never buys Pro is a paying customer at list price, and
-nothing about the points system is withheld from them.
+Google's 15% rate applies to the first $1M/year. **Both tiers are modelled,
+because the 30% case is the one that quietly breaks a plan built on 15%.**
 
-| Buyer | Pays per 1,000 | Play net | Worst-case cost | Margin |
-|---|---|---|---|---|
-| **Free user (list)** | **$1.00** | $0.85 | $0.375 | **56%** |
-| **Pro (−30%)** | **$0.70** | $0.595 | $0.375 | **37%** |
-| Pro, via Stripe on web | $0.70 | $0.65 | $0.375 | **42%** |
+| | 15% tier | 30% tier |
+|---|---|---|
+| Free user, list $1.00 | net $0.85 → **56%** | net $0.70 → **46%** |
+| Pro, −30% ($0.70) | net $0.595 → **37%** | net $0.49 → **23%** |
+| Pro via Stripe (web) | net $0.65 → **42%** | *(unchanged — no Play cut)* |
+| **Break-even discount** | **56% off list** | **46% off list** |
 
-37% at the worst case, on the worst channel. Comfortable.
+30% Pro remains profitable on every row. But note the floor moves: on the 30%
+tier the maximum safe total discount is **46%**, not 56%.
 
-**Note which row earns most.** A free user buying points is the *highest-margin*
-transaction in the business — 56% against 37%. That is worth keeping in view
-whenever the free tier is discussed as merely a funnel: point sales to non-Pro
-users are not a consolation prize, they are the better sale. Pro's 30% is a
-thank-you to people who already paid, and the business profits on either path.
-
-**Break-even discount is 56% off list.** At that point Play's cut plus fal's bill
-consume the entire sale. So:
-
-> **Total discount must never exceed ~50%.** 30% Pro is safe. Stacking a volume
-> discount *on top* of it is not — a 30% Pro price on a pack already discounted
-> 25% for volume lands at ~48% and leaves single-digit margin, before any
-> refund, retry or failed generation.
-
-**Therefore: no volume discounts on point packs.** Larger packs cost
-proportionally the same. **The volume discount *is* Pro** — which is precisely
-the "I want paying users" lever, because buying Pro becomes the only way to make
-points cheaper.
+**No volume discounts on packs.** Larger packs cost proportionally the same.
+Pro *is* the volume discount. Stacking both crosses the floor.
 
 | Pack | Points | List | Pro (−30%) |
 |---|---|---|---|
@@ -81,176 +92,170 @@ points cheaper.
 | Popular | 6,000 | $5.99 | $4.19 |
 | Studio | 15,000 | $14.99 | $10.49 |
 
-Every row holds 56% margin at list and 37% for Pro.
-
-### Honest note on how hard the discount pulls
-
-A 30% saving is $0.30 per 1,000 points. If Pro sells for ~$5.99, a buyer only
-recovers the Pro price in discount after **~20,000 points ≈ 33 Rapid
-generations**. For most users the discount alone will not sell Pro — it works as
-a *reinforcement* of the existing Pro features (multi-floor, PDF export, full
-catalogue), not as the headline.
-
-**That is a deliberate choice, not a gap to close.** Gating pack sizes behind
-Pro was considered and rejected: it would push away the highest-margin
-transaction there is (a free user paying list), to chase a one-time $5.99 that
-earns *less* per point thereafter. Deepening the discount is ruled out by the
-floor above. So the honest position is that points and Pro are two separate
-products that happen to reinforce each other — points monetise usage from
-everyone, Pro monetises the app's features and hands regular users a discount.
-Nobody has to buy Pro for the points economy to work.
+**Every user can buy any pack.** A free user paying list is the highest-margin
+transaction in the business (56% vs Pro's 37%) — point sales to non-Pro users
+are the better sale, not a consolation prize.
 
 ---
 
-## 3. The free grant: 1,000 points
+## 4. Loss-proofing: ten server-side guards
 
-Exactly the pattern you described — a large, friendly-sounding number that
-buys **one** real generation:
+Margin on a spreadsheet is not protection. These are the invariants that make
+losing money require a deliberate override.
 
-| What they spend it on | Points | Uses from the free 1,000 |
-|---|---|---|
-| One Rapid 3D model | 600 | **1**, with 400 stranded |
-| AI renders | 200 | 5 |
-| Auto-furnish a room | 50 | 20 |
-
-The 400-point remainder is the deliberate tease: visible, not enough, and the
-next model needs a top-up.
-
-**The part that needs a decision, because it is real money.** The free grant is
-not free to us. If a user spends it on a Rapid generation it costs **$0.225 of
-actual fal spend against zero revenue**. Ten thousand claimed grants is **~$2,250**.
-That is a customer-acquisition cost, and it should be run like one:
-
-* **One grant per verified Google account subject**, never per install or
-  device — the D1 `account_subject` link already exists, and points are the
-  first thing in this app worth farming.
-* **Require sign-in to claim.** Anonymous grants cannot be rate-limited
-  meaningfully.
-* **Set a monthly ceiling on total grants** in the Worker, with the grant
-  degrading to "come back next month" rather than failing open.
-* Track redemption cost as a marketing line, not as COGS.
-
-Most free users will drift to the cheap features (20 auto-furnishes costs us
-about two cents), so realistic average cost per grant lands well under the
-$0.225 worst case. Budget for the worst case anyway.
-
----
-
-## 4. Feature balancing
-
-| Feature | Runs on | Real cost | **Points** | Margin at list |
-|---|---|---|---|---|
-| Wall detection on import | client-side CV | $0 | **free, unmetered** | — |
-| Auto-furnish a room by style | Workers AI *(est. ~$0.001)* | ~$0.001 | **50** | ~98% |
-| **AI render from a plan/3D view** | fal image model *(est. ~$0.035)* | ~$0.035 | **200** | ~79% |
-| 3D model — Rapid | fal Hunyuan Rapid | $0.225 | **600** | 56% |
-| 3D model — Pro | fal Hunyuan Pro | $0.525 | **1,400** | 56% |
-| 3D model — Pro + PBR | fal Hunyuan Pro PBR | $0.675 | **1,800** | 56% |
-
-Two deliberate choices:
-
-* **Wall detection stays free and unmetered.** It runs client-side at zero
-  marginal cost, and it is the feature with a complaint already on record.
-  Metering something that costs nothing buys resentment and no revenue.
-* **Cheap features carry fatter margins on purpose.** Auto-furnish at 50 points
-  sells $0.05 of points for $0.001 of compute. That is normal for small-model
-  features, and it is what subsidises the 3D generations — so steering people
-  toward the cheap features is good business, not a leak.
-
-**AI renders supersede the old "avoid image generation" position.** That call was
-made when generation would have been bundled into a flat unlock, where cost
-scaled with usage and revenue did not. Metered at 200 points it carries ~79%
-margin. The estimate needs confirming against fal's actual image pricing before
-launch — **it is the only number here not taken from the repo.**
+* **G1 — Price against the worst case, never the typical.** Points per feature =
+  `ceil(max_possible_cost / 0.000375)`, where max includes *every* add-on the
+  endpoint can charge for.
+* **G2 — Hard floor guard.** Refuse to sell when
+  `net_per_point < cost_per_point`. Encode as a unit test over the real pack
+  table *and* a runtime assert, so a promo can never be configured below the
+  floor. Not selling beats selling at a loss.
+* **G3 — Spend server-side, before dispatch.** The client is never the authority
+  on the balance; it is the component an attacker controls.
+* **G4 — Pre-flight cost check.** Compute the job's max cost from *its actual
+  options* and refuse if the points collected do not cover it. This is what stops
+  a future flag (multi-view, higher face count) from silently going unpriced.
+* **G5 — Refund on failure.** Points return to the user. We may still owe fal;
+  that is the failure budget, and it is why margin is not 95%.
+* **G6 — Per-account rate limits.** Caps the blast radius of a compromised
+  account or a runaway client loop.
+* **G7 — Cost table server-side and versioned.** A fal price change is a Worker
+  config change, never an app release. The client must never compute price — an
+  old install would keep charging last year's rate forever.
+* **G8 — Circuit breaker.** If the fal float drops below the projected spend
+  window, disable *generative* features with an honest message and keep the
+  free/cheap ones running. A degraded app beats failed paid jobs.
+* **G9 — Negative balances allowed.** On a refund or chargeback after points are
+  spent, let the balance go negative and block further spend until cleared.
+  Never silently absorb it.
+* **G10 — One free grant per verified account subject, plus a monthly ceiling.**
+  Never per install or device. Points are the first thing in this app worth
+  farming.
 
 ---
 
-## 5. Stripe or Play — not a free choice
+## 5. Keeping the fal balance funded
 
-* **Android in-app point purchases must use Google Play Billing.** Points are
-  digital content consumed in the app; routing that through Stripe from inside
-  the Android app puts the listing at risk. This is a condition of staying in
-  the store, not a margin decision.
-* **Web should use Stripe** — no 15% cut, so ~42% margin for Pro buyers against
-  37% on Play. The rails are already live via RevenueCat Web Billing.
-* Google's rules on external payment links have been shifting under recent
-  litigation. **Verify current policy before relying on a link-out.**
+This is the "app doesn't break" question, and it is a **cash-flow** problem more
+than a margin one.
 
-**Both paths, one server-side balance.** Buy on either, spend on either.
+> **Confirm first:** fal's billing docs did not load (HTTP 429). Whether fal is a
+> prepaid balance that can hit zero, and whether auto-recharge exists, must be
+> confirmed before relying on the design below. The repo's own
+> `docs/FAL_TRELLIS_PIPELINE.md` refers to "spending credits", which suggests a
+> prepaid balance.
 
-Unifying the Play and web *Pro* price (which you are having Codex do) matters
-here beyond fairness: the 30% discount is defined against a list price, and
-today a $59.99 web list beside a £5.99 Play price makes "30% off" mean two
-different things depending on where someone stands.
+### The liability
 
----
+Points sold but not yet spent are a **debt payable in fal compute**:
 
-## 6. Implementation
-
-**D1** — beside the existing `play_purchases`:
-
-```sql
-CREATE TABLE point_balances (
-  account_subject TEXT PRIMARY KEY,
-  balance         INTEGER NOT NULL DEFAULT 0,
-  free_granted_at INTEGER,                 -- one free grant per account, ever
-  updated_at      INTEGER NOT NULL
-);
-
-CREATE TABLE point_ledger (
-  id              TEXT PRIMARY KEY,
-  account_subject TEXT NOT NULL,
-  delta           INTEGER NOT NULL,        -- +bought/granted, -spent, +refunded
-  reason          TEXT NOT NULL,           -- purchase | free_grant | spend | refund | promo
-  feature         TEXT,                    -- render | model_rapid | model_pro | furnish
-  source          TEXT,                    -- play | stripe | system
-  ref             TEXT UNIQUE,             -- receipt token / job id: idempotency key
-  created_at      INTEGER NOT NULL
-);
+```
+outstanding_points = points_sold + points_granted − points_spent
+liability          = outstanding_points × $0.000375
 ```
 
-`ref UNIQUE` makes a replayed receipt or retried job impossible to double-count.
-`free_granted_at` enforces one grant per account.
+Track it in D1. It is the single number that says whether the app can honour
+what it has already been paid for.
 
-**Worker routes:** `GET /v1/points`, `POST /v1/points/grant` (free, once),
-`POST /v1/points/purchase` (after a **verified** receipt),
-`POST /v1/points/spend`.
+**Rule: keep `fal_balance ≥ liability × 1.2`, with a hard floor** (say $50).
+The 1.2 covers price drift and failed jobs. Breakage — points never spent — makes
+this conservative, which is the correct direction to be wrong in.
 
-> **Spend server-side before dispatching to fal, and refund on failure.** The
-> client must never be the authority on the balance — it is the component an
-> attacker controls, and every point is real money at fal. The chokepoint
-> already exists: fal calls go through the Worker behind `FAL_KEY`.
+### The reserve ratio (the feedback loop)
 
-**Native:** the app currently sells a **single non-consumable**. Point packs are
-**consumables**, needing `consumeAsync` in `PlayBillingPlugin` — a product that
-is never consumed cannot be bought a second time. This is real work, not config.
+Worst-case fal cost is **44% of net revenue** on the 15% tier
+(`$0.375 / $0.85`), and **54%** on the 30% tier.
 
-**Pricing the discount:** hold the 30% server-side, not in the client. Two Play
-products per pack (list and Pro) is the policy-clean way to do a discount on
-Android, and the Worker must verify Pro entitlement before honouring the Pro SKU.
+> **Bank 45% of net point revenue (55% on the 30% tier) as fal float. Treat only
+> the remainder as profit.**
+
+That is the mechanism the question asks for: every point sale mechanically funds
+the compute it may later consume, so growth in usage cannot outrun the balance.
+Withdrawing the reserve is the only way to break it, which makes it a policy
+decision rather than an accident.
+
+### The timing gap — the real "app breaks" risk
+
+**Google pays out monthly in arrears. fal is prepaid. Users can spend points the
+hour they buy them.** So we owe fal *now* and get paid *later*.
+
+Worked example — $1,000 of points sold in a month, all spent immediately:
+
+| | |
+|---|---|
+| Owed to fal, now | ~$440 |
+| Received from Google | ~$850, up to ~45 days later |
+| **Working capital needed to bridge** | **~$440** |
+
+The business is profitable throughout and can still fail here purely on timing.
+So: hold a float sized to **one payout cycle of peak fal spend**, not to the
+average. G8's circuit breaker is the backstop when that estimate is wrong.
+
+### Operational
+
+* Worker endpoint reporting `fal_balance`, `liability`, and `days_of_cover`.
+* Alert well before the breaker trips — the existing `$1` R2 early-warning alert
+  is the precedent.
+* Enable fal auto-recharge if it exists; otherwise a monthly manual top-up sized
+  from `liability × 1.2`.
+
+---
+
+## 6. Easy AI features — and why they are the real protection
+
+The cheap features are not filler. **They are what makes losing money hard.**
+
+If most points are spent on Workers AI text features costing ~$0.0005 but priced
+at 25–100 points, the *blended* cost per point collapses far below the
+$0.000375 worst case. A plausible mix of 80% cheap features / 20% 3D lands
+blended cost near **$0.0001/point — around 88% margin**, while the worst-case
+guarantee still holds for the user who only ever generates 3D models.
+
+Ranked by ease of build against this codebase:
+
+1. **Room auto-naming** (10 pts) — one small prompt over existing room geometry.
+   Nearly trivial.
+2. **Colour / material scheme** (25 pts) — text in, palette out; applies through
+   the existing room-style path that already resets per-face overrides.
+3. **Auto-furnish a room by style** (50 pts) — structured JSON of catalogue ids +
+   positions, **validated by the geometry rules in `tests/samples.mjs` and
+   rejected on failure**. This validation pattern is already on record and is
+   what makes a hallucinated layout safe.
+4. **Listing / share description** (25 pts) — pure text over the design summary.
+5. **AI render from a view** (200 pts) — img2img over a Photo Mode frame.
+   **Photo Mode already exists and already requests the high-res `renderUrl`
+   tier**, so the capture half is built.
+6. **Text → layout** (100 pts) — the same validated-structured-output pattern as
+   auto-furnish, one step more ambitious.
+
+All of 1–4 and 6 run on Workers AI, which is already bound. None needs fal, so
+none of them is exposed to the balance problem in §5 at all.
 
 ---
 
 ## 7. Sequencing
 
-1. **Wall detection.** Free, unmetered, no billing work, addresses the live
-   complaint. Ship value before building a currency.
-2. **The points ledger + Play consumables**, with auto-furnish as the first
-   cheap feature to prove spend/refund end to end at ~$0.001 a call.
-3. **AI renders**, once image pricing is confirmed.
-4. **3D generation last** — the most expensive to serve and the most exposed if
+1. **Drop the `face_count` surcharge test.** One line, potentially −29% on Pro
+   generation cost. Do this before pricing anything.
+2. **Wall detection.** Free, unmetered, no billing work, answers a live complaint.
+3. **Points ledger + Play consumables + guards G1–G10**, with room auto-naming
+   as the first metered feature — it proves spend/refund end-to-end at
+   ~$0.0002 a call, where a bug is almost free.
+4. **Auto-furnish, colour schemes, descriptions.** Margin engine.
+5. **AI renders**, once image model choice is fixed.
+6. **3D generation last** — the most expensive to serve and the most exposed if
    the ledger has a hole.
 
 ---
 
 ## 8. Open questions
 
-1. **Confirm fal's image-generation price.** The 200-point render rests on a
-   ~$0.035 estimate; everything else here comes from configured values.
-2. **Workers AI cost per auto-furnish call** — assumed ~$0.001.
-3. **Do points expire?** No expiry is friendliest and simplest; expiry improves
-   economics and adds support load. Recommend **no expiry at launch**.
-4. **Refunds after points are spent** — points bought, spent, then the purchase
-   refunded. Recommend allowing the balance to go negative and blocking further
-   spend until cleared.
-5. **Free-grant ceiling** — what monthly acquisition spend is acceptable.
+1. **Is fal prepaid, and does it auto-recharge?** Docs returned 429; §5 depends
+   on the answer.
+2. **Does dropping `face_count` change output quality?** Worth one A/B before
+   taking the 29% saving.
+3. **Which Play tier are we on — 15% or 30%?** It moves the discount floor from
+   56% to 46%.
+4. **Do points expire?** Recommend no expiry at launch; note it permanently
+   inflates the §5 liability, which the reserve ratio already covers.
+5. **Workers AI cost per call** — assumed ~$0.0002–$0.002.
