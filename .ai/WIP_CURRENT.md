@@ -18,6 +18,14 @@ checkout still grants the same Google-linked RevenueCat `Pro` entitlement, so
 signing into Android with that Google account unlocks Pro there through the
 existing Worker entitlement lookup.
 
+Deployment is live: the production web branch contains this work, the custom
+domain served asset build `20260815135521688`, and Worker version
+`1f07e4f2-8164-4421-857a-0610599cbc50` enables member screenshot uploads. The
+four private codes and cross-platform redemption instructions were sent by
+Reddit DM to eXOpiceXO, Kartik_45, Disastrous-Ruin2033 and Own-Joke9250. Disable
+each individual code after confirmed redemption so a leaked code cannot be
+reused by another otherwise-eligible new customer.
+
 ## Session handoff 2026-08-15 (Codex) — community access and member screenshots
 
 The community was technically linked from Settings and About, but it was absent
