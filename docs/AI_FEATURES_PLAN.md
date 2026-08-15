@@ -44,13 +44,23 @@ Margin check at list, through Play (15%):
 
 ## 2. The 30% Pro discount — and the floor it must not cross
 
+**Every user can buy points, in any pack size. Pro is a 30% discount, not a
+gate.** A free user who never buys Pro is a paying customer at list price, and
+nothing about the points system is withheld from them.
+
 | Buyer | Pays per 1,000 | Play net | Worst-case cost | Margin |
 |---|---|---|---|---|
-| Free user (list) | $1.00 | $0.85 | $0.375 | **56%** |
+| **Free user (list)** | **$1.00** | $0.85 | $0.375 | **56%** |
 | **Pro (−30%)** | **$0.70** | $0.595 | $0.375 | **37%** |
 | Pro, via Stripe on web | $0.70 | $0.65 | $0.375 | **42%** |
 
 37% at the worst case, on the worst channel. Comfortable.
+
+**Note which row earns most.** A free user buying points is the *highest-margin*
+transaction in the business — 56% against 37%. That is worth keeping in view
+whenever the free tier is discussed as merely a funnel: point sales to non-Pro
+users are not a consolation prize, they are the better sale. Pro's 30% is a
+thank-you to people who already paid, and the business profits on either path.
 
 **Break-even discount is 56% off list.** At that point Play's cut plus fal's bill
 consume the entire sale. So:
@@ -79,9 +89,16 @@ A 30% saving is $0.30 per 1,000 points. If Pro sells for ~$5.99, a buyer only
 recovers the Pro price in discount after **~20,000 points ≈ 33 Rapid
 generations**. For most users the discount alone will not sell Pro — it works as
 a *reinforcement* of the existing Pro features (multi-floor, PDF export, full
-catalogue), not as the headline. If a stronger pull is wanted later, the lever
-with real force is restricting **pack sizes** to Pro (free users limited to the
-Starter pack), not deepening the discount, which the floor above forbids anyway.
+catalogue), not as the headline.
+
+**That is a deliberate choice, not a gap to close.** Gating pack sizes behind
+Pro was considered and rejected: it would push away the highest-margin
+transaction there is (a free user paying list), to chase a one-time $5.99 that
+earns *less* per point thereafter. Deepening the discount is ruled out by the
+floor above. So the honest position is that points and Pro are two separate
+products that happen to reinforce each other — points monetise usage from
+everyone, Pro monetises the app's features and hands regular users a discount.
+Nobody has to buy Pro for the points economy to work.
 
 ---
 
