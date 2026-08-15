@@ -460,6 +460,14 @@ export function isWebBillingConfigured(): boolean {
   return REVENUECAT_WEB_KEY.startsWith('rcb_') || REVENUECAT_WEB_KEY.startsWith('strp_');
 }
 
+// DEAD CODE, retained deliberately by the 1.22.23 Play Billing switch. Nothing
+// constructs this: Android now uses PlayBillingProvider and the RevenueCat
+// Android SDK dependency is gone from the native graph, so this class cannot
+// run even if something did. Suppressed rather than deleted because removing
+// ~250 lines that a previous session chose to keep is that session's call, not
+// a lint fix. If it is not coming back, delete it — it references an SDK the
+// app no longer ships.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- retained legacy provider, see above
 class RevenueCatProvider implements ProProvider {
   private configured = false;
   private configuring: Promise<void> | null = null;
@@ -742,6 +750,11 @@ class DirectPlayProvider implements ProProvider {
         await this.verifyOwned(owned);
         return true;
       }
+      // `error` is the sentinel withTimeout() threw above; anything else was
+      // already rethrown a line up. The real Play outcome never arrives — its
+      // promise is still pending — so there is no upstream cause to attach, and
+      // Error.cause would need lib ES2022, which this project does not use.
+      // eslint-disable-next-line preserve-caught-error -- no upstream cause exists
       throw new Error("The Play Store didn't answer. You were not charged; if that is wrong, tap Restore purchase.");
     }
 

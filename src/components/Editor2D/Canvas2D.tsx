@@ -112,6 +112,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     zoom: st.zoom,
     pan: st.pan,
     showGrid: st.showGrid,
+    wallAngleLock: st.wallAngleLock,
     gridSize: st.gridSize,
     selection: st.selection,
     moveLock: st.moveLock,
@@ -151,7 +152,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   })));
   const {
     walls, rooms, furniture, openings, background,
-    tool, zoom, pan, showGrid, gridSize, selection, selectedIds, showDimensions, units, moveLock,
+    tool, zoom, pan, showGrid, gridSize, wallAngleLock, selection, selectedIds, showDimensions, units, moveLock,
   } = s;
   const multi = selectedIds.length > 1;
   const fmtLen = (cm: number) => formatLength(cm, units);
@@ -467,7 +468,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     // tighter tolerance so a genuinely angled wall is left alone.
     if (background && draft.length > 0
       && (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room')) {
-      const straight = lockToAngle(draft[draft.length - 1], p, undefined, TRACE_ANGLE_LOCK);
+      const straight = lockToAngle(draft[draft.length - 1], p, undefined, TRACE_ANGLE_LOCK, wallAngleLock);
       if (straight !== p) {
         snapKindRef.current = 'grid';
         return straight;
@@ -479,12 +480,27 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       // a chain, pull near-45° segments exactly onto the axis so beginners get
       // straight walls without hunting for the guide line.
       if ((tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room') && draft.length > 0) {
-        const locked = lockToAngle(draft[draft.length - 1], p, (pt) => snapToGrid(pt, gridSize));
+        const locked = lockToAngle(draft[draft.length - 1], p, (pt) => snapToGrid(pt, gridSize), undefined, wallAngleLock);
         snapKindRef.current = 'grid';
         return locked;
       }
       snapKindRef.current = 'grid';
       return snapToGrid(p, gridSize);
+    }
+    // The angle lock otherwise lives ENTIRELY inside the grid branch, so with
+    // the grid switched off there is no straightening at all. That is fine for
+    // the '45' default — it is long-standing behaviour and quietly adding snap
+    // to everyone's freehand drawing is not what the reviewer asked for — but
+    // '90' is an explicit opt-in, and a setting that stops working because an
+    // unrelated toggle is off is a bug report waiting to happen. Straighten
+    // without quantising position, since the grid is off or being traced over.
+    if (wallAngleLock === '90' && draft.length > 0
+      && (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room')) {
+      const locked = lockToAngle(draft[draft.length - 1], p, undefined, undefined, wallAngleLock);
+      if (locked !== p) {
+        snapKindRef.current = 'grid';
+        return locked;
+      }
     }
     snapKindRef.current = 'free';
     return p;

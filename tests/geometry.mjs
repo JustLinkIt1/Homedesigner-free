@@ -906,6 +906,44 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   const s3 = lockToAngle(prev, at(3), undefined, TRACE);
   check('trace lock: straightening preserves the wall length',
     Math.abs(Math.hypot(s3.x - prev.x, s3.y - prev.y) - 200) < 1e-6);
+
+  // --- the three-way wall angle lock ---------------------------------------
+  // A Play reviewer on a Galaxy S24: "would be good to have a setting to
+  // automatically lock walls to 90 and 0 degrees, slightly difficult to get
+  // straight on phone screen." '90' therefore has to hold from ANY angle, not
+  // merely a wider window, or the complaint survives the setting.
+  const norm = (d) => ((d % 360) + 360) % 360;
+  const isCardinal = (p) => {
+    const a = norm(angleOf(p));
+    return Math.min(...[0, 90, 180, 270, 360].map((c) => Math.abs(a - c))) < 1e-6;
+  };
+  for (const deg of [3, 10, 20, 44, 44.9, 80, 100, 179, 200, 310]) {
+    check(`angle lock 90: ${deg}° is forced onto a right angle`,
+      isCardinal(lockToAngle(prev, at(deg), undefined, undefined, '90')));
+  }
+  // 45° is exactly between two cardinals. It must still land on one rather
+  // than returning unchanged, or the mode has a hole at its worst input.
+  check('angle lock 90: an exact 45° still lands on a cardinal',
+    isCardinal(lockToAngle(prev, at(45), undefined, undefined, '90')));
+  // …and never on a diagonal, which is what the reviewer was getting.
+  check('angle lock 90: a 45° wall is never left diagonal',
+    Math.abs(norm(angleOf(lockToAngle(prev, at(44), undefined, undefined, '90'))) - 45) > 1,
+    'a 45° result means the diagonal survived the right-angle setting');
+  // Right-angling must not change how long the wall is.
+  const r = lockToAngle(prev, at(20), undefined, undefined, '90');
+  check('angle lock 90: forcing a right angle preserves the wall length',
+    Math.abs(Math.hypot(r.x - prev.x, r.y - prev.y) - 200) < 1e-6);
+  // 'off' is a genuine escape hatch: nothing is touched, at any angle.
+  for (const deg of [3, 20, 45]) {
+    const free = lockToAngle(prev, at(deg), undefined, undefined, 'off');
+    check(`angle lock off: ${deg}° is left exactly alone`,
+      Math.abs(angleOf(free) - deg) < 1e-6);
+  }
+  // '45' must remain byte-for-byte the historical default, since it ships to
+  // everyone who never opens the setting.
+  check('angle lock 45: matches the previous default behaviour',
+    Math.abs(angleOf(lockToAngle(prev, at(10), undefined, undefined, '45'))) < 1e-6
+    && Math.abs(angleOf(lockToAngle(prev, at(20), undefined, undefined, '45')) - 20) < 1e-6);
 }
 
 // --- resized objects fill their footprint in plan --------------------------

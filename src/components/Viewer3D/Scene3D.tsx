@@ -526,7 +526,7 @@ export function snapDraftPoint(raw: Point, draft: Point[]): Point {
   const p = hit ? { ...hit.point } : { ...raw };
   const grid = st.showGrid ? (pt: Point) => snapToGrid(pt, st.gridSize) : undefined;
   if (prev) {
-    const locked = lockToAngle(prev, p, grid);
+    const locked = lockToAngle(prev, p, grid, undefined, st.wallAngleLock);
     if (locked !== p) return locked;
   }
   return grid ? grid(p) : p;
@@ -552,7 +552,7 @@ export function snapCornerPoint(raw: Point, other: Point, orig: Point): Point {
   if (best) return { ...best };
   const p = { ...raw };
   const grid = st.showGrid ? (pt: Point) => snapToGrid(pt, st.gridSize) : undefined;
-  const locked = lockToAngle(other, p, grid);
+  const locked = lockToAngle(other, p, grid, undefined, st.wallAngleLock);
   if (locked !== p) return locked;
   return grid ? grid(p) : p;
 }

@@ -23,18 +23,6 @@ export const snapToGrid = (p: Point, grid: number): Point => ({
   y: Math.round(p.y / grid) * grid,
 });
 
-/**
- * Snap an in-progress segment's end so it locks to horizontal / vertical /
- * 45° when close, which makes hand-drawn walls look clean.
- */
-export const snapAngle = (start: Point, end: Point, stepDeg = 15): Point => {
-  const d = dist(start, end);
-  if (d < 1) return end;
-  let a = Math.atan2(end.y - start.y, end.x - start.x);
-  const step = (stepDeg * Math.PI) / 180;
-  a = Math.round(a / step) * step;
-  return { x: start.x + Math.cos(a) * d, y: start.y + Math.sin(a) * d };
-};
 
 /** Nearest existing wall endpoint within `tol` cm, for snapping joints. */
 export const snapToEndpoints = (

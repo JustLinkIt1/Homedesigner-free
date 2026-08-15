@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { WallAngleLock } from '../lib/snapping';
 import type {
   BackgroundPlan,
   CustomTexture,
@@ -91,6 +92,8 @@ interface DesignState extends DesignSnapshot {
   pan: Point; // px offset
   showGrid: boolean;
   gridSize: number; // cm
+  /** How hard wall drawing straightens as you draw. Persisted setting. */
+  wallAngleLock: WallAngleLock;
   showDimensions: boolean; // 2D: architectural dimension annotations
   dollhouse: boolean; // 3D: fade walls between camera and interior
   walkMode: boolean; // 3D: first-person walk-through mode
@@ -118,6 +121,7 @@ interface DesignState extends DesignSnapshot {
   setPan: (p: Point) => void;
   setViewport: (p: Point, z: number) => void;
   setShowGrid: (b: boolean) => void;
+  setWallAngleLock: (m: WallAngleLock) => void;
   setShowDimensions: (b: boolean) => void;
   setUnits: (u: Units) => void;
   setDollhouse: (b: boolean) => void;
@@ -209,8 +213,8 @@ const SETTINGS_KEY = 'homedesigner.settings.v1';
 
 /** Load persisted display settings (units, lighting) from their own key — kept
  *  out of the undo snapshot so changing them never pollutes history. */
-const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean } => {
-  const def = { units: 'metric' as Units, sunTime: 13, lightsOn: true };
+const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean; wallAngleLock: WallAngleLock } => {
+  const def = { units: 'metric' as Units, sunTime: 13, lightsOn: true, wallAngleLock: '45' as WallAngleLock };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
@@ -219,6 +223,9 @@ const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean } =>
         units: s.units === 'imperial' ? 'imperial' : 'metric',
         sunTime: typeof s.sunTime === 'number' ? Math.min(24, Math.max(0, s.sunTime)) : def.sunTime,
         lightsOn: typeof s.lightsOn === 'boolean' ? s.lightsOn : def.lightsOn,
+        // Anything unrecognised falls back to the historical 45° assist, so a
+        // corrupt or older settings blob never leaves drawing unassisted.
+        wallAngleLock: s.wallAngleLock === 'off' || s.wallAngleLock === '90' ? s.wallAngleLock : def.wallAngleLock,
       };
     }
   } catch {
@@ -228,7 +235,7 @@ const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean } =>
 };
 
 /** Merge-write a settings patch so each setter keeps the others' values. */
-const persistSettings = (patch: Partial<{ units: Units; sunTime: number; lightsOn: boolean }>) => {
+const persistSettings = (patch: Partial<{ units: Units; sunTime: number; lightsOn: boolean; wallAngleLock: WallAngleLock }>) => {
   try {
     const cur = loadSettings();
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...cur, ...patch }));
@@ -462,6 +469,7 @@ export const useDesign = create<DesignState>((set, get) => {
     fitRequest: 0,
     selectedIds: [],
     savedTick: 0,
+    wallAngleLock: loadSettings().wallAngleLock,
     units: loadSettings().units,
     sunTime: loadSettings().sunTime,
     lightsOn: loadSettings().lightsOn,
@@ -475,6 +483,10 @@ export const useDesign = create<DesignState>((set, get) => {
     setPan: (p) => set({ pan: p }),
     setViewport: (p, z) => set({ pan: p, zoom: Math.max(0.05, Math.min(4, z)) }),
     setShowGrid: (b) => set({ showGrid: b }),
+    setWallAngleLock: (m) => {
+      persistSettings({ wallAngleLock: m });
+      set({ wallAngleLock: m });
+    },
     setShowDimensions: (b) => set({ showDimensions: b }),
     setUnits: (u) => {
       persistSettings({ units: u });

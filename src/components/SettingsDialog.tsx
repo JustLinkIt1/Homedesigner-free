@@ -59,6 +59,8 @@ export default function SettingsDialog({
   const pref = useTheme((s) => s.pref);
   const setPref = useTheme((s) => s.setPref);
   const units = useDesign((s) => s.units);
+  const wallAngleLock = useDesign((s) => s.wallAngleLock);
+  const setWallAngleLock = useDesign((s) => s.setWallAngleLock);
   const setUnits = useDesign((s) => s.setUnits);
   const showGrid = useDesign((s) => s.showGrid);
   const setShowGrid = useDesign((s) => s.setShowGrid);
@@ -178,6 +180,37 @@ export default function SettingsDialog({
                 {t('Imperial (ft)')}
               </button>
             </div>
+          </section>
+
+          <section>
+            <h3>{t('Wall angles')}</h3>
+            <div className="seg" role="radiogroup" aria-label={t('Wall angles')}>
+              <button
+                className={wallAngleLock === 'off' ? 'active' : ''}
+                role="radio"
+                aria-checked={wallAngleLock === 'off'}
+                onClick={() => setWallAngleLock('off')}
+              >
+                {t('Any angle')}
+              </button>
+              <button
+                className={wallAngleLock === '45' ? 'active' : ''}
+                role="radio"
+                aria-checked={wallAngleLock === '45'}
+                onClick={() => setWallAngleLock('45')}
+              >
+                {t('45° assist')}
+              </button>
+              <button
+                className={wallAngleLock === '90' ? 'active' : ''}
+                role="radio"
+                aria-checked={wallAngleLock === '90'}
+                onClick={() => setWallAngleLock('90')}
+              >
+                {t('Right angles')}
+              </button>
+            </div>
+            <p className="settings-hint">{t('Right angles keeps every wall at 0° or 90°, which is easier on a phone.')}</p>
           </section>
 
           <section>

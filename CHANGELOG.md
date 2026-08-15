@@ -7,6 +7,33 @@ changes and add an entry when you ship one.
 
 ## Unreleased
 
+### Wall angle lock (Settings → Wall angles)
+
+- Added a three-way wall angle setting: **Any angle**, **45° assist** (the
+  existing default) and **Right angles**. Asked for in a 5-star Play review from
+  a Galaxy S24 owner: "would be good to have a setting to automatically lock
+  walls to 90 and 0 degrees, slightly difficult to get straight on phone screen."
+- **Right angles has no tolerance window.** The existing assist only engages
+  within `ANGLE_LOCK_RAD` (12°) of a 45° multiple, so a finger further off got
+  no help at all — and 45° is itself a snap target, so you could land diagonal
+  when you wanted square. Merely widening the window would leave both problems,
+  so the mode snaps from any angle and to cardinals only.
+- The lock previously lived **entirely inside the grid branch**, so switching
+  the grid off silently disabled it. Right angles now applies with the grid off
+  too. The 45° default deliberately keeps its historical coupling to the grid:
+  quietly adding snap to everyone's freehand drawing is not what was asked for.
+- Applies identically in 2D and 3D, and to wall, half-wall, fence and room
+  tools, since they share `lockToAngle`. Persisted with the other display
+  settings, so it is a property of how someone draws, not of the design.
+- Translated across all 12 non-English locales. The option is keyed
+  `'Any angle'`, not `'Free'`: `'Free'` already exists as the *price* tier, and
+  reusing it rendered the angle control as "Darmowe"/"free of charge".
+- Removed `snapAngle()` from `geometry.ts` — dead code with zero callers, easily
+  mistaken for the live lock while being a different implementation.
+- 23 assertions covering all three modes. Fault injected: making `'90'` fall
+  back to 45° steps fails 5 of them, including "a 45° wall is never left
+  diagonal".
+
 ### Google Play checkout — the hang is the package lookup, not the catalog
 
 - Buy through `purchaseStoreProduct` instead of `purchasePackage` on Android.

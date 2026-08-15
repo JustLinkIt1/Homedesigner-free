@@ -138,6 +138,22 @@ export function buildSnapElements(opts: BuildOpts): SnapEl[] {
 export const ANGLE_LOCK_RAD = (12 * Math.PI) / 180;
 
 /**
+ * How hard the editor straightens a wall as it is drawn.
+ *
+ * * `'off'`  — no straightening at all; the pointer position is the wall.
+ * * `'45'`   — the long-standing default: snap onto a 45° multiple, but only
+ *              within `ANGLE_LOCK_RAD`, so a deliberately angled wall survives.
+ * * `'90'`   — right angles only, with no tolerance window. Requested by a
+ *              Play reviewer on a Galaxy S24: "would be good to have a setting
+ *              to automatically lock walls to 90 and 0 degrees, slightly
+ *              difficult to get straight on phone screen."
+ *
+ * Persisted in the settings key, not the design, so it is a property of how a
+ * person draws rather than of the house they drew.
+ */
+export type WallAngleLock = 'off' | '45' | '90';
+
+/**
  * IKEA-style "square to grid" angle lock, shared by the 2D and 3D wall
  * drawing so they behave identically. If the segment `prev`→`p` lands within
  * `ANGLE_LOCK_RAD` of a 45° multiple, rotate it exactly onto that angle
@@ -153,17 +169,25 @@ export function lockToAngle(
   /** How far off a 45° multiple still counts as "meant to be straight".
    *  Tracing an imported plan passes a tighter value: real plans are mostly
    *  axis-aligned so the help is worth a lot, but a genuinely angled wall must
-   *  not be yanked onto the axis. */
+   *  not be yanked onto the axis. Ignored when `mode` is `'90'`. */
   toleranceRad: number = ANGLE_LOCK_RAD,
+  /** Which angles a wall may land on. See `WallAngleLock`. */
+  mode: WallAngleLock = '45',
 ): Point {
+  if (mode === 'off') return p;
   const dx = p.x - prev.x;
   const dy = p.y - prev.y;
   const len = Math.hypot(dx, dy);
   if (len <= 1) return p;
-  const step = Math.PI / 4;
+  // '90' locks to cardinals only, and does so from ANY angle: a tolerance
+  // window is what makes the 45° assist feel unreliable on a phone, where the
+  // reviewer reported walls are "slightly difficult to get straight". Someone
+  // who has explicitly asked for right angles wants them at 44° too, so the
+  // window is deliberately absent rather than merely widened.
+  const step = mode === '90' ? Math.PI / 2 : Math.PI / 4;
   const ang = Math.atan2(dy, dx);
   const snapped = Math.round(ang / step) * step;
-  if (Math.abs(ang - snapped) >= toleranceRad) return p;
+  if (mode !== '90' && Math.abs(ang - snapped) >= toleranceRad) return p;
   const out = { x: prev.x + Math.cos(snapped) * len, y: prev.y + Math.sin(snapped) * len };
   const horiz = Math.abs(Math.sin(snapped)) < 1e-6;
   const vert = Math.abs(Math.cos(snapped)) < 1e-6;
