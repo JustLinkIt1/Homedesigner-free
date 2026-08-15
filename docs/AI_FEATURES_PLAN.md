@@ -57,10 +57,10 @@ Internal cost basis: **$0.000375 of real spend per point**. **List: $1.00 =
 | Auto-furnish a room by style | ~$0.001 | **50** | Workers AI, geometry-validated |
 | Text → layout ("describe your room") | ~$0.002 | **100** | Workers AI, geometry-validated |
 | **AI render from a view** | $0.03–0.04 | **200** | fal image |
-| 3D model — Rapid | $0.225 | **600** | |
-| 3D model — Rapid + PBR | $0.375 | **1,000** | |
-| 3D model — Pro | $0.525 *(→ $0.375 if face count dropped)* | **1,400** | |
-| 3D model — Pro + PBR | $0.675 | **1,800** | |
+| 3D model — Rapid | $0.225 | **600** | **Pro only** — see §3a |
+| 3D model — Rapid + PBR | $0.375 | **1,000** | **Pro only** |
+| 3D model — Pro | $0.525 *(→ $0.375 if face count dropped)* | **1,400** | **Pro only** |
+| 3D model — Pro + PBR | $0.675 | **1,800** | **Pro only** |
 | *(reserved)* Pro + PBR + multi-view | $0.825 | **2,200** | not currently offered |
 
 Workers AI figures remain estimates — they are the only ones here not verified.
@@ -95,6 +95,82 @@ Pro *is* the volume discount. Stacking both crosses the floor.
 **Every user can buy any pack.** A free user paying list is the highest-margin
 transaction in the business (56% vs Pro's 37%) — point sales to non-Pro users
 are the better sale, not a consolation prize.
+
+---
+
+## 3a. Gating 3D generation behind Pro — recommended, with one blocker
+
+**Proposal:** 3D generation is Pro-only. Pro includes one free generation, then
+points. Free users keep points for everything else.
+
+### Why this is the single biggest derisking in the plan
+
+It removes the largest uncontrolled cost: a free user burning fal money.
+
+| Free grant (1,000 pts) worst case | 3D available to free users | **3D Pro-only** |
+|---|---|---|
+| Most expensive thing it can buy | one Rapid model — **$0.225** | text→layout — **~$0.002** |
+| 10,000 grants | **~$2,250** | **~$20** |
+
+**Roughly a 100× reduction in free-tier exposure.** We only ever pay the $0.225
+for someone who has already paid $6.40. The free grant stops being acquisition
+spend worth budgeting and becomes a rounding error — and §5's monthly ceiling
+becomes a formality rather than a control.
+
+It also sharpens the three-part model:
+
+* **Pro** decides *which features* you can use (multi-floor, PDF export, full
+  catalogue, **3D generation**).
+* **Points** meter *how much* you use the metered ones.
+* **Pro's 30%** discounts the points.
+
+That is fully compatible with free users buying points at list: they buy and
+spend on everything except 3D. And it steers them onto the **88–98% margin**
+features while Pro users take the 56%/37% ones — the mix improves.
+
+Cost of the free Pro generation: **make it Rapid ($0.225)**, not Pro-quality.
+That is 3.5% of a £5.99 Play unlock, caps exposure at the cheapest generator, and
+leaves Pro-quality as the natural first thing to spend points on. Enforce it as a
+`free_generation_used` flag per **account subject** — not a points grant, so it
+cannot be split, hoarded or spent on anything else.
+
+### The blocker: Model Studio also publishes to the global catalogue
+
+`requireModelAdmin` (`workers/design-sync/src/index.ts:100`) gates the **entire**
+`/v1/admin/models` surface on one owner-email check — `source`, `generate`,
+`optimized`, `metadata` **and `publish`**. Model Studio is not a "make me a
+model" tool; it is a curation tool whose last step writes into
+`catalog/v1/catalog.json`, **the manifest every user of the app reads**.
+
+Opening it to Pro users as it stands would let any Pro buyer publish into the
+shared catalogue. That means unmoderated content for all users, CC0/rights
+confirmation performed by people with no reason to care, and catalogue pollution
+that is public the moment it is written.
+
+**So this needs a split before it can ship:**
+
+| Action | Who | Where the asset lands |
+|---|---|---|
+| Generate, preview, place in **my own design** | **Pro + points** | private R2 prefix, that user's designs only |
+| Optimize / metadata / **publish to the catalogue** | **owner only** (unchanged) | `catalog/v1/catalog.json`, global |
+
+The Worker already has the right shape for this — user data has a private
+`USER_DATA` R2 prefix (used by community avatars), and `readModelJob` already
+scopes jobs by `identity.subject`. The work is a second, non-admin route group
+(`/v1/models/...`) that reuses the fal dispatch but ends at "usable in your
+design" instead of "published for everyone", leaving `requireModelAdmin` exactly
+as it is on the publish path.
+
+### R2 retention — a second unbounded cost
+
+Model Studio history has **no R2 TTL**: the UI lists the newest 40 jobs while
+older objects remain stored forever. That is fine for one owner. Multiplied by
+every Pro user generating models, storage grows without limit and never falls.
+
+**Add a TTL to user-generated models** (source, raw and optimized tiers) — the
+published catalogue assets are the only ones that need to be permanent. Without
+it, §5's float maths covers fal but not the storage bill quietly compounding
+behind it.
 
 ---
 
@@ -243,8 +319,10 @@ none of them is exposed to the balance problem in §5 at all.
    ~$0.0002 a call, where a bug is almost free.
 4. **Auto-furnish, colour schemes, descriptions.** Margin engine.
 5. **AI renders**, once image model choice is fixed.
-6. **3D generation last** — the most expensive to serve and the most exposed if
-   the ledger has a hole.
+6. **Split generate from publish (§3a), add a user-model R2 TTL, then open 3D
+   generation to Pro.** Last, because it is the most expensive to serve, the
+   most exposed if the ledger has a hole, and the only one that cannot ship
+   without first making sure a Pro user cannot write to the global catalogue.
 
 ---
 
@@ -259,3 +337,7 @@ none of them is exposed to the balance problem in §5 at all.
 4. **Do points expire?** Recommend no expiry at launch; note it permanently
    inflates the §5 liability, which the reserve ratio already covers.
 5. **Workers AI cost per call** — assumed ~$0.0002–$0.002.
+6. **What TTL for user-generated models?** 30 days after last use in a design
+   would bound storage without surprising anyone mid-project.
+7. **Does a Pro user's generated model stay usable after its R2 object expires?**
+   Either re-generate on demand (costs again) or keep the optimized tier only.
