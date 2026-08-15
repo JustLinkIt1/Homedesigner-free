@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, importPKCS8, jwtVerify, SignJWT } from 'jose';
 import { fal } from '@fal-ai/client';
 
 import {
@@ -13,6 +13,8 @@ interface Env {
   GOOGLE_WEB_CLIENT_ID: string;
   REVENUECAT_PROJECT_ID: string;
   REVENUECAT_SECRET_KEY: string;
+  /** JSON key for a Play Console service account with order/purchase access. */
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: string;
   FAL_KEY: string;
   /** Workers AI, used only by the Model Studio metadata assistant. */
   AI: Ai;
@@ -193,6 +195,204 @@ interface RevenueCatActiveEntitlements {
     entitlement_id?: string;
     expires_at?: number | null;
   }>;
+}
+
+const PLAY_PACKAGE_NAME = 'com.homedesigner.app';
+const PLAY_PRO_PRODUCTS = new Set(['pro_lifetime']);
+const PLAY_VERIFY_CACHE_MS = 6 * 60 * 60 * 1000;
+
+interface PlayServiceAccount {
+  client_email: string;
+  private_key: string;
+  token_uri?: string;
+}
+
+interface PlayProductPurchaseV2 {
+  productLineItem?: Array<{ productId?: string }>;
+  purchaseStateContext?: { purchaseState?: string };
+  orderId?: string;
+  purchaseCompletionTime?: string;
+  acknowledgementState?: string;
+}
+
+interface StoredPlayPurchase {
+  purchase_token: string;
+  product_id: string;
+  account_subject: string | null;
+  status: 'active' | 'revoked';
+  last_verified_at: number;
+}
+
+let playAccessToken: { value: string; expiresAt: number } | null = null;
+
+function validPurchaseToken(value: unknown): value is string {
+  return typeof value === 'string' && value.length >= 20 && value.length <= 4096
+    && /^[A-Za-z0-9._:-]+$/.test(value);
+}
+
+async function getPlayAccessToken(env: Env): Promise<string> {
+  if (playAccessToken && playAccessToken.expiresAt > Date.now() + 60_000) {
+    return playAccessToken.value;
+  }
+  let service: PlayServiceAccount;
+  try {
+    service = JSON.parse(env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON) as PlayServiceAccount;
+  } catch {
+    throw new Error('Play verification credentials are not configured');
+  }
+  if (!service.client_email || !service.private_key) {
+    throw new Error('Play verification credentials are incomplete');
+  }
+  const tokenUri = service.token_uri || 'https://oauth2.googleapis.com/token';
+  const now = Math.floor(Date.now() / 1000);
+  const key = await importPKCS8(service.private_key, 'RS256');
+  const assertion = await new SignJWT({
+    scope: 'https://www.googleapis.com/auth/androidpublisher',
+  })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .setIssuer(service.client_email)
+    .setAudience(tokenUri)
+    .setIssuedAt(now)
+    .setExpirationTime(now + 3600)
+    .sign(key);
+  const response = await fetch(tokenUri, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion,
+    }),
+  });
+  if (!response.ok) throw new Error('Google rejected the Play service account');
+  const result = await response.json() as { access_token?: string; expires_in?: number };
+  if (!result.access_token) throw new Error('Google returned no Play access token');
+  playAccessToken = {
+    value: result.access_token,
+    expiresAt: Date.now() + Math.max(60, result.expires_in ?? 3600) * 1000,
+  };
+  return result.access_token;
+}
+
+async function acknowledgePlayPurchase(
+  env: Env,
+  accessToken: string,
+  productId: string,
+  purchaseToken: string,
+): Promise<void> {
+  const response = await fetch(
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PLAY_PACKAGE_NAME}` +
+      `/purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(purchaseToken)}:acknowledge`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    },
+  );
+  if (!response.ok) throw new Error(`Google Play acknowledgement failed (${response.status})`);
+}
+
+async function verifyPlayToken(
+  env: Env,
+  purchaseToken: string,
+): Promise<{ active: boolean; productId: string | null; orderId: string | null; purchasedAt: number | null }> {
+  const accessToken = await getPlayAccessToken(env);
+  const response = await fetch(
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PLAY_PACKAGE_NAME}` +
+      `/purchases/productsv2/tokens/${encodeURIComponent(purchaseToken)}`,
+    { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } },
+  );
+  // Google returns 400 for a syntactically valid but unknown/invalid receipt
+  // token and 404 when no purchase exists. Neither is a backend outage.
+  if (response.status === 400 || response.status === 404) {
+    return { active: false, productId: null, orderId: null, purchasedAt: null };
+  }
+  if (!response.ok) throw new Error(`Google Play verification failed (${response.status})`);
+  const purchase = await response.json() as PlayProductPurchaseV2;
+  const productId = purchase.productLineItem?.map((item) => item.productId)
+    .find((id): id is string => typeof id === 'string' && PLAY_PRO_PRODUCTS.has(id)) ?? null;
+  const active = purchase.purchaseStateContext?.purchaseState === 'PURCHASED' && productId !== null;
+  if (active && purchase.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING') {
+    await acknowledgePlayPurchase(env, accessToken, productId, purchaseToken);
+  }
+  return {
+    active,
+    productId,
+    orderId: purchase.orderId ?? null,
+    purchasedAt: purchase.purchaseCompletionTime
+      ? Date.parse(purchase.purchaseCompletionTime)
+      : null,
+  };
+}
+
+async function persistPlayVerification(
+  env: Env,
+  purchaseToken: string,
+  result: Awaited<ReturnType<typeof verifyPlayToken>>,
+): Promise<void> {
+  const now = Date.now();
+  if (result.active && result.productId) {
+    await env.COMMUNITY.prepare(
+      `INSERT INTO play_purchases
+        (purchase_token, product_id, order_id, purchased_at, status, last_verified_at)
+       VALUES (?, ?, ?, ?, 'active', ?)
+       ON CONFLICT(purchase_token) DO UPDATE SET
+         product_id = excluded.product_id,
+         order_id = COALESCE(excluded.order_id, play_purchases.order_id),
+         purchased_at = COALESCE(excluded.purchased_at, play_purchases.purchased_at),
+         status = 'active',
+         last_verified_at = excluded.last_verified_at`,
+    ).bind(purchaseToken, result.productId, result.orderId, result.purchasedAt, now).run();
+    return;
+  }
+  await env.COMMUNITY.prepare(
+    `UPDATE play_purchases SET status = 'revoked', last_verified_at = ? WHERE purchase_token = ?`,
+  ).bind(now, purchaseToken).run();
+}
+
+async function verifyAndPersistPlayPurchase(env: Env, purchaseToken: string) {
+  const result = await verifyPlayToken(env, purchaseToken);
+  await persistPlayVerification(env, purchaseToken, result);
+  return result;
+}
+
+async function verifyPlayPurchaseRequest(request: Request, env: Env): Promise<Response> {
+  const length = Number(request.headers.get('Content-Length') ?? 0);
+  if (length > 8_000) return json(request, { error: 'Payload too large' }, 413);
+  const body = await request.json().catch(() => ({})) as { purchaseToken?: unknown };
+  if (!validPurchaseToken(body.purchaseToken)) {
+    return json(request, { error: 'Invalid purchase token' }, 400);
+  }
+  const result = await verifyAndPersistPlayPurchase(env, body.purchaseToken);
+  return json(request, { active: result.active, productId: result.productId });
+}
+
+async function linkPlayPurchaseRequest(
+  request: Request,
+  env: Env,
+  subject: string,
+): Promise<Response> {
+  const body = await request.json().catch(() => ({})) as { purchaseTokens?: unknown };
+  if (!Array.isArray(body.purchaseTokens) || body.purchaseTokens.length === 0 || body.purchaseTokens.length > 10
+    || !body.purchaseTokens.every(validPurchaseToken)) {
+    return json(request, { error: 'Invalid purchase tokens' }, 400);
+  }
+  let isPro = false;
+  for (const purchaseToken of [...new Set(body.purchaseTokens)]) {
+    const result = await verifyAndPersistPlayPurchase(env, purchaseToken);
+    if (!result.active) continue;
+    const linked = await env.COMMUNITY.prepare(
+      `UPDATE play_purchases SET account_subject = ?, linked_at = ?
+       WHERE purchase_token = ? AND (account_subject IS NULL OR account_subject = ?)`,
+    ).bind(subject, Date.now(), purchaseToken, subject).run();
+    if ((linked.meta.changes ?? 0) === 0) {
+      return json(request, { error: 'This Play purchase is linked to another account.' }, 409);
+    }
+    isPro = true;
+  }
+  return json(request, { isPro });
 }
 
 type FalEndpoint =
@@ -917,7 +1117,7 @@ async function publishModel(request: Request, env: Env, job: ModelStudioJob): Pr
   return json(request, { job: clientModelJob(request, env, job), modelUrl: publicAssetUrl(env, finalKey) });
 }
 
-async function entitlement(request: Request, env: Env, subject: string): Promise<Response> {
+async function revenueCatEntitled(env: Env, subject: string): Promise<boolean> {
   const appUserId = `google:${subject}`;
   const response = await fetch(
     `https://api.revenuecat.com/v2/projects/${encodeURIComponent(env.REVENUECAT_PROJECT_ID)}` +
@@ -930,20 +1130,66 @@ async function entitlement(request: Request, env: Env, subject: string): Promise
     },
   );
   // A Google account that has never been linked is a normal free customer.
-  if (response.status === 404) return json(request, { isPro: false });
-  if (!response.ok) return json(request, { error: 'Entitlement lookup failed' }, 502);
+  if (response.status === 404) return false;
+  if (!response.ok) throw new Error('RevenueCat entitlement lookup failed');
   const result = await response.json() as RevenueCatActiveEntitlements;
   const now = Date.now();
-  const isPro = (result.items ?? []).some((item) =>
+  return (result.items ?? []).some((item) =>
     item.entitlement_id === 'Pro' &&
     (item.expires_at === null || (typeof item.expires_at === 'number' && item.expires_at > now)));
-  return json(request, { isPro });
+}
+
+async function playEntitled(env: Env, subject: string): Promise<boolean> {
+  const rows = await env.COMMUNITY.prepare(
+    `SELECT purchase_token, product_id, account_subject, status, last_verified_at
+     FROM play_purchases WHERE account_subject = ? AND status = 'active'`,
+  ).bind(subject).all<StoredPlayPurchase>();
+  if (rows.results.length === 0) return false;
+
+  // Refunds must eventually revoke a cross-platform grant. Recheck stale
+  // receipts against Play, but retain the last verified grant if Google is
+  // temporarily unavailable rather than locking a buyer out on an outage.
+  for (const row of rows.results) {
+    if (Date.now() - row.last_verified_at <= PLAY_VERIFY_CACHE_MS) return true;
+    try {
+      const result = await verifyAndPersistPlayPurchase(env, row.purchase_token);
+      if (result.active) return true;
+    } catch {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function entitlement(request: Request, env: Env, subject: string): Promise<Response> {
+  const play = await playEntitled(env, subject);
+  if (play) return json(request, { isPro: true, source: 'google_play' });
+  try {
+    const web = await revenueCatEntitled(env, subject);
+    return json(request, { isPro: web, source: web ? 'web_billing' : null });
+  } catch {
+    return json(request, { error: 'Entitlement lookup failed' }, 502);
+  }
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
     const url = new URL(request.url);
+
+    // A Play receipt must be verified and acknowledged even when the buyer has
+    // not created an app account yet. The token is checked with Google before
+    // any grant is returned; linking it to a person remains authenticated.
+    if (request.method === 'POST' && url.pathname === '/v1/play/verify') {
+      const ip = request.headers.get('CF-Connecting-IP') ?? 'anon';
+      const { success } = await env.USER_WRITE_LIMITER.limit({ key: `ip:${ip}:play-verify` });
+      if (!success) return json(request, { error: 'Too many requests' }, 429, { 'Retry-After': '60' });
+      try {
+        return await verifyPlayPurchaseRequest(request, env);
+      } catch {
+        return json(request, { error: 'Google Play could not verify this purchase.' }, 502);
+      }
+    }
 
     // Community reads are PUBLIC and are therefore matched before
     // authenticate(). A support forum only signed-in people can read is not a
@@ -988,6 +1234,9 @@ export default {
       if (request.method === 'GET' && url.pathname === '/v1/entitlement') {
         return await entitlement(request, env, identity.subject);
       }
+      if (request.method === 'POST' && url.pathname === '/v1/play/link') {
+        return await linkPlayPurchaseRequest(request, env, identity.subject);
+      }
       if (request.method === 'POST' && url.pathname === '/v1/sync') return await sync(request, env, identity.subject);
       if (request.method === 'DELETE' && url.pathname === '/v1/account') {
         const objects = await listAll(env.USER_DATA, `users/${identity.subject}/`);
@@ -998,6 +1247,11 @@ export default {
         // someone's posts up after they erased their designs would make that
         // promise false — and the GDPR request unanswerable.
         await erasePerson(env, identity.subject);
+        // The purchase remains valid on the Play account/device, but no longer
+        // identifies the erased HomeDesigner account.
+        await env.COMMUNITY.prepare(
+          `UPDATE play_purchases SET account_subject = NULL, linked_at = NULL WHERE account_subject = ?`,
+        ).bind(identity.subject).run();
         return json(request, { deleted: objects.length });
       }
 

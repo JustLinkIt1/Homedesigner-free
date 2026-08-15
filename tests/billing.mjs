@@ -8,9 +8,8 @@
 //   * it must NEVER clear an existing entitlement — a flaky read on resume
 //     revoking a paid unlock is far worse than a promo code taking one more
 //     resume to show up;
-//   * it must use the provider's sync() (syncPurchases) when there is one,
-//     because a plain getCustomerInfo() will not see a purchase that Play has
-//     never been asked about;
+//   * it must not call syncPurchases() on lifecycle events: RevenueCat owns the
+//     Billing integration and performs its own foreground purchase query;
 //   * it must be rate limited, because resume fires on every screen unlock;
 //   * a thrown provider (offline) must not burn the rate limit.
 //
@@ -27,7 +26,7 @@ const dir = mkdtempSync(join(tmpdir(), 'hdbilling-'));
 const entry = join(root, '.billing-entry.tmp.ts');
 writeFileSync(entry, `
 export { useProStore } from '${rootImport}/src/store/proStore.ts';
-export { setProProvider, playPackage, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics } from '${rootImport}/src/lib/pro.ts';
+export { setProProvider, playPackage, playStoreProduct, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics } from '${rootImport}/src/lib/pro.ts';
 `);
 
 const out = join(dir, 'bundle.mjs');
@@ -56,7 +55,7 @@ try {
   rmSync(entry, { force: true });
 }
 
-const { useProStore, setProProvider, playPackage, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics } = mod;
+const { useProStore, setProProvider, playPackage, playStoreProduct, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics } = mod;
 
 let failures = 0;
 const check = (name, ok, detail = '') => {
@@ -98,19 +97,17 @@ const reset = (isPro) => {
 };
 
 // --- a promo redeemed while the app was CLOSED --------------------------------
-// The gap a tester hit: "the pro code is marked OK in the Play Store but the app
-// does not seem to recognize it." recheck() syncs, but it only runs on RESUME.
-// Redeeming while the app is closed is followed by a COLD LAUNCH, where refresh()
-// is the only entitlement path — and it used to call getCustomerInfo() alone,
-// which cannot see a purchase Play was never asked about.
+// RevenueCat performs its own Play query on foreground. refresh() must read the
+// entitlement it publishes without starting a second manual sync.
 {
   reset(false);
-  const p = fakeProvider({ entitled: false, synced: true });
+  const p = fakeProvider({ entitled: true, synced: true });
   setProProvider(p);
   await useProStore.getState().refresh();
   check('promo: a code redeemed while the app was closed is found on launch',
     useProStore.getState().isPro === true);
-  check('promo: startup syncs with the store, not just a plain read', p.calls.sync === 1);
+  check('promo: startup reads RevenueCat without forcing a manual sync',
+    p.calls.isEntitled === 1 && p.calls.sync === 0);
 }
 {
   // …but the sync must not become the only signal: a provider without one still
@@ -127,11 +124,12 @@ const reset = (isPro) => {
 // --- a promo code redeemed outside the app is picked up ---------------------
 {
   reset(false);
-  const p = fakeProvider({ synced: true });
+  const p = fakeProvider({ entitled: true, synced: true });
   setProProvider(p);
   const unlocked = await useProStore.getState().recheck();
   check('promo: a purchase granted outside the app unlocks Pro', unlocked === true && useProStore.getState().isPro === true);
-  check('promo: the store is re-synced, not just re-read', p.calls.sync === 1 && p.calls.isEntitled === 0);
+  check('promo: resume reads the foreground result without forcing a manual sync',
+    p.calls.sync === 0 && p.calls.isEntitled === 1);
 }
 
 // --- nothing to find --------------------------------------------------------
@@ -161,7 +159,9 @@ const reset = (isPro) => {
   await useProStore.getState().recheck();
   await useProStore.getState().recheck();
   await useProStore.getState().recheck();
-  check('promo: repeated resumes are rate limited to one check', p.calls.sync === 1, `sync called ${p.calls.sync}×`);
+  check('promo: repeated resumes are rate limited to one check',
+    p.calls.isEntitled === 1 && p.calls.sync === 0,
+    `read called ${p.calls.isEntitled}×; sync called ${p.calls.sync}×`);
 }
 
 // --- offline must be retried, not silently swallowed for a minute -----------
@@ -170,7 +170,7 @@ const reset = (isPro) => {
   const offline = fakeProvider({ throws: true });
   setProProvider(offline);
   const first = await useProStore.getState().recheck();
-  const p = fakeProvider({ synced: true });
+  const p = fakeProvider({ entitled: true, synced: true });
   setProProvider(p);
   const second = await useProStore.getState().recheck();
   check('promo: a failed check does not burn the rate limit', first === false && second === true, `retry gave ${second}`);
@@ -205,11 +205,11 @@ const reset = (isPro) => {
   // Only the NATIVE provider talks to Play Billing. The web provider is
   // RevenueCat Web Billing over Stripe — ordinary HTTP, which fails rather
   // than hangs — so policing it would be noise.
-  const from = whole.indexOf('class RevenueCatProvider');
+  const from = whole.indexOf('class DirectPlayProvider');
   const to = whole.indexOf('class WebRevenueCatProvider');
   if (from < 0 || to < 0 || to < from) throw new Error('pro.ts no longer has the two provider classes');
   const src = whole.slice(from, to);
-  const GUARDED = /Purchases\.(getCustomerInfo|getOfferings|purchasePackage|purchaseStoreProduct|restorePurchases|syncPurchases|logIn|logOut|setEmail|setDisplayName|configure)\s*\(/g;
+  const GUARDED = /PlayBilling\.(connect|getProduct|purchase)\s*\(/g;
 
   /** True when `idx` sits inside the argument list of some `withTimeout(`. */
   const insideWithTimeout = (text, idx) => {
@@ -247,31 +247,82 @@ const reset = (isPro) => {
   // A timeout must not be reported to the user as a failed purchase: Promise
   // .race stops us waiting, it cannot cancel a transaction Play already took.
   check('a timed-out purchase re-checks entitlement before reporting failure',
-    /!== PURCHASE_TIMEOUT[\s\S]{0,600}?this\.sync\(\)/.test(src));
+    /!== PURCHASE_TIMEOUT[\s\S]{0,600}?this\.owned\(\)/.test(src));
 }
 
 // --- checkout identity and Android Activity contract -----------------------
-// RevenueCat can sell to an anonymous install, but that entitlement cannot be
-// found by email or followed safely to desktop/another phone. The Pro sheet
-// must therefore make Google identity a distinct step before checkout.
+// Google authentication must not sit in front of native Play checkout. A
+// RevenueCat anonymous customer can purchase immediately and be linked later;
+// web billing still requires the account used for cross-device access.
 //
 // RevenueCat's Capacitor Android integration also requires `standard` or
 // `singleTop`: Play and banking apps can background HomeDesigner during a
 // purchase, and `singleTask` can prevent the result reaching the SDK.
 {
   const modal = readFileSync(join(root, 'src/components/ProUpsellModal.tsx'), 'utf8');
-  check('native checkout signs the user in before starting Play Billing',
-    modal.includes('const requiresAccount = native || webBilling') &&
+  check('native checkout reaches Play Billing without a Google sign-in gate',
+    modal.includes('const requiresAccount = webBilling') &&
       modal.includes('const needsAccount = requiresAccount && !account') &&
-      modal.includes('const onPrimaryAction = needsAccount ? signIn : purchase'));
-  check('restore is attached to an identified account',
-    modal.includes('{(native || webBilling) && account && ('));
+      modal.includes('const onPrimaryAction = needsAccount ? signIn : purchaseAndOfferLink'));
+  check('anonymous buyers are offered cross-platform account linking after purchase',
+    modal.includes('Pro is active on this device. Sign in to use it on web and other devices.') &&
+      modal.includes("{ label: t('Sign in'), onClick: () => { void signIn(); } }"));
+  check('web buyers can identify on Android without starting a Play purchase',
+    modal.includes("native && !account") &&
+      modal.includes("Bought on web? Sign in to unlock Pro") &&
+      modal.includes("onClick={() => { void signIn(); }}"));
+  check('native restore works without a Google account',
+    modal.includes('{(native || (webBilling && account)) && ('));
 
   // Android now sells the same ladder as web, so the plan grid must not be
   // web-only — but a store offering only the lifetime unlock keeps the single
   // button rather than rendering a grid of one.
   check('the plan grid is offered on Android too',
-    modal.includes('const showPlanChoices = requiresAccount && !!account && plans.length > 1'));
+    modal.includes('const showPlanChoices = (native || (webBilling && !!account)) && plans.length > 1'));
+
+  const proProvider = readFileSync(join(root, 'src/lib/pro.ts'), 'utf8');
+  check('native checkout bypasses offerings and package lookup end to end',
+    proProvider.includes('new DirectPlayProvider()') &&
+      proProvider.includes('PlayBilling.getProduct({ productId: PLAY_PRO_PRODUCT_ID })') &&
+      proProvider.includes('PlayBilling.purchase({ productId: PLAY_PRO_PRODUCT_ID })'));
+  check('the release diagnostic uses the same direct Play product query',
+    proProvider.includes('PlayBilling.getProduct({ productId: PLAY_PRO_PRODUCT_ID })') &&
+      proProvider.includes('billing FAILED:') &&
+      !proProvider.includes('window.alert(report)'));
+
+  const nativePlugin = readFileSync(join(root,
+    'android/app/src/main/java/com/homedesigner/app/PlayBillingPlugin.java'), 'utf8');
+  check('native purchase launches Google BillingClient directly',
+    nativePlugin.includes('billingClient.launchBillingFlow(getActivity(), flow)') &&
+      nativePlugin.includes('@CapacitorPlugin(name = "PlayBilling")'));
+  check('native product query uses one-time purchase offers',
+    nativePlugin.includes('getOneTimePurchaseOfferDetailsList()') &&
+      nativePlugin.includes('setOfferToken(offer.getOfferToken())'));
+  check('native timeout invalidates late purchase callbacks',
+    nativePlugin.includes('purchaseGeneration += 1;') &&
+      nativePlugin.includes('isCurrentPurchase(call, generation)'));
+  check('every queued native connection receives its own failure',
+    nativePlugin.includes('List<ConnectionWaiter>') &&
+      nativePlugin.includes('waiter.failed.fail(result)'));
+
+  const playBridge = readFileSync(join(root, 'src/lib/playBilling.ts'), 'utf8');
+  check('native ownership accepts only the live pro_lifetime product',
+    playBridge.includes("purchase.products.includes(PLAY_PRO_PRODUCT_ID)") &&
+      !playBridge.includes("'pro_unlock'"));
+
+  const worker = readFileSync(join(root, 'workers/design-sync/src/index.ts'), 'utf8');
+  check('the Worker verifies and acknowledges Play receipts',
+    worker.includes('/purchases/productsv2/tokens/') &&
+      worker.includes(':acknowledge'));
+  check('the Worker grants only the live pro_lifetime product',
+    worker.includes("const PLAY_PRO_PRODUCTS = new Set(['pro_lifetime']);"));
+  check('Stripe web and Play receipts feed one entitlement endpoint',
+    worker.includes('const play = await playEntitled(env, subject)') &&
+      worker.includes('const web = await revenueCatEntitled(env, subject)'));
+  check('a linked Play purchase unlocks the web provider',
+    proProvider.includes('return hasProEntitlement(customerInfo) || await getCloudProEntitlement();'));
+  check('a signed-in Android purchase is linked immediately',
+    /if \(this\.accountLinked\)[\s\S]{0,300}?linkPlayPurchases/.test(proProvider));
 
   // The buy button must not be gated on auth-store busy. `authBusy` also covers
   // BACKGROUND account sync, and while it was OR'd into the button's state a
@@ -296,7 +347,7 @@ const reset = (isPro) => {
     'an unbounded await can strand busy and freeze the Pro sheet');
 
   const manifest = readFileSync(join(root, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
-  check('Android uses RevenueCat-compatible singleTop launch mode',
+  check('Android uses purchase-result-safe singleTop launch mode',
     manifest.includes('android:launchMode="singleTop"') && !manifest.includes('android:launchMode="singleTask"'));
 }
 
@@ -367,6 +418,20 @@ const reset = (isPro) => {
     playPackage(ladder)?.product.identifier === 'pro_lifetime');
   check('a plan whose product is missing never silently buys another',
     playPackage({ current: pkgs('pro_lifetime'), all: {} }, 'yearly') === null);
+
+  const directProducts = ['pro_monthly', 'pro_yearly', 'pro_lifetime'].map((identifier) => ({
+    identifier,
+    priceString: '$6.99',
+    productCategory: 'NON_SUBSCRIPTION',
+  }));
+  check('direct Play products default to the lifetime unlock',
+    playStoreProduct(directProducts)?.identifier === 'pro_lifetime');
+  check('direct Play products preserve the selected plan',
+    playStoreProduct(directProducts, 'monthly')?.identifier === 'pro_monthly' &&
+      playStoreProduct(directProducts, 'yearly')?.identifier === 'pro_yearly');
+  check('direct checkout refuses a missing or priceless product',
+    playStoreProduct(directProducts.filter((p) => p.identifier !== 'pro_yearly'), 'yearly') === null &&
+      playStoreProduct([{ identifier: 'pro_lifetime', priceString: '' }]) === null);
 
   // RevenueCat reads a one-time product's price from Play's backwards-compatible
   // purchase option alone (getOneTimePurchaseOfferDetails, singular). When Play

@@ -17,13 +17,8 @@ import { toast } from '../lib/ui';
  */
 async function deliver(report: string): Promise<void> {
   if (Capacitor.isNativePlatform()) {
-    // Put it ON SCREEN first. Every channel tried so far could fail silently —
-    // the clipboard write rejected without activation, and a share sheet can be
-    // dismissed — leaving the user certain they had triggered it and holding
-    // nothing. A dialog cannot fail that way, and a screenshot of it carries the
-    // whole report, which is how this app's problems have actually been reported
-    // all along.
-    window.alert(report);
+    // Do not use window.alert here. In the release WebView an async alert can
+    // block without rendering and leave the version stuck on its busy ellipsis.
     try {
       const { Share } = await import('@capacitor/share');
       await Share.share({
@@ -32,8 +27,8 @@ async function deliver(report: string): Promise<void> {
         dialogTitle: 'Send store diagnostics',
       });
     } catch {
-      // Dismissed or unavailable. The report was already shown, so there is
-      // nothing to recover.
+      // Dismissed or unavailable. The caller clears its busy indicator and can
+      // retry; there is no browser clipboard fallback without user activation.
     }
     return;
   }

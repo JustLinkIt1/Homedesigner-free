@@ -596,6 +596,8 @@ export const FR: Record<string, string> = {
   'Sign out': 'Se déconnecter',
   'Signing in…': 'Connexion…',
   'Sign in with Google': 'Se connecter avec Google',
+  'Pro is active on this device. Sign in to use it on web and other devices.': 'Pro est actif sur cet appareil. Connectez-vous pour l’utiliser sur le Web et sur vos autres appareils.',
+  'Bought on web? Sign in to unlock Pro': 'Acheté sur le Web ? Connectez-vous pour débloquer Pro',
   'Sync Pro access across Android devices. Designs stay on this device.': 'Synchronisez l’accès Pro entre les appareils Android. Les projets restent sur cet appareil.',
   'Google Sign-In needs an OAuth client ID in this build.': 'La connexion Google nécessite un ID client OAuth dans cette version.',
   'Signed in — Pro access is synced to this account.': 'Connecté — l’accès Pro est synchronisé avec ce compte.',

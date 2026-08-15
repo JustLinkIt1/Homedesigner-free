@@ -60,6 +60,41 @@ export async function getCloudProEntitlement(): Promise<boolean> {
   return result.isPro === true;
 }
 
+/** Verify and acknowledge a Play purchase without requiring app sign-in.
+ * The purchase token is an unforgeable store receipt; the Worker asks Google
+ * for its state before returning active. Account ownership is attached later. */
+export async function verifyPlayPurchase(purchaseToken: string): Promise<boolean> {
+  if (!isCloudSyncConfigured()) {
+    throw new Error('Purchase verification is not configured in this build.');
+  }
+  const response = await fetchWithTimeout(`${SYNC_URL}/v1/play/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ purchaseToken }),
+  });
+  const result = await response.json().catch(() => ({})) as { active?: boolean; error?: string };
+  if (!response.ok) throw new Error(result.error || `Purchase verification failed (${response.status}).`);
+  return result.active === true;
+}
+
+/** Attach device-owned Play receipts to the signed-in Google account. The
+ * Worker rejects a token already attached to a different account. */
+export async function linkPlayPurchases(purchaseTokens: string[]): Promise<boolean> {
+  if (!isCloudSyncConfigured() || purchaseTokens.length === 0) return false;
+  const token = await getGoogleIdToken();
+  const response = await fetchWithTimeout(`${SYNC_URL}/v1/play/link`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ purchaseTokens: [...new Set(purchaseTokens)].slice(0, 10) }),
+  });
+  const result = await response.json().catch(() => ({})) as { isPro?: boolean; error?: string };
+  if (!response.ok) throw new Error(result.error || `Purchase linking failed (${response.status}).`);
+  return result.isPro === true;
+}
+
 export async function syncProjects(): Promise<number> {
   if (!isCloudSyncConfigured()) return 0;
   if (syncPromise) return syncPromise;

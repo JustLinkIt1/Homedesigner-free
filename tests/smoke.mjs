@@ -218,7 +218,7 @@ check(
 check(
   'native purchase flow cannot leave the Pro sheet spinning forever',
   proSource.includes('PURCHASE_TIMEOUT_MS') &&
-    proSource.includes('Purchases.purchasePackage({ aPackage: pkg })') &&
+    proSource.includes('Purchases.purchaseStoreProduct({ product })') &&
     proSource.includes('if (await this.sync().catch(() => false)) return true') &&
     proSource.includes('tap Restore purchase') &&
     proStoreSource.includes('settleStranded: async () =>'),

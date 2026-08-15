@@ -1,69 +1,186 @@
 # WIP — current handoff
 
-## Session handoff 2026-08-14 (Claude) — PURCHASES: this supersedes the 08-12 entry
+## Session handoff 2026-08-15 (Codex) — 1.22.23 DIRECT PLAY BILLING, PROVEN
 
-Version **1.22.18**, branch `claude/home-design-app-2d-plans-12y5u5`, fix commit
-`33b47d8`.
+This supersedes Claude's 2026-08-14 RevenueCat package/product diagnosis. Its
+research and ruled-out evidence remain in
+[`docs/REVENUECAT_PLAYSTORE_GUIDE.md`](../docs/REVENUECAT_PLAYSTORE_GUIDE.md),
+but Android no longer ships or calls RevenueCat. The first real paid purchase
+proved the direct BillingClient replacement and the Play-to-web account link.
 
-> **Full write-up: [`docs/REVENUECAT_PLAYSTORE_GUIDE.md`](../docs/REVENUECAT_PLAYSTORE_GUIDE.md)**
-> — evidence chain, the plugin source that proves it, adb capture procedure, and
-> the ruled-out list. Read that before touching billing.
->
-> **Vendor reference supplied by the owner, to be used instead of memory:**
-> <https://sdk.revenuecat.com/android/10.16.2/index.html>
+RevenueCat has been removed from the Android purchase path and from the native
+dependency graph. Android now uses the app-owned `PlayBillingPlugin`, wrapping
+Google BillingClient **9.1.0**, to query `pro_lifetime`, choose its one-time
+purchase offer token, call `launchBillingFlow`, receive purchase updates, and
+query owned purchases for restore/resume recovery. The signed release graph
+contains BillingClient 9.1.0 and no RevenueCat Android artifact. R8 mapping and
+seeds both contain `com.homedesigner.app.PlayBillingPlugin`.
 
-### The 08-12 root cause is RETRACTED. So is R8. The catalog is fine.
+Web checkout is deliberately unchanged: RevenueCat Web Billing continues to
+open its Stripe-backed checkout. Cross-platform entitlement now resolves in the
+deployed `homedesigner-sync` Worker:
 
-The entry below says the failure is a Play Console setting — `pro_lifetime` not
-marked backwards compatible. **It is marked backwards compatible** (Play Console,
-`prolifetime`: Active, Backwards compatible, 173 countries), and the diagnosis is
-wrong regardless, because it predicts the wrong symptom:
+* `POST /v1/play/verify` verifies and acknowledges an anonymous Play receipt
+  with Google's `purchases.productsv2` / acknowledge APIs.
+* `POST /v1/play/link` attaches a verified receipt to the authenticated Google
+  subject, refusing a token already linked to another account.
+* `GET /v1/entitlement` grants Pro when either a linked Play receipt is active
+  or the existing RevenueCat Web Billing customer has the active `Pro`
+  entitlement. This is the web-to-Android Stripe path.
+* D1 migration `0003_play_purchases.sql` is applied remotely. The Google Play
+  service-account key is installed as the encrypted Worker secret
+  `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`; its plaintext download was deleted.
 
-* A dropped/priceless product throws **instantly** at `pro.ts:505` with "Pro
-  upgrade is not available right now."
-* The measured symptom is the buy button spinning the **full 180s** and ending
-  in "The Play Store didn't answer" — only reachable **after** `playPackage()`
-  returns a package. So `getOfferings()` succeeded **with a price**.
+The deployed Worker accepted its service-account credential and returned
+`200 {"active":false}` for an unknown well-formed receipt, proving Google API
+authentication works without granting a fake purchase.
 
-R8 goes with it: a dead `Dispatchers.Main` would break `getOfferings()`'s
-callback too, giving the 12s read timeout. It doesn't. Keep the `-keep` rules as
-hardening; they are not a purchase fix.
+**First real purchase / cross-platform proof, 2026-08-15:** Google charged the
+owner for `pro_lifetime`; Android unlocked immediately. D1 shows the receipt as
+Google-verified, active and linked to the Google subject. The production web
+site was still serving 1.22.18, so it remained Free even after signing into the
+same account. The 1.22.23 web bundle was deployed to the actual Pages production
+branch (`claude/home-design-app-2d-plans-12y5u5`), deployment
+`4539aa34-b8c7-4ff3-bb6a-07cb5a4f7e53`; the custom domain now reports 1.22.23.
+Chrome signed into `nathanjoppich@gmail.com`, every conditional Pro lock marker
+disappeared, and the gated PDF/image/DXF import workflow opened without an
+upsell. The temporary empty project created by that test was deleted. This is
+an end-to-end Play purchase -> Google account -> Worker -> web unlock proof.
 
-Every server-side layer was verified in the dashboards and is correct — Play
-Console, RevenueCat product/offering/package, and entitlement `Pro` (3 products,
-matching `ENTITLEMENT_ID`). **Do not re-check these.**
+The owner confirmed there are no historical buyers. Ownership therefore
+accepts exactly `pro_lifetime`; the obsolete `pro_unlock` alias was removed
+from both the client and deployed verifier rather than preserving an unused
+migration/free-grant path. Worker version
+`008dab6c-c652-4d56-93c5-ce6ce148e9e7` is live with that rule. Native purchase
+startup is reserved before the asynchronous product query, timeout/reset
+invalidates late callbacks, and every queued BillingClient connection waiter is
+rejected individually on setup failure. A late query can no longer open a Play
+sheet after the UI has timed out or collide with a second attempt.
 
-### The actual fault, and the fix in `33b47d8`
+Release artifact:
+`outputs/HomeDesigner-1.22.23-12223.aab` (26,365,013 bytes), SHA-256
+`294CFC871EA0241153B035C1FE6A1CC72594497E66FBEDC08DAE25774C2FD173`.
+TypeScript, Worker typecheck, billing/CI suites, Java compilation, signed release
+build, R8 and AAB content/version verification pass. A real purchase from the
+Play-installed 1.22.23 build opened Google's sheet, charged the owner, unlocked
+Android, linked to the Google account, and unlocked the production web app.
 
-`purchasePackage` requires `presentedOfferingContext` and makes the native side
-re-find the package **by identifier inside the offering that context names**;
-when that resolution fails Play is never asked to open a sheet and the promise
-never settles. `purchaseStoreProduct` resolves **by product id**, context
-optional, no offering lookup. Proven from `PurchasesPlugin.kt` 245-295 of
-purchases-capacitor 13.4.0 — see the guide for the quoted source.
+## Session handoff 2026-08-13 #3 (Codex) — 1.22.22 LIFECYCLE SYNC FIX
 
-Android now buys through `purchaseStoreProduct`, falling back to
-`purchasePackage` only when `productCategory` is null (the plugin reads it with
-`getStringOrReject` and would reject the call).
+The Play-installed **1.22.21 / 12221** build was tested over ADB on the affected
+Samsung SM-S921B and **failed**. This supersedes the untested-fix status below:
 
-### Status: UNVERIFIED ON DEVICE — this is the next step
+* The app was installed by `com.android.vending`.
+* RevenueCat connected to BillingClient and Play returned `pro_lifetime` at
+  `£5.99`; configuration and product availability were not the failure.
+* After tapping Unlock Pro, the UI entered its bounded waiting state, but there
+  was no RevenueCat purchase log, no BillingClient `launchBillingFlow`, and no
+  Play purchase sheet.
+* Restore also entered busy state without a corresponding native RevenueCat or
+  Billing action. The failure therefore was not specific to
+  `purchaseStoreProduct` or the former offering/package selector.
+* After a 35-second cold launch, the paywall still showed no price. Calls made
+  after startup product activity were being stranded before native checkout.
 
-Typecheck, lint and all 13 billing checks pass, and the unbounded-native-call
-guard in `tests/billing.mjs` now covers `purchaseStoreProduct` (fault-injected:
-unwrapping the call makes it name both purchase methods). **No device has run
-it.** The owner is testing with adb logcat — §2 of the guide has the commands.
+Version **1.22.22 / 12222** removes automatic `syncPurchases()` calls from cold
+launch and every app resume. RevenueCat documents `syncPurchases()` as a
+migration/manual-IAP operation and recommends calling it after login rather
+than on every launch. Normal lifecycle refresh now reads CustomerInfo through
+`isEntitled()`; `syncPurchases()` remains only for account-link migration and
+interrupted-purchase reconciliation. This removes the only unsupported,
+mutating store operation that ran before price discovery, restore and purchase
+on every session.
 
-The single decisive observation: **does a `BillingClient: Launching in-app
-billing flow` line follow the `[pro] purchaseStoreProduct` breadcrumb?** Absent
-before the fix, present after. If it is present and no sheet appears, the fault
-is below RevenueCat. If `productCategory` logs as null, the fallback took the
-old path and that is the next thing to fix.
+This is an evidence-based controlled change, **not yet proof that billing is
+fixed**. It must be installed from the Play test track. The decisive first
+signal is that the paywall shows the localized `£5.99` price before any tap;
+the second is that Unlock Pro produces a native RevenueCat purchase log and a
+Play sheet. If either remains absent, capture the 1.22.22 wired log and stop
+changing products, offerings, R8 or Play Console settings.
 
-A build is needed to test: the container has no keystore, and Play needs a higher
-versionCode, so this wants a version cut before it can be installed.
+Upload artifact: `outputs/HomeDesigner-1.22.22-12222.aab` (28,180,603 bytes).
+SHA-256: `50AA7AE4E4231E73DD004D01F71DC383E2E1CBE62812D0E21DCC8FC5517C7858`.
+The AAB verifier passes native 1.22.22/12222, embedded web 1.22.22, asset
+contents, and no stale app version. Upload certificate SHA-256 is the expected
+`EE:D4:E3:A9:11:BC:92:9A:D3:CD:33:36:FF:BF:32:C0:22:4A:1F:C5:21:BE:B1:13:02:F5:A0:7E:5F:00:6A:00`.
+Focused billing and i18n tests and the production build pass.
 
+## Session handoff 2026-08-13 #2 (Codex) — 1.22.21 DIRECT PRODUCT FIX
 
-## Session handoff 2026-08-12 (Claude) — SUPERSEDED by the entry above
+This supersedes the diagnosis below. A clean wired trace of the Play-installed
+**1.22.19 / 12219** build established the complete boundary:
+
+* Play Billing connected successfully with storefront GB.
+* Play returned `pro_lifetime` as `inapp`, purchase option `prolifetime`, at
+  `£5.99`; RevenueCat built an offering containing it.
+* RevenueCat 10.16.0 then logged `Failed to ready ui_config before
+  getOfferings; proceeding without it` and `IllegalStateException: Required
+  value was null` in its workflow/paywall readiness code.
+* Tapping Unlock Pro entered app busy state but produced no BillingClient launch
+  and no Play sheet. The package/offering path never reached Play.
+
+Version **1.22.21 / 12221** removes `Purchases.getOfferings()` from the native
+provider entirely. Android price, plan discovery, diagnostics and checkout now
+use `getProducts({ type: NON_SUBSCRIPTION })`; checkout passes that exact priced
+product to `purchaseStoreProduct`. This bypasses both the broken `ui_config`
+workflow and the package/offering re-lookup. Web Billing continues to use web
+offerings. The hidden diagnostic also no longer calls async `window.alert`,
+which blocked invisibly and left the version displaying an ellipsis.
+
+Upload artifact: `outputs/HomeDesigner-1.22.21-12221.aab`.
+SHA-256: `B899F39FB3C946DE93376D897DF94A00A6640CFC709906C53C3E515B44974542`.
+Billing tests, TypeScript/Vite build, Capacitor sync, signed release build and
+AAB version/content verification all pass. It still requires a Play-installed
+1.22.21 test to prove the payment sheet opens.
+
+## Session handoff 2026-08-13 (Codex) — WIRED RESULT SUPERSEDES THE 2026-08-12 DIAGNOSIS
+
+Version **1.22.19**, branch `codex/play-billing-wired-debug`.
+
+The 2026-08-12 claim that `prolifetime` was not backwards compatible is false.
+The live Play Console shows the option Active, Buy, Backwards compatible,
+priced and available in 173 regions. ADB against the Play-installed 1.22.18
+build then proved the full product-query path works on the affected phone:
+
+* package installed by `com.android.vending`, version 1.22.18 / 12218;
+* RevenueCat 10.16.0 connected to BillingClient 8.3.0, storefront GB;
+* Play returned `pro_lifetime` as `inapp`, purchase option `prolifetime`,
+  formatted price `£5.99`;
+* RevenueCat built the offering with the returned product;
+* tapping the paywall launched Credential Manager / Google Sign-In, not
+  `purchasePackage`; no Play purchase invocation appeared in the native log.
+
+The immediate app bug was the reintroduced Android identity gate in
+`ProUpsellModal.tsx`: `requiresAccount = native || webBilling`. The first tap
+therefore never attempted a purchase. 1.22.19 changes this to web-only identity
+gating, permits anonymous Play purchase and restore, offers account linking
+after a successful Android purchase, and adds a separate "Bought on web? Sign
+in to unlock Pro" action for the reverse web-to-Android path.
+
+Cross-platform identity uses the same `google:<subject>` App User ID on web and
+Android. RevenueCat project policy is `Transfer to new App User ID`, so linking
+the anonymous Android customer through `Purchases.logIn()` can attach it to the
+same customer used by web billing.
+
+Google Cloud audit found a separate production blocker: OAuth project
+`homedesigner-502819` is External but still in **Testing**, with only
+`nathanjoppich@gmail.com` as a test user. All other Google users are rejected.
+The Play-signing Android OAuth client has the correct package and SHA-1
+`12:D2:AC:26:74:34:F9:D4:04:64:B8:19:E8:FB:5F:E0:83:A5:92:34`; the web client
+has the correct origin `https://homedesignerapp.com` and redirect
+`https://homedesignerapp.com/app/`; no sensitive or restricted scopes are
+configured. Publish the OAuth app after owner confirmation.
+
+RevenueCat's service-account JSON validates. Google developer notifications
+are not connected, and the Google Cloud project currently has no Pub/Sub
+topics. This does not prevent checkout, but should be configured after the
+purchase path is live.
+
+Verification: billing suite green, TypeScript green, release AAB verified at
+1.22.19 / 12219. Do not add more R8 rules or change Play product configuration
+before testing this build from Play.
+
+## Session handoff 2026-08-12 (Claude) — PURCHASES: read this before touching billing
 
 Version **1.22.18**, branch `claude/home-designer-release-verify-npwmwu`.
 
@@ -164,7 +281,7 @@ Items only the owner can check, in the order worth checking them:
   `src/lib/pro.ts:198`) rather than a spinner. If a spinner appears instead,
   `getOfferings()` is hanging rather than returning empty — a separate bug.
 
-## Session handoff 2026-08-09 #2 (Claude) — SUPERSEDED, kept for the forum-bug record
+## Session handoff 2026-08-09 #2 (Claude) — read this first
 
 Supersedes the entry below it. Version **1.22.6**, commit `a72767b`, branch
 `claude/home-design-app-2d-plans-12y5u5`.

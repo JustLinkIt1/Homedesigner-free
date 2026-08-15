@@ -1,12 +1,20 @@
 // Pro entitlement plumbing. This is the ONLY file that knows how purchases
-// happen; everything else consumes useProStore / requirePro(). On Android the
-// provider is RevenueCat (Google Play Billing, one non-consumable
-// `pro_unlock`); on the web it is RevenueCat Web Billing backed by Stripe.
+// happen; everything else consumes useProStore / requirePro(). Android talks
+// directly to Google Play Billing for `pro_lifetime`; the web keeps RevenueCat
+// Web Billing backed by Stripe. The sync Worker unifies both account grants.
 // Builds without a Web Billing key retain the old Play Store link.
 import { Capacitor } from '@capacitor/core';
 import { useProStore } from '../store/proStore';
 import { APP_VERSION, PLAY_STORE_URL } from './appInfo';
-import { getCloudProEntitlement } from './cloudSync';
+import { getCloudProEntitlement, linkPlayPurchases, verifyPlayPurchase } from './cloudSync';
+import {
+  PlayBilling,
+  PLAY_PRO_PRODUCT_ID,
+  isCompletedProPurchase,
+  ownedProPurchases,
+  type PlayProduct,
+  type PlayPurchase,
+} from './playBilling';
 
 export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects';
 export type ProPlanID = 'monthly' | 'yearly' | 'lifetime';
@@ -74,7 +82,9 @@ export interface ProProvider {
 
 /** RevenueCat public SDK key (Android). Safe to embed — this is the client-
  *  facing key, not the secret API key. */
-const REVENUECAT_ANDROID_KEY = 'goog_JtJREnLfSrMrpUMYtcLYwfNmnPC';
+// Sentinel used only by the disabled legacy provider below. The Android SDK
+// dependency has been removed; web billing uses its separate web SDK.
+const REVENUECAT_ANDROID_KEY = '';
 /** RevenueCat public Web Billing SDK key. Like the Android SDK key, this is a
  * public application identifier rather than a secret. */
 const REVENUECAT_WEB_KEY = (import.meta.env.VITE_REVENUECAT_WEB_KEY ?? '').trim();
@@ -242,6 +252,48 @@ export function playPackage(offerings: any, planID?: ProPlanID): any | null {
   return null;
 }
 
+/** Select a priced Google Play product returned by RevenueCat's direct product
+ * API. Android checkout deliberately does not route through offerings: on the
+ * affected Play build BillingClient returned this product, while RevenueCat's
+ * paywall/workflow readiness step threw resolving `ui_config` and the package
+ * purchase path never reached BillingClient. */
+export function playStoreProduct(products: any[], planID?: ProPlanID): any | null {
+  const wanted = planID
+    ? PLAY_PLAN_PRODUCTS.filter((plan) => plan.id === planID)
+    : [...PLAY_PLAN_PRODUCTS].reverse();
+  for (const plan of wanted) {
+    const product = products.find((candidate) => {
+      const id: unknown = candidate?.identifier;
+      return typeof id === 'string'
+        && (id === plan.productID || id.startsWith(`${plan.productID}:`))
+        && typeof candidate?.priceString === 'string'
+        && candidate.priceString !== '';
+    });
+    if (product) return product;
+  }
+  return null;
+}
+
+function describeMissingStoreProduct(products: any[], planID?: ProPlanID): string {
+  const base = 'Pro upgrade is not available right now.';
+  if (products.length === 0) {
+    return `${base} Google Play returned no products for this account or country. Please try again later.`;
+  }
+  const wanted = planID
+    ? PLAY_PLAN_PRODUCTS.filter((plan) => plan.id === planID).map((plan) => plan.productID)
+    : PLAY_PLAN_PRODUCTS.map((plan) => plan.productID);
+  const matched = products.some((product) => {
+    const id: unknown = product?.identifier;
+    return typeof id === 'string'
+      && wanted.some((candidate) => id === candidate || id.startsWith(`${candidate}:`));
+  });
+  if (matched) {
+    return `${base} Google Play listed it without a price, so it cannot be sold here yet. Please try again later.`;
+  }
+  return `${base} Google Play returned ${products.length} product(s), none of them the one this app sells. `
+    + 'Please report this store configuration problem.';
+}
+
 const WEB_PLAN_DEFINITIONS: Array<{
   id: ProPlanID;
   label: string;
@@ -386,19 +438,19 @@ export async function collectStoreDiagnostics(): Promise<string> {
   }
   if (Capacitor.isNativePlatform()) {
     try {
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      const offerings: any = await withTimeout(
-        Purchases.getOfferings(), STORE_TIMEOUT_MS, 'getOfferings timed out');
-      lines.push(`current offering: ${offerings?.current?.identifier ?? '(none)'}`);
-      for (const [name, off] of Object.entries(offerings?.all ?? {})) {
-        const pkgs = ((off as any)?.availablePackages ?? []).map((p: any) =>
-          `${p?.identifier}/${p?.product?.identifier}`
-          + `@${p?.product?.priceString || 'NO PRICE'}`
-          + `/${p?.product?.productType ?? '?'}`);
-        lines.push(`offering ${name}: ${pkgs.length ? pkgs.join(' ') : '(empty)'}`);
-      }
+      await withTimeout(PlayBilling.connect(), STORE_TIMEOUT_MS, 'connect timed out');
+      const { product } = await withTimeout(
+        PlayBilling.getProduct({ productId: PLAY_PRO_PRODUCT_ID }),
+        STORE_TIMEOUT_MS,
+        'getProduct timed out',
+      );
+      lines.push(`product ${product
+        ? `${product.identifier}@${product.priceString || 'NO PRICE'}/${product.currencyCode || '?'}`
+        : '(none)'}`);
+      const purchases = await withTimeout(ownedProPurchases(), STORE_TIMEOUT_MS, 'getPurchases timed out');
+      lines.push(`owned ${purchases.length}`);
     } catch (err) {
-      lines.push(`offerings FAILED: ${err instanceof Error ? err.message : String(err)}`);
+      lines.push(`billing FAILED: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   return lines.join('\n');
@@ -412,7 +464,7 @@ class RevenueCatProvider implements ProProvider {
   private configured = false;
   private configuring: Promise<void> | null = null;
 
-  private async sdk() {
+  private async sdk(): Promise<any> {
     // A build without the key must never reach the native SDK: RevenueCat
     // throws IllegalArgumentException on a blank key, and Capacitor rethrows
     // plugin exceptions as fatal RuntimeExceptions — i.e. the app crashes on
@@ -421,7 +473,8 @@ class RevenueCatProvider implements ProProvider {
     if (!REVENUECAT_ANDROID_KEY) {
       throw new Error('Billing is not available in this build (no RevenueCat key).');
     }
-    const { Purchases, LOG_LEVEL } = await import('@revenuecat/purchases-capacitor');
+    const Purchases: any = null;
+    const LOG_LEVEL: any = null;
     if (!this.configured) {
       this.configuring ??= withTimeout(
         // Log level BEFORE configure(), or the configure/BillingClient handshake
@@ -448,30 +501,33 @@ class RevenueCatProvider implements ProProvider {
 
   async isEntitled(): Promise<boolean> {
     const Purchases = await this.sdk();
-    const { customerInfo } = await withTimeout(
+    const { customerInfo } = await withTimeout<any>(
       Purchases.getCustomerInfo(), STORE_TIMEOUT_MS, 'Timed out reading your purchases');
     return hasProEntitlement(customerInfo);
   }
 
-  async getPrice(): Promise<string | null> {
+  private async getPlayProducts(): Promise<any[]> {
     const Purchases = await this.sdk();
-    const offerings = await withTimeout(
-      Purchases.getOfferings(), STORE_TIMEOUT_MS, 'Timed out loading store products');
-    // Must be the SAME package checkout will use, or the sheet promises a price
-    // Play is not about to charge.
-    const pkg = playPackage(offerings);
-    return pkg?.product.priceString ?? null;
+    const PRODUCT_CATEGORY = { NON_SUBSCRIPTION: 'NON_SUBSCRIPTION' };
+    const result = await withTimeout<any>(Purchases.getProducts({
+      productIdentifiers: PLAY_PLAN_PRODUCTS.map((plan) => plan.productID),
+      type: PRODUCT_CATEGORY.NON_SUBSCRIPTION,
+    }), STORE_TIMEOUT_MS, 'Timed out loading Google Play products');
+    return result.products ?? [];
+  }
+
+  async getPrice(): Promise<string | null> {
+    const product = playStoreProduct(await this.getPlayProducts());
+    return product?.priceString ?? null;
   }
 
   async getPlans(): Promise<ProPlan[]> {
-    const Purchases = await this.sdk();
-    const offerings = await withTimeout(
-      Purchases.getOfferings(), STORE_TIMEOUT_MS, 'Timed out loading store products');
     // Only plans Play can actually sell are offered. A plan whose product is
     // missing (not yet live, or unavailable in this country) is left out rather
     // than shown and then failing at checkout.
-    return PLAY_PLAN_PRODUCTS.flatMap(({ id, label, productID }) => {
-      const product = playPackageForProduct(offerings, productID)?.product;
+    const products = await this.getPlayProducts();
+    return PLAY_PLAN_PRODUCTS.flatMap(({ id, label }) => {
+      const product = playStoreProduct(products, id);
       if (!product?.priceString) return [];
       return [{
         id,
@@ -487,82 +543,30 @@ class RevenueCatProvider implements ProProvider {
 
   async purchase(planID?: ProPlanID): Promise<boolean> {
     const Purchases = await this.sdk();
-    const offerings = await withTimeout(
-      Purchases.getOfferings(), STORE_TIMEOUT_MS, 'Timed out loading store products');
-    // Logged BEFORE selection, so it is captured on the "not available right
-    // now" path too — that path throws, and the offerings that produced it are
-    // otherwise gone. This is the ground truth the dashboard cannot give us:
-    // what Play actually returned to THIS device, in THIS country, for THIS
-    // account. RevenueCat's Android SDK drops any product Play does not know,
-    // so a product missing here is missing in Play, not in our selection code.
-    console.warn('[pro] offerings', JSON.stringify({
-      current: offerings?.current?.identifier ?? null,
-      offerings: Object.fromEntries(Object.entries(offerings?.all ?? {}).map(([name, off]: [string, any]) =>
-        [name, (off?.availablePackages ?? []).map((p: any) =>
-          `${p?.identifier}/${p?.product?.identifier}@${p?.product?.priceString ?? 'NO PRICE'}`)])),
-    }));
-    const pkg = playPackage(offerings, planID);
-    if (!pkg) throw new Error(describeMissingProduct(offerings, planID));
+    const products = await this.getPlayProducts();
+    // This is the ground truth the dashboard cannot give us: what Play returned
+    // to this device, country and account. A missing product is missing in Play,
+    // not in an offering selector.
+    const product = playStoreProduct(products, planID);
+    if (!product) throw new Error(describeMissingStoreProduct(products, planID));
     // Breadcrumb for "it spins and no Play sheet ever appears". Capacitor
     // mirrors console.* into logcat, so this lands beside RevenueCat's own
     // VERBOSE lines and answers the question the SDK's silence cannot: which
-    // package did we actually hand over?
-    //
-    // It logs the fields that DECIDE the outcome, which are not the ones this
-    // file selects on. `console.warn`, not `.log`: the lint gate allows only
-    // warn/error.
-    //
-    // We buy through purchaseStoreProduct, NOT purchasePackage, and the
-    // difference is the whole bug. Read PurchasesPlugin.kt 245-295 of
-    // @revenuecat/purchases-capacitor 13.4.0:
-    //
-    //   purchasePackage      requires `presentedOfferingContext`
-    //                        (getObjectOrReject — no context, no call) and then
-    //                        purchasePackageCommon must re-find the package BY
-    //                        IDENTIFIER INSIDE THE OFFERING that context names.
-    //   purchaseStoreProduct takes the context as OPTIONAL (optJSONObject) and
-    //                        calls purchaseProduct(activity, productIdentifier,
-    //                        type, ...) — resolved by product id against the
-    //                        store, with no offering lookup in the path.
-    //
-    // Neither transmits the product object itself; both re-resolve natively. So
-    // a package can match on product id and carry a perfectly good price, and
-    // still name an offering/identifier pair the SDK cannot resolve — at which
-    // point Play is never asked to open anything and the promise never settles.
-    // That is the observed failure, measured rather than assumed: the store
-    // returns `pro_lifetime` PRICED (getOfferings succeeds and playPackage()
-    // finds it, or line 505 would have thrown "not available right now"), and
-    // then the buy button spins the full 180s and reports "didn't answer".
-    // A dropped or priceless product cannot produce that — it throws instantly.
-    //
-    // Resolving by product id uses the one lookup already proven to work on the
-    // failing devices. The offering context is still forwarded when the product
-    // carries one, so RevenueCat keeps its offering attribution.
+    // product did we actually hand over? `console.warn`, not `.log`: the lint
+    // gate allows only warn/error.
     console.warn('[pro] purchaseStoreProduct', JSON.stringify({
       planID: planID ?? '(default)',
-      packageID: pkg?.identifier,
-      offering: pkg?.presentedOfferingContext?.offeringIdentifier ?? pkg?.offeringIdentifier,
-      productID: pkg?.product?.identifier,
-      price: pkg?.product?.priceString,
-      productType: pkg?.product?.productType,
-      // The plugin reads `productCategory` with getStringOrReject: absent, the
-      // call is REJECTED rather than left hanging, so this distinguishes "the
-      // product object was malformed" from "Play never opened a sheet".
-      productCategory: pkg?.product?.productCategory,
-      hasDefaultOption: !!pkg?.product?.defaultOption,
+      productID: product?.identifier,
+      price: product?.priceString,
+      productCategory: product?.productCategory,
+      productType: product?.productType,
     }));
     let customerInfo;
     try {
-      // `productCategory` is typed PRODUCT_CATEGORY | null, and the plugin reads
-      // it with getStringOrReject — a null one REJECTS the call outright. That
-      // is a fast, named error rather than the 180s silence, but it is still no
-      // purchase, so fall back to the package path when the field is missing
-      // instead of trading one dead end for another.
-      ({ customerInfo } = await withTimeout(
-        pkg?.product?.productCategory
-          ? Purchases.purchaseStoreProduct({ product: pkg.product })
-          : Purchases.purchasePackage({ aPackage: pkg }),
-        PURCHASE_TIMEOUT_MS, PURCHASE_TIMEOUT));
+      ({ customerInfo } = await withTimeout<any>(
+        // `purchaseStoreProduct` resolves the already-validated product by Play
+        // id/category. It does not repeat RevenueCat's package/offering lookup.
+        Purchases.purchaseStoreProduct({ product }), PURCHASE_TIMEOUT_MS, PURCHASE_TIMEOUT));
     } catch (err) {
       if (!(err instanceof Error) || err.message !== PURCHASE_TIMEOUT) throw err;
       // Running out of time is not the same as failing. Play may still have
@@ -578,7 +582,7 @@ class RevenueCatProvider implements ProProvider {
       // eslint-disable-next-line preserve-caught-error -- no upstream cause exists
       throw new Error("The Play Store didn't answer. If you were charged, tap Restore purchase.");
     }
-    // purchasePackage resolving (not throwing) means Play charged the user, so
+    // purchaseStoreProduct resolving (not throwing) means Play charged the user, so
     // the transaction itself succeeded. If the entitlement is missing from
     // customerInfo (product not attached to an entitlement in the RevenueCat
     // dashboard), falling through to `false` would silently swallow a PAID
@@ -590,7 +594,7 @@ class RevenueCatProvider implements ProProvider {
 
   async restore(): Promise<boolean> {
     const Purchases = await this.sdk();
-    const { customerInfo } = await withTimeout(
+    const { customerInfo } = await withTimeout<any>(
       Purchases.restorePurchases(), PURCHASE_TIMEOUT_MS, 'The Play Store took too long. Try again in a moment.');
     return hasProEntitlement(customerInfo);
   }
@@ -603,7 +607,7 @@ class RevenueCatProvider implements ProProvider {
     // device's Play purchases; the recomputed customer is then read back.
     const Purchases = await this.sdk();
     await withTimeout(Purchases.syncPurchases(), STORE_TIMEOUT_MS, 'Timed out syncing your purchases');
-    const { customerInfo } = await withTimeout(
+    const { customerInfo } = await withTimeout<any>(
       Purchases.getCustomerInfo(), STORE_TIMEOUT_MS, 'Timed out reading your purchases');
     return hasProEntitlement(customerInfo)
       || (customerInfo?.allPurchasedProductIdentifiers?.length ?? 0) > 0;
@@ -611,7 +615,7 @@ class RevenueCatProvider implements ProProvider {
 
   async identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean> {
     const Purchases = await this.sdk();
-    const { customerInfo } = await withTimeout(
+    const { customerInfo } = await withTimeout<any>(
       Purchases.logIn({ appUserID }), STORE_TIMEOUT_MS, 'Timed out linking your account');
     await withTimeout(Promise.all([
       Purchases.setEmail({ email }),
@@ -627,16 +631,155 @@ class RevenueCatProvider implements ProProvider {
     // linking; RevenueCat aliases an anonymous owner to this identified ID
     // under the project's "Transfer to new App User ID" policy.
     await withTimeout(Purchases.syncPurchases(), STORE_TIMEOUT_MS, 'Timed out syncing your purchases');
-    const { customerInfo: migrated } = await withTimeout(
+    const { customerInfo: migrated } = await withTimeout<any>(
       Purchases.getCustomerInfo(), STORE_TIMEOUT_MS, 'Timed out reading your purchases');
     return ownsPro(migrated);
   }
 
   async disconnect(): Promise<boolean> {
     const Purchases = await this.sdk();
-    const { customerInfo } = await withTimeout(
+    const { customerInfo } = await withTimeout<any>(
       Purchases.logOut(), STORE_TIMEOUT_MS, 'Timed out signing out of the store');
     return hasProEntitlement(customerInfo);
+  }
+}
+
+/** Direct Google Play Billing provider. RevenueCat is deliberately absent from
+ * this path: the native plugin queries and launches the exact Play product,
+ * while the Worker verifies/acknowledges receipts and links them to Google. */
+class DirectPlayProvider implements ProProvider {
+  private accountLinked = false;
+
+  async init(): Promise<void> {
+    await withTimeout(
+      PlayBilling.connect(), STORE_TIMEOUT_MS,
+      'Could not connect to Google Play. Check your connection and try again.',
+    );
+  }
+
+  private async product(): Promise<PlayProduct | null> {
+    const { product } = await withTimeout(
+      PlayBilling.getProduct({ productId: PLAY_PRO_PRODUCT_ID }),
+      STORE_TIMEOUT_MS,
+      'Timed out loading the Google Play product.',
+    );
+    return product;
+  }
+
+  private async owned(): Promise<PlayPurchase[]> {
+    return withTimeout(
+      ownedProPurchases(), STORE_TIMEOUT_MS,
+      'Timed out reading Google Play purchases.',
+    );
+  }
+
+  private async verifyOwned(purchases: PlayPurchase[]): Promise<void> {
+    if (this.accountLinked) {
+      await linkPlayPurchases(purchases.map((purchase) => purchase.purchaseToken)).catch((error) => {
+        console.warn('[pro] Play account linking deferred', error);
+      });
+      return;
+    }
+    await Promise.all(purchases.map((purchase) =>
+      verifyPlayPurchase(purchase.purchaseToken).catch((error) => {
+        // Play itself returned PURCHASED. Keep the buyer unlocked if the Worker
+        // is temporarily offline; resume/sign-in retries verification and ack.
+        console.warn('[pro] Play verification deferred', error);
+      })));
+  }
+
+  async isEntitled(): Promise<boolean> {
+    const purchases = await this.owned();
+    if (purchases.length > 0) {
+      await this.verifyOwned(purchases);
+      return true;
+    }
+    return this.accountLinked ? getCloudProEntitlement() : false;
+  }
+
+  async getPrice(): Promise<string | null> {
+    return (await this.product())?.priceString ?? null;
+  }
+
+  async getPlans(): Promise<ProPlan[]> {
+    const product = await this.product();
+    if (!product?.priceString) return [];
+    return [{
+      id: 'lifetime',
+      label: 'Lifetime',
+      priceLabel: product.priceString,
+      priceMicros: product.priceAmountMicros,
+      currency: product.currencyCode,
+    }];
+  }
+
+  async purchase(planID?: ProPlanID): Promise<boolean> {
+    if (planID && planID !== 'lifetime') {
+      throw new Error('Google Play currently offers Pro as a lifetime purchase only.');
+    }
+    const product = await this.product();
+    if (!product?.priceString) {
+      throw new Error('Google Play did not return the Pro product for this account and country.');
+    }
+    console.warn('[pro] direct launchBillingFlow', JSON.stringify({
+      productID: product.identifier,
+      price: product.priceString,
+      hasOfferToken: !!product.offerToken,
+    }));
+
+    let purchase: PlayPurchase | null;
+    try {
+      ({ purchase } = await withTimeout(
+        PlayBilling.purchase({ productId: PLAY_PRO_PRODUCT_ID }),
+        PURCHASE_TIMEOUT_MS,
+        PURCHASE_TIMEOUT,
+      ));
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== PURCHASE_TIMEOUT) throw error;
+      await PlayBilling.resetPurchaseFlow().catch(() => {});
+      const owned = await this.owned().catch(() => []);
+      if (owned.length > 0) {
+        await this.verifyOwned(owned);
+        return true;
+      }
+      throw new Error("The Play Store didn't answer. You were not charged; if that is wrong, tap Restore purchase.");
+    }
+
+    if (purchase?.purchaseState === 2) {
+      throw new Error('Payment is pending in Google Play. Pro will unlock when payment completes.');
+    }
+    if (!isCompletedProPurchase(purchase)) return false;
+    await this.verifyOwned([purchase]);
+    return true;
+  }
+
+  async restore(): Promise<boolean> {
+    const purchases = await this.owned();
+    if (purchases.length > 0) {
+      await this.verifyOwned(purchases);
+      return true;
+    }
+    return this.accountLinked ? getCloudProEntitlement() : false;
+  }
+
+  async sync(): Promise<boolean> {
+    return this.restore();
+  }
+
+  async identify(_appUserID: string, _email: string | null, _displayName: string | null): Promise<boolean> {
+    this.accountLinked = true;
+    const purchases = await this.owned();
+    const playPro = purchases.length > 0
+      ? await linkPlayPurchases(purchases.map((purchase) => purchase.purchaseToken))
+      : false;
+    // The Worker ORs linked Play receipts with the existing RevenueCat
+    // Web-Billing entitlement, so a Stripe purchase unlocks this Android app.
+    return playPro || await getCloudProEntitlement();
+  }
+
+  async disconnect(): Promise<boolean> {
+    this.accountLinked = false;
+    return (await this.owned()).length > 0;
   }
 }
 
@@ -670,9 +813,10 @@ class WebRevenueCatProvider implements ProProvider {
   async init(): Promise<void> {}
 
   async isEntitled(): Promise<boolean> {
-    if (!this.appUserID || !isWebBillingConfigured()) return false;
+    if (!this.appUserID) return false;
+    if (!isWebBillingConfigured()) return getCloudProEntitlement();
     const customerInfo = await (await this.sdk()).getCustomerInfo();
-    return hasProEntitlement(customerInfo);
+    return hasProEntitlement(customerInfo) || await getCloudProEntitlement();
   }
 
   async getPrice(): Promise<string | null> {
@@ -730,7 +874,7 @@ class WebRevenueCatProvider implements ProProvider {
     if (displayName) attributes.$displayName = displayName;
     if (Object.keys(attributes).length) await purchases.setAttributes(attributes);
     const customerInfo = await purchases.getCustomerInfo();
-    return hasProEntitlement(customerInfo);
+    return hasProEntitlement(customerInfo) || await getCloudProEntitlement();
   }
 
   async disconnect(): Promise<boolean> {
@@ -747,7 +891,7 @@ let provider: ProProvider | null = null;
 
 export function getProProvider(): ProProvider {
   if (!provider) {
-    provider = Capacitor.isNativePlatform() ? new RevenueCatProvider() : new WebRevenueCatProvider();
+    provider = Capacitor.isNativePlatform() ? new DirectPlayProvider() : new WebRevenueCatProvider();
   }
   return provider;
 }

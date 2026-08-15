@@ -49,21 +49,4 @@ export function markReferralRedeemed(raw: string): void {
       .then(({ Preferences }) => Preferences.set({ key: REFERRAL_KEY, value: code }))
       .catch(() => {});
   }
-  syncReferralAttribute();
-}
-
-/**
- * Tag this RevenueCat customer with the redeemed code so redemptions are
- * countable from the dashboard/API (the app has no backend of its own).
- * Fire-and-forget; requires Purchases.configure to have run (proStore.refresh
- * does that on launch, and calls this afterwards to backfill devices that
- * redeemed before this attribute existed).
- */
-export function syncReferralAttribute(): void {
-  if (!Capacitor.isNativePlatform()) return;
-  const code = redeemedReferralCode();
-  if (!code) return;
-  import('@revenuecat/purchases-capacitor')
-    .then(({ Purchases }) => Purchases.setAttributes({ referral_code: code }))
-    .catch(() => {});
 }

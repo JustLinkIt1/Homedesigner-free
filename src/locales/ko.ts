@@ -596,6 +596,8 @@ export const KO: Record<string, string> = {
   'Sign out': '로그아웃',
   'Signing in…': '로그인 중…',
   'Sign in with Google': 'Google로 로그인',
+  'Pro is active on this device. Sign in to use it on web and other devices.': '이 기기에서 Pro가 활성화되어 있습니다. 웹과 다른 기기에서도 사용하려면 로그인하세요.',
+  'Bought on web? Sign in to unlock Pro': '웹에서 구매하셨나요? 로그인하여 Pro 잠금 해제',
   'Sync Pro access across Android devices. Designs stay on this device.': 'Pro 이용 권한을 Android 기기 간에 동기화합니다. 디자인은 이 기기에 저장됩니다.',
   'Google Sign-In needs an OAuth client ID in this build.': '이 빌드에서 Google 로그인을 사용하려면 OAuth 클라이언트 ID가 필요합니다.',
   'Signed in — Pro access is synced to this account.': '로그인했습니다 — Pro 이용 권한이 이 계정과 동기화되었습니다.',

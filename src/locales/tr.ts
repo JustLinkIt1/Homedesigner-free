@@ -596,6 +596,8 @@ export const TR: Record<string, string> = {
   'Sign out': 'Çıkış yap',
   'Signing in…': 'Giriş yapılıyor…',
   'Sign in with Google': 'Google ile giriş yap',
+  'Pro is active on this device. Sign in to use it on web and other devices.': 'Pro bu cihazda etkin. Web’de ve diğer cihazlarda kullanmak için giriş yapın.',
+  'Bought on web? Sign in to unlock Pro': 'Web’den mi satın aldınız? Pro’yu açmak için giriş yapın',
   'Sync Pro access across Android devices. Designs stay on this device.': 'Pro erişimini Android cihazlar arasında eşitleyin. Tasarımlar bu cihazda kalır.',
   'Google Sign-In needs an OAuth client ID in this build.': 'Bu derlemede Google ile giriş için bir OAuth istemci kimliği gerekir.',
   'Signed in — Pro access is synced to this account.': 'Giriş yapıldı — Pro erişimi bu hesapla eşitlendi.',

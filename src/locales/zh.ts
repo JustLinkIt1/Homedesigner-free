@@ -596,6 +596,8 @@ export const ZH: Record<string, string> = {
   'Sign out': '退出登录',
   'Signing in…': '正在登录…',
   'Sign in with Google': '使用 Google 登录',
+  'Pro is active on this device. Sign in to use it on web and other devices.': 'Pro 已在此设备上启用。登录后即可在网页端和其他设备上使用。',
+  'Bought on web? Sign in to unlock Pro': '已在网页端购买？登录以解锁 Pro',
   'Sync Pro access across Android devices. Designs stay on this device.': '在 Android 设备间同步 Pro 权限。设计仍保存在此设备上。',
   'Google Sign-In needs an OAuth client ID in this build.': '此版本需要 OAuth 客户端 ID 才能使用 Google 登录。',
   'Signed in — Pro access is synced to this account.': '已登录 — Pro 权限已同步到此账号。',

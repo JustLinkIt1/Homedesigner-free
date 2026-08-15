@@ -7,7 +7,6 @@ import {
   isValidReferralCode,
   markReferralRedeemed,
   isReferralRedeemed,
-  syncReferralAttribute,
 } from '../lib/referral';
 import { toast } from '../lib/ui';
 import { t } from '../lib/i18n';
@@ -99,30 +98,11 @@ export const useProStore = create<ProState>((set, get) => ({
     }
     try {
       await provider.init();
-      // Backfill the referral attribute for devices that redeemed before we
-      // started reporting redemptions to RevenueCat (needs configure() first).
-      syncReferralAttribute();
-      // A Play promo code is granted to the ACCOUNT, and getCustomerInfo() does
-      // not see a purchase Play was never asked about. Only syncPurchases()
-      // does. Resume already syncs (see recheck), but a redemption made while
-      // the app was CLOSED is followed by a cold launch, where this is the only
-      // entitlement path that runs — so it has to sync too, or the code is
-      // silently ignored until the user happens to background and return.
-      // Reported: "the pro code is marked OK in the Play Store but the app does
-      // not seem to recognize it."
-      let synced = false;
-      if (!get().isPro && provider.sync) {
-        try {
-          synced = await provider.sync();
-        } catch {
-          /* fall through to the plain read below */
-        }
-      }
+      // Direct Billing queries Play ownership. A redeemed referral code remains
+      // a local grandfathered grant and is never allowed to revoke that result.
       // A redeemed referral code is a grant in its own right: RevenueCat
       // knows nothing about it, so it must never be able to revoke it.
-      // `synced` is OR'd in rather than short-circuiting the function, so the
-      // price and plan lookups further down still run for the upsell.
-      const entitled = synced || (await provider.isEntitled()) || isReferralRedeemed();
+      const entitled = (await provider.isEntitled()) || isReferralRedeemed();
       // Only a SUCCESSFUL response may change the flag — a network error must
       // never lock a paying user out of what they bought.
       set({ isPro: entitled });
@@ -154,7 +134,9 @@ export const useProStore = create<ProState>((set, get) => ({
     const provider = getProProvider();
     try {
       await provider.init();
-      const entitled = provider.sync ? await provider.sync() : await provider.isEntitled();
+      // Query Play directly on resume so pending purchases and promo redemptions
+      // become visible without relying on a stale SDK customer cache.
+      const entitled = await provider.isEntitled();
       if (!entitled) return false;
       set({ isPro: true, upsellFeature: null });
       writeCache(true);
@@ -284,8 +266,7 @@ export const useProStore = create<ProState>((set, get) => ({
       await provider.init();
       entitled = (await provider.disconnect()) || entitled;
     } finally {
-      // RevenueCat may reveal a device-owned anonymous entitlement after
-      // logout; retain that, while network failures keep the local fallback.
+      // A device-owned Play purchase remains valid after account sign-out.
       set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null });
       writeCache(entitled);
     }

@@ -6,6 +6,7 @@ import { isWebBillingConfigured, type ProFeature } from '../lib/pro';
 import { useAuthStore } from '../store/authStore';
 import { APP_NAME } from '../lib/appInfo';
 import { useI18n } from '../lib/i18n';
+import { toast } from '../lib/ui';
 import Modal from './Modal';
 
 const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blurb: string }> = {
@@ -58,12 +59,11 @@ export default function ProUpsellModal() {
 
   const native = Capacitor.isNativePlatform();
   const webBilling = !native && isWebBillingConfigured();
-  // An anonymous Play purchase works on this phone, but it cannot be followed
-  // reliably to another device or to the desktop app. Make identity a visible
-  // first step, then let the user review the price and explicitly buy. This
-  // also gives support a searchable RevenueCat customer instead of an opaque
-  // anonymous install when checkout fails.
-  const requiresAccount = native || webBilling;
+  // Google Play and RevenueCat both support anonymous purchases. Do not put
+  // Google authentication in front of Android checkout: it is a separate
+  // provider with separate failure modes, and a failed sign-in otherwise means
+  // Play Billing is never invoked. Link the RevenueCat customer afterward.
+  const requiresAccount = webBilling;
   const needsAccount = requiresAccount && !account;
   // Deliberately NOT `busy || authBusy`. `authBusy` also covers background
   // account sync, which has nothing to do with checkout — and while it was
@@ -78,7 +78,7 @@ export default function ProUpsellModal() {
   // store that currently offers only the lifetime unlock — a country the
   // subscriptions are not live in, or a build predating them — still gets the
   // single "Unlock Pro — <price>" button rather than a grid of one.
-  const showPlanChoices = requiresAccount && !!account && plans.length > 1;
+  const showPlanChoices = (native || (webBilling && !!account)) && plans.length > 1;
   const [selectedPlanID, setSelectedPlanID] = useState<'monthly' | 'yearly' | 'lifetime' | null>(null);
   useEffect(() => {
     if (!showPlanChoices) return;
@@ -114,7 +114,17 @@ export default function ProUpsellModal() {
     : webBilling
       ? t('Sign in with Google')
       : t('Get the Android app');
-  const onPrimaryAction = needsAccount ? signIn : purchase;
+  const purchaseAndOfferLink = async (planID?: 'monthly' | 'yearly' | 'lifetime') => {
+    await purchase(planID);
+    if (native && !account && useProStore.getState().isPro) {
+      toast.action(
+        t('Pro is active on this device. Sign in to use it on web and other devices.'),
+        { label: t('Sign in'), onClick: () => { void signIn(); } },
+        'success',
+      );
+    }
+  };
+  const onPrimaryAction = needsAccount ? signIn : purchaseAndOfferLink;
   // A plan only carries `originalPriceLabel` when a discount is genuinely
   // applied to the price beside it, so the struck-through price disappears by
   // itself when the offer ends rather than needing a second edit here.
@@ -204,7 +214,7 @@ export default function ProUpsellModal() {
             <>
               <button
                 className="btn primary pro-buy pro-continue"
-                onClick={() => purchase(selectedPlan.id)}
+                onClick={() => purchaseAndOfferLink(selectedPlan.id)}
                 disabled={actionBusy}
               >
                 {actionBusy ? <span className="spin" /> : <Sparkles className="icon" />}
@@ -219,9 +229,18 @@ export default function ProUpsellModal() {
               </p>
             </>
           )}
-          {(native || webBilling) && account && (
+          {(native || (webBilling && account)) && (
             <button className="pro-restore" onClick={restore} disabled={actionBusy}>
               {t('Restore purchase')}
+            </button>
+          )}
+          {native && !account && (
+            <button
+              className="pro-restore"
+              onClick={() => { void signIn(); }}
+              disabled={busy || authBusy}
+            >
+              {authBusy ? t('Signing in…') : t('Bought on web? Sign in to unlock Pro')}
             </button>
           )}
           {/* Referral-code entry removed — the test-user campaign is closed.

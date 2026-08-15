@@ -275,13 +275,12 @@ export default function App() {
       // takes over the screen, so the app was backgrounded for it; if we are
       // still `busy` now that the user is back, no callback is coming and the
       // buy button would otherwise spin until the provider's timeout.
-      // Second: a Play promo code, redeemed in the Play Store app, which lands
-      // while we are backgrounded and which nothing else would ever tell us
-      // about.
+      // Second: a Play promo code redeemed in the Play Store app. RevenueCat
+      // performs its own foreground purchase query; recheck() reads the
+      // resulting entitlement without starting a competing syncPurchases().
       //
       // settleStranded() runs first and no-ops unless a flow is actually in
-      // flight; recheck() then covers the promo case (and is rate limited, so
-      // the two together still cost at most one store round trip per minute).
+      // flight; recheck() then covers the promo case and is rate limited.
       void useProStore.getState().settleStranded().then((freed) => {
         if (freed) toast.success(translate('Pro unlocked — thank you!'));
         return useProStore.getState().recheck();

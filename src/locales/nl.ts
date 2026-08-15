@@ -596,6 +596,8 @@ export const NL: Record<string, string> = {
   'Sign out': 'Uitloggen',
   'Signing in…': 'Inloggen…',
   'Sign in with Google': 'Inloggen met Google',
+  'Pro is active on this device. Sign in to use it on web and other devices.': 'Pro is actief op dit apparaat. Log in om het op internet en andere apparaten te gebruiken.',
+  'Bought on web? Sign in to unlock Pro': 'Op internet gekocht? Log in om Pro te ontgrendelen',
   'Sync Pro access across Android devices. Designs stay on this device.': 'Synchroniseer Pro-toegang tussen Android-apparaten. Ontwerpen blijven op dit apparaat.',
   'Google Sign-In needs an OAuth client ID in this build.': 'Google-login heeft in deze build een OAuth-client-ID nodig.',
   'Signed in — Pro access is synced to this account.': 'Ingelogd — Pro-toegang is met dit account gesynchroniseerd.',

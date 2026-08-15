@@ -596,6 +596,8 @@ export const JA: Record<string, string> = {
   'Sign out': 'ログアウト',
   'Signing in…': 'ログイン中…',
   'Sign in with Google': 'Google でログイン',
+  'Pro is active on this device. Sign in to use it on web and other devices.': 'この端末では Pro が有効です。ウェブや他の端末でも使うにはログインしてください。',
+  'Bought on web? Sign in to unlock Pro': 'ウェブで購入済みですか？ログインして Pro を有効にする',
   'Sync Pro access across Android devices. Designs stay on this device.': 'Pro アクセスを Android 端末間で同期します。デザインはこの端末に保存されます。',
   'Google Sign-In needs an OAuth client ID in this build.': 'このビルドで Google ログインを使うには OAuth クライアント ID が必要です。',
   'Signed in — Pro access is synced to this account.': 'ログインしました — Pro アクセスをこのアカウントと同期しました。',
