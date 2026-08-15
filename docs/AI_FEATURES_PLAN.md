@@ -1,226 +1,239 @@
-# AI features: what they cost, what we give away, and how we profit
+# AI points: pricing, balancing, and where the profit comes from
 
-Draft **2026-08-15**. Numbers are from this repo, not estimates from memory:
-fal.ai prices are `basePrice` in `src/model-studio/modelStudioApi.ts`; Pro pricing
-is Play `pro_lifetime` and web `pro_lifetime_web_v2` + `WEB_DISCOUNT` in
-`src/lib/pro.ts`.
+Draft **2026-08-15**. fal.ai 3D prices and Pro pricing are read from this repo
+(`src/model-studio/modelStudioApi.ts`, `src/lib/pro.ts`). Image-generation and
+Workers AI figures are **estimates and marked as such** — they are the one input
+here not yet grounded in a configured value.
+
+**Model:** one points currency across every AI feature. Everyone gets a free
+grant on sign-in. Anyone can buy points; **Pro buyers pay 30% less**. Point costs
+per feature and the price per point are balanced so every feature profits.
 
 ---
 
-## 1. The finding that decides the whole design
+## 1. The point scale, and the one rule that keeps it honest
 
-**Unlimited AI generation cannot be bundled into a lifetime unlock. Not at any
-usage level worth having.**
+Set the internal cost basis at **$0.000375 of real spend per point**. That number
+is not arbitrary — it falls out of the two fal 3D prices already configured, and
+it makes them consistent with each other:
 
-Costs per fal.ai call:
-
-| Generator | Base | With PBR textures |
-|---|---|---|
-| Hunyuan 3D **Rapid** | **$0.225** | $0.375 |
-| Hunyuan 3D **Pro** | **$0.525** | $0.675 |
-
-Net revenue per Pro unlock — **one time, forever**:
-
-| Channel | Gross | Cut | Net |
+| Generator | fal cost | Points | Cost per point |
 |---|---|---|---|
-| Play `pro_lifetime` | £5.99 | Google 15% | ≈ **$6.40** |
-| Web `pro_lifetime_web_v2` | $59.99 list − 50% `launch-offer-50` = $29.99 | Stripe ≈2.9% + $0.30, plus RC Web Billing | ≈ **$28** |
+| Hunyuan 3D **Rapid** | $0.225 | **600** | $0.000375 |
+| Hunyuan 3D **Pro** | $0.525 | **1,400** | $0.000375 |
+| Hunyuan 3D Pro + PBR | $0.675 | **1,800** | $0.000375 |
 
-So the break-even point, after which a Pro user is **permanently** unprofitable:
+**List price: $1.00 = 1,000 points.** So a point sells for $0.001 and costs at
+most $0.000375 to honour.
 
-| User | Rapid gens | Pro-quality gens |
-|---|---|---|
-| **Play buyer** ($6.40) | 28 | **12** |
-| Web buyer ($28) | 124 | 53 |
+> **The rule: price the points against the *worst-case* feature.**
+> A user may spend every point they own on the single most expensive thing we
+> offer. If the scale is profitable at $0.000375/point, it is profitable no
+> matter what they choose. Every cheaper feature is upside.
 
-A Play customer who generates **13 models** has cost more than they will ever
-pay, and "lifetime" means there is no second payment to recover it. One
-enthusiastic user can erase the margin of several others.
+Margin check at list, through Play (15%):
 
-The free tier is worse, because there is no revenue at all: 1,000 free users
-given a single Rapid generation each is **$225 of pure cost**.
-
-**Therefore: fal.ai generation must be metered. Credits are not a nice-to-have,
-they are the only structure that works.** The instinct to use points is correct.
-
----
-
-## 2. The line: what is free, what is Pro, what costs credits
-
-The useful distinction is **not** "AI vs not AI". It is **per-call marginal
-cost**. Two very different things are being called AI here:
-
-| Class | Runs on | Marginal cost | Verdict |
-|---|---|---|---|
-| Wall detection from an imported plan | Client-side CV, or a segmentation model on Workers AI / ONNX | ~$0 | **Include it.** Never meter it. |
-| Auto-furnish a room by style | One small structured Workers AI call | fractions of a cent | **Include it** (Pro). |
-| **3D asset generation (Hunyuan)** | **fal.ai** | **$0.225–$0.675 per asset** | **Credits. Always.** |
-
-That gives a line that is honest and easy to explain:
-
-> **Credits are for generating new 3D models. Everything else is included.**
-
-Recommended tiering:
-
-| | Free | Pro (lifetime) |
-|---|---|---|
-| Improved wall detection on import | ✅ | ✅ |
-| Auto-furnish by style | — | ✅ |
-| Generate 3D models | — | ✅ *(credits required)* |
-| Starter credits | 0 | **5** |
-
-Why 5 starter credits and not more: 5 Rapid generations cost $1.13, which is
-**18% of a Play unlock's entire net revenue**. Ten would be 35%. The web buyer
-could absorb far more, but the allowance has to be sized for the *cheapest*
-channel or Play buyers become a loss-leader for a feature they were sold.
-
-Free tier gets **zero** generative credits. Giving away even one costs real
-money against zero revenue — that is a marketing spend, and should be decided as
-one (a promo code, a campaign), not baked into the product.
+| | Per 1,000 points |
+|---|---|
+| Gross | $1.00 |
+| Play cut −15% | $0.85 net |
+| Worst-case fal cost | $0.375 |
+| **Gross margin** | **$0.475 · 56%** |
 
 ---
 
-## 3. Can we profit from fal.ai generations?
+## 2. The 30% Pro discount — and the floor it must not cross
 
-**Yes — around 45–58% gross margin, but only as consumable credits.**
-
-Define **1 credit = 1 Rapid generation** ($0.225 cost). A Pro-quality generation
-costs **3 credits** (true ratio is 2.33; rounding up funds the margin and the
-PBR variants).
-
-Pack pricing, with the arithmetic shown:
-
-| Pack | Price | Net after cut | Max fal cost (all spent) | Gross margin |
+| Buyer | Pays per 1,000 | Play net | Worst-case cost | Margin |
 |---|---|---|---|---|
-| 10 credits (Play) | $5.99 | $5.09 | $2.25 | **$2.84 · 56%** |
-| 25 credits (Play) | $12.99 | $11.04 | $5.63 | **$5.42 · 49%** |
-| 60 credits (Play) | $27.99 | $23.79 | $13.50 | **$10.29 · 43%** |
-| 10 credits (**Stripe/web**) | $5.99 | $5.52 | $2.25 | **$3.27 · 58%** |
+| Free user (list) | $1.00 | $0.85 | $0.375 | **56%** |
+| **Pro (−30%)** | **$0.70** | $0.595 | $0.375 | **37%** |
+| Pro, via Stripe on web | $0.70 | $0.65 | $0.375 | **42%** |
 
-Two things make the real margin better than the table: **breakage** (a
-meaningful share of credits are never spent) and the fact that the "max cost"
-column assumes every credit goes to a generation that actually succeeds.
+37% at the worst case, on the worst channel. Comfortable.
 
-**The trap to avoid:** pricing packs at a markup that looks generous
-per-credit but dies after the store cut. At $4.99 for 20 credits, Play nets
-$4.24 while 20 Rapid generations cost $4.50 — **a loss on every pack sold.**
-Any pack must clear `cost ÷ 0.85` before it clears margin.
+**Break-even discount is 56% off list.** At that point Play's cut plus fal's bill
+consume the entire sale. So:
 
----
+> **Total discount must never exceed ~50%.** 30% Pro is safe. Stacking a volume
+> discount *on top* of it is not — a 30% Pro price on a pack already discounted
+> 25% for volume lands at ~48% and leaves single-digit margin, before any
+> refund, retry or failed generation.
 
-## 4. Stripe or Play for the credits? — both, and it is not a free choice
+**Therefore: no volume discounts on point packs.** Larger packs cost
+proportionally the same. **The volume discount *is* Pro** — which is precisely
+the "I want paying users" lever, because buying Pro becomes the only way to make
+points cheaper.
 
-This is the part where the answer is constrained by policy rather than economics.
+| Pack | Points | List | Pro (−30%) |
+|---|---|---|---|
+| Starter | 2,000 | $1.99 | $1.39 |
+| Popular | 6,000 | $5.99 | $4.19 |
+| Studio | 15,000 | $14.99 | $10.49 |
 
-* **Android in-app purchases of credits must use Google Play Billing.** Credits
-  are digital content consumed inside the app; routing that through Stripe from
-  within the Android app puts the listing at risk. This is not a margin
-  decision — it is a condition of staying in the store.
-* **Web can and should use Stripe.** No 15% cut, better margin (58% vs 56% on
-  the small pack), and the rails are already live via RevenueCat Web Billing.
-* Google's rules on *external payment links* have been shifting under recent
-  litigation. **Verify current policy before relying on any link-out**; do not
-  design around the assumption that it is permitted.
+Every row holds 56% margin at list and 37% for Pro.
 
-**So: not "Stripe instead of Play" — Stripe *as well as* Play, over one shared
-balance.** The credit balance lives on the server, and either purchase path
-tops up the same ledger. A user buys credits on the web at better margin, or
-in-app on Android at policy-compliant margin, and spends them on either device.
+### Honest note on how hard the discount pulls
 
-This also happens to be the cheapest thing to build, because the server side
-already exists:
-
-* the Worker already verifies and acknowledges Play receipts
-  (`/v1/play/verify`, `/v1/play/link`) with a real Google service-account
-  credential;
-* D1 already holds `play_purchases` with an `account_subject` link;
-* fal.ai calls **already** go through the Worker behind `FAL_KEY`, never the
-  client — so there is already a chokepoint where a spend can be enforced.
+A 30% saving is $0.30 per 1,000 points. If Pro sells for ~$5.99, a buyer only
+recovers the Pro price in discount after **~20,000 points ≈ 33 Rapid
+generations**. For most users the discount alone will not sell Pro — it works as
+a *reinforcement* of the existing Pro features (multi-floor, PDF export, full
+catalogue), not as the headline. If a stronger pull is wanted later, the lever
+with real force is restricting **pack sizes** to Pro (free users limited to the
+Starter pack), not deepening the discount, which the floor above forbids anyway.
 
 ---
 
-## 5. Implementation sketch
+## 3. The free grant: 1,000 points
 
-**D1** — two tables beside `play_purchases`:
+Exactly the pattern you described — a large, friendly-sounding number that
+buys **one** real generation:
+
+| What they spend it on | Points | Uses from the free 1,000 |
+|---|---|---|
+| One Rapid 3D model | 600 | **1**, with 400 stranded |
+| AI renders | 200 | 5 |
+| Auto-furnish a room | 50 | 20 |
+
+The 400-point remainder is the deliberate tease: visible, not enough, and the
+next model needs a top-up.
+
+**The part that needs a decision, because it is real money.** The free grant is
+not free to us. If a user spends it on a Rapid generation it costs **$0.225 of
+actual fal spend against zero revenue**. Ten thousand claimed grants is **~$2,250**.
+That is a customer-acquisition cost, and it should be run like one:
+
+* **One grant per verified Google account subject**, never per install or
+  device — the D1 `account_subject` link already exists, and points are the
+  first thing in this app worth farming.
+* **Require sign-in to claim.** Anonymous grants cannot be rate-limited
+  meaningfully.
+* **Set a monthly ceiling on total grants** in the Worker, with the grant
+  degrading to "come back next month" rather than failing open.
+* Track redemption cost as a marketing line, not as COGS.
+
+Most free users will drift to the cheap features (20 auto-furnishes costs us
+about two cents), so realistic average cost per grant lands well under the
+$0.225 worst case. Budget for the worst case anyway.
+
+---
+
+## 4. Feature balancing
+
+| Feature | Runs on | Real cost | **Points** | Margin at list |
+|---|---|---|---|---|
+| Wall detection on import | client-side CV | $0 | **free, unmetered** | — |
+| Auto-furnish a room by style | Workers AI *(est. ~$0.001)* | ~$0.001 | **50** | ~98% |
+| **AI render from a plan/3D view** | fal image model *(est. ~$0.035)* | ~$0.035 | **200** | ~79% |
+| 3D model — Rapid | fal Hunyuan Rapid | $0.225 | **600** | 56% |
+| 3D model — Pro | fal Hunyuan Pro | $0.525 | **1,400** | 56% |
+| 3D model — Pro + PBR | fal Hunyuan Pro PBR | $0.675 | **1,800** | 56% |
+
+Two deliberate choices:
+
+* **Wall detection stays free and unmetered.** It runs client-side at zero
+  marginal cost, and it is the feature with a complaint already on record.
+  Metering something that costs nothing buys resentment and no revenue.
+* **Cheap features carry fatter margins on purpose.** Auto-furnish at 50 points
+  sells $0.05 of points for $0.001 of compute. That is normal for small-model
+  features, and it is what subsidises the 3D generations — so steering people
+  toward the cheap features is good business, not a leak.
+
+**AI renders supersede the old "avoid image generation" position.** That call was
+made when generation would have been bundled into a flat unlock, where cost
+scaled with usage and revenue did not. Metered at 200 points it carries ~79%
+margin. The estimate needs confirming against fal's actual image pricing before
+launch — **it is the only number here not taken from the repo.**
+
+---
+
+## 5. Stripe or Play — not a free choice
+
+* **Android in-app point purchases must use Google Play Billing.** Points are
+  digital content consumed in the app; routing that through Stripe from inside
+  the Android app puts the listing at risk. This is a condition of staying in
+  the store, not a margin decision.
+* **Web should use Stripe** — no 15% cut, so ~42% margin for Pro buyers against
+  37% on Play. The rails are already live via RevenueCat Web Billing.
+* Google's rules on external payment links have been shifting under recent
+  litigation. **Verify current policy before relying on a link-out.**
+
+**Both paths, one server-side balance.** Buy on either, spend on either.
+
+Unifying the Play and web *Pro* price (which you are having Codex do) matters
+here beyond fairness: the 30% discount is defined against a list price, and
+today a $59.99 web list beside a £5.99 Play price makes "30% off" mean two
+different things depending on where someone stands.
+
+---
+
+## 6. Implementation
+
+**D1** — beside the existing `play_purchases`:
 
 ```sql
-CREATE TABLE credit_balances (
+CREATE TABLE point_balances (
   account_subject TEXT PRIMARY KEY,
   balance         INTEGER NOT NULL DEFAULT 0,
+  free_granted_at INTEGER,                 -- one free grant per account, ever
   updated_at      INTEGER NOT NULL
 );
 
-CREATE TABLE credit_ledger (
+CREATE TABLE point_ledger (
   id              TEXT PRIMARY KEY,
   account_subject TEXT NOT NULL,
-  delta           INTEGER NOT NULL,       -- +granted / -spent
-  reason          TEXT NOT NULL,          -- purchase | starter | refund | spend | promo
-  source          TEXT,                   -- play | stripe | system
-  ref             TEXT UNIQUE,            -- purchase token / job id: the idempotency key
+  delta           INTEGER NOT NULL,        -- +bought/granted, -spent, +refunded
+  reason          TEXT NOT NULL,           -- purchase | free_grant | spend | refund | promo
+  feature         TEXT,                    -- render | model_rapid | model_pro | furnish
+  source          TEXT,                    -- play | stripe | system
+  ref             TEXT UNIQUE,             -- receipt token / job id: idempotency key
   created_at      INTEGER NOT NULL
 );
 ```
 
-`ref UNIQUE` is what makes a replayed Play receipt or a retried job impossible
-to double-count.
+`ref UNIQUE` makes a replayed receipt or retried job impossible to double-count.
+`free_granted_at` enforces one grant per account.
 
-**Worker** — three routes, and one rule that matters more than the rest:
+**Worker routes:** `GET /v1/points`, `POST /v1/points/grant` (free, once),
+`POST /v1/points/purchase` (after a **verified** receipt),
+`POST /v1/points/spend`.
 
-* `GET  /v1/credits` — balance + recent ledger
-* `POST /v1/credits/grant` — after a **verified** purchase, keyed by `ref`
-* `POST /v1/credits/spend` — atomic decrement, **before** dispatching to fal
+> **Spend server-side before dispatching to fal, and refund on failure.** The
+> client must never be the authority on the balance — it is the component an
+> attacker controls, and every point is real money at fal. The chokepoint
+> already exists: fal calls go through the Worker behind `FAL_KEY`.
 
-> **Spend server-side before the fal call, and refund on failure.** The client
-> must never be the authority on the balance — it is the one component an
-> attacker controls, and every credit is real money at fal.
+**Native:** the app currently sells a **single non-consumable**. Point packs are
+**consumables**, needing `consumeAsync` in `PlayBillingPlugin` — a product that
+is never consumed cannot be bought a second time. This is real work, not config.
 
-**Client/native** — the one genuinely new piece of work: the app currently sells
-a **single non-consumable**. Credit packs are **consumables**, which need
-`consumeAsync` handling in `PlayBillingPlugin` (a non-consumed product cannot be
-bought twice). Budget for that; it is not a config change.
-
----
-
-## 6. Sequencing
-
-1. **Wall detection first, no credits, no fal.** It is the complaint on record
-   ("I don't find our current system works very well"), it costs ~nothing per
-   call, and it needs no billing work at all. Ship value before building a
-   currency.
-2. **Auto-furnish (Pro, Workers AI).** Still no per-call metering.
-3. **Credits + generation last.** Only build the ledger, the consumables and the
-   packs once there is evidence people want generated assets enough to buy them.
-
-Building the currency first is the expensive order: it is the most billing work,
-the most policy exposure, and the least certain demand.
+**Pricing the discount:** hold the 30% server-side, not in the client. Two Play
+products per pack (list and Pro) is the policy-clean way to do a discount on
+Android, and the Worker must verify Pro entitlement before honouring the Pro SKU.
 
 ---
 
-## 7. Open questions for the owner
+## 7. Sequencing
 
-1. **The £5.99 / $59.99 gap.** Play sells the lifetime unlock at £5.99 while the
-   web list price is $59.99 (charged $29.99 under `launch-offer-50`) — roughly
-   **5× different for the same entitlement**, and the Worker grants Pro from
-   either. Someone will notice. Is the Play price deliberate, or left over from
-   the `pro_unlock` era?
-2. Does Pro stay lifetime? Metered AI is a recurring cost; a lifetime unlock has
-   no recurring revenue. Credits are the workaround, but a subscription is the
-   structural fix — and there is already a deferred "3-day trial → $4/mo" thread.
-3. Credit expiry: none is friendliest and simplest; expiry improves economics and
-   adds support load. Recommend **no expiry** at launch.
-4. Refund policy once credits are spent.
+1. **Wall detection.** Free, unmetered, no billing work, addresses the live
+   complaint. Ship value before building a currency.
+2. **The points ledger + Play consumables**, with auto-furnish as the first
+   cheap feature to prove spend/refund end to end at ~$0.001 a call.
+3. **AI renders**, once image pricing is confirmed.
+4. **3D generation last** — the most expensive to serve and the most exposed if
+   the ledger has a hole.
 
 ---
 
-## 8. What is NOT recommended
+## 8. Open questions
 
-* **Image generation.** Already on record as avoided; the cost profile is worse
-  than 3D and the value to a floor-plan app is thinner.
-* **A vision LLM for wall geometry.** LLMs are unreliable at precise pixel
-  coordinates — you get plausible hallucinated geometry, per-call cost and
-  latency, for a job classical CV already does better. See
-  `docs/` tracer notes; the live pipeline in `src/lib/wallTrace.ts` is already a
-  Hough-based adaptive tracer, not the naive band scanner it is often mistaken
-  for.
-* **Free-tier generative credits by default.** Pure cost against zero revenue.
-  If they are wanted, fund them as a campaign with a fixed ceiling.
+1. **Confirm fal's image-generation price.** The 200-point render rests on a
+   ~$0.035 estimate; everything else here comes from configured values.
+2. **Workers AI cost per auto-furnish call** — assumed ~$0.001.
+3. **Do points expire?** No expiry is friendliest and simplest; expiry improves
+   economics and adds support load. Recommend **no expiry at launch**.
+4. **Refunds after points are spent** — points bought, spent, then the purchase
+   refunded. Recommend allowing the balance to go negative and blocking further
+   spend until cleared.
+5. **Free-grant ceiling** — what monthly acquisition spend is acceptable.
