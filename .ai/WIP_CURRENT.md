@@ -1,5 +1,82 @@
 # WIP — current handoff
 
+## BUILD REQUEST 2026-08-15 (Claude) — 1.22.24 is cut and ready to build
+
+**Everything is prepared. The only thing missing is a container with the
+keystore.** No code changes are needed before building.
+
+### Why this build exists
+
+The shipped `1.22.23` AAB was cut at `a0e4795`. **Nine commits landed after it
+at the same version number**, so `1.22.23` on Play is not the code on this
+branch. Two of them are user-facing and are the reason for the release:
+
+* the community forum reaching Project Home and the editor More menu, and
+* the three-way wall angle lock (Settings → **Wall angles**), asked for in a
+  5-star Play review.
+
+`versionCode 12223` is already used on Play and cannot be uploaded again.
+
+### State — all verified on this branch
+
+| | |
+|---|---|
+| Version | **1.22.24 / versionCode 12224** |
+| `sync-version --check` | OK — `build.gradle` matches |
+| `package.json` / `package-lock.json` | both at 1.22.24 |
+| typecheck · lint | green |
+| billing · community · geometry · i18n | green |
+
+### To build
+
+    npm install
+    npm run android:aab
+
+That runs `sync-version`, `build`, `npx cap sync android`, `gradlew
+bundleRelease`, then `scripts/verify-aab.mjs`. Output:
+`android/app/build/outputs/bundle/release/app-release.aab`.
+
+Signing needs no arguments — `android/app/build.gradle` reads
+`android/keystore.properties`, pointing at
+`android/keystore/homedesigner-upload.jks`. **Both are gitignored and must stay
+that way.** They are absent from a fresh container and only the owner can
+restore them; the upload key cannot be regenerated.
+
+### The one check that must not be skipped
+
+**`verify-aab` must print `web bundle was built at 1.22.24`.**
+
+Both headline changes in this release are **web-bundle** changes. `npx cap sync`
+only *copies* `dist/` — it never rebuilds — and `APP_VERSION` is baked in by Vite
+at build time. A stale `dist/` therefore produces a correctly-versioned native
+shell wrapping old web code, which is exactly how earlier releases shipped weeks
+of stale behaviour under new version numbers. If that line does not appear, the
+forum navigation and the angle lock are **not** in the bundle. Do not ship it.
+
+Then confirm the signer:
+
+    keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release.aab
+
+Expected upload certificate — `CN=Nathan Joppich`, SHA-256:
+
+    EE:D4:E3:A9:11:BC:92:9A:D3:CD:33:36:FF:BF:32:C0:22:4A:1F:C5:21:BE:B1:13:02:F5:A0:7E:5F:00:6A:00
+
+`97027CB7...21E93` is the **Play App Signing** key, not the upload key — seeing
+that one instead is not an error.
+
+### After a successful build
+
+Record the byte size and SHA-256 here, as previous releases have, and copy to
+`outputs/HomeDesigner-1.22.24-12224.aab`.
+
+### Not blocking this build, but open
+
+* `docs/AI_FEATURES_PLAN.md` — points economics, verified fal costs, and a
+  `face_count` surcharge we pay on every Pro generation that looks avoidable.
+* Wall detection improvements are **blocked on sample floor plans** that trace
+  badly; the live tracer is already a Hough pipeline, not the naive scanner its
+  header comment suggests.
+
 ## Session handoff 2026-08-15 (Codex) — WEB PRICE PARITY + PROMO CODES
 
 RevenueCat Web Billing now sells the lifetime package through

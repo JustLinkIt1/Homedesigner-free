@@ -5,7 +5,46 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
-## Unreleased
+## 1.22.24 - 2026-08-15 (versionCode 12224)
+
+> The 1.22.23 AAB was cut at the direct-Play-Billing commit. Everything below
+> landed **after** that artifact, so it needs this build to reach a device.
+> Versions 1.22.19-1.22.23 shipped without changelog entries; their record is in
+> `.ai/WIP_CURRENT.md`.
+
+### Community forum reachable from the app
+
+- Added the forum to the two first-level surfaces people actually use: a
+  **Community** action on Project Home (desktop) and a **phone bottom-nav
+  destination**, plus a direct entry in the editor's **More** menu. It was
+  previously only in Settings and About — technically linked, effectively
+  hidden.
+- `COMMUNITY_URL` is now the canonical `https://homedesignerapp.com/community/`
+  rather than relying on a redirect.
+- All five entry points (Project Home desktop, Project Home phone, More menu,
+  Settings, About) call `openCommunityForum()`, which uses Capacitor Browser on
+  native so the Android WebView opens a Custom Tab instead of doing nothing.
+  None of them is gated by Pro or owner status.
+- `tests/community.mjs` fences both halves: that Android opens the canonical URL
+  through Capacitor Browser, and that the forum is reachable from Project Home
+  and the editor menu.
+
+### Community member screenshots
+
+- All signed-in, non-suspended members can attach screenshots to threads and
+  replies — previously moderators only. Four images per post, 5 MB each. The
+  browser and the Worker both enforce type and byte limits, and the Worker
+  inspects the actual body rather than trusting the caller's MIME type or
+  `Content-Length`.
+
+### Web price parity and promo codes
+
+- Web lifetime moves to `pro_lifetime_web_v3` at **USD 6.99 / EUR 5.99**,
+  replacing the $59.99-with-50%-discount arrangement, so web and Play now sell
+  the same entitlement at comparable prices. The old `launch-offer-50` discount
+  is inactive; there were no transactions on the replaced product.
+- Web checkout accepts discount codes, including via `?discount_code=...`.
+
 
 ### Wall angle lock (Settings → Wall angles)
 
@@ -34,7 +73,16 @@ changes and add an entry when you ship one.
   back to 45° steps fails 5 of them, including "a 45° wall is never left
   diagonal".
 
-### Google Play checkout — the hang is the package lookup, not the catalog
+### Google Play checkout — superseded by direct Play Billing
+
+> **Historical.** The `purchaseStoreProduct` change below was correct that the
+> fault was the purchase call rather than the catalogue, but insufficient: an
+> ADB trace of 1.22.21 showed RevenueCat's SDK failing internally before any
+> BillingClient call, so no client-side choice could have worked. 1.22.23
+> removed RevenueCat from Android entirely in favour of the app-owned
+> `PlayBillingPlugin`. Kept for the diagnosis, not as a description of current
+> behaviour.
+
 
 - Buy through `purchaseStoreProduct` instead of `purchasePackage` on Android.
   Read `PurchasesPlugin.kt` 245-295 of `@revenuecat/purchases-capacitor` 13.4.0:
