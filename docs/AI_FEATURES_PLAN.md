@@ -174,6 +174,83 @@ behind it.
 
 ---
 
+## 3b. Bringing Model Studio into the app, public-facing
+
+Today Model Studio is **not in the app at all**. It is a separate page assembled
+to `/app/model-studio/` (`scripts/assemble-web.mjs:13`), reached by
+`openModelStudio()` handing the URL to a Capacitor **Custom Tab** — i.e. Android
+users leave the editor and land in a browser. It is a 728-line admin console
+whose flow is *prompt → generate → optimize → upload two tiers → metadata →
+publish*, showing costs in dollars (`Estimated total: $0.525 · textured`).
+
+That is a fine tool for one owner and the wrong thing to show a customer.
+
+### Two surfaces, matching the two route groups in §3a
+
+Do **not** convert the existing page. Keep it, and build a second, smaller one.
+
+| | Owner tool *(unchanged)* | **In-app creator** *(new)* |
+|---|---|---|
+| Lives at | `/app/model-studio/` page | lazy dialog inside the editor |
+| Flow | generate → optimize → upload → metadata → **publish** | **prompt → generate → preview → place** |
+| Talks to | `/v1/admin/models/*` | `/v1/models/*` (§3a) |
+| Cost shown as | dollars | **points** |
+| Asset ends up | global `catalog/v1/catalog.json` | that user's private R2 prefix |
+| Gate | `requireModelAdmin` | Pro + points |
+
+The publish pipeline, the rights confirmation and the dollar figures never appear
+in the customer-facing surface — which also means `requireModelAdmin` keeps
+guarding exactly what it guards now.
+
+### What the in-app version has to do differently
+
+* **Optimization becomes invisible.** A raw Hunyuan GLB is far too heavy to drop
+  into a phone scene; the optimized tier is what makes it usable. So the manual
+  optimize/upload steps collapse into one automatic stage between "generated" and
+  "ready to place".
+* **Lazy-load it.** `optimizeGlb.ts` pulls `@gltf-transform/core`,
+  `/extensions`, `/functions` and `meshoptimizer` (WASM). That must not land in
+  the initial editor bundle. The pattern already exists in `src/App.tsx` —
+  `ImportDialog` and `PhotoMode` are both `lazy(() => import(...))` behind
+  `Suspense`. Follow it exactly.
+* **Decide where optimization runs — by measuring, not guessing.** It is
+  client-side today, which is free and already works, but gltf-transform plus
+  meshopt on a mid-range Android phone is the kind of thing that OOMs. Ship the
+  lazy client-side path first, test on a real low-end device, and only move it to
+  the Worker if it actually fails. Do not build server-side mesh processing
+  speculatively — Workers have CPU limits that this could well exceed, and that
+  is a queue/container project, not an afternoon.
+* **Mobile layout from the start.** The current UI is a desktop console. The
+  in-app one should follow the catalogue sheet and `ImportDialog` conventions
+  that are already touch-tuned, including the safe-area handling fixed in 1.22.13.
+* **Entry point flips from owner-only to Pro-gated.** Today the Account and More
+  menus test `isModelStudioOwner(email)`. The new entry is visible to everyone
+  and calls the existing `requirePro()` path, so a free user gets the normal
+  upsell instead of an invisible feature.
+
+### Content safety — a genuine pre-release gate
+
+Text-to-3D from an arbitrary user prompt is **user-generated content**, and Play
+holds UGC apps to moderation and reporting obligations. Private-by-default helps
+enormously — nothing another user can see is nothing to moderate — but:
+
+* **Screen prompts before dispatch.** A cheap Workers AI classifier in front of
+  the fal call is worth it on its own terms: a rejected prompt costs ~$0.0002
+  instead of $0.225, so moderation partly pays for itself.
+* **The moment a generated model can appear in a shared design or a forum post,
+  full UGC obligations apply.** The community report queue is the precedent to
+  extend, not a second system to invent.
+* Keep a per-account generation log — already implied by the points ledger's
+  `feature` column — so a report can be traced to a prompt.
+
+### Naming
+
+"Model Studio" reads premium and is worth keeping publicly. In code, keep
+`ModelStudio` for the owner console and give the in-app one its own name so the
+two are never confused at a glance.
+
+---
+
 ## 4. Loss-proofing: ten server-side guards
 
 Margin on a spreadsheet is not protection. These are the invariants that make
@@ -319,10 +396,11 @@ none of them is exposed to the balance problem in §5 at all.
    ~$0.0002 a call, where a bug is almost free.
 4. **Auto-furnish, colour schemes, descriptions.** Margin engine.
 5. **AI renders**, once image model choice is fixed.
-6. **Split generate from publish (§3a), add a user-model R2 TTL, then open 3D
-   generation to Pro.** Last, because it is the most expensive to serve, the
-   most exposed if the ledger has a hole, and the only one that cannot ship
-   without first making sure a Pro user cannot write to the global catalogue.
+6. **Split generate from publish (§3a), add a user-model R2 TTL, build the in-app
+   creator (§3b), then open 3D generation to Pro.** Last, because it is the most
+   expensive to serve, the most exposed if the ledger has a hole, and the only
+   one that cannot ship without first making sure a Pro user cannot write to the
+   global catalogue. Prompt moderation ships **with** it, not after.
 
 ---
 
