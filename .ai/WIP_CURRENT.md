@@ -1,5 +1,39 @@
 # WIP — current handoff
 
+## Session handoff 2026-08-15 (Codex) — WEB PRICE PARITY + PROMO CODES
+
+RevenueCat Web Billing now sells the lifetime package through
+`pro_lifetime_web_v3`, priced at **USD 6.99** (default) and **EUR 5.99**. The
+product is non-consumable, attached to the existing `Pro` entitlement, and has
+replaced `pro_lifetime_web_v2` in the default offering's `$rc_lifetime`
+package. The old `launch-offer-50` discount is inactive. There were no web
+transactions on the replaced product, so no purchaser migration is required.
+
+An active RevenueCat Web Discount, `community-lifetime-100`, grants 100% off
+the new lifetime product to identified customers who have never purchased.
+Four private customer codes were created in RevenueCat; their values are
+deliberately not committed to the repository. Web checkout now shows the
+discount-code field and accepts `?discount_code=...` links. A successful free
+checkout still grants the same Google-linked RevenueCat `Pro` entitlement, so
+signing into Android with that Google account unlocks Pro there through the
+existing Worker entitlement lookup.
+
+## Session handoff 2026-08-15 (Codex) — community access and member screenshots
+
+The community was technically linked from Settings and About, but it was absent
+from both first-level navigation surfaces users actually see. Project Home now
+has a desktop Community action and a phone bottom-nav destination; the editor's
+More menu also links directly to the hosted forum through Capacitor Browser.
+The canonical URL now includes `/community/` to avoid relying on a redirect.
+
+All signed-in, non-suspended forum members can now attach screenshots to new
+threads and replies. The limit is **four images per post, 5 MB per image**.
+Both the browser and Worker enforce PNG/JPEG/WebP type and byte limits; the
+Worker checks the actual body rather than trusting the caller's MIME type or
+Content-Length. Image ownership and one-post-only attachment checks remain in
+place. The previous moderator-only upload checks were removed from both UI and
+Worker.
+
 ## Session handoff 2026-08-15 (Codex) — 1.22.23 DIRECT PLAY BILLING, PROVEN
 
 This supersedes Claude's 2026-08-14 RevenueCat package/product diagnosis. Its

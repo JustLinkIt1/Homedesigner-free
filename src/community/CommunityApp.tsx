@@ -37,8 +37,8 @@ function Avatar({ author }: { author?: api.CommunityAuthor }) {
     : <span className="cm-avatar cm-avatar-initial" aria-hidden>{author.displayName.charAt(0).toUpperCase()}</span>;
 }
 
-const canPostImages = (profile: CommunityProfile | null) =>
-  profile?.role === 'admin' || profile?.role === 'moderator';
+const MAX_SCREENSHOTS = 4;
+const SCREENSHOT_MAX_BYTES = 5 * 1024 * 1024;
 
 function MemberMeta({ author }: { author: api.CommunityAuthor }) {
   const role = author.role === 'admin' ? 'Admin' : author.role === 'moderator' ? 'Moderator' : 'Member';
@@ -68,6 +68,13 @@ function validateImage(file: File, maxBytes: number): string | null {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return 'Use a PNG, JPEG or WebP image.';
   if (file.size > maxBytes) return `Image must be smaller than ${maxBytes / 1024 / 1024} MB.`;
   return null;
+}
+
+function readScreenshots(files: FileList | null): { files?: File[]; error?: string } {
+  const selected = Array.from(files ?? []);
+  if (selected.length > MAX_SCREENSHOTS) return { error: `Add up to ${MAX_SCREENSHOTS} screenshots.` };
+  const problem = selected.map((file) => validateImage(file, SCREENSHOT_MAX_BYTES)).find(Boolean);
+  return problem ? { error: problem } : { files: selected };
 }
 
 /** Posts are plain text, rendered as paragraphs. NOT markdown and NOT HTML:
@@ -172,8 +179,8 @@ function ProfileEditor({ profile, onSaved }: { profile: CommunityProfile; onSave
   );
 }
 
-function Composer({ categories, allowImages, onPosted }: {
-  categories: Category[]; allowImages: boolean; onPosted: (id: string) => void;
+function Composer({ categories, onPosted }: {
+  categories: Category[]; onPosted: (id: string) => void;
 }) {
   const [category, setCategory] = useState(categories[0]?.id ?? 'general');
   const [title, setTitle] = useState('');
@@ -210,17 +217,16 @@ function Composer({ categories, allowImages, onPosted }: {
       </label>
       <label>Title<input value={title} maxLength={140} onChange={(e) => setTitle(e.target.value)} /></label>
       <label>Message<textarea value={body} maxLength={8000} rows={6} onChange={(e) => setBody(e.target.value)} /></label>
-      {allowImages && (
-        <label className="cm-file-field">Screenshots (optional, up to 4)
-          <input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={(e) => {
-            const selected = Array.from(e.target.files ?? []).slice(0, 4);
-            const problem = selected.map((file) => validateImage(file, 5 * 1024 * 1024)).find(Boolean);
-            if (problem) { setError(problem); return; }
-            setImages(selected);
-          }} />
-          {images.length > 0 && <span className="cm-muted">{images.length} image{images.length === 1 ? '' : 's'} selected</span>}
-        </label>
-      )}
+      <label className="cm-file-field">Screenshots (optional, up to {MAX_SCREENSHOTS})
+        <input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={(e) => {
+          const selection = readScreenshots(e.target.files);
+          if (selection.error) { setError(selection.error); e.target.value = ''; return; }
+          setError(null);
+          setImages(selection.files ?? []);
+        }} />
+        <span className="cm-muted">PNG, JPEG or WebP · maximum 5 MB each</span>
+        {images.length > 0 && <span className="cm-muted">{images.length} image{images.length === 1 ? '' : 's'} selected</span>}
+      </label>
       {error && <p className="cm-error">{error}</p>}
       <button className="btn primary" disabled={busy || !title.trim() || !body.trim()} onClick={() => void post()}>
         {busy ? 'Posting…' : 'Post'}
@@ -312,17 +318,16 @@ function ThreadView({ id, me }: { id: string; me: CommunityProfile | null }) {
       ) : me ? (
         <div className="cm-card">
           <label>Reply<textarea value={reply} rows={5} maxLength={8000} onChange={(e) => setReply(e.target.value)} /></label>
-          {canPostImages(me) && (
-            <label className="cm-file-field">Screenshots (optional, up to 4)
-              <input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={(e) => {
-                const selected = Array.from(e.target.files ?? []).slice(0, 4);
-                const problem = selected.map((file) => validateImage(file, 5 * 1024 * 1024)).find(Boolean);
-                if (problem) { setError(problem); return; }
-                setImages(selected);
-              }} />
-              {images.length > 0 && <span className="cm-muted">{images.length} image{images.length === 1 ? '' : 's'} selected</span>}
-            </label>
-          )}
+          <label className="cm-file-field">Screenshots (optional, up to {MAX_SCREENSHOTS})
+            <input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={(e) => {
+              const selection = readScreenshots(e.target.files);
+              if (selection.error) { setError(selection.error); e.target.value = ''; return; }
+              setError(null);
+              setImages(selection.files ?? []);
+            }} />
+            <span className="cm-muted">PNG, JPEG or WebP · maximum 5 MB each</span>
+            {images.length > 0 && <span className="cm-muted">{images.length} image{images.length === 1 ? '' : 's'} selected</span>}
+          </label>
           <button className="btn primary" disabled={busy || !reply.trim()} onClick={() => void send()}>
             {busy ? 'Posting…' : 'Reply'}
           </button>
@@ -515,7 +520,7 @@ export default function CommunityApp() {
               ? <p className="cm-muted">Checking sign-in…</p>
               : me
               ? (composing
-                ? <Composer categories={categories} allowImages={canPostImages(me)}
+                ? <Composer categories={categories}
                     onPosted={(id) => { setComposing(false); go(`?thread=${id}`); }} />
                 : <button className="btn primary" onClick={() => setComposing(true)}>Start a discussion</button>)
               : account

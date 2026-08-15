@@ -370,9 +370,6 @@ export async function uploadCommunityImage(
   env: CommunityEnv, identity: AuthIdentity, request: Request, kind: CommunityImageKind,
 ) {
   const profile = requirePoster(await ensureProfile(env, identity));
-  if (kind === 'post' && !isModerator(profile)) {
-    throw new CommunityError('Only moderators can add images to posts right now.', 403);
-  }
   const maxBytes = kind === 'avatar' ? AVATAR_MAX_BYTES : POST_IMAGE_MAX_BYTES;
   const statedLength = Number(request.headers.get('Content-Length')) || 0;
   if (statedLength > maxBytes) {
@@ -470,7 +467,6 @@ async function attachImages(
   env: CommunityEnv, profile: Profile, imageIds: string[], postId: string,
 ): Promise<D1PreparedStatement[]> {
   if (!imageIds.length) return [];
-  if (!isModerator(profile)) throw new CommunityError('Only moderators can add images to posts right now.', 403);
   const placeholders = imageIds.map(() => '?').join(',');
   const images = await env.COMMUNITY.prepare(
     `SELECT id FROM community_images

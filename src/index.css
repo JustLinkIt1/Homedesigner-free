@@ -3649,8 +3649,9 @@ button.brand:hover .brand-name {
   display: none;
 }
 @media (max-width: 720px) {
-  /* Settings already has a permanent destination in the phone bottom nav. */
-  .ps-settings-btn {
+  /* These already have permanent destinations in the phone bottom nav. */
+  .ps-settings-btn,
+  .ps-community-btn {
     display: none;
   }
   .ps-hero {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Home, Plus, Ruler, FolderOpen, Copy, Trash2, Pencil, Sofa, ChevronRight,
   LayoutGrid, Settings, Lightbulb, PenTool, Square,
+  MessageCircle,
 } from 'lucide-react';
 import { useDesign, type MaybeFloored } from '../store/designStore';
 import { confirmDialog, toast } from '../lib/ui';
@@ -15,6 +16,7 @@ import AccountButton from './AccountButton';
 import * as projects from '../lib/projects';
 import ProTag from './ProTag';
 import { useProStore } from '../store/proStore';
+import { openCommunityForum } from '../lib/communityAccess';
 
 function timeAgo(ts: number, t: (en: string) => string): string {
   const mins = Math.max(1, Math.round((Date.now() - ts) / 60000));
@@ -157,6 +159,10 @@ export default function ProjectsScreen({
         </div>
         <div className="ps-head-actions">
           <AccountButton />
+          <button className="lang-btn ps-community-btn" onClick={() => void openCommunityForum()}>
+            <MessageCircle className="icon" />
+            <span>{t('Community & support')}</span>
+          </button>
           <button className="lang-btn ps-settings-btn" onClick={onSettings}>
             <Settings className="icon" />
             <span>{t('Settings')}</span>
@@ -343,6 +349,9 @@ export default function ProjectsScreen({
           }}
         >
           <LayoutGrid className="icon" /> <span>{t('Templates')}</span>
+        </button>
+        <button onClick={() => void openCommunityForum()}>
+          <MessageCircle className="icon" /> <span>{t('Community & support')}</span>
         </button>
         <button onClick={onSettings}>
           <Settings className="icon" /> <span>{t('Settings')}</span>

@@ -139,6 +139,10 @@ const modelStudioAccessSource = await readFile(join(root, 'src', 'lib', 'modelSt
 const communityAccessSource = await readFile(join(root, 'src', 'lib', 'communityAccess.ts'), 'utf8');
 const settingsSource = await readFile(join(root, 'src', 'components', 'SettingsDialog.tsx'), 'utf8');
 const aboutSource = await readFile(join(root, 'src', 'components', 'AboutDialog.tsx'), 'utf8');
+const toolbarSource = await readFile(join(root, 'src', 'components', 'Toolbar.tsx'), 'utf8');
+const projectsSource = await readFile(join(root, 'src', 'components', 'ProjectsScreen.tsx'), 'utf8');
+const communityAppSource = await readFile(join(root, 'src', 'community', 'CommunityApp.tsx'), 'utf8');
+const communityWorkerSource = await readFile(join(root, 'workers', 'design-sync', 'src', 'community.ts'), 'utf8');
 const scene3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Scene3D.tsx'), 'utf8');
 const furniture3DSource = await readFile(join(root, 'src', 'components', 'Viewer3D', 'Furniture3D.tsx'), 'utf8');
 const referralSource = await readFile(join(root, 'src', 'lib', 'referral.ts'), 'utf8');
@@ -172,6 +176,23 @@ check(
     aboutSource.includes('void openCommunityForum()') &&
     !androidManifest.includes('android:autoVerify="true"') &&
     !androidManifest.includes('android:host="homedesignerapp.com"'),
+);
+check(
+  'community is a first-level destination from project home and the editor',
+  projectsSource.includes('void openCommunityForum()') &&
+    projectsSource.includes("t('Community & support')") &&
+    toolbarSource.includes('void openCommunityForum()') &&
+    toolbarSource.includes("t('Community & support')"),
+);
+check(
+  'signed-in members can attach four validated screenshots capped at 5 MB each',
+  communityAppSource.includes('const MAX_SCREENSHOTS = 4') &&
+    communityAppSource.includes('const SCREENSHOT_MAX_BYTES = 5 * 1024 * 1024') &&
+    communityAppSource.includes('maximum 5 MB each') &&
+    communityWorkerSource.includes('const MAX_POST_IMAGES = 4') &&
+    communityWorkerSource.includes('const POST_IMAGE_MAX_BYTES = 5 * 1024 * 1024') &&
+    communityWorkerSource.includes("if (!mimeType) throw new CommunityError('Use a PNG, JPEG or WebP image.', 415)") &&
+    !communityWorkerSource.includes('Only moderators can add images to posts right now.'),
 );
 check(
   'Google login avoids the plugin 8.3.38 invalid-JWT decoder',

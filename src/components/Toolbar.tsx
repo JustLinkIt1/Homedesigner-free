@@ -19,6 +19,7 @@ import {
   Settings,
   MoreVertical,
   WandSparkles,
+  MessageCircle,
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
@@ -32,6 +33,7 @@ import { capturePlanThumbnail } from '../lib/thumb';
 import AccountButton from './AccountButton';
 import { useAuthStore } from '../store/authStore';
 import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
+import { openCommunityForum } from '../lib/communityAccess';
 
 function SavedBadge({ tick }: { tick: number }) {
   const [saving, setSaving] = useState(false);
@@ -279,6 +281,9 @@ export default function Toolbar({
               </button>
               <button role="menuitem" onClick={() => { setMoreOpen(false); onHelp(); }}>
                 <CircleHelp className="icon" /> {t('Tips & shortcuts')}
+              </button>
+              <button role="menuitem" onClick={() => { setMoreOpen(false); void openCommunityForum(); }}>
+                <MessageCircle className="icon" /> {t('Community & support')}
               </button>
               <button role="menuitem" onClick={() => { setMoreOpen(false); onAbout(); }}>
                 <Info className="icon" /> {t('About')}

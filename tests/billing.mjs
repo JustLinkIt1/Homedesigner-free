@@ -473,28 +473,20 @@ const reset = (isPro) => {
     /without a price/.test(describeMissingProduct(
       { current: { availablePackages: [{ product: { identifier: 'pro_yearly' } }] }, all: {} }, 'yearly')));
 
-  // --- the web launch discount ---------------------------------------------
-  // This makes a CLAIM ABOUT PRICE that the app cannot verify: RevenueCat
-  // applies the discount at checkout but `purchases-js` never exposes it, so
-  // the percentage is mirrored from the dashboard. Advertising a discount on
-  // the wrong product would show a price the checkout will not honour.
+  // --- web price and customer-entered discount codes -----------------------
+  // The offering is now the only price source. Discounts are entered and
+  // validated by RevenueCat checkout instead of being mirrored as unprovable
+  // arithmetic in the app.
   const webPkg = (identifier, formattedPrice, amountMicros) => ({
     lifetime: { webBillingProduct: { identifier, price: { formattedPrice, amountMicros, currency: 'USD' } } },
   });
-  const discounted = webPlansFromOfferings({ current: webPkg('pro_lifetime_web_v2', '$59.99', 59990000), all: {} })[0];
-  // Asserts the amount, not the currency symbol: Node's default locale renders
-  // "USD 30.00" where a browser renders "$30.00".
-  check('the discounted product shows a struck-through list price',
-    discounted?.originalPriceLabel === '$59.99' && /30\.00/.test(discounted?.priceLabel ?? ''),
-    `got ${discounted?.originalPriceLabel} -> ${discounted?.priceLabel}`);
-  // $59.99 at 50% is $29.995. Rounded UP so the advertised price can never sit
-  // below what the processor charges.
-  check('a half-cent discount rounds up, never below the charged price',
-    discounted?.priceMicros === 30000000, `priceMicros ${discounted?.priceMicros}`);
-  // A product the dashboard does NOT discount must never be advertised as cut.
-  const undiscounted = webPlansFromOfferings({ current: webPkg('pro_lifetime_web', '$59.99', 59990000), all: {} })[0];
-  check('a product outside the discount is never shown as discounted',
-    undiscounted?.originalPriceLabel === undefined && undiscounted?.priceLabel === '$59.99');
+  const aligned = webPlansFromOfferings({ current: webPkg('pro_lifetime_web_v3', '$6.99', 6990000), all: {} })[0];
+  check('the web offering price is rendered without client-side price invention',
+    aligned?.originalPriceLabel === undefined && aligned?.priceLabel === '$6.99' && aligned?.priceMicros === 6990000);
+  check('web checkout exposes RevenueCat discount-code entry',
+    /showDiscountCodeField:\s*true/.test(whole));
+  check('campaign links can pre-apply a RevenueCat discount code',
+    /get\('discount_code'\)/.test(whole));
 
   // --- the pasteable store diagnostic ---------------------------------------
   // Users paste diagnostics into public forums, and the affordance is
