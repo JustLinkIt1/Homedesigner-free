@@ -168,7 +168,26 @@ export function finishStrandedGooglePopup(): boolean {
     // provider resolves ONLY on that message, while polling `popup.closed` every
     // second and rejecting with "Popup closed" when the window goes away
     // without one. That is the reported error, exactly.
-    const isPopup = (() => {
+    //
+    // `window.opener` CANNOT be the primary signal, because by the time we run
+    // here it is reliably null. `/app/` is served with
+    // `Cross-Origin-Opener-Policy: same-origin-allow-popups` (site/_headers).
+    // Landing back here from accounts.google.com is a cross-origin navigation
+    // INTO a COOP document, and the spec's browsing-context-group check swaps
+    // the group unless the two documents share both COOP value and origin —
+    // they share neither, so the group is swapped and the opener is severed.
+    //
+    // "allow-popups" only covers the trip OUT: that hop leaves the initial
+    // about:blank, which has its own carve-out, so the popup reaches Google
+    // with its opener intact. It is the trip BACK that cuts it. That asymmetry
+    // is exactly why this fails only *after* the account is chosen.
+    //
+    // The plugin hard-codes `state: 'popup'` on the URL it builds, while our own
+    // full-page redirect sends versioned JSON, so `state` distinguishes the two
+    // flows without depending on the opener surviving. BroadcastChannel is
+    // origin-scoped rather than opener-scoped, so it still reaches the waiting
+    // tab across the group swap.
+    const isPopup = params.get('state') === 'popup' || (() => {
       try {
         return !!window.opener && window.opener !== window;
       } catch {
@@ -215,6 +234,17 @@ export function finishStrandedGooglePopup(): boolean {
           /* already closed */
         }
         window.close();
+        // `window.close()` is only honoured for a script-opened window, and the
+        // COOP group swap described above can lose that association — so this
+        // window may simply stay. React is deliberately not mounted on this
+        // path, which means "stays" renders as a blank black window and reads as
+        // a failure even when the hand-off above succeeded. Say what happened
+        // instead of showing nothing.
+        document.body.textContent = 'Signed in. You can close this window.';
+        document.body.setAttribute(
+          'style',
+          'display:grid;place-items:center;height:100vh;margin:0;font:16px system-ui,sans-serif;color:#111;background:#fff',
+        );
       }, 1500);
       return true;
     }
