@@ -6,6 +6,10 @@ import {
   createThread, createPost, editPost, reportPost, moderate, listReports, erasePerson,
   uploadCommunityImage, removeAvatar, readCommunityImage,
 } from './community';
+import {
+  FEATURES, PACKS, PRO_DISCOUNT, TYPICAL_ROOM_POINTS, readAccount, grantFreePoints, runMetered,
+} from './points';
+import { MAX_ROOMS_PER_CALL, generateRoomNames, validRoomSummaries } from './ai-features';
 
 interface Env {
   USER_DATA: R2Bucket;
@@ -925,6 +929,91 @@ function slugType(value: unknown, fallback: string): string {
   return /^[a-z0-9][a-z0-9_-]*$/.test(clean) ? clean : fallback;
 }
 
+/**
+ * Balance, prices and packs in one read. The client renders costs from *this*,
+ * never from a bundled table -- guard G7: an old install must not be able to
+ * charge last year's rate.
+ *
+ * The free grant is issued here rather than at sign-up because this is the
+ * first authenticated call that proves a verified subject (G10).
+ */
+async function pointsState(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
+  if (identity.emailVerified) await grantFreePoints(env.COMMUNITY, identity.subject);
+  const account = await readAccount(env.COMMUNITY, identity.subject);
+  return json(request, {
+    balance: account.balance,
+    lifetime: {
+      granted: account.lifetimeGranted,
+      purchased: account.lifetimePurchased,
+      spent: account.lifetimeSpent,
+    },
+    features: Object.fromEntries(
+      Object.entries(FEATURES).map(([id, price]) => [id, { points: price.points, label: price.label }]),
+    ),
+    packs: PACKS.map((pack) => ({
+      ...pack,
+      proUsd: Number((pack.usd * (1 - PRO_DISCOUNT)).toFixed(2)),
+      // Packs are advertised in rooms, not points: "about 10 rooms" is a
+      // figure someone can actually judge. Server-computed so an old install
+      // cannot quote a stale one (G7).
+      approxRooms: Math.floor(pack.points / TYPICAL_ROOM_POINTS),
+    })),
+    typicalRoomPoints: TYPICAL_ROOM_POINTS,
+    proDiscount: PRO_DISCOUNT,
+  });
+}
+
+/**
+ * Room auto-naming: the first metered feature, deliberately the cheapest one.
+ * It proves spend/refund end-to-end where a bug costs ~$0.0002 a call.
+ */
+async function suggestRoomNames(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
+  if (!env.AI) return json(request, { error: 'AI features are not configured' }, 503);
+  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+
+  const rooms = validRoomSummaries(body.rooms);
+  if (!rooms) {
+    return json(request, { error: `Send between 1 and ${MAX_ROOMS_PER_CALL} rooms` }, 400);
+  }
+  // The key is the client's retry token. It must be per-attempt, not per-room-set:
+  // reusing one across a refunded failure is refused rather than run for free.
+  const key = cleanString(body.idempotencyKey, 100);
+  if (!key || !/^[a-zA-Z0-9_:-]{8,100}$/.test(key)) {
+    return json(request, { error: 'A valid idempotencyKey is required' }, 400);
+  }
+
+  const outcome = await runMetered(
+    env.COMMUNITY,
+    identity.subject,
+    'room_naming',
+    `room_naming:${identity.subject}:${key}`,
+    () => generateRoomNames(env.AI, rooms),
+  );
+
+  if (!outcome.ok) {
+    if (outcome.reason === 'insufficient') {
+      return json(request, {
+        error: 'Not enough points', balance: outcome.balance, required: outcome.required,
+      }, 402);
+    }
+    if (outcome.reason === 'key_reused') {
+      return json(request, {
+        error: 'That request was already charged and refunded. Retry with a new key.',
+        balance: outcome.balance,
+      }, 409);
+    }
+    // Refunded already; report the failure honestly rather than as a success
+    // with no suggestions.
+    return json(request, { error: outcome.error, balance: outcome.balance, refunded: true }, 502);
+  }
+
+  return json(request, {
+    suggestions: outcome.result,
+    charged: outcome.charged,
+    balance: outcome.balance,
+  });
+}
+
 async function suggestModelMetadata(request: Request, env: Env, job: ModelStudioJob): Promise<Response> {
   if (!env.AI) return json(request, { error: 'The metadata assistant is not configured' }, 503);
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
@@ -1237,6 +1326,12 @@ export default {
       if (request.method === 'POST' && url.pathname === '/v1/play/link') {
         return await linkPlayPurchaseRequest(request, env, identity.subject);
       }
+      if (request.method === 'GET' && url.pathname === '/v1/points') {
+        return await pointsState(request, env, identity);
+      }
+      if (request.method === 'POST' && url.pathname === '/v1/ai/room-names') {
+        return await suggestRoomNames(request, env, identity);
+      }
       if (request.method === 'POST' && url.pathname === '/v1/sync') return await sync(request, env, identity.subject);
       if (request.method === 'DELETE' && url.pathname === '/v1/account') {
         const objects = await listAll(env.USER_DATA, `users/${identity.subject}/`);
@@ -1251,6 +1346,16 @@ export default {
         // identifies the erased HomeDesigner account.
         await env.COMMUNITY.prepare(
           `UPDATE play_purchases SET account_subject = NULL, linked_at = NULL WHERE account_subject = ?`,
+        ).bind(identity.subject).run();
+        // Points die with the account: the balance stops counting towards the
+        // outstanding liability, because we no longer owe this person compute.
+        // The ledger rows are detached rather than dropped — they are the
+        // financial record of money taken, and that has to survive an erasure
+        // request without still naming the person.
+        await env.COMMUNITY.prepare(`DELETE FROM point_accounts WHERE subject = ?`)
+          .bind(identity.subject).run();
+        await env.COMMUNITY.prepare(
+          `UPDATE point_ledger SET subject = 'erased' WHERE subject = ?`,
         ).bind(identity.subject).run();
         return json(request, { deleted: objects.length });
       }

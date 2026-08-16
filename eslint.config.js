@@ -6,10 +6,26 @@ import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'site-dist/**', 'android/**', 'node_modules/**', 'tools/**', 'scripts/**', 'tests/**', '*.config.*'],
+    // `.claude/**` holds agent git worktrees — full nested checkouts, each with
+    // its own tsconfig.json. Linting into one makes typescript-eslint see two
+    // candidate project roots and fail to parse *every* file with
+    // "No tsconfigRootDir was set". They are someone else's checkout, not this
+    // project's source.
+    ignores: [
+      'dist/**', 'site-dist/**', 'android/**', 'node_modules/**', '.claude/**',
+      'tools/**', 'scripts/**', 'tests/**', '*.config.*',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // The Worker is plain TypeScript with no React. It only needs the `^_`
+    // convention, which the base recommended config does not carry.
+    files: ['workers/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
   {
     files: ['src/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },

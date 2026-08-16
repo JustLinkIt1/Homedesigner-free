@@ -1,5 +1,80 @@
 # WIP — current handoff
 
+## Session 2026-08-15 (Claude) — POINTS LEDGER + ROOM AUTO-NAMING (Worker only)
+
+Owner's call: build the cheap Workers AI features and the points backend
+**before** Model Studio, which is the most expensive and most complex. 3D
+generation, the §3a publish split and the in-app creator are all deferred.
+
+**Nothing here is deployed and nothing needs an app release.** All of it is
+Worker + D1. The client has no UI for points yet.
+
+### What landed
+
+* `migrations/0004_points.sql` — `point_accounts` (authoritative balance) and
+  `point_ledger` (append-only audit). Two tables deliberately: a spend is one
+  conditional UPDATE that cannot race, and the balance is never derived by
+  summing a table that only grows.
+* `src/points.ts` — the cost table, the guards, and `runMetered`, which ties
+  G3 (spend before dispatch) and G5 (refund on failure) together so a feature
+  route cannot implement one and forget the other.
+* `src/ai-features.ts` — `generateRoomNames`, over a **closed set** of room
+  types. A label outside the set is dropped rather than passed through, so a
+  confused model produces no suggestion instead of a plausible wrong one.
+* Routes `GET /v1/points` and `POST /v1/ai/room-names`.
+* `tests/points.mjs` — 52 assertions, wired into `test:ci`.
+
+### Decisions worth not re-litigating
+
+**`PLAY_FEE_RATE` is set to 0.30, not 0.15.** The tier is still unconfirmed
+(open question #3). The floor guard therefore assumes the worse tier: being
+wrong this way refuses a sale, being wrong the other way makes one at a loss.
+Confirm the tier before treating the 56% discount ceiling as available — at 30%
+it is 46%.
+
+**The client never computes a price.** `GET /v1/points` returns the feature
+costs and packs; the app renders those. G7 exists because an old install would
+otherwise keep charging last year's rate forever.
+
+**Tests run against real SQLite (`node:sqlite`) with the real migration**, not a
+fake. The things most worth testing are the SQL itself — `RETURNING` on a
+conditional UPDATE, `ON CONFLICT DO NOTHING`, the `CHECK` on ledger kind — and a
+shim written to match my own queries would pass whether or not the SQL was
+right. Needs Node 22.5+; this repo is on 24.
+
+### The bug worth knowing about
+
+`runMetered` refunds on failure. That opened a hole: a retry reusing the same
+idempotency key hit the replay path and returned "charged" against points that
+had already been refunded — **unlimited free AI for anyone who can make one call
+fail once**. `spendPoints` now refuses a key that has a matching `refund:` row
+and the caller must mint a new one. Retrying is fine; *reusing* is not.
+
+Both that guard and the overdraw guard are fault-injected in the suite:
+removing `AND balance >= ?` drives a balance to −100 and fails 5 assertions;
+disabling the replay-after-refund check dispatches free work and fails 2.
+
+### Not done
+
+* No client UI: no balance display, no spend confirmation, no Play consumables
+  for buying packs. The backend is usable but unreachable from the app.
+* Remaining cheap features from §6: colour/material scheme, listing
+  description, **auto-furnish**, **text→layout**. Auto-furnish and text→layout
+  both need the geometry validation described in §6 item 3 — a hallucinated
+  layout must be rejected, not placed.
+* `assertPricingIsSolvent()` runs at module load, so a bad price edit fails the
+  Worker at startup. Confirm that is the wanted behaviour before deploying —
+  it is deliberate (there is no sensible degraded mode for selling at a loss)
+  but it does mean a typo takes the whole Worker down, including sync.
+
+### Incidental fix
+
+`npm run lint` was failing with **274 errors on pristine HEAD** — every file
+unparseable. A leftover agent worktree under `.claude/worktrees/` carries its
+own `tsconfig.json`, so typescript-eslint saw two candidate roots and gave up.
+`eslint.config.js` now ignores `.claude/**`, and `workers/**/*.ts` gets the
+`^_` unused-args convention that only `src/**` had.
+
 ## BUILD REQUEST 2026-08-15 (Claude) — 1.22.24 is cut and ready to build
 
 **Everything is prepared. The only thing missing is a container with the
