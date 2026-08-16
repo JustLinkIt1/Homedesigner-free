@@ -11,8 +11,14 @@ export default tseslint.config(
     // candidate project roots and fail to parse *every* file with
     // "No tsconfigRootDir was set". They are someone else's checkout, not this
     // project's source.
+    //
+    // `**/.wrangler/**` is the same problem from a different direction: running
+    // `wrangler dev` leaves generated bundle shims under the Worker directory,
+    // and they trip no-unused-vars. It is already gitignored, so the only
+    // person who ever saw the failure was whoever had just run the dev server.
     ignores: [
       'dist/**', 'site-dist/**', 'android/**', 'node_modules/**', '.claude/**',
+      '**/.wrangler/**',
       'tools/**', 'scripts/**', 'tests/**', '*.config.*',
     ],
   },

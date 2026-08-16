@@ -12,7 +12,28 @@
  */
 import type { FeatureId } from './points';
 
-const TEXT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+/**
+ * Measured against real Workers AI, not chosen from the catalogue blurb.
+ *
+ * The 70B model was returning the RIGHT answers in 10s warm and 32s cold, and
+ * the cost was almost entirely fixed overhead -- one room took 30.6s and twenty
+ * took 34.1s. A 10-point convenience feature that makes someone wait half a
+ * minute is one nobody uses twice.
+ *
+ * On identical inputs with opaque room ids, this model returned the same names
+ * and the same confidences in ~780ms, stable across repeat runs. Same answers,
+ * an order of magnitude faster, on a much cheaper model -- which widens the
+ * blended margin the cheap features exist to provide (plan §6).
+ *
+ * Two things checked while picking it: `@cf/meta/llama-3.1-8b-instruct` (no
+ * suffix) was deprecated on 2026-05-30 and errors at the binding, while the
+ * `-fast` variant was explicitly retained; and `@cf/zai-org/glm-4.7-flash`, the
+ * catalogue's recommended fast model, fails here outright -- it is a reasoning
+ * model and its output does not survive `parseJson`, so it returned "unreadable
+ * answer" every time. Do not swap this for a reasoning model without re-running
+ * that check.
+ */
+const TEXT_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 
 /**
  * A flat price per call is only honest if the call's size is bounded. Without
