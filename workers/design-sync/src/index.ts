@@ -8,8 +8,10 @@ import {
 } from './community';
 import {
   FEATURES, PACKS, PRO_DISCOUNT, TYPICAL_ROOM_POINTS, readAccount, grantFreePoints, runMetered,
+  creditPurchase, packById, packPriceCents,
 } from './points';
 import { MAX_ROOMS_PER_CALL, generateRoomNames, validRoomSummaries } from './ai-features';
+import { stripeSignatureValid } from './stripe';
 
 interface Env {
   USER_DATA: R2Bucket;
@@ -31,6 +33,13 @@ interface Env {
   COMMUNITY: D1Database;
   /** Bootstrap forum moderator, by verified Google email. */
   COMMUNITY_ADMIN_EMAIL: string;
+  /** Card checkout for point packs. Absent means the web rail is simply off --
+   *  Play keeps working, and the client hides card checkout rather than
+   *  offering a button that 500s. */
+  STRIPE_SECRET_KEY?: string;
+  /** `whsec_...`, from the Stripe dashboard endpoint. Without it no webhook is
+   *  trusted, so a missing value fails closed rather than crediting freely. */
+  STRIPE_WEBHOOK_SECRET?: string;
 }
 
 interface AuthIdentity {
@@ -205,6 +214,36 @@ const PLAY_PACKAGE_NAME = 'com.homedesigner.app';
 const PLAY_PRO_PRODUCTS = new Set(['pro_lifetime']);
 const PLAY_VERIFY_CACHE_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * Play consumable products for point packs, mapped to the pack they credit.
+ *
+ * **Why each pack needs TWO products.** Pro's 30% discount cannot be delivered
+ * on Play as a discount. A Play "offer" on a one-time product never reaches the
+ * app: the billing library reads only the singular
+ * `getOneTimePurchaseOfferDetails()`, which Play leaves EMPTY when the price
+ * lives on a purchase option -- confirmed at runtime on a Play-installed build,
+ * and the cause of the priceless, unsellable Pro products fixed earlier. So the
+ * only way a discounted price reaches an Android buyer is a separate product
+ * carrying that price as its base price.
+ *
+ * Stripe has no such constraint and computes the discount server-side, which is
+ * why the web rail needs no parallel SKUs.
+ *
+ * `pro: true` products are checked against the buyer's real entitlement before
+ * crediting -- otherwise the discounted SKU is simply the cheap SKU for
+ * everyone.
+ */
+const PLAY_POINT_PRODUCTS: ReadonlyMap<string, { packId: string; pro: boolean }> = new Map([
+  ['points_2000', { packId: 'points_2000', pro: false }],
+  ['points_6000', { packId: 'points_6000', pro: false }],
+  ['points_15000', { packId: 'points_15000', pro: false }],
+  ['points_2000_pro', { packId: 'points_2000', pro: true }],
+  ['points_6000_pro', { packId: 'points_6000', pro: true }],
+  ['points_15000_pro', { packId: 'points_15000', pro: true }],
+]);
+
+const PLAY_POINT_PRODUCT_IDS: ReadonlySet<string> = new Set(PLAY_POINT_PRODUCTS.keys());
+
 interface PlayServiceAccount {
   client_email: string;
   private_key: string;
@@ -301,6 +340,13 @@ async function acknowledgePlayPurchase(
 async function verifyPlayToken(
   env: Env,
   purchaseToken: string,
+  // Which products this call is willing to recognise. Defaults to the Pro set
+  // so every existing caller keeps its exact behaviour; the points rail passes
+  // its own set. A receipt for a product outside the set reports inactive
+  // rather than being trusted on the strength of Google saying "PURCHASED" --
+  // that is what stops a points receipt being redeemed as a Pro unlock, and
+  // vice versa.
+  allowed: ReadonlySet<string> = PLAY_PRO_PRODUCTS,
 ): Promise<{ active: boolean; productId: string | null; orderId: string | null; purchasedAt: number | null }> {
   const accessToken = await getPlayAccessToken(env);
   const response = await fetch(
@@ -316,7 +362,7 @@ async function verifyPlayToken(
   if (!response.ok) throw new Error(`Google Play verification failed (${response.status})`);
   const purchase = await response.json() as PlayProductPurchaseV2;
   const productId = purchase.productLineItem?.map((item) => item.productId)
-    .find((id): id is string => typeof id === 'string' && PLAY_PRO_PRODUCTS.has(id)) ?? null;
+    .find((id): id is string => typeof id === 'string' && allowed.has(id)) ?? null;
   const active = purchase.purchaseStateContext?.purchaseState === 'PURCHASED' && productId !== null;
   if (active && purchase.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING') {
     await acknowledgePlayPurchase(env, accessToken, productId, purchaseToken);
@@ -940,6 +986,7 @@ function slugType(value: unknown, fallback: string): string {
 async function pointsState(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
   if (identity.emailVerified) await grantFreePoints(env.COMMUNITY, identity.subject);
   const account = await readAccount(env.COMMUNITY, identity.subject);
+  const isPro = await isProSubject(env, identity.subject);
   return json(request, {
     balance: account.balance,
     lifetime: {
@@ -950,9 +997,20 @@ async function pointsState(request: Request, env: Env, identity: AuthIdentity): 
     features: Object.fromEntries(
       Object.entries(FEATURES).map(([id, price]) => [id, { points: price.points, label: price.label }]),
     ),
+    isPro,
+    // Whether card checkout is available at all. The client hides the button
+    // rather than offering one that 503s.
+    cardCheckout: !!env.STRIPE_SECRET_KEY,
     packs: PACKS.map((pack) => ({
       ...pack,
       proUsd: Number((pack.usd * (1 - PRO_DISCOUNT)).toFixed(2)),
+      // The price this buyer actually pays, already discounted if they are
+      // Pro. The client renders THIS and never derives a price itself (G7).
+      priceCents: packPriceCents(pack, isPro),
+      // Which Play SKU to buy. Pro's discount cannot be an offer on Play, so
+      // the discount is a separate product and the server picks it -- see
+      // PLAY_POINT_PRODUCTS.
+      playProductId: isPro ? `${pack.id}_pro` : pack.id,
       // Packs are advertised in rooms, not points: "about 10 rooms" is a
       // figure someone can actually judge. Server-computed so an old install
       // cannot quote a stale one (G7).
@@ -961,6 +1019,185 @@ async function pointsState(request: Request, env: Env, identity: AuthIdentity): 
     typicalRoomPoints: TYPICAL_ROOM_POINTS,
     proDiscount: PRO_DISCOUNT,
   });
+}
+
+/** Pro status from either rail. Points pricing needs the same answer the
+ *  entitlement endpoint gives, so it is derived the same way. */
+async function isProSubject(env: Env, subject: string): Promise<boolean> {
+  if (await playEntitled(env, subject)) return true;
+  try {
+    return await revenueCatEntitled(env, subject);
+  } catch {
+    // An entitlement outage must not silently charge a Pro member list price.
+    // Refusing the discount is the wrong way to fail here, so treat the lookup
+    // as non-authoritative and let the caller decide; today every caller wants
+    // "not proven Pro" to mean list price, which is the safe commercial
+    // direction and is recoverable by retrying checkout.
+    return false;
+  }
+}
+
+/**
+ * Credits a Play consumable purchase.
+ *
+ * The client buys through Play Billing, sends the token here, and only calls
+ * `consumeAsync` once this returns success. That ordering matters: consuming
+ * first would destroy the receipt while the credit could still fail, leaving a
+ * buyer who paid, holds nothing, and has no token left to retry with.
+ */
+async function claimPlayPoints(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
+  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+  const purchaseToken = body.purchaseToken;
+  if (!validPurchaseToken(purchaseToken)) {
+    return json(request, { error: 'A valid purchaseToken is required' }, 400);
+  }
+
+  const verified = await verifyPlayToken(env, purchaseToken, PLAY_POINT_PRODUCT_IDS);
+  if (!verified.active || !verified.productId) {
+    return json(request, { error: 'Google Play did not confirm this purchase.' }, 402);
+  }
+
+  const product = PLAY_POINT_PRODUCTS.get(verified.productId);
+  const pack = product ? packById(product.packId) : null;
+  if (!product || !pack) {
+    return json(request, { error: 'That product does not map to a point pack.' }, 400);
+  }
+
+  // The discounted SKU is otherwise just the cheap SKU. Play cannot enforce
+  // this for us -- it has no idea what Pro is.
+  if (product.pro && !(await isProSubject(env, identity.subject))) {
+    return json(request, { error: 'That pack is discounted for Pro members.' }, 403);
+  }
+
+  const credited = await creditPurchase(
+    env.COMMUNITY,
+    identity.subject,
+    pack.id,
+    'play',
+    purchaseToken,
+    packPriceCents(pack, product.pro),
+  );
+  if (!credited.ok) return json(request, { error: 'That pack is no longer sold.' }, 400);
+
+  return json(request, {
+    credited: credited.credited,
+    balance: credited.balance,
+    replay: credited.replay,
+    // The client consumes only after seeing this, so it can be bought again.
+    consume: true,
+  });
+}
+
+/**
+ * Opens a Stripe Checkout session for a point pack.
+ *
+ * The price is computed here, never accepted from the client (G7), and the
+ * pack id travels in session metadata that only this Worker can set -- so the
+ * webhook can trust what it reads back without re-deriving it from an amount.
+ */
+async function createPointsCheckout(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
+  if (!env.STRIPE_SECRET_KEY) {
+    return json(request, { error: 'Card checkout is not configured' }, 503);
+  }
+  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+  const pack = packById(body.packId);
+  if (!pack) return json(request, { error: 'Unknown pack' }, 400);
+
+  const isPro = await isProSubject(env, identity.subject);
+  const cents = packPriceCents(pack, isPro);
+  // Fixed, not taken from the request. A caller-supplied return URL on a
+  // payment flow is an open redirect with a card form in front of it.
+  const origin = 'https://homedesignerapp.com/app/';
+
+  const form = new URLSearchParams({
+    mode: 'payment',
+    success_url: `${origin}?points=success`,
+    cancel_url: `${origin}?points=cancelled`,
+    client_reference_id: identity.subject,
+    'metadata[subject]': identity.subject,
+    'metadata[packId]': pack.id,
+    'metadata[pro]': String(isPro),
+    'line_items[0][quantity]': '1',
+    'line_items[0][price_data][currency]': 'usd',
+    'line_items[0][price_data][unit_amount]': String(cents),
+    'line_items[0][price_data][product_data][name]':
+      `${pack.points.toLocaleString('en-US')} AI points — ${pack.label}`,
+  });
+  if (identity.email) form.set('customer_email', identity.email);
+
+  const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      // Re-opening checkout after a network blip must not strand duplicate
+      // sessions against one intent.
+      'Idempotency-Key': `checkout:${identity.subject}:${pack.id}:${Math.floor(Date.now() / 60_000)}`,
+    },
+    body: form,
+  });
+  if (!response.ok) return json(request, { error: 'Stripe could not open checkout.' }, 502);
+
+  const session = await response.json() as { id?: string; url?: string };
+  if (!session.url) return json(request, { error: 'Stripe returned no checkout URL.' }, 502);
+  return json(request, { url: session.url, sessionId: session.id, amountCents: cents, isPro });
+}
+
+interface StripeCheckoutSession {
+  id?: string;
+  payment_status?: string;
+  amount_total?: number;
+  metadata?: { subject?: string; packId?: string };
+}
+
+/**
+ * Stripe's completion webhook. PUBLIC by necessity -- Stripe cannot present a
+ * Google identity -- so the signature is the only thing standing between this
+ * route and free points, and it is checked before the body is even parsed.
+ *
+ * Always answers 200 for anything it recognises but chooses not to act on.
+ * Stripe retries any non-2xx for days, and retrying an event we have
+ * deliberately ignored never changes the outcome.
+ */
+async function stripeWebhook(request: Request, env: Env): Promise<Response> {
+  if (!env.STRIPE_WEBHOOK_SECRET) return json(request, { error: 'Not configured' }, 503);
+  const payload = await request.text();
+  const valid = await stripeSignatureValid(
+    payload,
+    request.headers.get('Stripe-Signature'),
+    env.STRIPE_WEBHOOK_SECRET,
+  );
+  if (!valid) return json(request, { error: 'Bad signature' }, 400);
+
+  let event: { type?: string; data?: { object?: StripeCheckoutSession } };
+  try {
+    event = JSON.parse(payload) as typeof event;
+  } catch {
+    return json(request, { error: 'Bad payload' }, 400);
+  }
+  if (event.type !== 'checkout.session.completed') return json(request, { ignored: true });
+
+  const session = event.data?.object;
+  // `complete` is not `paid`: an async method can complete the session and
+  // settle later. Crediting on completion alone gives points away on a payment
+  // that has not cleared.
+  if (!session?.id || session.payment_status !== 'paid') return json(request, { ignored: true });
+
+  const subject = session.metadata?.subject;
+  const packId = session.metadata?.packId;
+  if (!subject || !packId) return json(request, { ignored: true });
+
+  const credited = await creditPurchase(
+    env.COMMUNITY,
+    subject,
+    packId,
+    'stripe',
+    session.id,
+    // What Stripe actually settled, not what we quoted. Already in cents.
+    session.amount_total ?? 0,
+  );
+  if (!credited.ok) return json(request, { ignored: true });
+  return json(request, { credited: credited.credited, replay: credited.replay });
 }
 
 /**
@@ -1280,6 +1517,21 @@ export default {
       }
     }
 
+    // Stripe cannot present a Google identity, so this route is unavoidably
+    // public and its HMAC signature is the whole of its authentication. It is
+    // matched before authenticate() for that reason, and rate limiting is
+    // deliberately NOT applied: throttling Stripe's retries would drop paid
+    // purchases on the floor, and a forged request costs one HMAC to reject.
+    if (request.method === 'POST' && url.pathname === '/v1/stripe/webhook') {
+      try {
+        return await stripeWebhook(request, env);
+      } catch {
+        // 500 so Stripe retries: a transient D1 failure here means a paying
+        // customer has not been credited yet.
+        return json(request, { error: 'Webhook processing failed' }, 500);
+      }
+    }
+
     // Community reads are PUBLIC and are therefore matched before
     // authenticate(). A support forum only signed-in people can read is not a
     // support forum, and Google cannot index what it cannot fetch. Writes fall
@@ -1328,6 +1580,17 @@ export default {
       }
       if (request.method === 'GET' && url.pathname === '/v1/points') {
         return await pointsState(request, env, identity);
+      }
+      if (request.method === 'POST' && url.pathname === '/v1/points/play/claim') {
+        try {
+          return await claimPlayPoints(request, env, identity);
+        } catch {
+          // The receipt is still valid and unconsumed, so the client can retry.
+          return json(request, { error: 'Google Play could not verify this purchase.' }, 502);
+        }
+      }
+      if (request.method === 'POST' && url.pathname === '/v1/points/checkout') {
+        return await createPointsCheckout(request, env, identity);
       }
       if (request.method === 'POST' && url.pathname === '/v1/ai/room-names') {
         return await suggestRoomNames(request, env, identity);

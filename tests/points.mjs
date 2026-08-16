@@ -28,6 +28,7 @@ const dir = mkdtempSync(join(tmpdir(), 'hdpoints-'));
 const entry = join(root, '.points-entry.tmp.ts');
 writeFileSync(entry, `
 export * from '${rootImport}/workers/design-sync/src/points.ts';
+export * from '${rootImport}/workers/design-sync/src/stripe.ts';
 `);
 
 const out = join(dir, 'bundle.mjs');
@@ -48,7 +49,21 @@ const {
   FREE_GRANT_POINTS, MAX_FREE_GRANTS_PER_MONTH,
   assertPricingIsSolvent, pointsFor,
   spendPoints, refundPoints, grantFreePoints, readAccount, readLiability, runMetered,
+  creditPurchase, packById, packPriceCents, readUnsettledPurchases, UNSETTLED_BALANCE,
+  stripeSignatureValid, timingSafeEqual, STRIPE_SIGNATURE_TOLERANCE_S,
 } = mod;
+
+/** Signs a payload the way Stripe does, so the tests exercise the real scheme
+ *  rather than a restatement of the implementation. */
+async function stripeSign(payload, secret, timestamp) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  );
+  const mac = await crypto.subtle.sign(
+    'HMAC', key, new TextEncoder().encode(`${timestamp}.${payload}`),
+  );
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 let passed = 0;
 let failed = 0;
@@ -83,6 +98,9 @@ function makeDb() {
             run() {
               const info = stmt.run(...args);
               return Promise.resolve({ success: true, meta: { changes: info.changes } });
+            },
+            all() {
+              return Promise.resolve({ success: true, results: stmt.all(...args) });
             },
           };
         },
@@ -308,6 +326,181 @@ console.log('Metered execution (G3 + G5 together)');
   check('a fresh key retries successfully', retry.ok === true && retry.result === 'done');
   check('the fresh key charges properly',
     (await readAccount(db, 'retrier')).balance === before - pointsFor('auto_furnish'));
+}
+
+// -------------------------------------------------- purchases (both rails)
+
+console.log('Purchases (G6, G7)');
+{
+  const pack = PACKS[1];
+
+  // Pricing is computed server-side, and the discounted price is what the G2
+  // floor was certified against -- so the rounding direction is load-bearing,
+  // not cosmetic.
+  check('list price is the pack price', packPriceCents(pack, false) === Math.ceil(pack.usd * 100),
+    `got ${packPriceCents(pack, false)}`);
+  check('Pro price applies the discount',
+    packPriceCents(pack, true) === Math.ceil(pack.usd * (1 - PRO_DISCOUNT) * 100),
+    `got ${packPriceCents(pack, true)}`);
+  check('Pro price rounds up, never down',
+    packPriceCents(pack, true) >= pack.usd * (1 - PRO_DISCOUNT) * 100);
+  for (const p of PACKS) {
+    // The floor has to hold against the price actually charged, not the
+    // idealised one -- rounding must not push a sale under it.
+    const netPerPoint = ((packPriceCents(p, true) / 100) * (1 - PLAY_FEE_RATE)) / p.points;
+    check(`charged Pro price for ${p.id} clears the floor`, netPerPoint >= USD_PER_POINT,
+      `nets $${netPerPoint.toFixed(6)}/point`);
+  }
+
+  check('an unknown pack id resolves to nothing', packById('points_9999') === null);
+  check('a real pack id resolves', packById(pack.id)?.points === pack.points);
+
+  {
+    const db = makeDb();
+    const credited = await creditPurchase(db, 'buyer', pack.id, 'play', 'tok-1', packPriceCents(pack, false));
+    check('a verified purchase credits its points', credited.ok && credited.credited === pack.points,
+      `got ${credited.ok ? credited.credited : credited.reason}`);
+    check('the balance reflects the purchase', (await readAccount(db, 'buyer')).balance === pack.points);
+    check('lifetime purchased is tracked',
+      (await readAccount(db, 'buyer')).lifetimePurchased === pack.points);
+    check('a settled purchase leaves nothing unsettled',
+      (await readUnsettledPurchases(db)).length === 0);
+  }
+
+  // THE one that matters. Stripe retries a webhook until it gets a 2xx, so the
+  // same receipt WILL arrive again in normal operation.
+  {
+    const db = makeDb();
+    await creditPurchase(db, 'buyer', pack.id, 'stripe', 'sess-1', 599);
+    const again = await creditPurchase(db, 'buyer', pack.id, 'stripe', 'sess-1', 599);
+    check('a replayed receipt credits nothing', again.ok && again.credited === 0 && again.replay === true,
+      `got ${again.ok ? `credited ${again.credited}` : again.reason}`);
+    check('a replayed receipt leaves the balance alone',
+      (await readAccount(db, 'buyer')).balance === pack.points,
+      `balance ${(await readAccount(db, 'buyer')).balance}`);
+    check('a replayed receipt does not inflate lifetime purchased',
+      (await readAccount(db, 'buyer')).lifetimePurchased === pack.points);
+  }
+
+  // Two devices verifying the same Play token at once, or two webhook
+  // deliveries racing. Only one may credit.
+  {
+    const db = makeDb();
+    const deliveries = await Promise.all([
+      creditPurchase(db, 'racer', pack.id, 'play', 'tok-race', 599),
+      creditPurchase(db, 'racer', pack.id, 'play', 'tok-race', 599),
+      creditPurchase(db, 'racer', pack.id, 'play', 'tok-race', 599),
+    ]);
+    const credits = deliveries.filter((d) => d.ok && d.credited > 0);
+    check('concurrent deliveries credit exactly once', credits.length === 1,
+      `${credits.length} of 3 credited`);
+    check('the racing balance is one pack', (await readAccount(db, 'racer')).balance === pack.points,
+      `balance ${(await readAccount(db, 'racer')).balance}`);
+  }
+
+  // A Play purchase token and a Stripe session id are different namespaces and
+  // must not be able to collide on one ledger key.
+  {
+    const db = makeDb();
+    await creditPurchase(db, 'buyer', pack.id, 'play', 'same-id', 599);
+    const other = await creditPurchase(db, 'buyer', pack.id, 'stripe', 'same-id', 599);
+    check('the same id on a different rail is a different receipt',
+      other.ok && other.credited === pack.points,
+      `got ${other.ok ? other.credited : other.reason}`);
+    check('both rails credited', (await readAccount(db, 'buyer')).balance === pack.points * 2);
+  }
+
+  {
+    const db = makeDb();
+    const bogus = await creditPurchase(db, 'buyer', 'points_9999', 'stripe', 'sess-x', 100);
+    check('an unknown pack is refused', !bogus.ok && bogus.reason === 'unknown_pack');
+    check('a refused purchase credits nothing', (await readAccount(db, 'buyer')).balance === 0);
+    check('a refused purchase writes no ledger row',
+      db.raw.prepare(`SELECT COUNT(*) AS n FROM point_ledger`).get().n === 0);
+  }
+
+  // Fault injection: credit-then-claim is what this ordering exists to prevent.
+  // Written the wrong way round, the replayed delivery pays out again.
+  {
+    const db = makeDb();
+    const naiveCredit = async (receipt) => {
+      const seen = db.raw.prepare(`SELECT 1 AS hit FROM point_ledger WHERE id = ?`).get(`naive:${receipt}`);
+      if (seen) return 0;
+      db.raw.prepare(
+        `UPDATE point_accounts SET balance = balance + ? WHERE subject = 'naive'`,
+      ).run(pack.points);
+      // The crash window the real implementation closes: the claim lands only
+      // AFTER the balance moved, so anything arriving in between pays twice.
+      db.raw.prepare(
+        `INSERT INTO point_ledger (id, subject, kind, delta, balance_after, created_at)
+         VALUES (?, 'naive', 'purchase', ?, 0, 0)`,
+      ).run(`naive:${receipt}`, pack.points);
+      return pack.points;
+    };
+    db.raw.prepare(
+      `INSERT INTO point_accounts (subject, created_at, updated_at) VALUES ('naive', 0, 0)`,
+    ).run();
+    await naiveCredit('r1');
+    const balanceBefore = db.raw.prepare(`SELECT balance FROM point_accounts WHERE subject = 'naive'`).get().balance;
+    check('fault injection: credit-before-claim is the bug being prevented',
+      balanceBefore === pack.points, `balance ${balanceBefore}`);
+  }
+}
+
+// ------------------------------------------ stripe webhook authentication
+
+console.log('Stripe webhook signature');
+{
+  const secret = 'whsec_test_2vFqYb8xN4pR';
+  const body = JSON.stringify({ type: 'checkout.session.completed', data: { object: { id: 'cs_1' } } });
+  const now = Date.now();
+  const t = Math.floor(now / 1000);
+  const good = await stripeSign(body, secret, t);
+
+  check('a correctly signed webhook is accepted',
+    await stripeSignatureValid(body, `t=${t},v1=${good}`, secret, now) === true);
+
+  check('a missing header is refused',
+    await stripeSignatureValid(body, null, secret, now) === false);
+  check('an empty secret is refused',
+    await stripeSignatureValid(body, `t=${t},v1=${good}`, '', now) === false);
+  check('a header with no signature is refused',
+    await stripeSignatureValid(body, `t=${t}`, secret, now) === false);
+  check('a header with no timestamp is refused',
+    await stripeSignatureValid(body, `v1=${good}`, secret, now) === false);
+
+  // The forged-signature case. This is the one that would hand out free points.
+  check('a forged signature is refused',
+    await stripeSignatureValid(body, `t=${t},v1=${'0'.repeat(64)}`, secret, now) === false);
+  check('a signature from the wrong secret is refused',
+    await stripeSignatureValid(body, `t=${t},v1=${await stripeSign(body, 'whsec_wrong', t)}`, secret, now) === false);
+
+  // Tampering: the signature is valid for the ORIGINAL body only. Swapping the
+  // session id (i.e. claiming a different receipt) must invalidate it.
+  const tampered = JSON.stringify({ type: 'checkout.session.completed', data: { object: { id: 'cs_ATTACKER' } } });
+  check('a tampered body is refused',
+    await stripeSignatureValid(tampered, `t=${t},v1=${good}`, secret, now) === false);
+
+  // Replay: a captured webhook must expire, or it is a permanent free-points
+  // coupon for anyone who ever saw one.
+  const stale = t - STRIPE_SIGNATURE_TOLERANCE_S - 60;
+  check('a replayed old webhook is refused',
+    await stripeSignatureValid(body, `t=${stale},v1=${await stripeSign(body, secret, stale)}`, secret, now) === false);
+  const future = t + STRIPE_SIGNATURE_TOLERANCE_S + 60;
+  check('a far-future timestamp is refused',
+    await stripeSignatureValid(body, `t=${future},v1=${await stripeSign(body, secret, future)}`, secret, now) === false);
+  const edge = t - STRIPE_SIGNATURE_TOLERANCE_S + 5;
+  check('a webhook inside the tolerance is accepted',
+    await stripeSignatureValid(body, `t=${edge},v1=${await stripeSign(body, secret, edge)}`, secret, now) === true);
+  check('a non-numeric timestamp is refused',
+    await stripeSignatureValid(body, `t=abc,v1=${good}`, secret, now) === false);
+
+  // Secret rotation sends several v1 values; any one valid is enough.
+  check('one valid signature among several is accepted',
+    await stripeSignatureValid(body, `t=${t},v1=${'a'.repeat(64)},v1=${good}`, secret, now) === true);
+
+  check('constant-time compare still compares', timingSafeEqual('abc', 'abc') === true
+    && timingSafeEqual('abc', 'abd') === false && timingSafeEqual('abc', 'ab') === false);
 }
 
 // --------------------------------------------------------------- liability

@@ -441,6 +441,150 @@ export async function grantFreePoints(
   return { granted: FREE_GRANT_POINTS, balance: updated.balance };
 }
 
+export type Pack = (typeof PACKS)[number];
+
+export function packById(id: unknown): Pack | null {
+  return PACKS.find((pack) => pack.id === id) ?? null;
+}
+
+/**
+ * What this buyer pays, in whole cents, computed server-side (G7).
+ *
+ * Rounded UP. A half-cent rounded down is a half-cent of margin given away on
+ * every discounted sale, and the G2 floor is checked against the discounted
+ * price -- so rounding the other way would sell fractionally under the floor
+ * the solvency guard just certified.
+ */
+export function packPriceCents(pack: Pack, isPro: boolean): number {
+  return Math.ceil(pack.usd * (isPro ? 1 - PRO_DISCOUNT : 1) * 100);
+}
+
+/** Where the money came from. Namespaces receipt ids so a Play purchase token
+ *  and a Stripe session id can never collide on one ledger key. */
+export type PurchaseSource = 'play' | 'stripe';
+
+/**
+ * Sentinel `balance_after` for a purchase row that has been claimed but whose
+ * balance has not moved yet. Only ever observable if the Worker dies between
+ * the claim and the credit -- see `creditPurchase`. Negative so it can never be
+ * mistaken for a real balance, which is `>= 0` by construction.
+ */
+export const UNSETTLED_BALANCE = -1;
+
+export type CreditResult =
+  | { ok: true; credited: number; balance: number; replay: boolean }
+  | { ok: false; reason: 'unknown_pack' };
+
+/**
+ * Credits a paid pack. The single entry point for money becoming points, used
+ * by both the Play and Stripe rails.
+ *
+ * **Claim first, credit second, and the order is the whole design.** Both rails
+ * deliver the same receipt more than once as a matter of course: Stripe retries
+ * a webhook for up to three days until it gets a 2xx, and the Play verify route
+ * can be called concurrently by two of the same user's devices. So the ledger
+ * row is inserted as a *claim* before the balance moves, and the balance only
+ * moves for the caller that won the insert.
+ *
+ * The failure directions are not symmetric, which is why it is arranged this
+ * way round:
+ *
+ * * Crash between claim and credit -> the buyer is short their points, and a
+ *   ledger row with `balance_after = UNSETTLED_BALANCE` names exactly which
+ *   receipt to settle. Detectable and repairable.
+ * * Credit before claim -> a retried delivery credits twice, silently, and
+ *   under Stripe's retry schedule it can credit many times. Undetectable
+ *   without reconciliation and unbounded.
+ *
+ * Being wrong the first way costs one support ticket. Being wrong the second
+ * way gives away the product.
+ *
+ * The caller is responsible for having verified the receipt with the payment
+ * provider first -- this function trusts `receiptId` and does not re-check it.
+ */
+export async function creditPurchase(
+  db: D1Database,
+  subject: string,
+  packId: unknown,
+  source: PurchaseSource,
+  receiptId: string,
+  paidCents: number,
+): Promise<CreditResult> {
+  const pack = packById(packId);
+  if (!pack) return { ok: false, reason: 'unknown_pack' };
+
+  const now = Date.now();
+  const id = `purchase:${source}:${receiptId}`;
+  await ensureAccount(db, subject, now);
+
+  const claim = await db
+    .prepare(
+      `INSERT INTO point_ledger
+         (id, subject, kind, delta, feature, cost_micros, balance_after, ref, price_version, created_at)
+       VALUES (?, ?, 'purchase', ?, NULL, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO NOTHING`,
+    )
+    .bind(
+      id,
+      subject,
+      pack.points,
+      // For a purchase row this column carries money RECEIVED, not compute
+      // cost -- the opposite direction to a spend row. It is stored because
+      // §5's reserve ratio reconciles cash taken against compute owed, and
+      // that sum is impossible after the fact if the amount is not on the row.
+      paidCents * 10_000,
+      UNSETTLED_BALANCE,
+      receiptId,
+      PRICE_VERSION,
+      now,
+    )
+    .run();
+
+  if (!claim.meta.changes) {
+    // Someone already claimed this receipt. Report the balance as it stands
+    // rather than the balance at claim time: the caller wants to render a
+    // current figure, and a replayed webhook is not a second sale.
+    const account = await readAccount(db, subject);
+    return { ok: true, credited: 0, balance: account.balance, replay: true };
+  }
+
+  const updated = await db
+    .prepare(
+      `UPDATE point_accounts
+         SET balance = balance + ?, lifetime_purchased = lifetime_purchased + ?, updated_at = ?
+       WHERE subject = ?
+       RETURNING balance`,
+    )
+    .bind(pack.points, pack.points, now, subject)
+    .first<{ balance: number }>();
+
+  const balance = updated?.balance ?? pack.points;
+
+  await db
+    .prepare(`UPDATE point_ledger SET balance_after = ? WHERE id = ?`)
+    .bind(balance, id)
+    .run();
+
+  return { ok: true, credited: pack.points, balance, replay: false };
+}
+
+/**
+ * Purchases claimed but never settled -- the repair list for the crash window
+ * described in `creditPurchase`. Empty is the normal state.
+ */
+export async function readUnsettledPurchases(db: D1Database): Promise<
+  Array<{ id: string; subject: string; delta: number; createdAt: number }>
+> {
+  const result = await db
+    .prepare(
+      `SELECT id, subject, delta, created_at AS createdAt FROM point_ledger
+       WHERE kind = 'purchase' AND balance_after = ? ORDER BY created_at`,
+    )
+    .bind(UNSETTLED_BALANCE)
+    .all<{ id: string; subject: string; delta: number; createdAt: number }>();
+  return result.results ?? [];
+}
+
 export type MeteredOutcome<T> =
   | { ok: true; result: T; charged: number; balance: number }
   | { ok: false; reason: 'insufficient'; balance: number; required: number }
