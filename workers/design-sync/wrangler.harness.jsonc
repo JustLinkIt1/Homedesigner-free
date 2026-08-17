@@ -1,0 +1,15 @@
+// DEV-ONLY config for the room-naming accuracy harness. Not a deploy target:
+// it binds nothing but Workers AI, so it cannot touch user data, the points
+// ledger or the community database even by mistake.
+//
+//   npx wrangler dev --remote --config wrangler.harness.jsonc --port 8799
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "homedesigner-room-naming-harness",
+  "main": "src/room-naming-harness.ts",
+  "compatibility_date": "2026-07-22",
+  "workers_dev": false,
+  "ai": {
+    "binding": "AI"
+  }
+}

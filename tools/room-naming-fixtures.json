@@ -1,0 +1,1047 @@
+[
+  {
+    "sample": "open-plan",
+    "floor": "Ground floor",
+    "authored": "Deck",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r1",
+      "areaSqm": 23.1,
+      "widthCm": 550,
+      "depthCm": 420,
+      "furniture": [
+        "patio_table",
+        "parasol",
+        "patio_chair",
+        "bbq",
+        "planter_box"
+      ],
+      "outdoor": true,
+      "doors": 0,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "open-plan",
+    "floor": "Ground floor",
+    "authored": "Great Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r2",
+      "areaSqm": 63.8,
+      "widthCm": 750,
+      "depthCm": 850,
+      "furniture": [
+        "fridge",
+        "cabinets",
+        "stove",
+        "cabinets",
+        "kitchen_sink",
+        "cabinets",
+        "island",
+        "pendant",
+        "pendant",
+        "bar_stool",
+        "bar_stool",
+        "bar_stool",
+        "dining_table",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "pendant",
+        "large_plant",
+        "rug",
+        "modern_sofa",
+        "throw_pillows",
+        "round_coffee_table",
+        "tv_stand",
+        "accent_chair",
+        "tall_side_table",
+        "floor_lamp",
+        "display_cabinet",
+        "clay_planter",
+        "large_plant",
+        "wall_art",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 2,
+      "windows": 6
+    }
+  },
+  {
+    "sample": "open-plan",
+    "floor": "Ground floor",
+    "authored": "Master Bedroom",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r3",
+      "areaSqm": 17.5,
+      "widthCm": 350,
+      "depthCm": 500,
+      "furniture": [
+        "bed_double",
+        "nightstand",
+        "nightstand",
+        "wardrobe",
+        "bench",
+        "curtains",
+        "rug",
+        "ceiling_light",
+        "large_plant"
+      ],
+      "outdoor": false,
+      "doors": 2,
+      "windows": 2
+    }
+  },
+  {
+    "sample": "open-plan",
+    "floor": "Ground floor",
+    "authored": "Bathroom",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r4",
+      "areaSqm": 12.3,
+      "widthCm": 350,
+      "depthCm": 350,
+      "furniture": [
+        "bathtub",
+        "vanity",
+        "toilet",
+        "shower",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 2,
+      "windows": 1
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Ground floor",
+    "authored": "Terrace",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r5",
+      "areaSqm": 17.2,
+      "widthCm": 430,
+      "depthCm": 400,
+      "furniture": [
+        "patio_table",
+        "patio_chair",
+        "bbq",
+        "planter_box"
+      ],
+      "outdoor": true,
+      "doors": 1,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Ground floor",
+    "authored": "Lawn",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r6",
+      "areaSqm": 36,
+      "widthCm": 450,
+      "depthCm": 800,
+      "furniture": [
+        "fire_pit",
+        "sun_lounger",
+        "tree",
+        "tree_small",
+        "hedge"
+      ],
+      "outdoor": true,
+      "doors": 0,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Ground floor",
+    "authored": "Living Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r7",
+      "areaSqm": 30,
+      "widthCm": 600,
+      "depthCm": 500,
+      "furniture": [
+        "rug",
+        "modern_sofa",
+        "throw_pillows",
+        "tea_table",
+        "tv_stand",
+        "lounge_chair",
+        "display_cabinet",
+        "floor_lamp",
+        "large_plant",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 3,
+      "windows": 2
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Ground floor",
+    "authored": "Kitchen & Dining",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r8",
+      "areaSqm": 20,
+      "widthCm": 400,
+      "depthCm": 500,
+      "furniture": [
+        "fridge",
+        "cabinets",
+        "stove",
+        "kitchen_sink",
+        "dining_table",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "pendant"
+      ],
+      "outdoor": false,
+      "doors": 1,
+      "windows": 1
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Ground floor",
+    "authored": "Hallway",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r9",
+      "areaSqm": 25.5,
+      "widthCm": 850,
+      "depthCm": 300,
+      "furniture": [
+        "stairs",
+        "sideboard",
+        "wall_art",
+        "ceiling_light",
+        "large_plant"
+      ],
+      "outdoor": false,
+      "doors": 4,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Ground floor",
+    "authored": "WC",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r10",
+      "areaSqm": 4.5,
+      "widthCm": 150,
+      "depthCm": 300,
+      "furniture": [
+        "toilet",
+        "sink"
+      ],
+      "outdoor": false,
+      "doors": 2,
+      "windows": 1
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Upper floor",
+    "authored": "Master Bedroom",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r11",
+      "areaSqm": 25,
+      "widthCm": 500,
+      "depthCm": 500,
+      "furniture": [
+        "bed_double",
+        "nightstand",
+        "nightstand",
+        "wardrobe",
+        "chest_of_drawers",
+        "rug",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 3,
+      "windows": 2
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Upper floor",
+    "authored": "Kids Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r12",
+      "areaSqm": 25,
+      "widthCm": 500,
+      "depthCm": 500,
+      "furniture": [
+        "day_bed",
+        "nightstand",
+        "metal_desk",
+        "office_chair",
+        "office_bookshelf",
+        "desk_lamp",
+        "rug",
+        "ceiling_light",
+        "large_plant"
+      ],
+      "outdoor": false,
+      "doors": 1,
+      "windows": 2
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Upper floor",
+    "authored": "Landing",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r13",
+      "areaSqm": 16.5,
+      "widthCm": 550,
+      "depthCm": 300,
+      "furniture": [
+        "ceiling_light",
+        "sideboard"
+      ],
+      "outdoor": false,
+      "doors": 3,
+      "windows": 1
+    }
+  },
+  {
+    "sample": "family-house",
+    "floor": "Upper floor",
+    "authored": "Bathroom",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r14",
+      "areaSqm": 13.5,
+      "widthCm": 450,
+      "depthCm": 300,
+      "furniture": [
+        "bathtub",
+        "vanity",
+        "toilet",
+        "shower",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 1,
+      "windows": 1
+    }
+  },
+  {
+    "sample": "city-studio",
+    "floor": "Ground floor",
+    "authored": "Terrace",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r15",
+      "areaSqm": 9.9,
+      "widthCm": 330,
+      "depthCm": 300,
+      "furniture": [
+        "patio_table",
+        "patio_chair",
+        "planter_box",
+        "hedge"
+      ],
+      "outdoor": true,
+      "doors": 2,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "city-studio",
+    "floor": "Ground floor",
+    "authored": "Studio",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r16",
+      "areaSqm": 33.8,
+      "widthCm": 650,
+      "depthCm": 520,
+      "furniture": [
+        "bed_double",
+        "nightstand",
+        "curtains",
+        "cabinets",
+        "kitchen_sink",
+        "fridge",
+        "rug",
+        "modern_sofa",
+        "throw_pillows",
+        "accent_table",
+        "tv_stand",
+        "floor_lamp",
+        "large_plant",
+        "dining_table",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "pendant",
+        "shower",
+        "toilet",
+        "sink",
+        "ceiling_light",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 2,
+      "windows": 2
+    }
+  },
+  {
+    "sample": "city-studio",
+    "floor": "Ground floor",
+    "authored": "Bathroom",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r17",
+      "areaSqm": 4.4,
+      "widthCm": 210,
+      "depthCm": 210,
+      "furniture": [
+        "shower",
+        "toilet",
+        "sink",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 1,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "terrace-house",
+    "floor": "Ground floor",
+    "authored": "Terrace",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r18",
+      "areaSqm": 10.2,
+      "widthCm": 240,
+      "depthCm": 440,
+      "furniture": [
+        "planter_box",
+        "patio_chair",
+        "hedge",
+        "picnic_table",
+        "large_plant"
+      ],
+      "outdoor": true,
+      "doors": 2,
+      "windows": 1
+    }
+  },
+  {
+    "sample": "terrace-house",
+    "floor": "Ground floor",
+    "authored": "Bedroom",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r19",
+      "areaSqm": 10.1,
+      "widthCm": 230,
+      "depthCm": 440,
+      "furniture": [
+        "bed_double",
+        "nightstand",
+        "wardrobe",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 1,
+      "windows": 1
+    }
+  },
+  {
+    "sample": "terrace-house",
+    "floor": "Ground floor",
+    "authored": "Dining Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r20",
+      "areaSqm": 17,
+      "widthCm": 454,
+      "depthCm": 380,
+      "furniture": [
+        "dining_table",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "pendant",
+        "large_plant"
+      ],
+      "outdoor": false,
+      "doors": 3,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "terrace-house",
+    "floor": "Ground floor",
+    "authored": "WC",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r21",
+      "areaSqm": 3.9,
+      "widthCm": 156,
+      "depthCm": 260,
+      "furniture": [
+        "toilet",
+        "sink"
+      ],
+      "outdoor": false,
+      "doors": 2,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "terrace-house",
+    "floor": "Ground floor",
+    "authored": "Hall",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r22",
+      "areaSqm": 9.6,
+      "widthCm": 432,
+      "depthCm": 310,
+      "furniture": [
+        "sideboard",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 2,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "terrace-house",
+    "floor": "Ground floor",
+    "authored": "Living Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r23",
+      "areaSqm": 18.2,
+      "widthCm": 430,
+      "depthCm": 430,
+      "furniture": [
+        "rug",
+        "modern_sofa",
+        "throw_pillows",
+        "round_coffee_table",
+        "tv_stand",
+        "accent_chair",
+        "lounge_chair",
+        "large_plant",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 2,
+      "windows": 1
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Deck",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r24",
+      "areaSqm": 21,
+      "widthCm": 420,
+      "depthCm": 500,
+      "furniture": [
+        "patio_table",
+        "patio_chair",
+        "patio_chair",
+        "patio_chair",
+        "bbq"
+      ],
+      "outdoor": true,
+      "doors": 1,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Side lawn",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r25",
+      "areaSqm": 79.2,
+      "widthCm": 480,
+      "depthCm": 1650,
+      "furniture": [
+        "tree",
+        "tree_small",
+        "hedge",
+        "garden_lamp"
+      ],
+      "outdoor": true,
+      "doors": 0,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Back lawn",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r26",
+      "areaSqm": 54.6,
+      "widthCm": 1560,
+      "depthCm": 350,
+      "furniture": [
+        "hedge",
+        "tree_small",
+        "tree"
+      ],
+      "outdoor": true,
+      "doors": 0,
+      "windows": 5
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Front lawn",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r27",
+      "areaSqm": 41,
+      "widthCm": 1000,
+      "depthCm": 410,
+      "furniture": [
+        "tree_small",
+        "hedge"
+      ],
+      "outdoor": true,
+      "doors": 0,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Driveway",
+    "outdoorPolygon": true,
+    "summary": {
+      "id": "r28",
+      "areaSqm": 26.3,
+      "widthCm": 560,
+      "depthCm": 470,
+      "furniture": [
+        "garden_lamp",
+        "planter_box"
+      ],
+      "outdoor": true,
+      "doors": 2,
+      "windows": 2
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Sitting Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r29",
+      "areaSqm": 24,
+      "widthCm": 500,
+      "depthCm": 480,
+      "furniture": [
+        "rug",
+        "sofa",
+        "coffee_table",
+        "armchair",
+        "lounge_chair",
+        "side_table",
+        "bookshelf",
+        "large_plant",
+        "floor_lamp",
+        "wall_art",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 5,
+      "windows": 5
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Kitchen",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r30",
+      "areaSqm": 24,
+      "widthCm": 500,
+      "depthCm": 480,
+      "furniture": [
+        "fridge",
+        "counter",
+        "dishwasher",
+        "kitchen_sink",
+        "stove",
+        "cabinets",
+        "round_dining_table",
+        "dining_chair",
+        "dining_chair",
+        "dining_chair",
+        "dining_chair",
+        "pendant"
+      ],
+      "outdoor": false,
+      "doors": 3,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Laundry",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r31",
+      "areaSqm": 13.4,
+      "widthCm": 280,
+      "depthCm": 480,
+      "furniture": [
+        "washer",
+        "sink",
+        "cabinets",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 3,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Den",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r32",
+      "areaSqm": 13.4,
+      "widthCm": 280,
+      "depthCm": 480,
+      "furniture": [
+        "desk",
+        "office_chair",
+        "day_bed",
+        "bookshelf",
+        "rug",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 1,
+      "windows": 2
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Living Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r33",
+      "areaSqm": 33.5,
+      "widthCm": 500,
+      "depthCm": 670,
+      "furniture": [
+        "sofa",
+        "tv_stand",
+        "rug",
+        "coffee_table",
+        "armchair",
+        "lounge_chair",
+        "floor_lamp",
+        "bookshelf",
+        "large_plant",
+        "wall_art",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 4,
+      "windows": 1
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Hallway",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r34",
+      "areaSqm": 16.1,
+      "widthCm": 240,
+      "depthCm": 670,
+      "furniture": [
+        "stairs",
+        "large_plant",
+        "wall_art",
+        "mirror",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 1,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Dining Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r35",
+      "areaSqm": 17.4,
+      "widthCm": 260,
+      "depthCm": 670,
+      "furniture": [
+        "dining_table",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "wooden_dining_chair",
+        "sideboard",
+        "display_cabinet",
+        "large_plant",
+        "pendant"
+      ],
+      "outdoor": false,
+      "doors": 1,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Ground floor",
+    "authored": "Garage",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r36",
+      "areaSqm": 37.5,
+      "widthCm": 560,
+      "depthCm": 670,
+      "furniture": [
+        "bench",
+        "worn_bookshelf",
+        "filing_cabinet",
+        "outdoor_bin",
+        "outdoor_bin",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 3,
+      "windows": 2
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Upper floor",
+    "authored": "Master Bedroom",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r37",
+      "areaSqm": 29.8,
+      "widthCm": 620,
+      "depthCm": 480,
+      "furniture": [
+        "bed_double",
+        "nightstand",
+        "nightstand",
+        "wardrobe",
+        "dresser",
+        "rug",
+        "large_plant",
+        "wall_art",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 4,
+      "windows": 3
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Upper floor",
+    "authored": "Kids' Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r38",
+      "areaSqm": 18.2,
+      "widthCm": 380,
+      "depthCm": 480,
+      "furniture": [
+        "bed_single",
+        "nightstand",
+        "desk",
+        "desk_lamp",
+        "office_chair",
+        "bookshelf",
+        "rug",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 1,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Upper floor",
+    "authored": "Home Office",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r39",
+      "areaSqm": 26.9,
+      "widthCm": 560,
+      "depthCm": 480,
+      "furniture": [
+        "desk",
+        "office_chair",
+        "desk_lamp",
+        "office_bookshelf",
+        "filing_cabinet",
+        "sofa",
+        "rug",
+        "large_plant",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 0,
+      "windows": 3
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Upper floor",
+    "authored": "Second Bedroom",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r40",
+      "areaSqm": 33.5,
+      "widthCm": 500,
+      "depthCm": 670,
+      "furniture": [
+        "bed_single",
+        "nightstand",
+        "desk",
+        "office_chair",
+        "wardrobe",
+        "bookshelf",
+        "rug",
+        "large_plant",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 4,
+      "windows": 2
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Upper floor",
+    "authored": "Landing",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r41",
+      "areaSqm": 27.6,
+      "widthCm": 1060,
+      "depthCm": 670,
+      "furniture": [
+        "sideboard",
+        "large_plant",
+        "wall_art",
+        "wall_art",
+        "mirror",
+        "ceiling_light",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 3,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Upper floor",
+    "authored": "Bathroom",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r42",
+      "areaSqm": 13.8,
+      "widthCm": 260,
+      "depthCm": 530,
+      "furniture": [
+        "bathtub",
+        "vanity",
+        "sink",
+        "shower",
+        "toilet",
+        "mirror",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 2,
+      "windows": 0
+    }
+  },
+  {
+    "sample": "suburban-classic",
+    "floor": "Upper floor",
+    "authored": "Bonus Room",
+    "outdoorPolygon": false,
+    "summary": {
+      "id": "r43",
+      "areaSqm": 29.7,
+      "widthCm": 560,
+      "depthCm": 530,
+      "furniture": [
+        "sofa",
+        "tv_stand",
+        "rug",
+        "coffee_table",
+        "armchair",
+        "lounge_chair",
+        "bookshelf",
+        "large_plant",
+        "floor_lamp",
+        "ceiling_light"
+      ],
+      "outdoor": false,
+      "doors": 0,
+      "windows": 3
+    }
+  }
+]
