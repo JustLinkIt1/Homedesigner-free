@@ -1,6 +1,40 @@
 # WIP — current handoff
 
-## 2026-08-17 (Claude) — DESKTOP PRO NEVER REACHED ANDROID (Worker fix, NOT deployed)
+## 2026-08-17 (Claude) — 1.22.25 BUILT AND VERIFIED (account menu clipping)
+
+| | |
+|---|---|
+| Artifact | `outputs/HomeDesigner-1.22.25-12225.aab` |
+| Bytes | 26,367,039 |
+| SHA-256 | `d14977e71ccfe88a8d127c6d722aeafd3781e42ad5304d37ecbfef7ca27e8fd2` |
+| Signer | `CN=Nathan Joppich` — `EE:D4:E3:A9:11:BC:92:9A:D3:CD:33:36:FF:BF:32:C0:22:4A:1F:C5:21:BE:B1:13:02:F5:A0:7E:5F:00:6A:00` ✓ |
+| `verify-aab` | all green, including `web bundle was built at 1.22.25` |
+
+**Why 1.22.25 and not a rebuild of 1.22.24:** the 1.22.24 AAB was never uploaded
+anywhere, but it exists on disk with a recorded hash. Two different binaries
+sharing one versionCode is the exact confusion the 1.22.23 note warns about, so
+the number moved instead.
+
+The one user-facing change: the header account popover no longer runs off the
+left edge of a phone screen. It hangs right-aligned under the avatar, which only
+works while the avatar is near the right edge — and it is not, because the
+language picker sits beside it. Measured at 375px, the 264px menu started at
+−26.5px; at 320px it started at −81.9px, cutting the sign-in button in half.
+
+The clamp is measured, not a width breakpoint, because the overflow depends on
+how far the language picker pushes the avatar in — and that width is the name of
+the current language. "System" and "Português (Brasil)" do not leave the avatar
+in the same place, so an offset tuned on an English phone would be wrong in half
+the locales we ship.
+
+Verified in the preview at three widths: 320px → menu at 10.1px, 375px →
+10.5px, both fully on screen; 1280px → no offset applied at all and the menu
+still right-aligned to the avatar exactly, so desktop is untouched.
+
+**Not uploaded to Play.** Internal testing first, production only on the owner's
+explicit OK. A copy went to Google Drive at the owner's request.
+
+## 2026-08-17 (Claude) — DESKTOP PRO NEVER REACHED ANDROID (Worker fix, deployed)
 
 Bug report: a user has Pro on desktop, Android stays locked.
 

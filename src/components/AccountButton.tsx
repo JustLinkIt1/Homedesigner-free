@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { User, LogOut, Check, RefreshCw, WandSparkles } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useI18n } from '../lib/i18n';
@@ -32,6 +32,8 @@ export default function AccountButton() {
   const t = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [nudge, setNudge] = useState(0);
 
   useEffect(() => {
     if (!open) return;
@@ -40,6 +42,49 @@ export default function AccountButton() {
     };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  /**
+   * Keep the popover on screen.
+   *
+   * It hangs right-aligned under the avatar, which works only while the avatar
+   * is near the right edge. It is not: the language picker sits beside it, so on
+   * a phone the 264px menu started roughly 37px off the LEFT edge of the screen
+   * and the sign-in button and its explanatory line were both cut in half.
+   *
+   * Measured rather than handled with a width breakpoint, because the overflow
+   * depends on how far the language picker pushes the avatar inward, and that
+   * width is the NAME OF THE CURRENT LANGUAGE — "System" and "Português
+   * (Brasil)" do not leave the avatar in the same place. A fixed offset tuned on
+   * an English phone would be wrong in half the locales we ship.
+   */
+  useLayoutEffect(() => {
+    if (!open) {
+      setNudge(0);
+      return;
+    }
+    const GUTTER = 10;
+    const clamp = () => {
+      const menu = menuRef.current;
+      const anchor = ref.current;
+      if (!menu || !anchor) return;
+      // Derived from the anchor and the menu's own width, never from the menu's
+      // current position: reading a rect we have already nudged would make each
+      // resize compound the last correction.
+      const anchorRight = anchor.getBoundingClientRect().right;
+      const overflowLeft = GUTTER - (anchorRight - menu.offsetWidth);
+      // Shifting right must not push the other edge off instead — on a viewport
+      // too narrow for the menu at all, staying put is the honest outcome.
+      const headroom = window.innerWidth - GUTTER - anchorRight;
+      setNudge(Math.round(Math.max(0, Math.min(overflowLeft, headroom))));
+    };
+    clamp();
+    window.addEventListener('resize', clamp);
+    window.addEventListener('orientationchange', clamp);
+    return () => {
+      window.removeEventListener('resize', clamp);
+      window.removeEventListener('orientationchange', clamp);
+    };
   }, [open]);
 
   if (!configured) return null;
@@ -72,7 +117,12 @@ export default function AccountButton() {
       </button>
 
       {open && (
-        <div className="account-menu" role="menu">
+        <div
+          className="account-menu"
+          role="menu"
+          ref={menuRef}
+          style={nudge ? { right: -nudge } : undefined}
+        >
           {account ? (
             <>
               <div className="account-menu-head">
