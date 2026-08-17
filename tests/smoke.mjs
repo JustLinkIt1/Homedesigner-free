@@ -265,9 +265,20 @@ check(
   'sync API rate-limits verified users and requires the exact Pro entitlement',
   workerSource.includes('USER_READ_LIMITER') &&
     workerSource.includes('USER_WRITE_LIMITER') &&
-    workerSource.includes("item.entitlement_id === 'Pro'") &&
+    workerSource.includes("const PRO_ENTITLEMENT_LOOKUP_KEY = 'Pro';") &&
     workerSource.includes("{ error: 'Too many requests' }, 429") &&
     workerConfig.includes('"ratelimits"'),
+);
+// The cross-platform grant is matched by the entitlement OBJECT id, because
+// that is the only thing RevenueCat's v2 `active_entitlements` reports.
+// Comparing that field to the SDK lookup key is never true, and it reported
+// every web buyer as free — invisible on desktop (which reads its own SDK) and
+// total on Android (which since direct Play Billing has no SDK at all).
+check(
+  'the web entitlement is matched by RevenueCat object id, not by lookup key alone',
+  /const PRO_ENTITLEMENT_ID = 'entl[a-z0-9]+';/.test(workerSource) &&
+    workerSource.includes('item.entitlement_id === configuredId') &&
+    workerSource.includes('proEntitlementIds(env)'),
 );
 check(
   'Cloudflare Pages and Android ship baseline data protections',

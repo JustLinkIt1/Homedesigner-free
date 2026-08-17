@@ -1,5 +1,58 @@
 # WIP — current handoff
 
+## 2026-08-17 (Claude) — DESKTOP PRO NEVER REACHED ANDROID (Worker fix, NOT deployed)
+
+Bug report: a user has Pro on desktop, Android stays locked.
+
+`revenueCatEntitled()` matched `item.entitlement_id === 'Pro'`. RevenueCat's v2
+`active_entitlements` reports `entitlement_id` as the entitlement **object id**
+— this project's is `entlf6de9c6c3d`, `Pro` is only the *lookup key* the SDKs
+use. The comparison was therefore never true for anyone, and
+`GET /v1/entitlement` answered `isPro: false` for every web/Stripe buyer.
+
+Why only Android showed it: desktop reads its own RevenueCat Web SDK
+`customerInfo`, where the identifier IS the lookup key, and only falls back to
+the Worker. Android has had no RevenueCat SDK since the switch to direct Play
+Billing, so the Worker is its *only* path to a non-Play purchase.
+
+Same call feeds `isProSubject()`, so Pro members were also quoted list price
+for point packs.
+
+The fix matches the object id (overridable via `REVENUECAT_PRO_ENTITLEMENT_ID`),
+still accepts the lookup key, and — only when a customer holds some *other*
+active entitlement — re-derives the id from the project catalogue, so a
+recreated entitlement cannot silently lock buyers out again.
+
+**Worker-only. No app release.** After `wrangler deploy`, affected users get Pro
+on the next Android app start (or by tapping Restore purchase) while signed in
+to the same Google account. Evidence: customer `google:1019…7114` holds an
+active, unlimited `Pro` grant in RevenueCat while their phone shows free.
+
+## 2026-08-16 (Claude) — 1.22.24 AAB IS BUILT AND VERIFIED
+
+Built locally; the keystore was present after all, so the "needs a container
+with the keystore" blocker below no longer applied.
+
+| | |
+|---|---|
+| Artifact | `outputs/HomeDesigner-1.22.24-12224.aab` |
+| Bytes | 26,366,739 |
+| SHA-256 | `126D3D0A6DDCB55CD0E9B6C026A2173E8871D1B69473A359B075B1002F9EC446` |
+| Signer | `CN=Nathan Joppich` — `EE:D4:E3:A9:11:BC:92:9A:D3:CD:33:36:FF:BF:32:C0:22:4A:1F:C5:21:BE:B1:13:02:F5:A0:7E:5F:00:6A:00` ✓ |
+| `verify-aab` | all green, **including `web bundle was built at 1.22.24`** |
+
+That last line is the one that mattered: both headline changes (forum
+navigation, wall angle lock) are web-bundle changes, so a stale `dist/` would
+have shipped a correctly-versioned shell around old code.
+
+**Not uploaded anywhere.** Internal testing first, production only on the
+owner's explicit OK.
+
+`keytool` is not on PATH in this environment. It is at
+`/c/Program Files/Android/Android Studio/jbr/bin/keytool.exe` — a bare
+`keytool` call silently produces no output, which could easily be mistaken for
+a passing signer check. It is not one.
+
 ## Session 2026-08-15 (Claude) — POINTS LEDGER + ROOM AUTO-NAMING (Worker only)
 
 Owner's call: build the cheap Workers AI features and the points backend
