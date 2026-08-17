@@ -265,21 +265,16 @@ check(
   'sync API rate-limits verified users and requires the exact Pro entitlement',
   workerSource.includes('USER_READ_LIMITER') &&
     workerSource.includes('USER_WRITE_LIMITER') &&
-    workerSource.includes("const PRO_ENTITLEMENT_LOOKUP_KEY = 'Pro';") &&
+    workerSource.includes('matchesProEntitlement(item, configuredId)') &&
     workerSource.includes("{ error: 'Too many requests' }, 429") &&
     workerConfig.includes('"ratelimits"'),
 );
-// The cross-platform grant is matched by the entitlement OBJECT id, because
-// that is the only thing RevenueCat's v2 `active_entitlements` reports.
-// Comparing that field to the SDK lookup key is never true, and it reported
-// every web buyer as free — invisible on desktop (which reads its own SDK) and
-// total on Android (which since direct Play Billing has no SDK at all).
-check(
-  'the web entitlement is matched by RevenueCat object id, not by lookup key alone',
-  /const PRO_ENTITLEMENT_ID = 'entl[a-z0-9]+';/.test(workerSource) &&
-    workerSource.includes('item.entitlement_id === configuredId') &&
-    workerSource.includes('proEntitlementIds(env)'),
-);
+// The matching itself is NOT asserted here. A source-text check cannot tell a
+// correct comparison from an incorrect one — it can only notice that the line
+// changed — and that is precisely how the previous version of this file pinned
+// a broken comparison in place and reported green while every web buyer was
+// being told they were free. `tests/entitlement.mjs` runs the real matcher over
+// real RevenueCat payloads. All that belongs here is that it is still wired up.
 check(
   'Cloudflare Pages and Android ship baseline data protections',
   pagesHeaders.includes('Strict-Transport-Security:') &&

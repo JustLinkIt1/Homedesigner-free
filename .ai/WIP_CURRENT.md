@@ -23,10 +23,48 @@ still accepts the lookup key, and — only when a customer holds some *other*
 active entitlement — re-derives the id from the project catalogue, so a
 recreated entitlement cannot silently lock buyers out again.
 
-**Worker-only. No app release.** After `wrangler deploy`, affected users get Pro
-on the next Android app start (or by tapping Restore purchase) while signed in
-to the same Google account. Evidence: customer `google:1019…7114` holds an
-active, unlimited `Pro` grant in RevenueCat while their phone shows free.
+**Worker-only. No app release.** Affected users get Pro on the next Android app
+start (or by tapping Restore purchase) while signed in to the same Google
+account. Evidence: customer `google:1019…7114` held an active, unlimited `Pro`
+grant in RevenueCat while their phone showed free. Ron was emailed the two
+steps; his phone is the end-to-end confirmation, which is still outstanding.
+
+### DEPLOYED — and it carried the whole undeployed Worker backlog with it
+
+`wrangler deploy` ships the working tree, not a patch. Everything Worker-side
+that had been sitting unreleased went live in the same push: the **points ledger
+and `/v1/points`**, **`POST /v1/ai/room-names`**, and the **Stripe point-pack
+rail**. Version `4155163c-185b-45da-9ae5-0361edabe94a`.
+
+Checked afterwards, all fine, but none of it was the intent:
+
+* `assertPricingIsSolvent()` runs at module load and the Worker boots, so the
+  price table is solvent. The 2026-08-15 note asked for that to be confirmed
+  before deploying — it now has been, the loud way.
+* D1 migration `0004_points` was **already applied** to the remote database
+  (`migrations list` reports nothing pending), so the points routes have their
+  tables.
+* `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are **not set** on the Worker
+  (`wrangler secret list`: only `FAL_KEY`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`,
+  `MODEL_ADMIN_EMAIL`, `REVENUECAT_SECRET_KEY`). The card rail is therefore inert
+  and the webhook fails closed, exactly as designed.
+* No client can reach any of it: the app still has no points UI.
+
+Live route check after deploy: `/v1/entitlement` 401 unauthenticated,
+`/v1/points` 401 unauthenticated, community threads 200.
+
+### The test that should have existed
+
+`workers/design-sync/src/entitlements.ts` now holds the matching logic as pure
+functions, and `tests/entitlement.mjs` (25 assertions, wired into `test:ci`)
+runs them over real v2 payloads.
+
+The old smoke check asserted the string `item.entitlement_id === 'Pro'`. That is
+worth remembering as a category: **a source-text assertion cannot distinguish a
+correct comparison from an incorrect one.** It pinned the bug in place and
+reported green for as long as the bug existed. Restoring the broken comparison
+now fails 4 assertions in the new suite; the smoke check no longer claims to
+verify the matching at all.
 
 ## 2026-08-16 (Claude) — 1.22.24 AAB IS BUILT AND VERIFIED
 

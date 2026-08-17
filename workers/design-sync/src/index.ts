@@ -12,6 +12,10 @@ import {
 } from './points';
 import { MAX_ROOMS_PER_CALL, generateRoomNames, validRoomSummaries } from './ai-features';
 import { stripeSignatureValid } from './stripe';
+import {
+  PRO_ENTITLEMENT_ID, liveEntitlements, matchesProEntitlement, proIdsFromCatalogue,
+  type ActiveEntitlementItem, type CatalogueEntitlement,
+} from './entitlements';
 
 interface Env {
   USER_DATA: R2Bucket;
@@ -207,12 +211,7 @@ async function sync(request: Request, env: Env, subject: string): Promise<Respon
 }
 
 interface RevenueCatActiveEntitlements {
-  items?: Array<{
-    /** The entitlement OBJECT id (`entl…`), not the lookup key the SDKs use.
-     *  See `PRO_ENTITLEMENT_LOOKUP_KEY`. */
-    entitlement_id?: string;
-    expires_at?: number | null;
-  }>;
+  items?: ActiveEntitlementItem[];
 }
 
 const PLAY_PACKAGE_NAME = 'com.homedesigner.app';
@@ -1448,32 +1447,9 @@ async function publishModel(request: Request, env: Env, job: ModelStudioJob): Pr
   return json(request, { job: clientModelJob(request, env, job), modelUrl: publicAssetUrl(env, finalKey) });
 }
 
-/**
- * The Pro entitlement, named the two different ways RevenueCat names it.
- *
- * `PRO_ENTITLEMENT_LOOKUP_KEY` is the identifier every SDK reports and the one
- * `hasProEntitlement()` matches in the client. The v2 REST API does NOT use it:
- * `active_entitlements` reports `entitlement_id` as the entitlement OBJECT id
- * (`entl…`, visible in the dashboard URL), so comparing that field to `'Pro'`
- * can never be true — it silently reported every web buyer as a free customer.
- *
- * That failure was invisible on desktop, which reads its own RevenueCat SDK
- * customerInfo and only consults this Worker as a fallback, and total on
- * Android, which since the switch to direct Play Billing has NO RevenueCat SDK
- * at all: `/v1/entitlement` is the only way a Stripe/web purchase can reach the
- * phone. Reported as "Pro on desktop, not on Android".
- */
-const PRO_ENTITLEMENT_LOOKUP_KEY = 'Pro';
-/** Object id of the entitlement above. Overridable because it is the one part
- *  of this pairing that changes if the entitlement is ever recreated — and a
- *  wrong id here locks paying customers out of the platform that has no other
- *  entitlement source. `proEntitlementIds()` re-derives it from the lookup key
- *  as a safety net, so this is the fast path rather than the only one. */
-const PRO_ENTITLEMENT_ID = 'entlf6de9c6c3d';
-
 /** Entitlement object ids carrying the Pro lookup key, resolved from the
  *  project catalogue. Cached per isolate: the catalogue changes about never,
- *  and this runs only when the id above fails to match. */
+ *  and this runs only when the configured id fails to match. */
 let proEntitlementIdCache: Set<string> | null = null;
 
 async function revenueCatFetch(env: Env, path: string): Promise<Response> {
@@ -1495,24 +1471,12 @@ async function proEntitlementIds(env: Env): Promise<Set<string>> {
   // which the customer-facing key may not carry. Failing here is not fatal:
   // the caller keeps whatever the configured id already decided.
   if (!response.ok) throw new Error('RevenueCat entitlement catalogue lookup failed');
-  const result = await response.json() as {
-    items?: Array<{ id?: string; lookup_key?: string }>;
-  };
-  const ids = new Set<string>();
-  for (const item of result.items ?? []) {
-    if (item.lookup_key === PRO_ENTITLEMENT_LOOKUP_KEY && typeof item.id === 'string') ids.add(item.id);
-  }
+  const result = await response.json() as { items?: CatalogueEntitlement[] };
+  const ids = proIdsFromCatalogue(result.items);
   // An empty result means the catalogue read did not answer the question, so it
   // must not be remembered as "there is no Pro entitlement".
   if (ids.size > 0) proEntitlementIdCache = ids;
   return ids;
-}
-
-/** A grant with no expiry is reported as `null`; treat a missing field the same
- *  way rather than expiring a lifetime unlock on a field RevenueCat omitted. */
-function entitlementLive(item: { expires_at?: number | null }, now: number): boolean {
-  if (item.expires_at === null || item.expires_at === undefined) return true;
-  return typeof item.expires_at === 'number' && item.expires_at > now;
 }
 
 async function revenueCatEntitled(env: Env, subject: string): Promise<boolean> {
@@ -1525,23 +1489,17 @@ async function revenueCatEntitled(env: Env, subject: string): Promise<boolean> {
   if (response.status === 404) return false;
   if (!response.ok) throw new Error('RevenueCat entitlement lookup failed');
   const result = await response.json() as RevenueCatActiveEntitlements;
-  const now = Date.now();
-  const items = (result.items ?? []).filter((item) => entitlementLive(item, now));
+  const items = liveEntitlements(result.items, Date.now());
   if (items.length === 0) return false;
 
   const configuredId = env.REVENUECAT_PRO_ENTITLEMENT_ID?.trim() || PRO_ENTITLEMENT_ID;
-  // The lookup key is accepted too: it costs nothing, and it is what a v1-shaped
-  // response or a future API revision would carry.
-  if (items.some((item) =>
-    item.entitlement_id === configuredId || item.entitlement_id === PRO_ENTITLEMENT_LOOKUP_KEY)) {
-    return true;
-  }
+  if (items.some((item) => matchesProEntitlement(item, configuredId))) return true;
 
   // This customer holds SOME active entitlement that is not the one we expect.
   // Either they hold an unrelated one (correctly not Pro) or the Pro entitlement
-  // was recreated and the id above is stale — which is the failure mode that
-  // locks paying Android customers out, so it is worth one catalogue read to
-  // rule out. Never reached for free customers: their item list is empty.
+  // was recreated and the configured id is stale — which is the failure mode
+  // that locks paying Android customers out, so it is worth one catalogue read
+  // to rule out. Never reached for free customers: their item list is empty.
   const ids = await proEntitlementIds(env).catch(() => null);
   if (!ids) return false;
   return items.some((item) => typeof item.entitlement_id === 'string' && ids.has(item.entitlement_id));
