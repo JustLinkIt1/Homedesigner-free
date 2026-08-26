@@ -1,18 +1,20 @@
 // Record short screen-capture clips of the real app, for promo/demo videos.
 //
 //   npm run build && node tools/capture-clips.mjs
+//   ONLY=02-draw-walls node tools/capture-clips.mjs     # just one clip
 //
 // Writes one .webm per clip into store/clips/. Companion to tools/screenshots.mjs
 // (same preview server, same selectors, same "no intro, no tour, ?pro=1" setup) —
 // that one takes stills for the Play listing, this one takes motion for a promo.
 //
 // GPU CAVEAT: like the screenshot harness, this falls back to ANGLE/SwiftShader
-// when there is no GPU. 2D-editor clips record fine that way; the 3D clips will
-// be visibly choppy because the frames are being rendered in software, not
-// because the app is slow. Capture 3D footage on a machine with a real GPU
-// (drop the --use-gl flags), or screen-record the Android build, which is the
-// truest footage anyway. Set CAPTURE_GPU=1 to launch without the software-GL
-// flags on a machine that has one.
+// when there is no GPU. The 2D-editor clips record fine that way. The 3D ones do
+// not: measured headless, the orbit clip took 656s to record a four-second
+// gesture, because every frame is a full software re-render of a shadowed,
+// post-processed scene. So the 3D clips are OPT-IN — set CAPTURE_GPU=1 on a
+// machine with a GPU (which also drops the software-GL flags), or CAPTURE_3D=1
+// to record them in software anyway and wait. Better still, screen-record the
+// Android build: it is a phone app, so that is the truest footage there is.
 //
 // On machines without a Playwright-managed Chromium, point CHROMIUM_PATH at a
 // Chrome binary.
@@ -87,9 +89,18 @@ const browser = await chromium.launch({
 });
 
 const errors = [];
+const only = process.env.ONLY;
+const want3d = gpu || process.env.CAPTURE_3D === '1';
 
-/** Record one clip. `body(page)` drives the app; the video is named `name`. */
-const clip = async (name, body) => {
+/** Record one clip. `body(page)` drives the app; the video is named `name`.
+ *  Pass `{ needsGpu: true }` for clips that are not worth recording in
+ *  software — see the GPU caveat above. */
+const clip = async (name, body, { needsGpu = false } = {}) => {
+  if (only && only !== name) return;
+  if (needsGpu && !want3d) {
+    console.log(`skipped ${name} — 3D clip; set CAPTURE_GPU=1 (or CAPTURE_3D=1) to record it`);
+    return;
+  }
   const ctx = await browser.newContext({
     viewport: VIEWPORT,
     isMobile: true,
@@ -158,8 +169,25 @@ await clip('02-draw-walls', async (page) => {
   await page.click('.tpl-card:last-child'); // blank project
   await page.waitForSelector('.toolbar');
   await page.waitForTimeout(1200);
-  await page.click('.dock-btn:nth-child(2)'); // Draw walls
-  await page.waitForTimeout(500);
+
+  // On a phone viewport the tool dock is behind the "Build" tab rather than
+  // on screen, so the tool has to be revealed before it can be picked. Select
+  // by aria-label, not nth-child: the dock interleaves `.dock-sep` separators
+  // between the buttons, so positional selectors do not mean what they look
+  // like. (dispatchEvent, as in screenshots.mjs — the drawer backdrop swallows
+  // real pointer events.)
+  const buildTab = page.locator('.mobile-tabs button').first();
+  const drawer = await buildTab.isVisible();
+  if (drawer) {
+    await buildTab.dispatchEvent('click');
+    await page.waitForTimeout(600);
+  }
+  await page.locator('.dock-btn[aria-label="Draw walls"]').dispatchEvent('click');
+  await page.waitForTimeout(400);
+  if (drawer) {
+    await buildTab.dispatchEvent('click'); // close it again, back to the canvas
+    await page.waitForTimeout(600);
+  }
 
   // A closed rectangle, corner by corner, pausing so the length/angle
   // readouts are legible in the footage.
@@ -198,7 +226,7 @@ await clip('04-to-3d', async (page) => {
   await page.waitForTimeout(9000); // three.js chunk + first frames
   await clearSelection(page);
   await page.waitForTimeout(2500);
-});
+}, { needsGpu: true });
 
 // 5. Orbiting the finished home in 3D.
 await clip('05-orbit-3d', async (page) => {
@@ -216,7 +244,7 @@ await clip('05-orbit-3d', async (page) => {
   }
   await page.mouse.up();
   await page.waitForTimeout(1200);
-});
+}, { needsGpu: true });
 
 await browser.close();
 stopPreview();

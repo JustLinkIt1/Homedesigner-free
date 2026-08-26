@@ -83,8 +83,10 @@ no locks), same `hd-intro-enabled=0` / tour-dismissed init script, same
 selectors — but records **video** instead of stills:
 
 ```bash
-npm run build && node tools/capture-clips.mjs      # phone-portrait clips
-LANDSCAPE=1 node tools/capture-clips.mjs           # landscape, for Play
+npm run build && node tools/capture-clips.mjs      # 2D clips, phone-portrait
+CAPTURE_GPU=1 node tools/capture-clips.mjs         # + the 3D clips, on a GPU box
+LANDSCAPE=1 CAPTURE_GPU=1 node tools/capture-clips.mjs   # landscape, for Play
+ONLY=02-draw-walls node tools/capture-clips.mjs    # re-shoot one clip
 ```
 
 Five clips into `store/clips/`: the project gallery, **walls being drawn live**
@@ -97,31 +99,55 @@ is selling.
 
 ### Verified in this session
 
-Run end to end on this container. Findings:
+Run end to end on this container, and fixed twice off the results.
 
-- **It works.** Clips recorded at 780×1688, VP8, 25 fps.
-- **The 3D scene renders fully under software GL** — walls, furniture, the deck,
-  the tree, the parasol, real shadows. Content is not the problem.
-- **Two things need a real machine:**
-  - **Frame rate.** Everything here runs on ANGLE/SwiftShader because the
-    container has no GPU. Stills survive that (the screenshot harness already
-    notes software GL "can't finish 1600×2560"); *motion* does not. Measured:
-    the four static-ish clips took ~130s in total, while the single **orbit**
-    clip — a drag gesture that lasts about a second on a phone — was still
-    rendering minutes later, because every frame of it is a full software
-    re-render of a shadowed, post-processed scene. That footage would judder.
-    Run the capture on the workstation with `CAPTURE_GPU=1`, or screen-record
-    the Android build.
-  - **Resolution.** Playwright only ever scales a page **down** to fit
-    `recordVideo.size`; asking for a bigger size parks the page 1:1 in the corner
-    of an empty frame — which is exactly what the first run produced before the
-    fix. The script now records at true phone CSS pixels and the upscale happens
-    in post:
+- **It works** — but only after two real bugs, both worth knowing about before
+  anyone extends it.
+- **The 2D clips are good footage.** The walls clip draws a closed rectangle
+  corner by corner with the live `3.20 m · 270°` readout on screen, in 11s.
+- **The 3D scene renders correctly under software GL** — walls, furniture, the
+  deck, the tree, the parasol, real shadows. Content is not the problem; speed
+  is.
 
-    ```bash
-    ffmpeg -i store/clips/04-to-3d.webm -vf scale=1080:-2:flags=lanczos \
-           -c:v libx264 -crf 18 -pix_fmt yuv420p 04-to-3d.mp4
-    ```
+**Bug 1 — the tool dock is not on screen at phone width.** The first run's
+walls clip failed with a 30s click timeout and recorded 40 seconds of an empty
+grid. On a 390px viewport the tools live behind the **Build** tab, so the dock
+has to be opened before a tool can be picked. Positional selectors are also a
+trap here: `.tool-dock` interleaves `.dock-sep` separators between buttons, so
+`.dock-btn:nth-child(2)` is not the second tool. Select by `aria-label`, and
+`dispatchEvent('click')` rather than `click()` — the drawer backdrop swallows
+real pointer events, which is why `screenshots.mjs` already does the same.
+
+**Bug 2 — Playwright never scales a page up.** `recordVideo.size` only ever
+scales a page *down* to fit; asking for a larger size parks the page 1:1 in the
+corner of a mostly-empty frame, which is what the first run produced. Record at
+true phone CSS pixels and upscale in post:
+
+```bash
+ffmpeg -i store/clips/04-to-3d.webm -vf scale=1080:-2:flags=lanczos \
+       -c:v libx264 -crf 18 -pix_fmt yuv420p 04-to-3d.mp4
+```
+
+(Playwright ships its own ffmpeg if the system has none — look under the
+browsers path for `ffmpeg-*/ffmpeg-linux`.)
+
+**And the finding that decides where capture happens: 3D motion is not viable
+headless.** Measured, same run, same machine:
+
+| Clip | Record time |
+| --- | --- |
+| `01-home` | 4.9s |
+| `02-draw-walls` | 11.4s |
+| `03-furnish` | 11.0s |
+| `04-to-3d` | 28.7s |
+| **`05-orbit-3d`** | **656.5s** |
+
+Eleven minutes to record a four-second drag, because every frame is a full
+software re-render of a shadowed, post-processed scene — and the result still
+judders. So the two 3D clips are now **opt-in**: `CAPTURE_GPU=1` on a machine
+with a GPU (which also drops the software-GL flags), or `CAPTURE_3D=1` to record
+them in software anyway and wait. The 2D clips stay the fast default, and
+`ONLY=<clip>` re-shoots a single one.
 
 **The best footage is not headless at all — it is a screen recording of the real
 Android build on a real phone.** It is a phone app; that footage is truest,
