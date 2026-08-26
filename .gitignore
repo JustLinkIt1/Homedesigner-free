@@ -24,3 +24,8 @@ site-dist
 
 # Release artifacts (AAB copies) stay local; Drive/Play hold the canonical ones.
 outputs/
+
+# Raw screen-capture footage from tools/capture-clips.mjs. Regenerable, and the
+# usable takes come off a GPU machine or a real phone — only the finished,
+# edited video is worth keeping. See docs/PROMO_VIDEO_PLAN.md.
+store/clips/
