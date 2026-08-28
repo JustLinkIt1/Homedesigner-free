@@ -199,9 +199,10 @@
           <span class="tag">Buy on the web</span>
           <h2>Card checkout</h2>
           <p>
-            Secure card payment, handled by Stripe through RevenueCat. Sign in
-            with Google at checkout so your Pro unlock follows your account onto
-            every device you use — phone, tablet and browser.
+            You sign in with Google first, then pay by card — checkout is
+            handled by Stripe through RevenueCat, and we never see your card
+            details. Signing in is what makes your Pro unlock follow your
+            account onto every device you use: phone, tablet and browser.
           </p>
           <!-- Filled from the live RevenueCat catalogue by the script at the
                foot of this page. This static markup is the fallback shown when
@@ -213,9 +214,12 @@
           <div class="grow"></div>
           <a class="btn primary big" href="/app/?buy=pro" style="margin-top:20px">
             <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            <span id="buy-cta">Buy Pro</span>
+            <span id="buy-cta">Get Pro</span>
           </a>
-          <p class="after" id="price-note">Taxes may be added at checkout.</p>
+          <p class="after" id="price-note">
+            Opens the app, where you sign in with Google and pay by card.
+            Taxes may be added at checkout.
+          </p>
         </div>
 
         <div class="card">
@@ -419,7 +423,7 @@
         grid.removeAttribute('data-loading');
 
         if (plans.length === 1) {
-          document.getElementById('buy-cta').textContent = 'Buy Pro — ' + plans[0].price;
+          document.getElementById('buy-cta').textContent = 'Get Pro — ' + plans[0].price;
         } else {
           document.getElementById('buy-cta').textContent = 'Choose a plan';
         }
