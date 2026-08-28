@@ -58,6 +58,10 @@ interface ProState {
   plans: ProPlan[];
   busy: boolean;
   upsellFeature: ProFeature | null;
+  /** Whether the Pro sheet is showing. Separate from `upsellFeature` because
+   *  the sheet can also be opened directly — from the /buy landing page — with
+   *  no feature to frame it, in which case it shows the plain Pro pitch. */
+  upsellOpen: boolean;
   refresh: () => Promise<void>;
   /** Silent re-check for an entitlement granted outside the app (Play promo
    *  code). Resolves true only when it flipped a non-Pro user to Pro. */
@@ -71,7 +75,8 @@ interface ProState {
   linkAccount: (account: { appUserID: string; email: string | null; displayName: string | null }) => Promise<void>;
   unlinkAccount: () => Promise<void>;
   redeemCode: (code: string) => boolean;
-  openUpsell: (f: ProFeature) => void;
+  /** Omit the feature for a direct "buy Pro" entry with no feature framing. */
+  openUpsell: (f?: ProFeature | null) => void;
   closeUpsell: () => void;
 }
 
@@ -83,6 +88,7 @@ export const useProStore = create<ProState>((set, get) => ({
   plans: [],
   busy: false,
   upsellFeature: null,
+  upsellOpen: false,
 
   refresh: async () => {
     const provider = getProProvider();
@@ -260,14 +266,14 @@ export const useProStore = create<ProState>((set, get) => ({
     let entitled = isReferralRedeemed();
     // Clear account-derived state before touching the network so sign-out is
     // immediate and cannot leave another person's Pro badge or prices visible.
-    set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null });
+    set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null, upsellOpen: false });
     writeCache(entitled);
     try {
       await provider.init();
       entitled = (await provider.disconnect()) || entitled;
     } finally {
       // A device-owned Play purchase remains valid after account sign-out.
-      set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null });
+      set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null, upsellOpen: false });
       writeCache(entitled);
     }
   },
@@ -281,6 +287,6 @@ export const useProStore = create<ProState>((set, get) => ({
     return true;
   },
 
-  openUpsell: (f) => set({ upsellFeature: f }),
-  closeUpsell: () => set({ upsellFeature: null }),
+  openUpsell: (f = null) => set({ upsellFeature: f, upsellOpen: true }),
+  closeUpsell: () => set({ upsellFeature: null, upsellOpen: false }),
 }));

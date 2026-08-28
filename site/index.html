@@ -77,6 +77,10 @@
     .btn.primary:hover { box-shadow: 0 12px 30px -10px rgba(13, 99, 248, 0.8); }
     .btn .ic { width: 18px; height: 18px; flex: none; }
     .nav .btn { padding: 9px 18px; font-size: 13.5px; }
+    /* Three CTAs do not fit a phone-width bar. Shed them in order of
+       importance as it narrows, so "Buy Pro" is the one that always survives. */
+    @media (max-width: 1040px) { .nav .nav-hide-md { display: none; } }
+    @media (max-width: 720px) { .nav .nav-hide-sm { display: none; } }
 
     /* ---------- Hero ---------- */
     .hero { padding: 150px 0 60px; text-align: center; position: relative; }
@@ -98,7 +102,7 @@
       font-size: clamp(16px, 2.2vw, 19px);
     }
     .hero .ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 34px; }
-    .hero .note { margin-top: 16px; font-size: 13px; color: var(--text-2); }
+    .note { margin-top: 16px; font-size: 13px; color: var(--text-2); }
     .play-badge-link {
       display: inline-flex; align-items: center; border-radius: 14px;
       transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
@@ -267,12 +271,14 @@
       <nav class="links">
         <a href="#see-it">See it</a>
         <a href="#features">Features</a>
+        <a href="/buy">Pro</a>
         <a href="/community">Community</a>
         <a href="#get-app">Get the app</a>
       </nav>
       <span class="spacer"></span>
-      <a class="btn" href="./app/">Open web app</a>
-      <a class="btn primary" href="https://play.google.com/store/apps/details?id=com.homedesigner.app" target="_blank" rel="noopener">Get it on Google Play</a>
+      <a class="btn nav-hide-md" href="./app/">Open web app</a>
+      <a class="btn nav-hide-sm" href="https://play.google.com/store/apps/details?id=com.homedesigner.app" target="_blank" rel="noopener">Get it on Google Play</a>
+      <a class="btn primary" href="/buy">Buy Pro</a>
     </div>
   </header>
 
@@ -399,13 +405,17 @@
           <img class="mark" src="./assets/brand-icon.png" alt="HomeDesigner app icon" width="84" height="84" />
           <span class="access-badge"><span class="dot"></span> Available worldwide</span>
           <h2>Get HomeDesigner</h2>
-          <p>Download HomeDesigner from Google Play, or start designing immediately in the full web app.</p>
+          <p>Download HomeDesigner from Google Play, or start designing immediately in the full web app. Both are free to use.</p>
           <div class="ctas">
             <a class="play-badge-link" href="https://play.google.com/store/apps/details?id=com.homedesigner.app" target="_blank" rel="noopener" aria-label="Get HomeDesigner on Google Play">
               <img class="play-badge" src="./assets/google-play-badge.png" alt="Get it on Google Play" width="734" height="219" loading="lazy" />
             </a>
             <a class="btn" href="./app/">Open the web app →</a>
           </div>
+          <p class="note" style="margin-top:20px;font-size:14.5px">
+            Want unlimited floors, the full catalog and watermark-free renders?
+            <a href="/buy" style="color:#3d8bff;font-weight:700">Buy HomeDesigner Pro →</a>
+          </p>
         </div>
       </div>
     </section>

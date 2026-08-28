@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Buy HomeDesigner Pro — unlock every feature</title>
+  <meta name="description" content="Unlock HomeDesigner Pro: unlimited floors and projects, the full furniture catalog, watermark-free renders and PDF plan export. Buy on the web or on Google Play." />
+  <link rel="canonical" href="https://homedesignerapp.com/buy" />
+  <link rel="icon" type="image/png" href="../assets/brand-icon.png" />
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" />
+  <meta property="og:title" content="Buy HomeDesigner Pro" />
+  <meta property="og:description" content="Unlimited floors and projects, the full furniture catalog, watermark-free renders and PDF plan export." />
+  <meta property="og:image" content="https://homedesignerapp.com/assets/icon-512.png" />
+  <meta property="og:url" content="https://homedesignerapp.com/buy" />
+  <meta name="theme-color" content="#0a0d14" />
+  <style>
+    /* Brand tokens mirror site/index.html. Kept inline for the same reason the
+       landing page is: one self-contained file, no extra request on a page
+       whose whole job is to load fast and take a payment. */
+    @font-face {
+      font-family: 'Plus Jakarta Sans';
+      font-style: normal;
+      font-weight: 200 800;
+      font-display: swap;
+      src: url('../assets/pjs.woff2') format('woff2');
+    }
+    :root {
+      --bg: #0a0d14;
+      --surface: #141924;
+      --surface-2: #1a2030;
+      --border: #232b3a;
+      --text: #eef1f6;
+      --text-2: #a3adbe;
+      --brand: #0d63f8;
+      --brand-2: #3d8bff;
+      --grad: linear-gradient(135deg, #0d63f8, #3d8bff);
+      --radius: 16px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    img { max-width: 100%; display: block; }
+    a { color: inherit; text-decoration: none; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+    header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      background: rgba(10, 13, 20, 0.72);
+      border-bottom: 1px solid rgba(35, 43, 58, 0.6);
+    }
+    .nav { display: flex; align-items: center; gap: 14px; height: 64px; }
+    .nav .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; letter-spacing: -0.02em; }
+    .nav .logo img { width: 32px; height: 32px; border-radius: 9px; }
+    .nav .links { display: flex; gap: 26px; margin-left: 30px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+    .nav .links a:hover { color: var(--text); }
+    .nav .spacer { flex: 1; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      white-space: nowrap;
+      padding: 11px 22px; border-radius: 999px; font-weight: 700; font-size: 14.5px;
+      border: 1px solid var(--border); color: var(--text); background: var(--surface);
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      cursor: pointer;
+    }
+    .btn:hover { transform: translateY(-1px); background: var(--surface-2); }
+    .btn.primary {
+      background: var(--grad); border-color: transparent; color: #fff;
+      box-shadow: 0 8px 24px -10px rgba(13, 99, 248, 0.65);
+    }
+    .btn.primary:hover { box-shadow: 0 12px 30px -10px rgba(13, 99, 248, 0.8); }
+    .btn.big { padding: 15px 30px; font-size: 16px; width: 100%; }
+    .btn .ic { width: 18px; height: 18px; flex: none; }
+    .nav .btn { padding: 9px 18px; font-size: 13.5px; }
+    @media (max-width: 860px) { .nav .links { display: none; } }
+    @media (max-width: 560px) { .nav .btn.hide-sm { display: none; } }
+
+    .hero { padding: 132px 0 22px; text-align: center; position: relative; }
+    .hero::before {
+      content: ''; position: absolute; inset: -20% 0 auto 0; height: 560px;
+      background: radial-gradient(60% 60% at 50% 20%, rgba(13, 99, 248, 0.22), transparent 70%);
+      pointer-events: none;
+    }
+    .hero > * { position: relative; }
+    .crown {
+      display: inline-flex; align-items: center; gap: 9px;
+      padding: 7px 16px; border-radius: 999px;
+      border: 1px solid rgba(61, 139, 255, 0.35); background: rgba(13, 99, 248, 0.12);
+      font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--brand-2);
+    }
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 56px); font-weight: 800; letter-spacing: -0.035em;
+      line-height: 1.08; margin-top: 20px;
+    }
+    .hero h1 .accent { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p.sub { color: var(--text-2); font-size: clamp(16px, 2.1vw, 19px); max-width: 620px; margin: 16px auto 0; }
+
+    section.block { padding: 44px 0 92px; }
+    .buy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 26px 26px;
+      display: flex; flex-direction: column;
+    }
+    .card.featured { border-color: rgba(61, 139, 255, 0.5); box-shadow: 0 20px 50px -30px rgba(13, 99, 248, 0.8); }
+    .card .tag { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-2); }
+    .card h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 8px; }
+    .card p { color: var(--text-2); font-size: 15px; }
+    .card .grow { flex: 1; min-height: 14px; }
+    .card .after { color: var(--text-2); font-size: 13px; margin-top: 12px; text-align: center; }
+    .play-badge-link { display: inline-block; align-self: center; border-radius: 10px; }
+    .play-badge-link:focus-visible { outline: 3px solid var(--brand-2); outline-offset: 4px; }
+    .play-badge { width: 210px; height: auto; }
+
+    /* Three plans, always on one row. `auto-fit` wrapped the ladder to two
+       columns and orphaned Lifetime underneath, which read as a fourth
+       option missing rather than a set of three. */
+    .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+    .plan {
+      border: 1px solid var(--border); background: var(--surface-2);
+      border-radius: 13px; padding: 13px 8px; text-align: center; min-width: 0;
+    }
+    .plan.best { border-color: rgba(61, 139, 255, 0.55); }
+    .plan b { display: block; font-size: 15px; letter-spacing: -0.02em; }
+    .plan span { display: block; color: var(--text-2); font-size: 12.5px; line-height: 1.35; }
+    .plan .badge {
+      display: inline-block; margin-bottom: 6px; padding: 2px 9px; border-radius: 999px;
+      background: var(--grad); color: #fff; font-size: 10.5px; font-weight: 800;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+
+    .band { background: var(--surface); border-block: 1px solid var(--border); }
+    .kicker { font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-2); }
+    .band h2.title { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.03em; margin-top: 10px; }
+    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px 34px; margin-top: 32px; }
+    .tick { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; }
+    .tick svg { flex: none; width: 22px; height: 22px; margin-top: 2px; }
+    .tick b { display: block; font-size: 15.5px; letter-spacing: -0.01em; }
+    .tick span { color: var(--text-2); font-size: 14px; }
+
+    .faq { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 34px; }
+    .faq div { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .faq h3 { font-size: 16.5px; font-weight: 800; letter-spacing: -0.02em; }
+    .faq p { color: var(--text-2); font-size: 14.5px; margin-top: 6px; }
+    .faq a { color: var(--brand-2); text-decoration: underline; }
+
+    footer { border-top: 1px solid var(--border); padding: 30px 0 44px; color: var(--text-2); font-size: 14px; }
+    footer .row { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+    footer .spacer { flex: 1; }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="logo" href="/">
+        <img src="../assets/brand-icon.png" alt="" width="32" height="32" />
+        HomeDesigner
+      </a>
+      <nav class="links">
+        <a href="/#see-it">See it</a>
+        <a href="/#features">Features</a>
+        <a href="/community">Community</a>
+        <a href="/buy">Pro</a>
+      </nav>
+      <span class="spacer"></span>
+      <a class="btn hide-sm" href="/app/">Open web app</a>
+      <a class="btn primary" href="/app/?buy=pro">Buy Pro</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <span class="crown">
+          <svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 6l4 5 6-8 6 8 4-5v12H2z"/></svg>
+          HomeDesigner Pro
+        </span>
+        <h1>Unlock <span class="accent">every feature</span></h1>
+        <p class="sub">
+          One upgrade for unlimited floors and projects, the complete furniture
+          catalog, watermark-free renders and PDF plan export — on your phone and
+          in your browser.
+        </p>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap buy-grid">
+        <div class="card featured">
+          <span class="tag">Buy on the web</span>
+          <h2>Card checkout</h2>
+          <p>
+            Secure card payment, handled by Stripe through RevenueCat. Sign in
+            with Google at checkout so your Pro unlock follows your account onto
+            every device you use — phone, tablet and browser.
+          </p>
+          <div class="plans">
+            <div class="plan"><b>Monthly</b><span>per month</span></div>
+            <div class="plan best"><span class="badge">Best value</span><b>Yearly</b><span>per year</span></div>
+            <div class="plan"><b>Lifetime</b><span>one payment</span></div>
+          </div>
+          <div class="grow"></div>
+          <a class="btn primary big" href="/app/?buy=pro" style="margin-top:20px">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18"/></svg>
+            Choose a plan
+          </a>
+          <p class="after">Prices are shown at checkout in your local currency.</p>
+        </div>
+
+        <div class="card">
+          <span class="tag">Buy on Android</span>
+          <h2>Google Play</h2>
+          <p>
+            Already using the Android app? Buy Pro inside it and Google Play
+            handles the payment with the card already on your account — no
+            sign-in needed to purchase.
+          </p>
+          <div class="plans">
+            <div class="plan"><b>Monthly</b><span>per month</span></div>
+            <div class="plan best"><span class="badge">Best value</span><b>Yearly</b><span>per year</span></div>
+            <div class="plan"><b>Lifetime</b><span>one payment</span></div>
+          </div>
+          <div class="grow"></div>
+          <a class="play-badge-link" style="margin-top:20px"
+             href="https://play.google.com/store/apps/details?id=com.homedesigner.app"
+             target="_blank" rel="noopener">
+            <img class="play-badge" src="../assets/google-play-badge.png" alt="Get it on Google Play" />
+          </a>
+          <p class="after">Sign in with Google in the app to use Pro on the web too.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block band">
+      <div class="wrap">
+        <span class="kicker">What Pro unlocks</span>
+        <h2 class="title">Everything, with nothing held back</h2>
+        <div class="cols">
+          <div class="tick">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+            <div><b>Unlimited floors &amp; projects</b><span>Add upper storeys and basements, and keep as many designs as you like.</span></div>
+          </div>
+          <div class="tick">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+            <div><b>The full furniture catalog</b><span>Every piece and fixture, including the premium 3D models.</span></div>
+          </div>
+          <div class="tick">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+            <div><b>Watermark-free renders</b><span>Save renders and Photo Mode images clean, and at higher resolution.</span></div>
+          </div>
+          <div class="tick">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+            <div><b>PDF &amp; DXF plan export</b><span>Print-ready plans for builders, landlords and permit applications.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <span class="kicker">Before you buy</span>
+        <h2 class="title" style="font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-0.03em;margin-top:10px">Good to know</h2>
+        <div class="faq">
+          <div>
+            <h3>Do I need an account?</h3>
+            <p>For the web checkout, yes — sign in with Google so the purchase is tied to your account rather than one browser. On Android you can buy without signing in, but signing in is what carries Pro across to the web.</p>
+          </div>
+          <div>
+            <h3>Does one purchase cover every device?</h3>
+            <p>Yes, as long as you sign in with the same Google account. Pro bought on the web works in the Android app, and the other way round.</p>
+          </div>
+          <div>
+            <h3>I already bought Pro</h3>
+            <p>Open the app, go to the Pro sheet and choose <b>Restore purchases</b>, or simply sign in with the Google account you bought it on.</p>
+          </div>
+          <div>
+            <h3>Refunds and cancellations</h3>
+            <p>Purchases made on Android are handled by Google Play; web purchases are handled by RevenueCat and Stripe. Manage or cancel a subscription wherever you bought it.</p>
+          </div>
+          <div>
+            <h3>Is there a free version?</h3>
+            <p>Yes. Drawing plans, furnishing a room and the 3D walkthrough are all free — <a href="/app/">try it in your browser</a> before you buy.</p>
+          </div>
+          <div>
+            <h3>Your data</h3>
+            <p>Designs are stored on your device and, if you sign in, synced to your account. See the <a href="/privacy.html">privacy policy</a>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap row">
+      <span>© <span id="yr"></span> HomeDesigner</span>
+      <span class="spacer"></span>
+      <a href="/privacy.html">Privacy policy</a>
+      <a href="https://play.google.com/store/apps/details?id=com.homedesigner.app">Google Play</a>
+      <a href="/app/">Web app</a>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('yr').textContent = String(new Date().getFullYear());
+  </script>
+</body>
+</html>

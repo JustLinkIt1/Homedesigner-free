@@ -214,6 +214,24 @@ export default function App() {
     if (view !== '3d' && walkMode) setWalkMode(false);
   }, [view, walkMode, setWalkMode]);
 
+  // `/buy` on the marketing site sends buyers to `/app/?buy=pro`. Open the Pro
+  // sheet on arrival so the checkout they were promised is the first thing they
+  // see, and drop the parameter so a refresh or a shared link does not reopen
+  // it. Nothing to do for someone who already owns Pro — the sheet would not
+  // render anyway (`upsellOpen && !isPro`), so just clean the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('buy') !== 'pro') return;
+    if (!useProStore.getState().isPro) useProStore.getState().openUpsell();
+    params.delete('buy');
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
+    );
+  }, []);
+
   useEffect(() => {
     initNative(() => {
       const st = stateRef.current;
@@ -224,7 +242,7 @@ export default function App() {
         useConfirm.getState().answer(false);
         return true;
       }
-      if (useProStore.getState().upsellFeature) {
+      if (useProStore.getState().upsellOpen) {
         useProStore.getState().closeUpsell();
         return true;
       }

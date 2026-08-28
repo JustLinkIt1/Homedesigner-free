@@ -42,13 +42,16 @@ const CORE_BENEFITS = [
 /** Feature-triggered Pro purchase sheet (Play Billing on Android, Stripe-backed
  * RevenueCat Web Billing on configured desktop builds). */
 export default function ProUpsellModal() {
-  const { upsellFeature, closeUpsell, purchase, restore, busy, priceLabel, plans, isPro } = useProStore();
+  const { upsellFeature, upsellOpen, closeUpsell, purchase, restore, busy, priceLabel, plans, isPro } = useProStore();
   const account = useAuthStore((s) => s.account);
   const authBusy = useAuthStore((s) => s.busy);
   const signIn = useAuthStore((s) => s.signIn);
   const t = useI18n();
 
-  const open = !!upsellFeature && !isPro;
+  // Not `!!upsellFeature`: the sheet also opens straight from the /buy page
+  // with no feature, and then shows the plain Pro pitch — the feature hero
+  // below is already conditional on `copy`.
+  const open = upsellOpen && !isPro;
   // Escape, focus handling and presence now live in <Modal>. Because the modal
   // stays mounted while it animates out, `upsellFeature` may already be null —
   // keep the last one so the closing frame still renders its copy instead of
@@ -145,13 +148,24 @@ export default function ProUpsellModal() {
           <span className="pro-badge" id="pro-title">
             <Crown className="icon" /> {APP_NAME} Pro
           </span>
-          {copy && Icon && (
+          {copy && Icon ? (
             <>
               <span className="pro-hero-icon">
                 <Icon className="icon" />
               </span>
               <h2>{t(copy.title)}</h2>
               <p>{t(copy.blurb)}</p>
+            </>
+          ) : (
+            /* Opened straight from /buy, with no feature to frame it. The
+               benefits list below carries the pitch, so this only needs a
+               heading — and it reuses a string every locale already has
+               rather than adding two more to translate. */
+            <>
+              <span className="pro-hero-icon">
+                <Crown className="icon" />
+              </span>
+              <h2>{t('Unlock Pro')}</h2>
             </>
           )}
         </div>
