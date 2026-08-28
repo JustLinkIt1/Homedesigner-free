@@ -261,6 +261,9 @@ export const KO: Record<string, string> = {
   'Click the first point or': '첫 점을 클릭하거나',
   'Double-click or': '더블클릭하거나',
   'press Enter to finish': 'Enter를 눌러 완료',
+  'Drag to size the room': '드래그하여 방 크기를 정하세요',
+  'Undo point': '점 실행 취소',
+  'Undo last point': '마지막 점 실행 취소',
   Finish: '완료',
   "3D view isn't available on this device — it needs WebGL, which your browser/graphics driver doesn't provide. The 2D editor still works fully.":
     '이 기기에서는 3D 보기를 사용할 수 없습니다 — WebGL이 필요하지만 브라우저나 그래픽 드라이버가 지원하지 않습니다. 2D 편집기는 계속 정상 작동합니다.',

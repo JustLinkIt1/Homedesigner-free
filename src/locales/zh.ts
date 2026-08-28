@@ -261,6 +261,9 @@ export const ZH: Record<string, string> = {
   'Click the first point or': '点击第一个点或',
   'Double-click or': '双击或',
   'press Enter to finish': '按 Enter 完成',
+  'Drag to size the room': '拖动以设置房间大小',
+  'Undo point': '撤销点',
+  'Undo last point': '撤销最后一个点',
   Finish: '完成',
   "3D view isn't available on this device — it needs WebGL, which your browser/graphics driver doesn't provide. The 2D editor still works fully.":
     '此设备无法使用 3D 视图 — 它需要 WebGL，而你的浏览器或显卡驱动未提供。2D 编辑器仍可完整使用。',

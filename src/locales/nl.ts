@@ -261,6 +261,9 @@ export const NL: Record<string, string> = {
   'Click the first point or': 'Klik op het eerste punt of',
   'Double-click or': 'Dubbelklik of',
   'press Enter to finish': 'druk op Enter om te voltooien',
+  'Drag to size the room': 'Sleep om de grootte van de kamer te bepalen',
+  'Undo point': 'Punt ongedaan maken',
+  'Undo last point': 'Laatste punt ongedaan maken',
   Finish: 'Voltooien',
   "3D view isn't available on this device — it needs WebGL, which your browser/graphics driver doesn't provide. The 2D editor still works fully.":
     'De 3D-weergave is niet beschikbaar op dit apparaat — het heeft WebGL nodig, dat je browser of grafische driver niet levert. De 2D-editor werkt nog volledig.',

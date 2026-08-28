@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Plus, Layers, X, Crown, Copy, ChevronUp, ChevronDown } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
@@ -11,7 +11,7 @@ import { useI18n } from '../lib/i18n';
  * it, "+" to add one above, double-click to rename, × to remove. Shown in both
  * the 2D and 3D views so you can move between levels anywhere.
  */
-export default function FloorSwitcher() {
+export default function FloorSwitcher({ variant = 'floating' }: { variant?: 'floating' | 'toolbar' }) {
   const floors = useDesign((s) => s.floors);
   const activeFloorId = useDesign((s) => s.activeFloorId);
   const setActiveFloor = useDesign((s) => s.setActiveFloor);
@@ -25,6 +25,19 @@ export default function FloorSwitcher() {
   const [editing, setEditing] = useState<string | null>(null);
   const [cloneOpen, setCloneOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const switcherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onDoc = (event: MouseEvent) => {
+      if (switcherRef.current && !switcherRef.current.contains(event.target as Node)) {
+        setMobileOpen(false);
+        setCloneOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [mobileOpen]);
 
   if (floors.length === 0) return null;
   // Highest storey at the top of the list.
@@ -47,7 +60,7 @@ export default function FloorSwitcher() {
   };
 
   return (
-    <div className={`floor-switcher ${mobileOpen ? 'expanded' : ''}`} aria-label={t('Storeys')}>
+    <div ref={switcherRef} className={`floor-switcher ${variant}-floor-switcher ${mobileOpen ? 'expanded' : ''}`} aria-label={t('Storeys')}>
       <button
         className="floor-current"
         onClick={() => setMobileOpen((v) => !v)}
@@ -60,6 +73,7 @@ export default function FloorSwitcher() {
           ? <ChevronUp className="icon floor-current-caret" />
           : <ChevronDown className="icon floor-current-caret" />}
       </button>
+      <div className="floor-switcher-menu">
       <button className="floor-add" onClick={handleAdd} data-tip={t('Add an empty floor above')} aria-label={t('Add an empty floor above')}>
         <Plus className="icon" style={{ width: 14, height: 14 }} /> {t('Floor')}
         {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
@@ -140,6 +154,7 @@ export default function FloorSwitcher() {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

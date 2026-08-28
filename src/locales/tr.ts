@@ -261,6 +261,9 @@ export const TR: Record<string, string> = {
   'Click the first point or': 'İlk noktaya tıklayın veya',
   'Double-click or': 'Çift tıklayın veya',
   'press Enter to finish': 'bitirmek için Enter’a basın',
+  'Drag to size the room': 'Odanın boyutunu belirlemek için sürükleyin',
+  'Undo point': 'Noktayı geri al',
+  'Undo last point': 'Son noktayı geri al',
   Finish: 'Bitir',
   "3D view isn't available on this device — it needs WebGL, which your browser/graphics driver doesn't provide. The 2D editor still works fully.":
     '3B görünüm bu cihazda kullanılamıyor — tarayıcınızın veya grafik sürücünüzün sağlamadığı WebGL gerekir. 2B düzenleyici tamamen çalışmaya devam eder.',

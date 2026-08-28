@@ -531,9 +531,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
 
         {!multi && !selection.id && (
           <>
-            <div className="props" style={{ paddingBottom: 4 }}>
+            {s.walls.length > 0 && s.rooms.length === 0 && <div className="props" style={{ paddingBottom: 4 }}>
               <button
-                className="btn primary block"
+                className="btn block"
                 onClick={() => {
                   const n = s.detectRoomsFromWalls();
                   if (n === 0) toast.info(t('No new enclosed rooms found — make sure walls form closed loops.'));
@@ -542,7 +542,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               >
                 <Sparkles className="icon" /> {t('Auto-detect rooms')}
               </button>
-            </div>
+            </div>}
             <PlanCard />
             <ExteriorCard />
             <RoofCard />

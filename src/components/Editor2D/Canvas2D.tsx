@@ -29,7 +29,7 @@ import { planCapture } from '../../lib/renderBridge';
 import FurnitureSymbol from './FurnitureSymbol';
 import { buildSnapElements, nearestSnap, lockToAngle, type SnapKind, type GuideLine } from '../../lib/snapping';
 import {
-  isDragDrawTool, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan,
+  isDragDrawTool, shouldPanOnTouch, stripDegenerateTail, roomRectangle, readoutOffsetCm, transformPlan,
 } from '../../lib/drawGesture';
 import { kitchenRunUnits, RUN_UNIT } from '../../lib/kitchenRun';
 import { computeWallPolygons } from '../../lib/wallGeometry';
@@ -129,6 +129,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     addWall: st.addWall,
     updateWall: st.updateWall,
     addRoom: st.addRoom,
+    addRoomWithWalls: st.addRoomWithWalls,
+    detectRoomsFromWalls: st.detectRoomsFromWalls,
     addKitchenRun: st.addKitchenRun,
     updateBackground: st.updateBackground,
     addFurniture: st.addFurniture,
@@ -162,6 +164,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   // Draft state for in-progress drawing.
   const [draft, setDraft] = useState<Point[]>([]);
   const [cursor, setCursor] = useState<Point | null>(null);
+  const roomDragStartRef = useRef<Point | null>(null);
   // Tape-measure tool: first click sets A, second click freezes the A–B span.
   const [measureA, setMeasureA] = useState<Point | null>(null);
   const [measureSeg, setMeasureSeg] = useState<{ a: Point; b: Point } | null>(null);
@@ -313,11 +316,19 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     };
   }, []);
 
+  const undoDraftPoint = () => {
+    setLengthInput('');
+    setDraft((points) => points.slice(0, -1));
+    setCursor(null);
+    setSnapKind('free');
+    setSnapGuide(null);
+  };
+
   // Keyboard: Enter/Escape to finish, Delete to remove, undo/redo.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-      const chaining = (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room') && draft.length > 0;
+      const chaining = (tool === 'wall' || tool === 'halfWall' || tool === 'fence') && draft.length > 0;
       if (e.key === 'Escape') {
         if (lengthInput) {
           setLengthInput('');
@@ -335,6 +346,12 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       } else if (e.key === 'Enter') {
         if (chaining && lengthInput) commitTypedLength();
         else finishDraft();
+      } else if (chaining && (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undoDraftPoint();
+      } else if (chaining && e.key === 'Backspace' && !lengthInput) {
+        e.preventDefault();
+        undoDraftPoint();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (chaining && lengthInput) {
           e.preventDefault();
@@ -619,13 +636,6 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     const snapped = applySnaps(p);
     if (tool === 'wall' || tool === 'halfWall' || tool === 'fence') {
       setDraft((d) => [...d, snapped]);
-    } else if (tool === 'room') {
-      if (draft.length >= 3 && dist(snapped, draft[0]) < (IS_COARSE ? 38 : 25) / zoom) {
-        s.addRoom(draft);
-        setDraft([]);
-      } else {
-        setDraft((d) => [...d, snapped]);
-      }
     } else if (tool === 'kitchen') {
       // Two taps define the run: first sets the start, second tiles cabinets.
       if (draft.length === 0) setDraft([snapped]);
@@ -715,8 +725,45 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       lastPan.current = { x: e.evt.clientX, y: e.evt.clientY };
       return;
     }
+    if (tool === 'room' && e.evt.button === 0) {
+      const start = applySnaps(p);
+      roomDragStartRef.current = start;
+      setDraft([start]);
+      setCursor(start);
+      return;
+    }
     actAt(p);
   };
+
+  const finishRoomDrag = (rawEnd: Point | null) => {
+    const start = roomDragStartRef.current;
+    roomDragStartRef.current = null;
+    if (!start || !rawEnd) {
+      setDraft([]);
+      return;
+    }
+    const end = applySnaps(rawEnd);
+    if (Math.abs(end.x - start.x) >= 40 && Math.abs(end.y - start.y) >= 40) {
+      s.addRoomWithWalls(roomRectangle(start, end));
+    }
+    setDraft([]);
+    setCursor(null);
+  };
+
+  const onMouseUp = () => {
+    if (tool === 'room' && roomDragStartRef.current) finishRoomDrag(worldPointer());
+  };
+
+  useEffect(() => {
+    if (tool !== 'room') return;
+    const up = (event: MouseEvent) => {
+      if (!roomDragStartRef.current) return;
+      finishRoomDrag(clientToWorld(event.clientX, event.clientY) ?? lastCursorRef.current);
+    };
+    window.addEventListener('mouseup', up);
+    return () => window.removeEventListener('mouseup', up);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool]);
 
   // Commit a typed length: places the next draft point at that distance from
   // the last point, along the direction toward the current cursor (so angle
@@ -731,12 +778,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     const dy = cursor.y - last.y;
     const d = Math.hypot(dx, dy) || 1;
     const next = { x: last.x + (dx / d) * lenCm, y: last.y + (dy / d) * lenCm };
-    if (tool === 'room' && draft.length >= 3 && dist(next, draft[0]) < 25 / zoom) {
-      s.addRoom(draft);
-      setDraft([]);
-    } else {
-      setDraft((d2) => [...d2, next]);
-    }
+    setDraft((d2) => [...d2, next]);
   };
 
   // Open the length editor over a wall's dimension label.
@@ -911,7 +953,14 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         // what makes the gesture feel magnetic rather than blind.
         if (wp) {
           lastDrawPointRef.current = wp;
-          publishCursor(wp);
+          if (tool === 'room') {
+            const start = applySnaps(wp);
+            roomDragStartRef.current = start;
+            setDraft([start]);
+            setCursor(start);
+          } else {
+            publishCursor(wp);
+          }
         }
       }
       if (tool === 'pan') {
@@ -1055,7 +1104,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         // Commit the RAW point — actAt re-runs applySnaps, so the placed corner
         // is exactly the previewed one, and room-closing and the kitchen run's
         // second point work on release with no extra code.
-        if (p) actAt(p);
+        if (tool === 'room') finishRoomDrag(p);
+        else if (p) actAt(p);
         endDrawDrag();
       } else if (!touchMoved.current && tool !== 'pan') {
         const p = worldPointer();
@@ -1200,8 +1250,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     if ((tool === 'wall' || tool === 'halfWall' || tool === 'fence') && d.length >= 2) {
       const kind = tool === 'fence' ? 'fence' : tool === 'halfWall' ? 'half' : 'wall';
       for (let i = 0; i < d.length - 1; i++) s.addWall(d[i], d[i + 1], kind);
-    } else if (tool === 'room' && d.length >= 3) {
-      s.addRoom(d);
+      if (tool === 'wall') s.detectRoomsFromWalls();
     } else if (tool === 'kitchen' && d.length >= 1 && cursor) {
       s.addKitchenRun(d[0], cursor);
     }
@@ -1229,6 +1278,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   useEffect(() => {
     drawBridge.finish = finishDraft;
     drawBridge.cancel = () => setDraft([]);
+    drawBridge.undoPoint = undoDraftPoint;
     // One point is enough to show the pill. With drag-drawing the first gesture
     // ends with a single corner placed, and requiring two left the user with no
     // ✕ on screen and no way out but switching tools. Finish still no-ops below
@@ -1238,6 +1288,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     return () => {
       drawBridge.finish = null;
       drawBridge.cancel = null;
+      drawBridge.undoPoint = null;
       useDraw.getState().setActive(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1470,18 +1521,29 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
         dragDistance={IS_COARSE ? TAP_SLOP : 3}
         onWheel={onWheel}
         onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
         onMouseMove={onStageMouseMove}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        onDblClick={() => (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room') && finishDraft()}
+        onDblClick={() => (tool === 'wall' || tool === 'halfWall' || tool === 'fence') && finishDraft()}
         // Touch had no equivalent of double-click-to-finish: Konva emits
         // `dbltap`, which was never wired, so the pill was the only way out.
         // A common drag workflow starts the next segment at the previous
         // corner. Konva also calls that a double-tap; only finish when the
         // second gesture stayed a tap, otherwise it would erase the first
         // corner just before the dragged endpoint is committed.
-        onDblTap={() => isDragDrawTool(tool) && tool !== 'kitchen' && !touchMoved.current && finishDraft()}
+        onDblTap={() => {
+          // Konva reports two quick taps as a double-tap even when they are at
+          // different corners. Only the conventional same-spot gesture should
+          // finish; rapid point placement must keep extending the chain.
+          const a = draft[draft.length - 2];
+          const b = draft[draft.length - 1];
+          const sameSpot = !!a && !!b && dist(a, b) < (IS_COARSE ? 38 : 25) / zoom;
+          if (isDragDrawTool(tool) && tool !== 'kitchen' && tool !== 'room' && !touchMoved.current && sameSpot) {
+            finishDraft();
+          }
+        }}
         onContextMenu={(e) => {
           e.evt.preventDefault();
           const p = worldPointer();
@@ -2700,7 +2762,9 @@ function DraftView({
     const d = Math.hypot(dx, dy) || 1;
     previewEnd = { x: last.x + (dx / d) * lenCm, y: last.y + (dy / d) * lenCm };
   }
-  const pts = previewEnd ? [...draft, previewEnd] : draft;
+  const pts = tool === 'room' && draft.length === 1 && previewEnd
+    ? roomRectangle(draft[0], previewEnd)
+    : previewEnd ? [...draft, previewEnd] : draft;
   const flat = pts.flatMap((p) => [p.x, p.y]);
   return (
     <Group listening={false}>
@@ -2754,7 +2818,9 @@ function DraftView({
               : (previewEnd ?? cursor).y + readoutDy
           }
           text={
-            lengthInput
+            tool === 'room'
+              ? `${formatLength(Math.abs(cursor.x - last.x), units)} × ${formatLength(Math.abs(cursor.y - last.y), units)}`
+              : lengthInput
               ? `${lengthInput}${units === 'imperial' ? ' ft' : ' m'} ▏ Enter to confirm`
               : `${formatLength(dist(last, cursor), units)}  ·  ${Math.round(((angleDeg(last, cursor) % 360) + 360) % 360)}°`
           }

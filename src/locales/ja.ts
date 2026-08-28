@@ -261,6 +261,9 @@ export const JA: Record<string, string> = {
   'Click the first point or': '最初の点をクリック、または',
   'Double-click or': 'ダブルクリック、または',
   'press Enter to finish': 'Enterで完了',
+  'Drag to size the room': 'ドラッグして部屋の大きさを決めます',
+  'Undo point': '点を元に戻す',
+  'Undo last point': '最後の点を元に戻す',
   Finish: '完了',
   "3D view isn't available on this device — it needs WebGL, which your browser/graphics driver doesn't provide. The 2D editor still works fully.":
     'このデバイスでは3Dビューを利用できません — WebGLが必要ですが、お使いのブラウザまたはグラフィックドライバが対応していません。2Dエディターは引き続き完全に動作します。',

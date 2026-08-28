@@ -61,7 +61,8 @@ import { useI18n, t as translate } from './lib/i18n';
 //  - Scene3D pulls in three + drei + postprocessing
 //  - ImportDialog pulls in pdfjs (+ its worker) and dxf-parser
 //  - PhotoMode pulls in the GPU path tracer
-const Scene3D = lazy(() => import('./components/Viewer3D/Scene3D'));
+const loadScene3D = () => import('./components/Viewer3D/Scene3D');
+const Scene3D = lazy(loadScene3D);
 const ImportDialog = lazy(() => import('./components/ImportDialog'));
 const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
 
@@ -110,6 +111,16 @@ export default function App() {
     rotateDesign: s.rotateDesign,
   })));
   const t = useI18n();
+  // Warm the heavy 3D code after startup without mounting a hidden WebGL
+  // canvas or allocating GPU resources. React.lazy reuses the imported module.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadScene3D().catch(() => {
+        // Suspense retries normally when the user opens 3D.
+      });
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, []);
   const selectedFurnitureType = useDesign((s) =>
     s.selection.kind === 'furniture'
       ? s.furniture.find((item) => item.id === s.selection.id)?.type ?? null
@@ -566,7 +577,9 @@ export default function App() {
           {drawing && (
             <div className="draw-affordance">
               <span>
-                {coarsePointer
+                {view === '2d' && tool === 'room'
+                  ? t('Drag to size the room')
+                  : coarsePointer
                   ? tool === 'room'
                     ? t('Drag or tap · close on the first point, or finish')
                     : t('Drag or tap to place corners, then finish')
@@ -611,9 +624,16 @@ export default function App() {
                   {!isPro && <Crown className="icon pro-pill" style={{ width: 12, height: 12 }} />}
                 </label>
               )}
-              <button className="finish-btn" onClick={() => drawBridge.finish?.()}>
-                ✓ {tool === 'room' ? t('Finish room') : t('Finish')}
-              </button>
+              {(tool === 'wall' || tool === 'halfWall' || tool === 'fence' || (view === '3d' && tool === 'room')) && (
+                <button className="undo-point-btn" onClick={() => drawBridge.undoPoint?.()} aria-label={t('Undo last point')}>
+                  <RotateCcw className="icon" /> {t('Undo point')}
+                </button>
+              )}
+              {!(view === '2d' && tool === 'room') && (
+                <button className="finish-btn" onClick={() => drawBridge.finish?.()}>
+                  ✓ {tool === 'room' ? t('Finish room') : t('Finish')}
+                </button>
+              )}
               <button className="cancel-btn" onClick={() => drawBridge.cancel?.()} aria-label={coarsePointer ? t('Cancel') : 'Cancel drawing'}>
                 {coarsePointer ? '✕' : 'Esc'}
               </button>
@@ -933,7 +953,7 @@ export default function App() {
               top-left floor pills on phones (tester screenshot, v1.0.53). */}
           {!walkMode && !drawing &&
             !(view === '2d' && (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room' || tool === 'kitchen') && !tipsDismissed) && (
-            <FloorSwitcher />
+            <FloorSwitcher variant="floating" />
           )}
         </div>
         <PropertiesPanel open={drawer === 'props'} />

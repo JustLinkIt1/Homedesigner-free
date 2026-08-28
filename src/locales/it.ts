@@ -261,6 +261,9 @@ export const IT: Record<string, string> = {
   'Click the first point or': 'Clicca il primo punto o',
   'Double-click or': 'Fai doppio clic o',
   'press Enter to finish': 'premi Invio per terminare',
+  'Drag to size the room': 'Trascina per definire le dimensioni della stanza',
+  'Undo point': 'Annulla punto',
+  'Undo last point': 'Annulla l’ultimo punto',
   Finish: 'Termina',
   "3D view isn't available on this device — it needs WebGL, which your browser/graphics driver doesn't provide. The 2D editor still works fully.":
     'La vista 3D non è disponibile su questo dispositivo — richiede WebGL, che il tuo browser o driver grafico non fornisce. L’editor 2D funziona comunque del tutto.',

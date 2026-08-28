@@ -1,14 +1,29 @@
-// User preference for the animated-logo launch intro (IntroVideo). Persisted in
-// localStorage so it survives relaunches; defaults ON. Stored separately from
-// the per-session "already played" flag (sessionStorage) — this is the "never
-// show it" switch for people who don't want the intro at all.
+// Every install gets one automatic intro, then recurring playback defaults off.
+// People who enjoy it can explicitly opt back in from Settings.
 const KEY = 'hd-intro-enabled';
+const FIRST_PLAY_KEY = 'hd-intro-first-played';
 
 export function introEnabled(): boolean {
   try {
-    return localStorage.getItem(KEY) !== '0';
+    return localStorage.getItem(KEY) === '1';
   } catch {
-    return true;
+    return false;
+  }
+}
+
+export function shouldPlayIntro(): boolean {
+  try {
+    return localStorage.getItem(FIRST_PLAY_KEY) !== '1' || introEnabled();
+  } catch {
+    return false;
+  }
+}
+
+export function markIntroPlayed(): void {
+  try {
+    localStorage.setItem(FIRST_PLAY_KEY, '1');
+  } catch {
+    /* private mode — ignore */
   }
 }
 

@@ -26,7 +26,7 @@ const dir = mkdtempSync(join(tmpdir(), 'hdbilling-'));
 const entry = join(root, '.billing-entry.tmp.ts');
 writeFileSync(entry, `
 export { useProStore } from '${rootImport}/src/store/proStore.ts';
-export { setProProvider, playPackage, playStoreProduct, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics } from '${rootImport}/src/lib/pro.ts';
+export { setProProvider, playPackage, playStoreProduct, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics, resolveWebEntitlement } from '${rootImport}/src/lib/pro.ts';
 `);
 
 const out = join(dir, 'bundle.mjs');
@@ -55,7 +55,7 @@ try {
   rmSync(entry, { force: true });
 }
 
-const { useProStore, setProProvider, playPackage, playStoreProduct, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics } = mod;
+const { useProStore, setProProvider, playPackage, playStoreProduct, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics, resolveWebEntitlement } = mod;
 
 let failures = 0;
 const check = (name, ok, detail = '') => {
@@ -66,6 +66,28 @@ const check = (name, ok, detail = '') => {
     console.log(`FAIL  ${name}${detail ? ` — ${detail}` : ''}`);
   }
 };
+
+{
+  let cloudCalls = 0;
+  const fromCloud = await resolveWebEntitlement(
+    async () => false,
+    async () => { cloudCalls++; return true; },
+  );
+  check('web account restore: cloud entitlement unlocks automatically', fromCloud && cloudCalls === 1);
+
+  cloudCalls = 0;
+  const fromWeb = await resolveWebEntitlement(
+    async () => true,
+    async () => { cloudCalls++; return false; },
+  );
+  check('web account restore: web entitlement avoids the fallback', fromWeb && cloudCalls === 0);
+
+  const afterFailure = await resolveWebEntitlement(
+    async () => { throw new Error('offline'); },
+    async () => true,
+  );
+  check('web account restore: SDK failure still checks the verified account', afterFailure);
+}
 
 /** A provider that records what was asked of it. */
 function fakeProvider({ entitled = false, synced = false, throws = false } = {}) {
@@ -320,7 +342,8 @@ const reset = (isPro) => {
     worker.includes('const play = await playEntitled(env, subject)') &&
       worker.includes('const web = await revenueCatEntitled(env, subject)'));
   check('a linked Play purchase unlocks the web provider',
-    proProvider.includes('return hasProEntitlement(customerInfo) || await getCloudProEntitlement();'));
+    proProvider.includes('return resolveWebEntitlement(async () => {') &&
+      proProvider.includes('return hasProEntitlement(customerInfo);'));
   check('a signed-in Android purchase is linked immediately',
     /if \(this\.accountLinked\)[\s\S]{0,300}?linkPlayPurchases/.test(proProvider));
 

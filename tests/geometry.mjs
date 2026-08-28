@@ -33,7 +33,7 @@ export { lockToAngle, ANGLE_LOCK_RAD } from '${sourceRoot}/src/lib/snapping.ts';
 export { spriteBox, spriteReshaped } from '${sourceRoot}/src/lib/spriteFit.ts';
 export { scaleBox, resizeBox, snapAngleTo, norm360, cornerSign } from '${sourceRoot}/src/components/Editor2D/editHandles.ts';
 export { wallDistances } from '${sourceRoot}/src/lib/distanceGuides.ts';
-export { isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan } from '${sourceRoot}/src/lib/drawGesture.ts';
+export { isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, roomRectangle, readoutOffsetCm, transformPlan } from '${sourceRoot}/src/lib/drawGesture.ts';
 export { catalogEntryMatches, normalizeCatalogText } from '${sourceRoot}/src/lib/catalogSearch.ts';
 export { CATALOG_BY_TYPE } from '${sourceRoot}/src/data/furnitureCatalog.ts';
 `);
@@ -52,7 +52,7 @@ const {
   buildDxf, LAYERS, flattenPath, importDxf, isNewer, reviewRequestDue, REVIEW_COOLDOWN_MS, rotatePoint, boundsOf,
   fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT,
   wallDistances, lockToAngle, ANGLE_LOCK_RAD, spriteBox, spriteReshaped,
-  isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, readoutOffsetCm, transformPlan,
+  isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, roomRectangle, readoutOffsetCm, transformPlan,
   scaleBox, resizeBox, snapAngleTo, norm360, cornerSign,
   catalogEntryMatches, normalizeCatalogText, CATALOG_BY_TYPE,
 } = await import(pathToFileURL(out).href);
@@ -1036,6 +1036,13 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   // It is a screen-space gap, so it must shrink in world units as we zoom in.
   check('gesture: readout gap is constant on screen, not in the plan',
     near(Math.abs(readoutOffsetCm({ screenY: 400, zoom: 2 })), Math.abs(mid) / 2, 1e-9));
+}
+{
+  const corners = roomRectangle({ x: 10, y: 20 }, { x: 410, y: 320 });
+  check('room drag: diagonal expands to four rectangle corners',
+    JSON.stringify(corners) === JSON.stringify([
+      { x: 10, y: 20 }, { x: 410, y: 20 }, { x: 410, y: 320 }, { x: 10, y: 320 },
+    ]), JSON.stringify(corners));
 }
 
 // ---- trace mode: positioning an imported plan ------------------------------

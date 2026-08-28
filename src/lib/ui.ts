@@ -120,12 +120,15 @@ export const useDraw = create<DrawState>((set) => ({
 export const drawBridge: {
   finish: (() => void) | null;
   cancel: (() => void) | null;
+  /** Remove only the newest point from the active wall chain. */
+  undoPoint: (() => void) | null;
   /** Set the just-drawn segment to an exact length in cm (3D exact-dimension
    *  input; registered by the 3D drafting layer while a chain is active). */
   setLength: ((cm: number) => void) | null;
 } = {
   finish: null,
   cancel: null,
+  undoPoint: null,
   setLength: null,
 };
 

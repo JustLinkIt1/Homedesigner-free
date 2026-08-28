@@ -213,9 +213,9 @@ check(
     mainSource.includes('const completedGooglePopup = finishStrandedGooglePopup()'),
 );
 check(
-  'mobile web OAuth returns to the exact forum or Model Studio page',
-  googleAuthSource.includes("window.location.pathname.startsWith('/community')") &&
-    googleAuthSource.includes("window.location.pathname.startsWith('/app/model-studio')") &&
+  'all hosted web OAuth avoids fragile popups and returns to the exact page',
+  googleAuthSource.includes('if (!Capacitor.isNativePlatform())') &&
+    googleAuthSource.includes('return startGooglePageRedirect()') &&
     googleAuthSource.includes('state: JSON.stringify({ version: 1, nonce, returnTo }') &&
     googleAuthSource.includes('const redirectState = readRedirectState(params.get(\'state\'))') &&
     googleAuthSource.includes('window.location.replace(returnTo)'),
@@ -422,7 +422,8 @@ check('2D canvas mounts', (await page.locator('.konvajs-content canvas').count()
 // A configured desktop build must offer web checkout. Because purchases are
 // attached to the stable Google customer ID, signed-out visitors first get a
 // clear sign-in action instead of the old Android-only link.
-await page.locator('.floor-add').first().click();
+await page.locator('.toolbar-floor-switcher .floor-current').click();
+await page.locator('.toolbar-floor-switcher .floor-add:not(.floor-clone)').click();
 check(
   'desktop Pro checkout asks signed-out visitors to link Google',
   await page.locator('.pro-upsell .pro-buy', { hasText: 'Sign in with Google' }).isVisible().catch(() => false),
@@ -1685,7 +1686,7 @@ check(
 check(
   'desktop checkout separates plan selection from purchase',
   proUpsellSource.includes('setSelectedPlanID(plan.id)') &&
-    proUpsellSource.includes('purchase(selectedPlan.id)') &&
+    proUpsellSource.includes('purchaseAndOfferLink(selectedPlan.id)') &&
     proUpsellSource.includes('Subscription renews automatically until cancelled.') &&
     proSource.includes('priceMicros'),
 );
@@ -1850,6 +1851,24 @@ await staleEditorPage.close();
   check('starter room: a single undo clears the whole room',
     undone.walls === 0 && undone.rooms === 0, JSON.stringify(undone));
 
+  const drawn = await sr.evaluate(() => {
+    const s = window.useDesign.getState();
+    s.addRoomWithWalls([
+      { x: 0, y: 0 }, { x: 420, y: 0 }, { x: 420, y: 320 }, { x: 0, y: 320 },
+    ]);
+    const made = window.useDesign.getState();
+    return { walls: made.walls.length, rooms: made.rooms.length };
+  });
+  check('draw room: creates four real walls and a detected floor',
+    drawn.walls === 4 && drawn.rooms === 1, JSON.stringify(drawn));
+  await sr.evaluate(() => window.useDesign.getState().undo());
+  const roomUndone = await sr.evaluate(() => {
+    const s = window.useDesign.getState();
+    return { walls: s.walls.length, rooms: s.rooms.length };
+  });
+  check('draw room: walls and floor are one undo step',
+    roomUndone.walls === 0 && roomUndone.rooms === 0, JSON.stringify(roomUndone));
+
   // The save cue used to live inside `.project`, which is display:none on
   // phones — so the platform that most needs the reassurance never saw it.
   const badge = sr.locator('.saved-badge');
@@ -1876,6 +1895,27 @@ await staleEditorPage.close();
   await tp.reload({ waitUntil: 'networkidle' });
   await tp.locator('.tpl-card', { hasText: 'Start with a room' }).click();
   await tp.waitForSelector('.tool-dock', { timeout: 15000 });
+
+  const furnishLayout = await tp.evaluate(() => {
+    const furnish = document.querySelector('.furniture-toggle');
+    const floor = document.querySelector('.floating-floor-switcher');
+    const toolbarFloor = document.querySelector('.toolbar-floor-switcher');
+    const label = furnish?.querySelector('.furniture-toggle-label');
+    const fr = furnish?.getBoundingClientRect();
+    const sr = floor?.getBoundingClientRect();
+    return {
+      labelled: !!label && getComputedStyle(label).display !== 'none' && !!label.textContent?.trim(),
+      onScreen: !!fr && fr.top >= 0 && fr.bottom <= innerHeight,
+      overlapsFloor: !!fr && !!sr && fr.left < sr.right && fr.right > sr.left && fr.top < sr.bottom && fr.bottom > sr.top,
+      floatingFloorHidden: !!floor && getComputedStyle(floor).display === 'none',
+      toolbarFloorVisible: !!toolbarFloor && getComputedStyle(toolbarFloor).display !== 'none',
+    };
+  });
+  check('furniture: desktop dock exposes a visible Furnish label', furnishLayout.labelled, JSON.stringify(furnishLayout));
+  check('furniture: catalog action stays on-screen and clear of the floor switcher',
+    furnishLayout.onScreen && !furnishLayout.overlapsFloor, JSON.stringify(furnishLayout));
+  check('floors: desktop selection lives in the toolbar',
+    furnishLayout.floatingFloorHidden && furnishLayout.toolbarFloorVisible, JSON.stringify(furnishLayout));
 
   const strays = await tp.locator('[data-tip][title]').count();
   check('tooltips: nothing carries both data-tip and a native title', strays === 0, `${strays} found`);
@@ -2095,6 +2135,32 @@ await staleEditorPage.close();
     drag.midPreview?.wallsSoFar === drag.wallsBefore);
   check('drag-draw: release appends to the existing corner instead of triggering double-tap finish',
     drag.afterTap === 1 && drag.afterDrag?.length === 2, JSON.stringify({ afterTap: drag.afterTap, afterDrag: drag.afterDrag }));
+
+  await dd.waitForTimeout(350);
+  const afterMistake = await dd.evaluate(async () => {
+    const content = document.querySelector('.konvajs-content');
+    const rect = content.getBoundingClientRect();
+    const x = rect.left + 160;
+    const y = rect.top + 180;
+    const touch = new Touch({
+      identifier: 22, target: content, clientX: x, clientY: y,
+      screenX: x, screenY: y, pageX: x, pageY: y,
+    });
+    content.dispatchEvent(new TouchEvent('touchstart', {
+      bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch],
+    }));
+    content.dispatchEvent(new TouchEvent('touchend', {
+      bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [touch],
+    }));
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return window.__draftLen?.() ?? null;
+  });
+  check('wall correction: third point exists before undo', afterMistake === 3, `draft ${afterMistake}`);
+  check('wall correction: Undo point is visible', await dd.locator('.undo-point-btn').isVisible().catch(() => false));
+  await dd.locator('.undo-point-btn').click();
+  await dd.waitForTimeout(150);
+  const afterPointUndo = await dd.evaluate(() => window.__draftLen?.() ?? null);
+  check('wall correction: only the mistaken corner is removed', afterPointUndo === 2, `draft ${afterPointUndo}`);
 
   // Finish and confirm the wall landed where the finger was RELEASED, not
   // where it pressed — the whole point of the gesture.

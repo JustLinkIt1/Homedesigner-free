@@ -334,6 +334,20 @@ async function initializeGoogle(): Promise<void> {
 }
 
 export async function signInWithGoogle(): Promise<GoogleAccount> {
+  // Hosted web login is a same-tab OAuth redirect. Start it directly instead
+  // of first loading/initialising the popup provider and asking Google to
+  // validate an old access token. Those preliminary calls can hang or fail
+  // before navigation, and the user only sees a Sign in button that does
+  // nothing. The nonce-bound callback below persists the state the provider
+  // needs after Google returns. Native still uses the provider normally.
+  if (!Capacitor.isNativePlatform()) {
+    if (!isGoogleSignInConfigured()) {
+      throw new Error('Google Sign-In is not configured in this build.');
+    }
+    currentIdToken = null;
+    clearPersistedGoogleCredential();
+    return startGooglePageRedirect();
+  }
   await initializeGoogle();
   // The plugin can retain a provider session after the app's local account was
   // cleared (for example, an offline sign-out). Reset that stale session before
@@ -349,12 +363,9 @@ export async function signInWithGoogle(): Promise<GoogleAccount> {
     // path is their only route back to a clean session.
     clearPersistedGoogleCredential();
   }
-  const needsFullPageRedirect =
-    window.location.pathname.startsWith('/community') ||
-    window.location.pathname.startsWith('/app/model-studio');
-  if (!Capacitor.isNativePlatform() && needsFullPageRedirect) {
-    return startGooglePageRedirect();
-  }
+  // Use one same-tab flow everywhere on the hosted web app. Google's strict
+  // opener isolation and embedded browsers can strand or block popup windows;
+  // the nonce-bound callback already restores the exact current route.
   const { result } = await SocialLogin.login({
     provider: 'google',
     // Android adds openid/email/profile itself. Supplying `scopes` here makes

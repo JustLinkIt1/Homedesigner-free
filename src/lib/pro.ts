@@ -408,6 +408,20 @@ export function isWebBillingConfigured(): boolean {
   return REVENUECAT_WEB_KEY.startsWith('rcb_') || REVENUECAT_WEB_KEY.startsWith('strp_');
 }
 
+/** Resolve desktop Pro from either billing surface. Android/lifetime purchases
+ * can exist on the verified cloud customer without appearing in Web Billing. */
+export async function resolveWebEntitlement(
+  webCheck: () => Promise<boolean>,
+  cloudCheck: () => Promise<boolean> = getCloudProEntitlement,
+): Promise<boolean> {
+  try {
+    if (await webCheck()) return true;
+  } catch {
+    // Web Billing unavailable: the verified account check is still valid.
+  }
+  return cloudCheck();
+}
+
 // DEAD CODE, retained deliberately by the 1.22.23 Play Billing switch. Nothing
 // constructs this: Android now uses PlayBillingProvider and the RevenueCat
 // Android SDK dependency is gone from the native graph, so this class cannot
@@ -775,9 +789,11 @@ class WebRevenueCatProvider implements ProProvider {
 
   async isEntitled(): Promise<boolean> {
     if (!this.appUserID) return false;
-    if (!isWebBillingConfigured()) return getCloudProEntitlement();
-    const customerInfo = await (await this.sdk()).getCustomerInfo();
-    return hasProEntitlement(customerInfo) || await getCloudProEntitlement();
+    return resolveWebEntitlement(async () => {
+      if (!isWebBillingConfigured()) return false;
+      const customerInfo = await (await this.sdk()).getCustomerInfo();
+      return hasProEntitlement(customerInfo);
+    });
   }
 
   async getPrice(): Promise<string | null> {
@@ -822,22 +838,25 @@ class WebRevenueCatProvider implements ProProvider {
   }
 
   async restore(): Promise<boolean> {
-    if (await this.isEntitled()) return true;
-    return getCloudProEntitlement();
+    return this.isEntitled();
   }
 
   async identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean> {
     this.appUserID = appUserID;
     this.email = email;
-    if (!isWebBillingConfigured()) return getCloudProEntitlement();
-
-    const purchases = await this.sdk(appUserID);
-    const attributes: Record<string, string> = {};
-    if (email) attributes.$email = email;
-    if (displayName) attributes.$displayName = displayName;
-    if (Object.keys(attributes).length) await purchases.setAttributes(attributes);
-    const customerInfo = await purchases.getCustomerInfo();
-    return hasProEntitlement(customerInfo) || await getCloudProEntitlement();
+    if (isWebBillingConfigured()) {
+      // Metadata failure must not prevent the verified entitlement check.
+      try {
+        const purchases = await this.sdk(appUserID);
+        const attributes: Record<string, string> = {};
+        if (email) attributes.$email = email;
+        if (displayName) attributes.$displayName = displayName;
+        if (Object.keys(attributes).length) await purchases.setAttributes(attributes);
+      } catch {
+        /* fall through */
+      }
+    }
+    return this.isEntitled();
   }
 
   async disconnect(): Promise<boolean> {

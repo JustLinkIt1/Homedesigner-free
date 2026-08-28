@@ -34,6 +34,7 @@ import AccountButton from './AccountButton';
 import { useAuthStore } from '../store/authStore';
 import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
 import { openCommunityForum } from '../lib/communityAccess';
+import FloorSwitcher from './FloorSwitcher';
 
 function SavedBadge({ tick }: { tick: number }) {
   const [saving, setSaving] = useState(false);
@@ -263,6 +264,9 @@ export default function Toolbar({
             )}
           </div>
         )}
+        <div className="floor-toolbar-slot">
+          <FloorSwitcher variant="toolbar" />
+        </div>
         <div className="export-wrap" ref={moreRef}>
           <button
             className="tbtn icon-only"

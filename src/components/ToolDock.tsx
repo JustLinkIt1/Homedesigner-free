@@ -118,6 +118,7 @@ export default function ToolDock() {
         }}
       >
         <Sofa className="icon" />
+        <span className="furniture-toggle-label">{tr('Furnish it')}</span>
       </button>
     </div>
   );

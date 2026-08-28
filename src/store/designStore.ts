@@ -137,6 +137,8 @@ interface DesignState extends DesignSnapshot {
   addWall: (start: Point, end: Point, kind?: 'wall' | 'half' | 'fence') => string;
   updateWall: (id: string, patch: Partial<Wall>) => void;
   addRoom: (points: Point[]) => string;
+  /** Create an enclosed room and its structural walls as one undo step. */
+  addRoomWithWalls: (points: Point[]) => void;
   updateRoom: (id: string, patch: Partial<Room>) => void;
   addFurniture: (
     type: string,
@@ -568,6 +570,37 @@ export const useDesign = create<DesignState>((set, get) => {
         });
       });
       return id;
+    },
+
+    addRoomWithWalls: (points) => {
+      if (points.length < 3) return;
+      const { defaultWallHeight, defaultWallThickness } = get();
+      commit((d) => {
+        for (let i = 0; i < points.length; i++) {
+          d.walls.push({
+            id: uid(),
+            start: points[i],
+            end: points[(i + 1) % points.length],
+            thickness: defaultWallThickness,
+            height: defaultWallHeight,
+            color: '#ece6db',
+          });
+        }
+        d.rooms = d.rooms.filter((room) => !room.auto);
+        const palette = ['oak', 'carpet_grey', 'tile_white', 'walnut', 'tile_grey', 'concrete'];
+        let added = 0;
+        for (const poly of detectRooms(structuralWalls(d.walls))) {
+          if (d.rooms.some((room) => roomMatches(poly, room.points))) continue;
+          d.rooms.push({
+            id: uid(),
+            name: `Room ${d.rooms.length + 1}`,
+            points: poly,
+            floorMaterial: palette[added++ % palette.length],
+            color: '#f3ede2',
+            auto: true,
+          });
+        }
+      });
     },
 
     updateRoom: (id, patch) =>

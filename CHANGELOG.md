@@ -1,5 +1,17 @@
 # Changelog
 
+## Web hotfix — 2026-08-28
+
+- Restored the web app to 1.22.26 after a marketing-site deployment from the
+  older production branch replaced it with 1.22.25.
+- Preserved the new Buy Pro and terms pages from that deployment while restoring
+  the 1.22.26 editor improvements.
+- Web Google sign-in now starts its nonce-bound, same-tab redirect immediately;
+  it no longer waits for the popup provider or a stale-token check before
+  navigating to Google. Native Android sign-in is unchanged.
+- This deployment intentionally excludes the unreleased AI-rendering and
+  Android changes in the separate 1.22.27 worktree.
+
 All notable HomeDesigner Free release changes are recorded here, newest first.
 Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making

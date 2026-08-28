@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { introEnabled } from '../lib/introPref';
+import { markIntroPlayed, shouldPlayIntro } from '../lib/introPref';
 
 /**
- * Full-screen animated-logo intro shown once per app session (a cold launch on
- * Android clears sessionStorage, so it replays on real relaunches but not on
- * warm resumes or in-session navigation). Skippable by tap or the Skip button,
- * auto-dismisses when the clip ends, and is skipped entirely when the user
- * prefers reduced motion. The backdrop colour is sampled from the video's own
- * corner pixel so the letterboxing blends seamlessly with the clip.
+ * Full-screen animated-logo intro shown automatically once per installation.
+ * After that first play it defaults off; users can opt into replaying it on cold
+ * launches from Settings.
  */
 const SESSION_KEY = 'hd-intro-seen';
 // Module-scoped so it survives React StrictMode's dev remount (which would
@@ -21,7 +18,7 @@ export default function IntroVideo() {
   // Pure read: show unless the user prefers reduced motion or it has already
   // played this session (module flag, or persisted across a reload).
   const [show, setShow] = useState(() => {
-    if (prefersReduced || played || !introEnabled()) return false;
+    if (prefersReduced || played || !shouldPlayIntro()) return false;
     try {
       if (sessionStorage.getItem(SESSION_KEY)) return false;
     } catch {
@@ -35,6 +32,7 @@ export default function IntroVideo() {
 
   const dismiss = () => {
     played = true;
+    markIntroPlayed();
     try {
       sessionStorage.setItem(SESSION_KEY, '1');
     } catch {

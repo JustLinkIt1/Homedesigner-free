@@ -106,6 +106,11 @@ export function stripDegenerateTail(draft: Point[], epsCm: number): Point[] {
   return Math.hypot(last.x - prev.x, last.y - prev.y) <= epsCm ? draft.slice(0, -1) : draft;
 }
 
+/** Expand opposite drag corners into a clockwise rectangular room outline. */
+export function roomRectangle(a: Point, b: Point): Point[] {
+  return [a, { x: b.x, y: a.y }, b, { x: a.x, y: b.y }];
+}
+
 /** Screen px between the fingertip and the length/angle readout. Roughly a
  *  fingertip contact radius plus the text height, matching the app's 44px
  *  touch-target unit. */
