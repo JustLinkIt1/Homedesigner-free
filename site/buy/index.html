@@ -130,6 +130,7 @@
     .plan.best { border-color: rgba(61, 139, 255, 0.55); }
     .plan b { display: block; font-size: 15px; letter-spacing: -0.02em; }
     .plan span { display: block; color: var(--text-2); font-size: 12.5px; line-height: 1.35; }
+    .plan .plan-price { color: var(--text); font-size: 19px; font-weight: 800; letter-spacing: -0.03em; margin-top: 2px; }
     .plan .badge {
       display: inline-block; margin-bottom: 6px; padding: 2px 9px; border-radius: 999px;
       background: var(--grad); color: #fff; font-size: 10.5px; font-weight: 800;
@@ -202,17 +203,19 @@
             with Google at checkout so your Pro unlock follows your account onto
             every device you use — phone, tablet and browser.
           </p>
-          <div class="plans">
-            <div class="plan"><b>Monthly</b><span>per month</span></div>
-            <div class="plan best"><span class="badge">Best value</span><b>Yearly</b><span>per year</span></div>
+          <!-- Filled from the live RevenueCat catalogue by the script at the
+               foot of this page. This static markup is the fallback shown when
+               that fetch fails, so the page never claims a price it could not
+               confirm. -->
+          <div class="plans" id="plans" data-loading="1">
             <div class="plan"><b>Lifetime</b><span>one payment</span></div>
           </div>
           <div class="grow"></div>
           <a class="btn primary big" href="/app/?buy=pro" style="margin-top:20px">
-            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18"/></svg>
-            Choose a plan
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <span id="buy-cta">Buy Pro</span>
           </a>
-          <p class="after">Prices are shown at checkout in your local currency.</p>
+          <p class="after" id="price-note">Taxes may be added at checkout.</p>
         </div>
 
         <div class="card">
@@ -221,13 +224,9 @@
           <p>
             Already using the Android app? Buy Pro inside it and Google Play
             handles the payment with the card already on your account — no
-            sign-in needed to purchase.
+            sign-in needed to purchase. Google Play shows the plans and prices
+            available in your country, in your own currency.
           </p>
-          <div class="plans">
-            <div class="plan"><b>Monthly</b><span>per month</span></div>
-            <div class="plan best"><span class="badge">Best value</span><b>Yearly</b><span>per year</span></div>
-            <div class="plan"><b>Lifetime</b><span>one payment</span></div>
-          </div>
           <div class="grow"></div>
           <a class="play-badge-link" style="margin-top:20px"
              href="https://play.google.com/store/apps/details?id=com.homedesigner.app"
@@ -282,8 +281,8 @@
             <p>Open the app, go to the Pro sheet and choose <b>Restore purchases</b>, or simply sign in with the Google account you bought it on.</p>
           </div>
           <div>
-            <h3>Refunds and cancellations</h3>
-            <p>Purchases made on Android are handled by Google Play; web purchases are handled by RevenueCat and Stripe. Manage or cancel a subscription wherever you bought it.</p>
+            <h3>Refunds and billing</h3>
+            <p>Web purchases are handled by RevenueCat and Stripe; Android purchases are handled by Google Play. Manage a purchase, or ask for a refund, wherever you bought it.</p>
           </div>
           <div>
             <h3>Is there a free version?</h3>
@@ -310,6 +309,123 @@
 
   <script>
     document.getElementById('yr').textContent = String(new Date().getFullYear());
+
+    /* Live prices, straight from the RevenueCat catalogue the app itself sells
+       from, so this page can never quote a price the checkout disagrees with.
+       Two plain fetches rather than the Web Billing SDK: the SDK is ~100KB on a
+       page whose job is to load fast, and configuring it would register a
+       customer for every visit. The key below is the same public Web Billing
+       key already shipped inside /app/ — a public application identifier, not a
+       secret. The subscriber id is a single fixed placeholder used only to read
+       the catalogue; nothing is ever purchased against it.
+
+       Anything unexpected leaves the server-rendered fallback in place. A page
+       with no price still sells; a page with a wrong price is a problem. */
+    (function () {
+      var KEY = 'rcb_WzKYYmFYFdxYABFCvyyZTBwxkzRG';
+      var USER = 'homedesignerapp-web-pricing';
+      var API = 'https://api.revenuecat.com';
+      var HEADERS = { Authorization: 'Bearer ' + KEY, 'X-Platform': 'web' };
+      // RevenueCat's own package identifiers, mapped to the wording used here.
+      var LABELS = {
+        '$rc_monthly': { name: 'Monthly', unit: 'per month' },
+        '$rc_annual': { name: 'Yearly', unit: 'per year' },
+        '$rc_six_month': { name: '6 months', unit: 'every 6 months' },
+        '$rc_lifetime': { name: 'Lifetime', unit: 'one payment' }
+      };
+
+      function money(price) {
+        var amount = price.amount_micros / 1e6;
+        try {
+          return new Intl.NumberFormat(undefined, {
+            style: 'currency',
+            currency: price.currency,
+            // Whole amounts read better without the trailing ".00".
+            minimumFractionDigits: amount % 1 === 0 ? 0 : 2
+          }).format(amount);
+        } catch (e) {
+          return price.currency + ' ' + amount.toFixed(2);
+        }
+      }
+
+      function getJSON(url) {
+        return fetch(url, { headers: HEADERS }).then(function (r) {
+          if (!r.ok) throw new Error(String(r.status));
+          return r.json();
+        });
+      }
+
+      function priceOf(details) {
+        if (!details) return null;
+        if (details.current_price) return details.current_price;
+        var options = details.purchase_options || {};
+        var chosen = options[details.default_purchase_option_id] ||
+          options.base_option || options[Object.keys(options)[0]];
+        return (chosen && chosen.base_price) || null;
+      }
+
+      getJSON(API + '/v1/subscribers/' + USER + '/offerings').then(function (data) {
+        var list = data.offerings || [];
+        var offering = null;
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].identifier === data.current_offering_id) offering = list[i];
+        }
+        offering = offering || list[0];
+        var packages = (offering && offering.packages) || [];
+        if (!packages.length) throw new Error('no packages');
+
+        return Promise.all(packages.map(function (pkg) {
+          var id = pkg.platform_product_identifier;
+          return getJSON(
+            API + '/rcbilling/v1/subscribers/' + USER + '/products?id=' + encodeURIComponent(id)
+          ).then(function (res) {
+            var details = (res.product_details || [])[0];
+            var price = priceOf(details);
+            if (!price) return null;
+            var label = LABELS[pkg.identifier] || {};
+            return {
+              name: label.name || (details && details.title) || 'Pro',
+              unit: label.unit || '',
+              price: money(price),
+              lifetime: pkg.identifier === '$rc_lifetime'
+            };
+          }).catch(function () { return null; });
+        }));
+      }).then(function (plans) {
+        plans = plans.filter(Boolean);
+        if (!plans.length) return;
+
+        var grid = document.getElementById('plans');
+        grid.innerHTML = '';
+        // One plan is a price, not a choice — say so on the button instead of
+        // rendering a "ladder" of a single rung.
+        grid.style.gridTemplateColumns = 'repeat(' + Math.min(plans.length, 3) + ', 1fr)';
+        plans.forEach(function (plan) {
+          var cell = document.createElement('div');
+          cell.className = 'plan' + (plans.length > 1 && plan.lifetime ? ' best' : '');
+          var name = document.createElement('b');
+          name.textContent = plan.name;
+          var price = document.createElement('span');
+          price.className = 'plan-price';
+          price.textContent = plan.price;
+          var unit = document.createElement('span');
+          unit.textContent = plan.unit;
+          cell.appendChild(name);
+          cell.appendChild(price);
+          cell.appendChild(unit);
+          grid.appendChild(cell);
+        });
+        grid.removeAttribute('data-loading');
+
+        if (plans.length === 1) {
+          document.getElementById('buy-cta').textContent = 'Buy Pro — ' + plans[0].price;
+        } else {
+          document.getElementById('buy-cta').textContent = 'Choose a plan';
+        }
+      }).catch(function () {
+        /* Keep the fallback markup exactly as served. */
+      });
+    })();
   </script>
 </body>
 </html>
