@@ -51,6 +51,7 @@ const {
   liveEntitlements,
   matchesProEntitlement,
   proIdsFromCatalogue,
+  activePlaySubscriptionProduct,
 } = mod;
 
 let failures = 0;
@@ -162,6 +163,32 @@ check('REVENUECAT_PRO_ENTITLEMENT_ID takes precedence',
 check('the override does not disable the built-in id',
   entitled([{ entitlement_id: PRO_ENTITLEMENT_ID, expires_at: null }], { configuredId: RECREATED }) === false,
   'an override names ONE entitlement; the default must not linger as a second accepted id');
+
+console.log('\nGoogle Play subscription promo codes');
+
+const PLAY_PRO_PRODUCTS = new Set(['pro_lifetime', 'pro_yearly', 'pro_monthly']);
+const activeTrial = {
+  subscriptionState: 'SUBSCRIPTION_STATE_ACTIVE',
+  lineItems: [{ productId: 'pro_yearly', expiryTime: new Date(NOW + 30 * 24 * 60 * 60 * 1000).toISOString() }],
+};
+check('an active yearly promo trial grants Pro',
+  activePlaySubscriptionProduct(activeTrial, PLAY_PRO_PRODUCTS, NOW) === 'pro_yearly');
+check('a cancelled trial remains Pro until its expiry',
+  activePlaySubscriptionProduct({ ...activeTrial, subscriptionState: 'SUBSCRIPTION_STATE_CANCELED' },
+    PLAY_PRO_PRODUCTS, NOW) === 'pro_yearly');
+check('an expired promo trial is not Pro',
+  activePlaySubscriptionProduct({
+    ...activeTrial,
+    lineItems: [{ productId: 'pro_yearly', expiryTime: new Date(NOW).toISOString() }],
+  }, PLAY_PRO_PRODUCTS, NOW) === null);
+check('a paused or on-hold subscription is not Pro',
+  activePlaySubscriptionProduct({ ...activeTrial, subscriptionState: 'SUBSCRIPTION_STATE_ON_HOLD' },
+    PLAY_PRO_PRODUCTS, NOW) === null);
+check('an unrelated subscription product cannot unlock Pro',
+  activePlaySubscriptionProduct({
+    ...activeTrial,
+    lineItems: [{ productId: 'points_2000', expiryTime: new Date(NOW + YEAR).toISOString() }],
+  }, PLAY_PRO_PRODUCTS, NOW) === null);
 
 console.log('\nShapes that must not throw');
 

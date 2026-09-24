@@ -20,7 +20,7 @@ export const USD_PER_POINT = 0.000375;
  * Bumped whenever a price or point cost below changes. Written onto every
  * ledger row so history stays readable after a repricing.
  */
-export const PRICE_VERSION = 1;
+export const PRICE_VERSION = 2;
 
 /**
  * Google's cut. The plan models both tiers and notes the 30% case is the one
@@ -31,6 +31,7 @@ export const PRICE_VERSION = 1;
 export const PLAY_FEE_RATE = 0.30;
 
 export type FeatureId =
+  | 'ai_render'
   | 'room_naming'
   | 'colour_scheme'
   | 'listing_description'
@@ -55,6 +56,7 @@ interface FeaturePrice {
  * rounded *up* here.
  */
 export const FEATURES: Record<FeatureId, FeaturePrice> = {
+  ai_render: { points: 200, maxCostUsd: 0.04, label: 'AI render' },
   room_naming: { points: 10, maxCostUsd: 0.0002, label: 'Room naming' },
   colour_scheme: { points: 25, maxCostUsd: 0.0005, label: 'Colour scheme' },
   listing_description: { points: 25, maxCostUsd: 0.0005, label: 'Description' },
@@ -104,9 +106,9 @@ export const FREE_GRANT_POINTS = 400;
  * ten users a month, which would have throttled ordinary signups rather than
  * abuse.
  *
- * Worst-case exposure is small precisely because 3D generation is not a
- * metered feature: 400 points spent entirely on the most expensive Workers AI
- * call is ~$0.008, so this ceiling caps free-tier spend near $40/month.
+ * AI render is now a Pro-only metered feature: a Pro account can spend this
+ * grant on two renders ($0.08), in addition to its separate free render.
+ * Unsubscribed accounts still cannot dispatch the fal render endpoint.
  */
 export const MAX_FREE_GRANTS_PER_MONTH = 5_000;
 

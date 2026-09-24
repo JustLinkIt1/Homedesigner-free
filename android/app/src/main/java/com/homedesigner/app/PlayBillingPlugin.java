@@ -8,6 +8,7 @@ import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.ConsumeParams;
 import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
@@ -26,9 +27,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Deliberately small Google Play Billing bridge for HomeDesigner's single
- * non-consumable product. Product catalogues, paywalls and account ownership
- * live outside this class; this class only reports what Google Play says.
+ * Deliberately small Google Play Billing bridge. HomeDesigner sells a lifetime
+ * one-time product, but Play promotions can grant a monthly/yearly subscription
+ * outside the app. Ownership therefore has to read both product types even
+ * though checkout itself remains the one-time product.
  */
 @CapacitorPlugin(name = "PlayBilling")
 public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListener {
@@ -148,6 +150,76 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
 
     private interface ProductCallback {
         void complete(ProductDetails details);
+    }
+
+    /** Only call after the authenticated server has credited this receipt. */
+    @PluginMethod
+    public void consumePoints(PluginCall call) {
+        String token = call.getString("purchaseToken");
+        if (token == null || token.isBlank()) { call.reject("purchaseToken is required"); return; }
+        withReady(() -> {
+            QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP).build();
+            billingClient.queryPurchasesAsync(params, (result, purchases) -> {
+                if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                    reject(call, "Owned purchase query", result); return;
+                }
+                Purchase found = null;
+                if (purchases != null) {
+                    for (Purchase item : purchases) if (item.getPurchaseToken().equals(token)) found = item;
+                }
+                if (found == null) { call.resolve(new JSObject().put("consumed", true)); return; }
+                boolean points = false;
+                for (String id : found.getProducts()) {
+                    if (id.matches("points_(2000|6000|15000)(_pro)?")) points = true;
+                }
+                if (!points || found.getPurchaseState() != Purchase.PurchaseState.PURCHASED) {
+                    call.reject("Only completed point packs can be consumed"); return;
+                }
+                billingClient.consumeAsync(ConsumeParams.newBuilder().setPurchaseToken(token).build(), (consumed, receipt) -> {
+                    if (consumed.getResponseCode() == BillingClient.BillingResponseCode.OK
+                        || consumed.getResponseCode() == BillingClient.BillingResponseCode.ITEM_NOT_OWNED) {
+                        call.resolve(new JSObject().put("consumed", true));
+                    } else reject(call, "Point pack consumption", consumed);
+                });
+            });
+        }, result -> reject(call, "Store connection", result));
+    }
+
+    private interface PurchasesCallback {
+        void complete(BillingResult result, List<Purchase> purchases);
+    }
+
+    /** Query both Play ownership namespaces. A promo-code subscription is not
+     * returned by an INAPP query, and a lifetime unlock is not returned by a
+     * SUBS query. If either namespace succeeds, return its trustworthy result;
+     * only fail when Play rejected both queries. */
+    private void queryAllPurchases(PurchasesCallback callback) {
+        QueryPurchasesParams inAppParams = QueryPurchasesParams.newBuilder()
+            .setProductType(BillingClient.ProductType.INAPP)
+            .build();
+        billingClient.queryPurchasesAsync(inAppParams, (inAppResult, inAppPurchases) -> {
+            List<Purchase> combined = new ArrayList<>();
+            if (inAppResult.getResponseCode() == BillingClient.BillingResponseCode.OK && inAppPurchases != null) {
+                combined.addAll(inAppPurchases);
+            }
+            QueryPurchasesParams subscriptionParams = QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build();
+            billingClient.queryPurchasesAsync(subscriptionParams, (subscriptionResult, subscriptionPurchases) -> {
+                if (subscriptionResult.getResponseCode() == BillingClient.BillingResponseCode.OK
+                    && subscriptionPurchases != null) {
+                    combined.addAll(subscriptionPurchases);
+                }
+                if (inAppResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                    callback.complete(inAppResult, combined);
+                } else if (subscriptionResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                    callback.complete(subscriptionResult, combined);
+                } else {
+                    callback.complete(inAppResult, Collections.emptyList());
+                }
+            });
+        });
     }
 
     private static ProductDetails.OneTimePurchaseOfferDetails chooseOffer(ProductDetails details) {
@@ -314,10 +386,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
     }
 
     private void queryOwnedForCall(PluginCall call, String productId) {
-        QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.INAPP)
-            .build();
-        billingClient.queryPurchasesAsync(params, (result, purchases) -> {
+        queryAllPurchases((result, purchases) -> {
             Log.i(TAG, "Owned purchase query: " + describe(result));
             if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
                 reject(call, "Owned purchase query", result);
@@ -333,10 +402,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
     @PluginMethod
     public void getPurchases(PluginCall call) {
         withReady(() -> {
-            QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build();
-            billingClient.queryPurchasesAsync(params, (result, purchases) -> {
+            queryAllPurchases((result, purchases) -> {
                 Log.i(TAG, "Owned purchases: " + describe(result));
                 if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
                     reject(call, "Owned purchase query", result);

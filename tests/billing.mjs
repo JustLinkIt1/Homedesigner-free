@@ -328,16 +328,25 @@ const reset = (isPro) => {
       nativePlugin.includes('waiter.failed.fail(result)'));
 
   const playBridge = readFileSync(join(root, 'src/lib/playBilling.ts'), 'utf8');
-  check('native ownership accepts only the live pro_lifetime product',
-    playBridge.includes("purchase.products.includes(PLAY_PRO_PRODUCT_ID)") &&
+  check('native ownership accepts lifetime and subscription Pro products',
+    playBridge.includes("'pro_lifetime', 'pro_yearly', 'pro_monthly'") &&
+      playBridge.includes('purchase.products.some') &&
       !playBridge.includes("'pro_unlock'"));
+  check('native ownership queries one-time purchases and promo subscriptions',
+    nativePlugin.includes('BillingClient.ProductType.INAPP') &&
+      nativePlugin.includes('BillingClient.ProductType.SUBS') &&
+      nativePlugin.includes('queryAllPurchases'));
 
   const worker = readFileSync(join(root, 'workers/design-sync/src/index.ts'), 'utf8');
   check('the Worker verifies and acknowledges Play receipts',
     worker.includes('/purchases/productsv2/tokens/') &&
       worker.includes(':acknowledge'));
-  check('the Worker grants only the live pro_lifetime product',
-    worker.includes("const PLAY_PRO_PRODUCTS = new Set(['pro_lifetime']);"));
+  check('the Worker grants only the three live Pro products',
+    worker.includes("const PLAY_PRO_PRODUCTS = new Set(['pro_lifetime', 'pro_yearly', 'pro_monthly']);"));
+  check('the Worker verifies and acknowledges promo subscriptions',
+    worker.includes('/purchases/subscriptionsv2/tokens/') &&
+      worker.includes('/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/') &&
+      worker.includes('activePlaySubscriptionProduct'));
   check('Stripe web and Play receipts feed one entitlement endpoint',
     worker.includes('const play = await playEntitled(env, subject)') &&
       worker.includes('const web = await revenueCatEntitled(env, subject)'));

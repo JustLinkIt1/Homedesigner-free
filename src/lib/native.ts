@@ -22,7 +22,7 @@ function webDownload(dataUrl: string, filename: string) {
 }
 
 /**
- * Save a PNG data URL. On Android it writes to the app's Documents dir and
+ * Save an image data URL. On Android it writes to the app's share cache and
  * opens the share sheet (so the user can save to Photos / Drive / etc.).
  */
 export async function saveImage(dataUrl: string, filename: string): Promise<void> {
@@ -36,10 +36,10 @@ export async function saveImage(dataUrl: string, filename: string): Promise<void
   await Filesystem.writeFile({
     path,
     data: dataUrlToBase64(dataUrl),
-    directory: Directory.Documents,
+    directory: Directory.Cache,
     recursive: true,
   });
-  const { uri } = await Filesystem.getUri({ path, directory: Directory.Documents });
+  const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
   try {
     // The image is the payload; the text is its caption. A shared render used
     // to travel with no name and no link, so anyone who liked one had no way
@@ -51,10 +51,13 @@ export async function saveImage(dataUrl: string, filename: string): Promise<void
     await Share.share({
       title: `${APP_NAME} render`,
       text: `${APP_NAME}\n${t('Design your dream home')}\n${PLAY_STORE_URL}`,
-      url: uri,
+      files: [uri],
     });
-  } catch {
-    /* user dismissed the share sheet — file is still saved */
+  } catch (error) {
+    // A cancelled chooser is normal. Provider/permission failures are not:
+    // surfacing them prevents a silent "saved" result with no accessible file.
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/cancel(?:led|ed)?/i.test(message)) throw error;
   }
 }
 

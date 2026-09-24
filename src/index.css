@@ -5623,3 +5623,11 @@ button:focus:not(:focus-visible) {
   .cm-post-content { padding: 13px 14px 17px; }
   .cm-post-images { grid-template-columns: minmax(0, 1fr); }
 }
+/* AI render stays usable in the phone's safe-area constrained dialog. */
+.ai-render-dialog { width: min(620px, calc(100vw - 24px)); }
+.ai-render-body { display: flex; flex-direction: column; gap: 14px; }
+.ai-render-preview { display: block; width: 100%; max-height: 40vh; object-fit: contain; border-radius: 12px; background: #111827; }
+.ai-render-consent { display: flex; align-items: flex-start; gap: 10px; line-height: 1.45; }
+.ai-render-consent input { margin-top: 4px; flex-shrink: 0; }
+.ai-point-packs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.ai-render-error { color: #ef7373; overflow-wrap: anywhere; }

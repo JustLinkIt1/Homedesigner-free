@@ -1,5 +1,167 @@
 # WIP — current handoff
 
+## 2026-08-28 — WEB LOGIN HOTFIX LIVE; VERSION RESTORED TO 1.22.26
+
+The production Pages branch had been advanced from the released 1.22.26 commit
+to an older 1.22.25 source line while adding `/buy` and legal pages. That made
+`/app/` use the unreliable popup login again and changed the live version back
+to 1.22.25. The repair was made in isolated worktree
+`work/Homedesigner-web-login-hotfix` on top of that exact production revision,
+so the new `/buy` and `/terms` pages remain intact.
+
+- Production source: commit `3726520` on
+  `claude/home-design-app-2d-plans-12y5u5`.
+- Production Pages deployment: `https://76846f7f.homedesignerapp.pages.dev`.
+- Custom-domain `/app/version.json`: 1.22.26, asset namespace
+  `20260828190359903`.
+- Web Google login now clears stale provider state and starts a same-tab OAuth
+  redirect before native SocialLogin initialization. The callback validates
+  nonce, issuer, audience and expiry, then returns to the requested app route.
+- Live browser verification reached Google's account chooser with the exact
+  `https://homedesignerapp.com/app/` callback. `/app/`, `/buy/` and `/terms/`
+  all returned HTTP 200.
+- Full CI, typecheck, lint and production web build passed. Auth regression
+  coverage was added in `tests/auth.mjs`.
+
+This web hotfix deliberately excludes the unreleased 1.22.27 AI-render/mobile
+capture work, Android changes, Worker changes and database migrations. Details:
+`docs/WEB_LOGIN_HOTFIX_2026-08-28.md` in the hotfix worktree.
+
+## 2026-08-28 — MOBILE CAPTURE + PRO AI RENDER IMPLEMENTED LOCALLY, NOT DEPLOYED
+
+Correct worktree: work/Homedesigner-1.22.26, package 1.22.27. Earlier dirty
+1.22.26/27 work is preserved. No release/version bump or external write made.
+The existing 1.22.27 AAB does not include this work.
+
+- Bounded mobile captures, guaranteed renderer restoration/redraw and lighter
+  touch-device Photo mode. Android image sharing uses the supported Cache path.
+- Added 3D Render → AI render · Pro: verified server entitlement, one free
+  successful render per account, then 200 existing AI points. Explicit fal.ai
+  preview consent, job resume, result save, and available point-pack checkout.
+- Migration 0005 provides atomic allowances/debits/refunds, idempotent jobs,
+  account isolation and abuse limits. No client fal secret. AI_RENDER_ENABLED
+  must be exactly true; it is currently unset, so generation remains disabled.
+- 65 render tests, full CI suite, types/lint/build and Android Java compile pass.
+  Provider requests are stubbed: no paid generation or live purchase was made.
+- Mobile device confirmation, signed-in AI UI and actual store purchase tests
+  are still required. Apply D1 migration before Worker rollout; configure/verify
+  point products and web payment webhook before selling points.
+
+See docs/AI_RENDER_ROLLOUT.md for product rules, privacy, release order and gaps.
+
+## 2026-08-27 (Codex) — PRODUCT DEMO V2 HOSTED; WEBSITE PAGE UNCHANGED
+
+The Remotion-polished demo is hosted separately from app releases in new R2
+bucket `homedesigner-media`, under custom domain `media.homedesignerapp.com`.
+The domain previously returned NXDOMAIN; no existing DNS record was replaced.
+Only public promotional media is stored here; user-data and model buckets were
+not changed. Minimum TLS is 1.2. No app/Worker/Pages deployment was performed.
+
+- Embed/player: `https://media.homedesignerapp.com/demos/homedesigner-pro-v2.html`
+- MP4: `https://media.homedesignerapp.com/demos/homedesigner-pro-v2-20260827.mp4`
+- Poster: `https://media.homedesignerapp.com/demos/homedesigner-pro-v2-20260827.jpg`
+- Local originals retained: `C:/Users/jopps/HomeDesigner-demo-final.mp4` and
+  `C:/Users/jopps/HomeDesigner-demo-pro-v2.mp4`.
+- Editable project and copy/paste embed: workspace
+  `video-edit/pro-demo-v2/`, including `website-embed.html`.
+
+The V2 keeps the full 213.56-second recording, fictional presenter and selected
+Australian voice, adding targeted eased zooms, chapter labels, branded framing
+and a progress rail. No personal name is displayed. Its AAC audio packet hash
+matches the original. Public checks returned HTTPS 200, `video/mp4`, the exact
+55,624,434-byte file length, and HTTP 206 byte-range responses (cache HIT).
+The HTML player uses native controls, playsinline and metadata-only preload;
+there is no autoplay or third-party player script. Dated MP4/poster assets have
+immutable one-year caching; the player HTML has one-hour caching.
+
+The user requested hosting for embedding. **The marketing homepage has not
+been edited or deployed**; choose placement before a later page update.
+
+## 2026-08-26 (Codex) — 1.22.27 PROMO-SUBSCRIPTION FIX BUILT; WORKER LIVE
+
+Play Console was inspected before the HowToMen campaign was promoted. Production
+is still `1.22.25` (`12225`), and release 24 is an empty untitled draft: the
+1.22.26 AAB was never uploaded. The custom promotion **How to en trial** is live
+for `HomeDesigner Pro Yearly`, code `H0WT0H0ME`, 2,000 redemptions, with a
+30-day trial from 26–31 August 2026 (campaign end 31 August at 11:00).
+
+The inspection found a release blocker: direct Play Billing queried only
+`INAPP` ownership and accepted only `pro_lifetime`, while this promotion grants
+the `pro_yearly` `SUBS` product. Google could therefore accept the code while
+the installed app stayed locked. 1.22.27 fixes the full path:
+
+- native ownership queries both `INAPP` and `SUBS`, while checkout itself
+  remains the lifetime one-time product;
+- completed `pro_lifetime`, `pro_yearly`, and `pro_monthly` purchases grant Pro;
+- the Worker falls back from `purchases.productsv2` to
+  `purchases.subscriptionsv2`, validates state plus line-item expiry, and
+  acknowledges an active promo subscription when required;
+- active, grace-period, and cancelled-before-expiry subscriptions retain Pro;
+  expired, on-hold, paused, and unrelated products do not.
+
+Worker version `3ebb00ce-2b44-463e-9a22-a4406effb905` is live. A harmless
+invalid-token probe exercised the deployed Google verification path and returned
+HTTP 200 `{"active":false,"productId":null}`, proving the service-account/API
+path is available and fails closed. No Android release was uploaded or
+published; one genuine licensed-tester redemption is still the final end-to-end
+check before sharing the campaign publicly.
+
+| | |
+|---|---|
+| Artifact | `outputs/HomeDesigner-1.22.27-12227.aab` |
+| Bytes | 26,369,861 |
+| SHA-256 | `36b486d0a334606217066c6e4dc7715ae957e3276571365d79e206e5de7f47d9` |
+| Signer | `CN=Nathan Joppich` — `EE:D4:E3:A9:11:BC:92:9A:D3:CD:33:36:FF:BF:32:C0:22:4A:1F:C5:21:BE:B1:13:02:F5:A0:7E:5F:00:6A:00` ✓ |
+| `verify-aab` | all green at `1.22.27` / `12227` |
+| Google Drive | `https://drive.google.com/file/d/1H-l-EDXqgWS0bvU5QuLBDH8azCFYYS0D/view?usp=drivesdk` |
+
+Validation: root typecheck/lint/test:ci clean; Worker typecheck clean; Java/Gradle
+release build clean; AAB content/version/signer checks clean. Promo-specific
+tests cover active yearly trial, cancellation before expiry, expiry, on-hold,
+unrelated products, both native ownership namespaces, and Worker subscription
+verification/acknowledgement. The earlier local 1.22.26 AAB is superseded and
+must not be uploaded.
+
+## 2026-08-25 (Codex) — 1.22.26 WEB DEPLOYED; ANDROID AAB READY
+
+Clean release worktree: `work/Homedesigner-1.22.26`, branch
+`codex/homedesigner-1.22.26`, based on origin commit `970bdb6`. This matters:
+the earlier task folder was on stale `agent/cloudflare-private` at 1.22.6 and
+must not be used for a release. The older dirty model-catalog worktree was left
+untouched.
+
+The 1.22.26 batch contains: rectangular room drawing with real walls and one
+undo; automatic room detection on wall Finish; last-point undo for wall chains;
+desktop Furnish/floor discoverability; same-tab hosted Google OAuth; robust
+automatic cloud Pro restoration; a once-per-install startup animation that
+defaults off afterwards; and background 3D module preloading without hidden
+WebGL. Rapid taps at different wall corners no longer masquerade as a
+double-tap-to-finish.
+
+The web app is deployed at `https://homedesignerapp.com/app/` and immutable
+deployment `https://c002daa7.homedesignerapp.pages.dev` as 1.22.26, asset
+namespace `20260825074757146`. Both the immutable URL and custom domain were
+checked after deployment: `version.json`, `/app/`, version and namespace all
+match.
+
+The signed Android bundle is ready but **has not been uploaded to Play**:
+
+| | |
+|---|---|
+| Artifact | `outputs/HomeDesigner-1.22.26-12226.aab` |
+| Bytes | 26,368,717 |
+| SHA-256 | `dc3ea7be7973c02bb83598f9ec9701b7330dd25e78eec9a83fc9744f9c4b947f` |
+| Signer | `CN=Nathan Joppich` — `EE:D4:E3:A9:11:BC:92:9A:D3:CD:33:36:FF:BF:32:C0:22:4A:1F:C5:21:BE:B1:13:02:F5:A0:7E:5F:00:6A:00` ✓ |
+| `verify-aab` | all green at `1.22.26` / `12226` |
+
+Validation: typecheck and lint clean; deterministic `test:ci` clean; full 2D,
+account and editor Playwright smoke suite clean (`SMOKE_SKIP_3D=1`); production
+web build clean. The 3D section was skipped in the long smoke run, while the
+new preload remains covered by compilation/source checks and the existing 3D
+recovery checks still ran clean. `npm audit` reports the pre-existing dependency
+backlog (2 moderate, 6 high); no broad dependency update was attempted in this
+release.
+
 ## 2026-08-17 (Claude) — 1.22.25 BUILT AND VERIFIED (account menu clipping)
 
 | | |

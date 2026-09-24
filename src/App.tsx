@@ -65,6 +65,7 @@ const loadScene3D = () => import('./components/Viewer3D/Scene3D');
 const Scene3D = lazy(loadScene3D);
 const ImportDialog = lazy(() => import('./components/ImportDialog'));
 const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
+const AiRenderDialog = lazy(() => import('./components/AiRenderDialog'));
 
 export default function App() {
   const {
@@ -133,6 +134,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showList, setShowList] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
+  const [aiRenderOpen, setAiRenderOpen] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderScale, setRenderScale] = useState(3); // supersample factor for captures
   const [renderMenuOpen, setRenderMenuOpen] = useState(false);
@@ -207,8 +209,8 @@ export default function App() {
   };
 
   // Keep latest UI state for the hardware back-button handler.
-  const stateRef = useRef({ photoMode, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings });
-  stateRef.current = { photoMode, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings };
+  const stateRef = useRef({ photoMode, aiRenderOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings });
+  stateRef.current = { photoMode, aiRenderOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings };
 
   // Going home: capture the plan synchronously (the canvas may unmount right
   // after), switch screens immediately so the tap feels instant, and finish
@@ -277,6 +279,7 @@ export default function App() {
         setWalkMode(false);
         return true;
       }
+      if (st.aiRenderOpen) { setAiRenderOpen(false); return true; }
       if (st.photoMode) {
         setPhotoMode(false);
         return true;
@@ -367,8 +370,8 @@ export default function App() {
     await new Promise((r) => setTimeout(r, 30));
     try {
       await sceneCapture.current(scale);
-    } catch {
-      toast.error(t('Render failed — try a lower quality'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('Render failed — try a lower quality'));
     } finally {
       setRendering(false);
     }
@@ -905,6 +908,10 @@ export default function App() {
                   </button>
                   {renderMenuOpen && (
                     <div className="export-menu render-menu" role="menu">
+                      <button role="menuitem" onClick={() => {
+                        setRenderMenuOpen(false);
+                        if (requirePro('aiRender')) setAiRenderOpen(true);
+                      }}><Crown className="icon" /> {t('AI render')} · Pro</button>
                       {/* Photo mode folded in here as the top quality tier —
                           it used to be its own button next to this one. */}
                       <button
@@ -1065,6 +1072,7 @@ export default function App() {
           <PhotoMode onClose={() => setPhotoMode(false)} />
         </Suspense>
       )}
+      {aiRenderOpen && <Suspense fallback={null}><AiRenderDialog onClose={() => setAiRenderOpen(false)} /></Suspense>}
 
       <ProUpsellModal />
       <UpdateBanner />

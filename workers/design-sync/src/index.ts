@@ -8,12 +8,17 @@ import {
 } from './community';
 import {
   FEATURES, PACKS, PRO_DISCOUNT, TYPICAL_ROOM_POINTS, readAccount, grantFreePoints, runMetered,
-  creditPurchase, packById, packPriceCents,
+  creditPurchase, packById, packPriceCents, UNSETTLED_BALANCE,
 } from './points';
 import { MAX_ROOMS_PER_CALL, generateRoomNames, validRoomSummaries } from './ai-features';
 import { stripeSignatureValid } from './stripe';
 import {
+  RenderError, validRenderId, validRenderImage, validResultUrl, readRender,
+  reserveRender, dispatchRender, refreshRender, publicRender, freeRenderAvailable,
+} from './ai-render';
+import {
   PRO_ENTITLEMENT_ID, liveEntitlements, matchesProEntitlement, proIdsFromCatalogue,
+  activePlaySubscriptionProduct,
   type ActiveEntitlementItem, type CatalogueEntitlement,
 } from './entitlements';
 
@@ -29,6 +34,8 @@ interface Env {
   /** JSON key for a Play Console service account with order/purchase access. */
   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: string;
   FAL_KEY: string;
+  /** Explicit rollout/circuit-breaker switch. Unset leaves paid generation off. */
+  AI_RENDER_ENABLED?: string;
   /** Workers AI, used only by the Model Studio metadata assistant. */
   AI: Ai;
   MODEL_ADMIN_EMAIL: string;
@@ -215,7 +222,7 @@ interface RevenueCatActiveEntitlements {
 }
 
 const PLAY_PACKAGE_NAME = 'com.homedesigner.app';
-const PLAY_PRO_PRODUCTS = new Set(['pro_lifetime']);
+const PLAY_PRO_PRODUCTS = new Set(['pro_lifetime', 'pro_yearly', 'pro_monthly']);
 const PLAY_VERIFY_CACHE_MS = 6 * 60 * 60 * 1000;
 
 /**
@@ -260,6 +267,34 @@ interface PlayProductPurchaseV2 {
   orderId?: string;
   purchaseCompletionTime?: string;
   acknowledgementState?: string;
+}
+
+async function boundedBody(source: Request | Response, max: number): Promise<ArrayBuffer> {
+  const reader = source.body?.getReader();
+  if (!reader) throw new RenderError('Empty image request.');
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > max) { await reader.cancel(); throw new RenderError('Image is too large.', 413); }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  const result = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+  return result.buffer;
+}
+
+interface PlaySubscriptionPurchaseV2 {
+  subscriptionState?: string;
+  acknowledgementState?: string;
+  latestOrderId?: string;
+  startTime?: string;
+  lineItems?: Array<{ productId?: string; expiryTime?: string }>;
 }
 
 interface StoredPlayPurchase {
@@ -341,6 +376,26 @@ async function acknowledgePlayPurchase(
   if (!response.ok) throw new Error(`Google Play acknowledgement failed (${response.status})`);
 }
 
+async function acknowledgePlaySubscription(
+  accessToken: string,
+  productId: string,
+  purchaseToken: string,
+): Promise<void> {
+  const response = await fetch(
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PLAY_PACKAGE_NAME}` +
+      `/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(purchaseToken)}:acknowledge`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    },
+  );
+  if (!response.ok) throw new Error(`Google Play subscription acknowledgement failed (${response.status})`);
+}
+
 async function verifyPlayToken(
   env: Env,
   purchaseToken: string,
@@ -358,10 +413,32 @@ async function verifyPlayToken(
       `/purchases/productsv2/tokens/${encodeURIComponent(purchaseToken)}`,
     { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } },
   );
-  // Google returns 400 for a syntactically valid but unknown/invalid receipt
-  // token and 404 when no purchase exists. Neither is a backend outage.
+  // A subscription token is not present in productsv2. Only after that API
+  // confirms it does not know the token do we try subscriptionsv2.
   if (response.status === 400 || response.status === 404) {
-    return { active: false, productId: null, orderId: null, purchasedAt: null };
+    const subscriptionResponse = await fetch(
+      `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PLAY_PACKAGE_NAME}` +
+        `/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`,
+      { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } },
+    );
+    if (subscriptionResponse.status === 400 || subscriptionResponse.status === 404) {
+      return { active: false, productId: null, orderId: null, purchasedAt: null };
+    }
+    if (!subscriptionResponse.ok) {
+      throw new Error(`Google Play subscription verification failed (${subscriptionResponse.status})`);
+    }
+    const subscription = await subscriptionResponse.json() as PlaySubscriptionPurchaseV2;
+    const productId = activePlaySubscriptionProduct(subscription, allowed, Date.now());
+    const active = productId !== null;
+    if (active && subscription.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING') {
+      await acknowledgePlaySubscription(accessToken, productId, purchaseToken);
+    }
+    return {
+      active,
+      productId,
+      orderId: subscription.latestOrderId ?? null,
+      purchasedAt: subscription.startTime ? Date.parse(subscription.startTime) : null,
+    };
   }
   if (!response.ok) throw new Error(`Google Play verification failed (${response.status})`);
   const purchase = await response.json() as PlayProductPurchaseV2;
@@ -1004,7 +1081,7 @@ async function pointsState(request: Request, env: Env, identity: AuthIdentity): 
     isPro,
     // Whether card checkout is available at all. The client hides the button
     // rather than offering one that 503s.
-    cardCheckout: !!env.STRIPE_SECRET_KEY,
+    cardCheckout: !!env.STRIPE_SECRET_KEY && !!env.STRIPE_WEBHOOK_SECRET,
     packs: PACKS.map((pack) => ({
       ...pack,
       proUsd: Number((pack.usd * (1 - PRO_DISCOUNT)).toFixed(2)),
@@ -1083,6 +1160,18 @@ async function claimPlayPoints(request: Request, env: Env, identity: AuthIdentit
   );
   if (!credited.ok) return json(request, { error: 'That pack is no longer sold.' }, 400);
 
+  // A replay can race the original credit, or come from a different account.
+  // Never tell Android to consume a receipt before this account owns a settled
+  // credit. An interrupted credit remains recoverable through reconciliation.
+  const settled = await env.COMMUNITY.prepare('SELECT subject, balance_after FROM point_ledger WHERE id = ?')
+    .bind(`purchase:play:${purchaseToken}`).first<{ subject: string; balance_after: number }>();
+  if (settled?.subject !== identity.subject) {
+    return json(request, { error: 'This purchase belongs to another account. Sign in to that account to restore it.' }, 409);
+  }
+  if (settled.balance_after === UNSETTLED_BALANCE) {
+    return json(request, { error: 'Your points are still being credited. Keep the receipt and try restoring later; contact support if this persists.' }, 503);
+  }
+
   return json(request, {
     credited: credited.credited,
     balance: credited.balance,
@@ -1100,7 +1189,7 @@ async function claimPlayPoints(request: Request, env: Env, identity: AuthIdentit
  * webhook can trust what it reads back without re-deriving it from an amount.
  */
 async function createPointsCheckout(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
-  if (!env.STRIPE_SECRET_KEY) {
+  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET) {
     return json(request, { error: 'Card checkout is not configured' }, 503);
   }
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
@@ -1539,7 +1628,7 @@ async function entitlement(request: Request, env: Env, subject: string): Promise
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
     const url = new URL(request.url);
 
@@ -1621,6 +1710,53 @@ export default {
       if (request.method === 'GET' && url.pathname === '/v1/points') {
         return await pointsState(request, env, identity);
       }
+      if (url.pathname.startsWith('/v1/ai/renders')) {
+        try {
+          const enabled = env.AI_RENDER_ENABLED === 'true' && !!env.FAL_KEY;
+          if (request.method === 'GET' && url.pathname === '/v1/ai/renders') {
+            const active = await env.COMMUNITY.prepare("SELECT * FROM ai_render_jobs WHERE subject = ? ORDER BY created_at DESC LIMIT 1")
+              .bind(identity.subject).first<import('./ai-render').RenderJob>();
+            return json(request, { enabled, isPro: await isProSubject(env, identity.subject),
+              freeAvailable: await freeRenderAvailable(env.COMMUNITY, identity.subject),
+              latest: active ? publicRender(active) : null });
+          }
+          if (request.method === 'POST' && url.pathname === '/v1/ai/renders') {
+            if (!enabled) return json(request, { error: 'AI rendering is temporarily unavailable.' }, 503);
+            if (!identity.emailVerified || !(await isProSubject(env, identity.subject))) {
+              return json(request, { error: 'AI rendering requires a signed-in Pro account.' }, 403);
+            }
+            const bytes = await boundedBody(request, 2_810_000);
+            let body: Record<string, unknown>;
+            try { body = JSON.parse(new TextDecoder().decode(bytes)); }
+            catch { return json(request, { error: 'Invalid render request.' }, 400); }
+            if (!body || !validRenderId(body.id) || !validRenderImage(body.image) || !Number.isSafeInteger(body.expectedCharge) || Number(body.expectedCharge) < 0) {
+              return json(request, { error: 'Send a JPEG preview up to 2 MB and a unique request ID.' }, 400);
+            }
+            const { job, created } = await reserveRender(env.COMMUNITY, identity.subject, body.id, Number(body.expectedCharge));
+            if (created) ctx.waitUntil(dispatchRender(env.COMMUNITY, env.FAL_KEY, job, body.image));
+            return json(request, publicRender(job), 202);
+          }
+          const match = url.pathname.match(/^\/v1\/ai\/renders\/([a-f0-9-]{36})(\/image)?$/);
+          if (request.method === 'GET' && match) {
+            let job = await readRender(env.COMMUNITY, identity.subject, match[1]);
+            if (!job) return json(request, { error: 'Render not found.' }, 404);
+            if (match[2]) {
+              if (job.status !== 'complete' || !validResultUrl(job.result_url)) return json(request, { error: 'Image is not ready.' }, 409);
+              const image = await fetch(job.result_url, { redirect: 'error', signal: AbortSignal.timeout(20_000) });
+              if (!image.ok) return json(request, { error: 'Image download failed. Try again.' }, 502);
+              const contentType = image.headers.get('Content-Type')?.split(';')[0];
+              if (!['image/jpeg', 'image/png'].includes(contentType ?? '')) return json(request, { error: 'Unexpected image format.' }, 502);
+              return new Response(await boundedBody(image, 12_000_000), { headers: { ...cors(request), 'Content-Type': contentType!, 'Cache-Control': 'no-store' } });
+            }
+            job = await refreshRender(env.COMMUNITY, env.FAL_KEY, job);
+            return json(request, publicRender(job));
+          }
+          return json(request, { error: 'Not found.' }, 404);
+        } catch (error) {
+          if (error instanceof RenderError) return json(request, { error: error.message }, error.status);
+          return json(request, { error: 'Could not check AI rendering. Please retry; no new render was requested.' }, 502);
+        }
+      }
       if (request.method === 'POST' && url.pathname === '/v1/points/play/claim') {
         try {
           return await claimPlayPoints(request, env, identity);
@@ -1645,6 +1781,10 @@ export default {
         // someone's posts up after they erased their designs would make that
         // promise false — and the GDPR request unanswerable.
         await erasePerson(env, identity.subject);
+        // Remove image links and direct identity, retaining pseudonymous usage
+        // counts so account erasure cannot reset the provider-spend ceiling.
+        await env.COMMUNITY.prepare("UPDATE ai_render_jobs SET subject = 'erased:' || allowance_key, result_url = NULL, request_id = NULL WHERE subject = ?")
+          .bind(identity.subject).run();
         // The purchase remains valid on the Play account/device, but no longer
         // identifies the erased HomeDesigner account.
         await env.COMMUNITY.prepare(

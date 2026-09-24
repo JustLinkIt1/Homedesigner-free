@@ -10,6 +10,11 @@ import { toast } from '../lib/ui';
 import Modal from './Modal';
 
 const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blurb: string }> = {
+  aiRender: {
+    icon: Sparkles,
+    title: 'Photorealistic AI renders',
+    blurb: 'Pro includes one free AI render per account. Further AI renders use AI points. Sign-in and internet required.',
+  },
   multiFloor: {
     icon: Layers,
     title: 'Design every storey',

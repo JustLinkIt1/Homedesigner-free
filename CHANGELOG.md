@@ -17,6 +17,55 @@ Versions map to `package.json` `version` and the Android `versionCode`
 (`1.0.NN` → `100NN`). Agents working in this repo: read this file before making
 changes and add an entry when you ship one.
 
+## Website media — 2026-08-27 (no app release)
+
+- Hosted the polished HomeDesigner product demo and poster at `media.homedesignerapp.com`, in a separate public media bucket. The responsive player is ready for iframe embedding, with native controls, no autoplay, and byte-range seeking.
+- Preserved the original local demo, presenter and Australian narration; the new edit adds smooth targeted zooms, chapter labels and branded framing. No personal name identifies the fictional presenter.
+- The marketing homepage and deployed app are unchanged; embedding on a site page is a separate follow-up.
+
+## Unreleased — 1.22.27
+
+### Mobile capture and Pro AI rendering (2026-08-28; not in existing AAB)
+
+- Bounded render buffers on phones and restored the live 3D view after success
+  or failure. Touch devices use a lighter raster Photo mode. Android image
+  sharing now stages files in the share provider's supported cache directory.
+- Added Pro-only photorealistic AI rendering from the current camera view via
+  fal.ai, with explicit image-sharing consent and no changes to the editable plan.
+- Included one free successful render per account, then 200 AI points; added
+  point balances, supported point-pack checkout/restore, resumable jobs and
+  automatic failure refunds. Server checks Pro, balance and request ownership.
+- Added atomic accounting migration, duplicate-request protection, usage limits,
+  12-locale UI strings, privacy disclosure and render regression coverage.
+- Not deployed or enabled. Migration 0005 and backend/store readiness checks
+  are required; see docs/AI_RENDER_ROLLOUT.md. No new version number assigned.
+
+### Google Play promotional subscriptions
+
+- Fixed subscription promo codes such as the 30-day `pro_yearly` trial being accepted by Google Play without unlocking Pro in HomeDesigner. Android now reads both one-time-product and subscription ownership granted outside the app.
+- Added server verification and acknowledgement for Google Play subscription tokens, including expiry-aware handling for active trials, grace periods and subscriptions cancelled before their access period ends. Expired, paused/on-hold and unrelated subscriptions remain locked.
+- Prepared signed Android `1.22.27` (`versionCode 12227`). The bundle has not been uploaded to Play; the existing production release remains 1.22.25.
+
+## 1.22.26 - 2026-08-25
+
+### Drawing and editor usability
+
+- Replaced point-by-point 2D room drawing with a press-drag-release rectangle that creates four real walls and its detected floor as one undoable action. Finishing a structural wall loop now detects enclosed rooms automatically; the manual detector remains only as recovery when walls exist but no room was found.
+- Added **Undo point** while drawing walls, half walls and fences in 2D or 3D. Backspace and Ctrl/Cmd+Z remove the latest uncommitted 2D point before touching project history. Rapid taps at different corners no longer trigger double-tap Finish.
+- Promoted a labelled **Furnish it** action to the top of the two-column desktop dock and moved desktop floor selection into a toolbar dropdown beside Import/Export. Phones retain the floating floor picker.
+
+### Accounts and startup
+
+- Made all hosted web Google sign-in use the nonce-bound same-tab redirect and return to the exact route, avoiding blocked or opener-less popups. Android keeps the native provider.
+- Hardened automatic Pro restoration: account identification now checks the authenticated cloud entitlement even if Web Billing metadata or customer-info calls fail, so linked Pro buyers should not need **Restore purchase** on every launch.
+- Made the animated-logo video play automatically once per installation, then default off; users can opt back in through **Settings → Startup**.
+- Preloaded the 3D scene module 1.2 seconds after startup without mounting WebGL, reducing the first 2D-to-3D wait without allocating hidden GPU resources.
+
+### Release
+
+- Advanced Android to `1.22.26` (`versionCode 12226`), based directly on the verified 1.22.25 release tip.
+- Deployed web 1.22.26 to `homedesignerapp.com/app` (asset namespace `20260825074757146`) and prepared the signed Android AAB locally; the Android build has not been uploaded to Play.
+
 ## 1.22.24 - 2026-08-15 (versionCode 12224)
 
 > The 1.22.23 AAB was cut at the direct-Play-Billing commit. Everything below

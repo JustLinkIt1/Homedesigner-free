@@ -14,7 +14,8 @@ import { drawBridge, useDraw } from '../../lib/ui';
 import type { Point } from '../../types';
 import WalkControls, { WalkTouchControls } from './WalkControls';
 import * as THREE from 'three';
-import { sceneCapture, orbitZoom, orbitFocus } from '../../lib/renderBridge';
+import { sceneCapture, sceneSnapshot, orbitZoom, orbitFocus } from '../../lib/renderBridge';
+import { captureRenderer } from '../../lib/renderCapture';
 import { saveImage } from '../../lib/native';
 import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
@@ -762,34 +763,24 @@ class PostFXBoundary extends Component<{ onFail: () => void; children: ReactNode
 
 /** Registers a high-resolution PNG capture function for the toolbar button. */
 function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<any> }) {
-  const { gl, size, scene, camera } = useThree();
+  const { gl, size, scene, camera, invalidate } = useThree();
   useEffect(() => {
+    const capture = (scale: number, mobile: boolean, format: 'image/png' | 'image/jpeg' = 'image/png') => {
+      try { return captureRenderer(gl, scene, camera, size, composerRef.current, scale, mobile, format); }
+      finally { invalidate(); }
+    };
+    sceneSnapshot.current = () => capture(Math.min(1, 1280 / Math.max(size.width, size.height)), true, 'image/jpeg');
     sceneCapture.current = async (scale = 3) => {
-      const { width, height } = size;
-      const dpr = gl.getPixelRatio();
-      // Supersample: render renderer + composer at scale×, keeping CSS size.
-      gl.setPixelRatio(1);
-      gl.setSize(width * scale, height * scale, false);
-      const composer = composerRef.current;
-      // Post-processing degraded (e.g. context-loss on some GPUs) → render the
-      // scene straight to the buffer so Render still works without effects.
-      const draw = () => (composer ? composer.render() : gl.render(scene, camera));
-      composer?.setSize(width * scale, height * scale);
-      draw();
-      let dataUrl = gl.domElement.toDataURL('image/png');
-      // Restore the live view exactly.
-      gl.setPixelRatio(dpr);
-      gl.setSize(width, height, false);
-      composer?.setSize(width, height);
-      draw();
+      let dataUrl = capture(scale, IS_TOUCH);
       // Free tier ships a small corner ribbon; Pro exports clean.
       if (!useProStore.getState().isPro) dataUrl = await applyWatermark(dataUrl);
       await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-render.png`);
     };
     return () => {
       sceneCapture.current = null;
+      sceneSnapshot.current = null;
     };
-  }, [gl, size, scene, camera, composerRef]);
+  }, [gl, size, scene, camera, composerRef, invalidate]);
   return null;
 }
 
@@ -915,6 +906,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
     if ((st.tool === 'wall' || st.tool === 'halfWall' || st.tool === 'fence') && d.length >= 2) {
       const kind = st.tool === 'fence' ? 'fence' : st.tool === 'halfWall' ? 'half' : 'wall';
       for (let i = 0; i < d.length - 1; i++) st.addWall(d[i], d[i + 1], kind);
+      if (st.tool === 'wall') st.detectRoomsFromWalls();
     } else if (st.tool === 'room' && d.length >= 3) {
       st.addRoom(d);
     }
@@ -926,6 +918,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
     if (!buildArmed) return;
     drawBridge.finish = finishDraft;
     drawBridge.cancel = () => setDraft([]);
+    drawBridge.undoPoint = () => setDraft(draftRef.current.slice(0, -1));
     // Exact dimensions: retype the just-drawn segment to a precise length
     // along its (snapped) direction — wired to the draw-affordance input.
     drawBridge.setLength = (cm: number) => {
@@ -944,6 +937,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
     return () => {
       drawBridge.finish = null;
       drawBridge.cancel = null;
+      drawBridge.undoPoint = null;
       drawBridge.setLength = null;
       useDraw.getState().setActive(false);
     };

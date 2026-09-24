@@ -6,6 +6,8 @@ type CaptureFn = (scale?: number) => Promise<void> | void;
 
 export const sceneCapture: { current: CaptureFn | null } = { current: null };
 export const photoCapture: { current: CaptureFn | null } = { current: null };
+// AI starts from the current camera, without saving a file or adding a watermark.
+export const sceneSnapshot: { current: (() => string) | null } = { current: null };
 
 // 2D plan export: Canvas2D registers a function returning a framed PNG data URL
 // of the whole design (grid hidden) plus its raster scale (image px per plan

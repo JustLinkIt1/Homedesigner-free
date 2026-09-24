@@ -16,7 +16,7 @@ import {
   type PlayPurchase,
 } from './playBilling';
 
-export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects';
+export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects' | 'aiRender';
 export type ProPlanID = 'monthly' | 'yearly' | 'lifetime';
 
 export interface ProPlan {

@@ -1,6 +1,7 @@
 import { registerPlugin } from '@capacitor/core';
 
 export const PLAY_PRO_PRODUCT_ID = 'pro_lifetime';
+export const PLAY_PRO_PRODUCT_IDS = ['pro_lifetime', 'pro_yearly', 'pro_monthly'] as const;
 
 export interface PlayProduct {
   identifier: string;
@@ -28,12 +29,14 @@ interface PlayBillingPlugin {
   purchase(options: { productId: string }): Promise<{ purchase: PlayPurchase | null }>;
   getPurchases(): Promise<{ purchases: PlayPurchase[] }>;
   resetPurchaseFlow(): Promise<void>;
+  consumePoints(options: { purchaseToken: string }): Promise<{ consumed: boolean }>;
 }
 
 export const PlayBilling = registerPlugin<PlayBillingPlugin>('PlayBilling');
 
 export function isCompletedProPurchase(purchase: PlayPurchase | null | undefined): purchase is PlayPurchase {
-  return purchase?.purchaseState === 1 && purchase.products.includes(PLAY_PRO_PRODUCT_ID)
+  return purchase?.purchaseState === 1
+    && purchase.products.some((product) => (PLAY_PRO_PRODUCT_IDS as readonly string[]).includes(product))
     && typeof purchase.purchaseToken === 'string' && purchase.purchaseToken.length > 0;
 }
 

@@ -27,6 +27,35 @@ export interface CatalogueEntitlement {
   lookup_key?: string;
 }
 
+/** Relevant subset of Android Publisher subscriptionsv2. */
+export interface PlaySubscriptionPurchaseV2 {
+  subscriptionState?: string;
+  lineItems?: Array<{ productId?: string; expiryTime?: string }>;
+}
+
+const LIVE_PLAY_SUBSCRIPTION_STATES = new Set([
+  'SUBSCRIPTION_STATE_ACTIVE',
+  'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+  // Cancelled means renewal stopped; access continues until expiryTime.
+  'SUBSCRIPTION_STATE_CANCELED',
+]);
+
+/** Find the Pro line item that is genuinely entitled at `now`. State alone is
+ * insufficient: a cancelled trial remains valid until its expiry timestamp. */
+export function activePlaySubscriptionProduct(
+  purchase: PlaySubscriptionPurchaseV2,
+  allowedProducts: ReadonlySet<string>,
+  now: number,
+): string | null {
+  if (!purchase.subscriptionState || !LIVE_PLAY_SUBSCRIPTION_STATES.has(purchase.subscriptionState)) return null;
+  for (const item of purchase.lineItems ?? []) {
+    if (!item.productId || !allowedProducts.has(item.productId) || !item.expiryTime) continue;
+    const expiry = Date.parse(item.expiryTime);
+    if (Number.isFinite(expiry) && expiry > now) return item.productId;
+  }
+  return null;
+}
+
 /** The identifier the SDKs use, and the one `hasProEntitlement()` matches in
  *  the client. The REST API never returns it in `active_entitlements`. */
 export const PRO_ENTITLEMENT_LOOKUP_KEY = 'Pro';

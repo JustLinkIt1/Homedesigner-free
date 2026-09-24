@@ -17,6 +17,8 @@ import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
 import { requestReviewAfterPhotoSave } from '../../lib/appReview';
+import { captureRenderer } from '../../lib/renderCapture';
+import { toast } from '../../lib/ui';
 
 const MAX_SAMPLES = 200;
 
@@ -24,6 +26,7 @@ const MAX_SAMPLES = 200;
  *  (no EXT_color_buffer_float), so we decide the mode BEFORE mounting the
  *  heavy tracer and render a raster "beauty" view instead. */
 function pathtracerSupported(): boolean {
+  if (window.matchMedia('(pointer: coarse)').matches) return false;
   try {
     const c = document.createElement('canvas');
     const gl = c.getContext('webgl2');
@@ -124,28 +127,22 @@ function PathtracedContent({
 
 /** Supersampled PNG capture of the raster beauty view (works on every GPU). */
 function RasterCapture({ composerRef }: { composerRef: React.MutableRefObject<any> }) {
-  const { gl, size } = useThree();
+  const { gl, size, scene, camera, invalidate } = useThree();
   useEffect(() => {
     photoCapture.current = async () => {
       const scale = useProStore.getState().isPro ? 3 : 2;
-      const { width, height } = size;
-      const dpr = gl.getPixelRatio();
-      gl.setPixelRatio(1);
-      gl.setSize(width * scale, height * scale, false);
-      composerRef.current?.setSize(width * scale, height * scale);
-      composerRef.current?.render();
-      let dataUrl = gl.domElement.toDataURL('image/png');
-      gl.setPixelRatio(dpr);
-      gl.setSize(width, height, false);
-      composerRef.current?.setSize(width, height);
-      composerRef.current?.render();
+      let dataUrl: string;
+      try {
+        dataUrl = captureRenderer(gl, scene, camera, size, composerRef.current, scale,
+          window.matchMedia('(pointer: coarse)').matches);
+      } finally { invalidate(); }
       if (!useProStore.getState().isPro) dataUrl = await applyWatermark(dataUrl);
       await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-photo.png`);
     };
     return () => {
       photoCapture.current = null;
     };
-  }, [gl, size, composerRef]);
+  }, [gl, size, scene, camera, composerRef, invalidate]);
   return null;
 }
 
@@ -161,6 +158,7 @@ function RasterContent({
   dollhouse: boolean;
 }) {
   const composerRef = useRef<any>(null);
+  const mobile = window.matchMedia('(pointer: coarse)').matches;
   const sunTime = useDesign((s) => s.sunTime);
   const sun = sunModel(sunTime);
   const sunPos: [number, number, number] = [
@@ -200,13 +198,13 @@ function RasterContent({
         <meshStandardMaterial color="#e6e8eb" roughness={1} />
       </mesh>
 
-      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant useRenderModels />
+      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant useRenderModels={!mobile} />
 
-      <EffectComposer ref={composerRef} multisampling={8} enableNormalPass>
+      {!mobile && <EffectComposer ref={composerRef} multisampling={4} enableNormalPass>
         <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />
         <Bloom mipmapBlur intensity={0.18} luminanceThreshold={1.0} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      </EffectComposer>
+      </EffectComposer>}
       <RasterCapture composerRef={composerRef} />
       <OrbitControls makeDefault target={center} enableDamping dampingFactor={0.09} />
     </>
@@ -216,6 +214,7 @@ function RasterContent({
 /* ----------------------------------------------------------------------- shell */
 
 export default function PhotoMode({ onClose }: { onClose: () => void }) {
+  const mobile = window.matchMedia('(pointer: coarse)').matches;
   const { center, radius } = useDesignBounds();
   const [mode, setMode] = useState<'trace' | 'raster'>(() =>
     pathtracerSupported() ? 'trace' : 'raster',
@@ -242,8 +241,12 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
   const savePhoto = async () => {
     const capture = photoCapture.current;
     if (!capture) return;
-    await capture();
-    await requestReviewAfterPhotoSave();
+    try {
+      await capture();
+      await requestReviewAfterPhotoSave();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not save the photo.');
+    }
   };
 
   return (
@@ -265,8 +268,9 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
         </Canvas>
       ) : (
         <Canvas
-          flat
+          flat={!mobile}
           shadows
+          dpr={[1, 1.5]}
           gl={{ antialias: true, preserveDrawingBuffer: true }}
           camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
           style={{ position: 'absolute', inset: 0 }}
