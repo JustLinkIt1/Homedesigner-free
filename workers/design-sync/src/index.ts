@@ -15,6 +15,7 @@ import { stripeSignatureValid } from './stripe';
 import {
   RenderError, validRenderId, validRenderImage, validResultUrl, readRender,
   reserveRender, dispatchRender, refreshRender, publicRender, freeRenderAvailable,
+  validRenderStyle, RENDER_STYLES,
 } from './ai-render';
 import {
   PRO_ENTITLEMENT_ID, liveEntitlements, matchesProEntitlement, proIdsFromCatalogue,
@@ -262,11 +263,15 @@ interface PlayServiceAccount {
 }
 
 interface PlayProductPurchaseV2 {
-  productLineItem?: Array<{ productId?: string }>;
+  productLineItem?: Array<{
+    productId?: string;
+    productOfferDetails?: { quantity?: number; consumptionState?: string };
+  }>;
   purchaseStateContext?: { purchaseState?: string };
   orderId?: string;
   purchaseCompletionTime?: string;
   acknowledgementState?: string;
+  obfuscatedExternalAccountId?: string;
 }
 
 async function boundedBody(source: Request | Response, max: number): Promise<ArrayBuffer> {
@@ -310,6 +315,14 @@ let playAccessToken: { value: string; expiresAt: number } | null = null;
 function validPurchaseToken(value: unknown): value is string {
   return typeof value === 'string' && value.length >= 20 && value.length <= 4096
     && /^[A-Za-z0-9._:-]+$/.test(value);
+}
+
+async function playAccountId(subject: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(`homedesigner-play:${subject}`),
+  );
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 async function getPlayAccessToken(env: Env): Promise<string> {
@@ -376,6 +389,19 @@ async function acknowledgePlayPurchase(
   if (!response.ok) throw new Error(`Google Play acknowledgement failed (${response.status})`);
 }
 
+async function consumePlayPurchase(
+  accessToken: string,
+  productId: string,
+  purchaseToken: string,
+): Promise<void> {
+  const response = await fetch(
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PLAY_PACKAGE_NAME}` +
+      `/purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(purchaseToken)}:consume`,
+    { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!response.ok) throw new Error(`Google Play consumption failed (${response.status})`);
+}
+
 async function acknowledgePlaySubscription(
   accessToken: string,
   productId: string,
@@ -406,7 +432,16 @@ async function verifyPlayToken(
   // that is what stops a points receipt being redeemed as a Pro unlock, and
   // vice versa.
   allowed: ReadonlySet<string> = PLAY_PRO_PRODUCTS,
-): Promise<{ active: boolean; productId: string | null; orderId: string | null; purchasedAt: number | null }> {
+  acknowledge = true,
+): Promise<{
+  active: boolean;
+  productId: string | null;
+  orderId: string | null;
+  purchasedAt: number | null;
+  obfuscatedAccountId: string | null;
+  consumed: boolean;
+  quantity: number;
+}> {
   const accessToken = await getPlayAccessToken(env);
   const response = await fetch(
     `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PLAY_PACKAGE_NAME}` +
@@ -422,7 +457,10 @@ async function verifyPlayToken(
       { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } },
     );
     if (subscriptionResponse.status === 400 || subscriptionResponse.status === 404) {
-      return { active: false, productId: null, orderId: null, purchasedAt: null };
+      return {
+        active: false, productId: null, orderId: null, purchasedAt: null,
+        obfuscatedAccountId: null, consumed: false, quantity: 0,
+      };
     }
     if (!subscriptionResponse.ok) {
       throw new Error(`Google Play subscription verification failed (${subscriptionResponse.status})`);
@@ -438,14 +476,18 @@ async function verifyPlayToken(
       productId,
       orderId: subscription.latestOrderId ?? null,
       purchasedAt: subscription.startTime ? Date.parse(subscription.startTime) : null,
+      obfuscatedAccountId: null,
+      consumed: false,
+      quantity: 1,
     };
   }
   if (!response.ok) throw new Error(`Google Play verification failed (${response.status})`);
   const purchase = await response.json() as PlayProductPurchaseV2;
-  const productId = purchase.productLineItem?.map((item) => item.productId)
-    .find((id): id is string => typeof id === 'string' && allowed.has(id)) ?? null;
+  const lineItem = purchase.productLineItem
+    ?.find((item) => typeof item.productId === 'string' && allowed.has(item.productId));
+  const productId = lineItem?.productId ?? null;
   const active = purchase.purchaseStateContext?.purchaseState === 'PURCHASED' && productId !== null;
-  if (active && purchase.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING') {
+  if (active && acknowledge && purchase.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING') {
     await acknowledgePlayPurchase(env, accessToken, productId, purchaseToken);
   }
   return {
@@ -455,6 +497,9 @@ async function verifyPlayToken(
     purchasedAt: purchase.purchaseCompletionTime
       ? Date.parse(purchase.purchaseCompletionTime)
       : null,
+    obfuscatedAccountId: purchase.obfuscatedExternalAccountId ?? null,
+    consumed: lineItem?.productOfferDetails?.consumptionState === 'CONSUMPTION_STATE_CONSUMED',
+    quantity: lineItem?.productOfferDetails?.quantity ?? 1,
   };
 }
 
@@ -1121,10 +1166,10 @@ async function isProSubject(env: Env, subject: string): Promise<boolean> {
 /**
  * Credits a Play consumable purchase.
  *
- * The client buys through Play Billing, sends the token here, and only calls
- * `consumeAsync` once this returns success. That ordering matters: consuming
- * first would destroy the receipt while the credit could still fail, leaving a
- * buyer who paid, holds nothing, and has no token left to retry with.
+ * The client buys through Play Billing and sends the token here. This endpoint
+ * verifies and account-binds the receipt, credits the ledger, then consumes it
+ * on Google's backend so it can be bought again. Consuming before the credit
+ * would destroy the retryable receipt while the buyer still holds no points.
  */
 async function claimPlayPoints(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
@@ -1133,9 +1178,15 @@ async function claimPlayPoints(request: Request, env: Env, identity: AuthIdentit
     return json(request, { error: 'A valid purchaseToken is required' }, 400);
   }
 
-  const verified = await verifyPlayToken(env, purchaseToken, PLAY_POINT_PRODUCT_IDS);
+  const verified = await verifyPlayToken(env, purchaseToken, PLAY_POINT_PRODUCT_IDS, false);
   if (!verified.active || !verified.productId) {
     return json(request, { error: 'Google Play did not confirm this purchase.' }, 402);
+  }
+  if (verified.obfuscatedAccountId !== await playAccountId(identity.subject)) {
+    return json(request, { error: 'This Google Play purchase belongs to a different HomeDesigner account.' }, 409);
+  }
+  if (verified.quantity !== 1) {
+    return json(request, { error: 'Point packs must be purchased one at a time.' }, 409);
   }
 
   const product = PLAY_POINT_PRODUCTS.get(verified.productId);
@@ -1172,12 +1223,23 @@ async function claimPlayPoints(request: Request, env: Env, identity: AuthIdentit
     return json(request, { error: 'Your points are still being credited. Keep the receipt and try restoring later; contact support if this persists.' }, 503);
   }
 
+  if (!verified.consumed) {
+    const accessToken = await getPlayAccessToken(env);
+    try {
+      await consumePlayPurchase(accessToken, verified.productId, purchaseToken);
+    } catch (error) {
+      // Concurrent restore requests can race after the one ledger credit. If
+      // the other request consumed first, the purchase is already settled.
+      const after = await verifyPlayToken(env, purchaseToken, PLAY_POINT_PRODUCT_IDS, false);
+      if (!after.consumed) throw error;
+    }
+  }
+
   return json(request, {
     credited: credited.credited,
     balance: credited.balance,
     replay: credited.replay,
-    // The client consumes only after seeing this, so it can be bought again.
-    consume: true,
+    consumed: true,
   });
 }
 
@@ -1718,6 +1780,7 @@ export default {
               .bind(identity.subject).first<import('./ai-render').RenderJob>();
             return json(request, { enabled, isPro: await isProSubject(env, identity.subject),
               freeAvailable: await freeRenderAvailable(env.COMMUNITY, identity.subject),
+              styles: RENDER_STYLES,
               latest: active ? publicRender(active) : null });
           }
           if (request.method === 'POST' && url.pathname === '/v1/ai/renders') {
@@ -1729,10 +1792,11 @@ export default {
             let body: Record<string, unknown>;
             try { body = JSON.parse(new TextDecoder().decode(bytes)); }
             catch { return json(request, { error: 'Invalid render request.' }, 400); }
-            if (!body || !validRenderId(body.id) || !validRenderImage(body.image) || !Number.isSafeInteger(body.expectedCharge) || Number(body.expectedCharge) < 0) {
+            if (!body || !validRenderId(body.id) || !validRenderImage(body.image) || !validRenderStyle(body.style)
+              || !Number.isSafeInteger(body.expectedCharge) || Number(body.expectedCharge) < 0) {
               return json(request, { error: 'Send a JPEG preview up to 2 MB and a unique request ID.' }, 400);
             }
-            const { job, created } = await reserveRender(env.COMMUNITY, identity.subject, body.id, Number(body.expectedCharge));
+            const { job, created } = await reserveRender(env.COMMUNITY, identity.subject, body.id, Number(body.expectedCharge), body.style);
             if (created) ctx.waitUntil(dispatchRender(env.COMMUNITY, env.FAL_KEY, job, body.image));
             return json(request, publicRender(job), 202);
           }

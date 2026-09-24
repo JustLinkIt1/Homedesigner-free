@@ -37,8 +37,33 @@ changes and add an entry when you ship one.
   automatic failure refunds. Server checks Pro, balance and request ownership.
 - Added atomic accounting migration, duplicate-request protection, usage limits,
   12-locale UI strings, privacy disclosure and render regression coverage.
-- Not deployed or enabled. Migration 0005 and backend/store readiness checks
+- Added six fixed, server-owned render treatments—Photorealistic, Modern,
+  Scandinavian, Industrial, Coastal and Luxury—at the existing 200-point price.
+  The app cannot submit arbitrary provider prompts or generation settings.
+- Hardened Google Play point packs: purchases are cryptographically bound to
+  the signed-in account, verified and credited on the server, then consumed by
+  the server only after the points ledger settles. Interrupted purchases are
+  reconciled automatically when AI render reopens.
+- Activated six consumable point products across 173 Play regions: 2,000 /
+  6,000 / 15,000 points at USD 1.99 / 5.99 / 14.99 and Pro variants at USD
+  1.40 / 4.20 / 10.50 base prices. Google Play localizes and charms regional
+  consumer prices.
+- Not deployed or enabled. Migrations 0005–0006 and backend/store readiness checks
   are required; see docs/AI_RENDER_ROLLOUT.md. No new version number assigned.
+
+### Android ANR mitigation (2026-09-24; not in existing AAB)
+
+- Play vitals measured a 1.77% user-perceived ANR rate for 12227, above the
+  0.47% bad-behaviour threshold. Four of five events were native GPU waits in
+  `HardwareRenderer.syncAndDrawFrame`; affected samples included Infinix SMART
+  9 HD and realme 12 5G. One Redmi A1 trace was captured idle and inconclusive.
+- Made native Android's automatic 3D quality conservative because CPU/RAM do
+  not predict WebView GPU stability: DPR 1, no MSAA, shadows, contact shadows or
+  post-processing, and a low-power WebGL preference. Users can still explicitly
+  choose Medium or High in Settings.
+- Reduced mobile Photo mode to a demand-rendered DPR-1 canvas without live
+  shadows/contact shadows. Desktop quality and exported image dimensions are
+  unchanged.
 
 ### Google Play promotional subscriptions
 

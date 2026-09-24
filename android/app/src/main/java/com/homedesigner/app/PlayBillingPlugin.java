@@ -8,7 +8,6 @@ import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
-import com.android.billingclient.api.ConsumeParams;
 import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
@@ -152,40 +151,6 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
         void complete(ProductDetails details);
     }
 
-    /** Only call after the authenticated server has credited this receipt. */
-    @PluginMethod
-    public void consumePoints(PluginCall call) {
-        String token = call.getString("purchaseToken");
-        if (token == null || token.isBlank()) { call.reject("purchaseToken is required"); return; }
-        withReady(() -> {
-            QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
-                .setProductType(BillingClient.ProductType.INAPP).build();
-            billingClient.queryPurchasesAsync(params, (result, purchases) -> {
-                if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                    reject(call, "Owned purchase query", result); return;
-                }
-                Purchase found = null;
-                if (purchases != null) {
-                    for (Purchase item : purchases) if (item.getPurchaseToken().equals(token)) found = item;
-                }
-                if (found == null) { call.resolve(new JSObject().put("consumed", true)); return; }
-                boolean points = false;
-                for (String id : found.getProducts()) {
-                    if (id.matches("points_(2000|6000|15000)(_pro)?")) points = true;
-                }
-                if (!points || found.getPurchaseState() != Purchase.PurchaseState.PURCHASED) {
-                    call.reject("Only completed point packs can be consumed"); return;
-                }
-                billingClient.consumeAsync(ConsumeParams.newBuilder().setPurchaseToken(token).build(), (consumed, receipt) -> {
-                    if (consumed.getResponseCode() == BillingClient.BillingResponseCode.OK
-                        || consumed.getResponseCode() == BillingClient.BillingResponseCode.ITEM_NOT_OWNED) {
-                        call.resolve(new JSObject().put("consumed", true));
-                    } else reject(call, "Point pack consumption", consumed);
-                });
-            });
-        }, result -> reject(call, "Store connection", result));
-    }
-
     private interface PurchasesCallback {
         void complete(BillingResult result, List<Purchase> purchases);
     }
@@ -272,8 +237,13 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
     @PluginMethod
     public void purchase(PluginCall call) {
         String productId = call.getString("productId");
+        String obfuscatedAccountId = call.getString("obfuscatedAccountId");
         if (productId == null || productId.isBlank()) {
             call.reject("productId is required");
+            return;
+        }
+        if (obfuscatedAccountId != null && !obfuscatedAccountId.matches("[a-f0-9]{64}")) {
+            call.reject("obfuscatedAccountId must be a SHA-256 hex digest");
             return;
         }
         final long generation;
@@ -309,9 +279,10 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
                     .setProductDetails(details)
                     .setOfferToken(offer.getOfferToken())
                     .build();
-            BillingFlowParams flow = BillingFlowParams.newBuilder()
-                .setProductDetailsParamsList(Collections.singletonList(productParams))
-                .build();
+            BillingFlowParams.Builder flowBuilder = BillingFlowParams.newBuilder()
+                .setProductDetailsParamsList(Collections.singletonList(productParams));
+            if (obfuscatedAccountId != null) flowBuilder.setObfuscatedAccountId(obfuscatedAccountId);
+            BillingFlowParams flow = flowBuilder.build();
 
             getActivity().runOnUiThread(() -> {
                 if (!isCurrentPurchase(call, generation)) return;

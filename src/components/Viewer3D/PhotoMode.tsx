@@ -180,19 +180,19 @@ function RasterContent({
       <ambientLight intensity={sun.ambient} />
       <hemisphereLight intensity={0.18 + sun.day * 0.3} groundColor="#2a2c33" color={sun.isNight ? '#20293a' : '#ffffff'} />
       <directionalLight
-        position={sunPos} intensity={sun.sunIntensity} color={sun.sunColor} castShadow
+        position={sunPos} intensity={sun.sunIntensity} color={sun.sunColor} castShadow={!mobile}
         shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004}
         shadow-camera-left={-radius * 2} shadow-camera-right={radius * 2}
         shadow-camera-top={radius * 2} shadow-camera-bottom={-radius * 2} shadow-camera-far={80} />
       <directionalLight position={[center[0] - sun.dir[0] * 14, 12, center[2] - sun.dir[2] * 10]}
         intensity={0.1 + sun.day * 0.24} color="#cdd8ff" />
-      <Environment resolution={256} frames={1}>
+      <Environment resolution={mobile ? 64 : 256} frames={1}>
         <Lightformer intensity={1.1 * k} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
         <Lightformer intensity={0.8 * k} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
         <Lightformer intensity={0.6 * k} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
       </Environment>
-      <ContactShadows position={[center[0], 0.015, center[2]]} scale={Math.max(20, radius * 4)}
-        resolution={1024} blur={2.4} far={2.2} opacity={0.42} color="#0a0c10" />
+      {!mobile && <ContactShadows position={[center[0], 0.015, center[2]]} scale={Math.max(20, radius * 4)}
+        resolution={1024} blur={2.4} far={2.2} opacity={0.42} color="#0a0c10" />}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center[0], -0.01, center[2]]} receiveShadow>
         <planeGeometry args={[400, 400]} />
         <meshStandardMaterial color="#e6e8eb" roughness={1} />
@@ -206,7 +206,7 @@ function RasterContent({
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       </EffectComposer>}
       <RasterCapture composerRef={composerRef} />
-      <OrbitControls makeDefault target={center} enableDamping dampingFactor={0.09} />
+      <OrbitControls makeDefault target={center} enableDamping={!mobile} dampingFactor={0.09} />
     </>
   );
 }
@@ -269,9 +269,10 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
       ) : (
         <Canvas
           flat={!mobile}
-          shadows
-          dpr={[1, 1.5]}
-          gl={{ antialias: true, preserveDrawingBuffer: true }}
+          shadows={!mobile}
+          frameloop={mobile ? 'demand' : 'always'}
+          dpr={mobile ? 1 : [1, 1.5]}
+          gl={{ antialias: !mobile, preserveDrawingBuffer: true, powerPreference: mobile ? 'low-power' : 'high-performance' }}
           camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
           style={{ position: 'absolute', inset: 0 }}
         >

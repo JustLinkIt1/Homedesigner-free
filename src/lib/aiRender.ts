@@ -4,8 +4,9 @@ import { withTimeout, STORE_TIMEOUT_MS, PURCHASE_TIMEOUT_MS } from './pro';
 import { useAuthStore } from '../store/authStore';
 
 const BASE = (import.meta.env.VITE_CLOUD_SYNC_URL ?? '').replace(/\/$/, '');
-export interface AiJob { id: string; status: 'reserved' | 'queued' | 'complete' | 'failed'; charged: number; error: string | null }
-export interface AiState { enabled: boolean; isPro: boolean; freeAvailable: boolean; latest: AiJob | null }
+export interface AiJob { id: string; status: 'reserved' | 'queued' | 'complete' | 'failed'; style: string; charged: number; error: string | null }
+export interface AiRenderStyle { id: string; label: string }
+export interface AiState { enabled: boolean; isPro: boolean; freeAvailable: boolean; styles: AiRenderStyle[]; latest: AiJob | null }
 export interface PointPack { id: string; points: number; playProductId: string; priceCents: number }
 export interface PointsState { balance: number; features: Record<string, { points: number }>; packs: PointPack[]; cardCheckout: boolean }
 
@@ -46,13 +47,19 @@ export async function imageDataUrl(id: string): Promise<string> {
 
 async function claimPack(purchase: PlayPurchase) {
   if (purchase.purchaseState !== 1) throw new Error('Payment is pending. Restore point purchases after Google Play completes it.');
-  const result = await aiJson<{ consume: boolean }>('/v1/points/play/claim', { purchaseToken: purchase.purchaseToken });
-  if (result.consume) await withTimeout(PlayBilling.consumePoints({ purchaseToken: purchase.purchaseToken }), STORE_TIMEOUT_MS,
-    'Points were credited, but Play could not finish. Tap Restore point purchases.');
+  await aiJson('/v1/points/play/claim', { purchaseToken: purchase.purchaseToken });
+}
+async function playAccountId(subject: string) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`homedesigner-play:${subject}`));
+  return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 export async function buyPlayPoints(pack: PointPack) {
   const subject = useAuthStore.getState().account?.subject;
-  const result = await withTimeout(PlayBilling.purchase({ productId: pack.playProductId }), PURCHASE_TIMEOUT_MS,
+  if (!subject) throw new Error('Sign in before buying AI points.');
+  const result = await withTimeout(PlayBilling.purchase({
+    productId: pack.playProductId,
+    obfuscatedAccountId: await playAccountId(subject),
+  }), PURCHASE_TIMEOUT_MS,
     'Purchase is still pending. Use Restore point purchases before buying again.');
   if (subject !== useAuthStore.getState().account?.subject) throw new Error('Account changed. Sign back in and restore point purchases.');
   if (!result.purchase) throw new Error('No completed purchase returned.');

@@ -5629,5 +5629,7 @@ button:focus:not(:focus-visible) {
 .ai-render-preview { display: block; width: 100%; max-height: 40vh; object-fit: contain; border-radius: 12px; background: #111827; }
 .ai-render-consent { display: flex; align-items: flex-start; gap: 10px; line-height: 1.45; }
 .ai-render-consent input { margin-top: 4px; flex-shrink: 0; }
+.ai-render-style { display: grid; gap: 6px; font-weight: 600; }
+.ai-render-style select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
 .ai-point-packs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .ai-render-error { color: #ef7373; overflow-wrap: anywhere; }

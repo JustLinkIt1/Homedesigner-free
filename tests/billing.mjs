@@ -320,6 +320,8 @@ const reset = (isPro) => {
   check('native product query uses one-time purchase offers',
     nativePlugin.includes('getOneTimePurchaseOfferDetailsList()') &&
       nativePlugin.includes('setOfferToken(offer.getOfferToken())'));
+  check('point purchases are bound to the signed-in account',
+    nativePlugin.includes('setObfuscatedAccountId(obfuscatedAccountId)'));
   check('native timeout invalidates late purchase callbacks',
     nativePlugin.includes('purchaseGeneration += 1;') &&
       nativePlugin.includes('isCurrentPurchase(call, generation)'));
@@ -347,6 +349,17 @@ const reset = (isPro) => {
     worker.includes('/purchases/subscriptionsv2/tokens/') &&
       worker.includes('/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/') &&
       worker.includes('activePlaySubscriptionProduct'));
+  const aiRender = readFileSync(join(root, 'src/lib/aiRender.ts'), 'utf8');
+  check('the app and Worker derive the same private Play account binding',
+    aiRender.includes('homedesigner-play:${subject}') &&
+      aiRender.includes('obfuscatedAccountId: await playAccountId(subject)') &&
+      worker.includes('homedesigner-play:${subject}') &&
+      worker.includes('verified.obfuscatedAccountId !== await playAccountId(identity.subject)'));
+  check('point receipts are credited then consumed on the trusted backend',
+    worker.includes('await creditPurchase(') &&
+      worker.includes('/tokens/${encodeURIComponent(purchaseToken)}:consume') &&
+      worker.indexOf('const credited = await creditPurchase(') < worker.indexOf('await consumePlayPurchase(') &&
+      !nativePlugin.includes('consumePoints(PluginCall call)'));
   check('Stripe web and Play receipts feed one entitlement endpoint',
     worker.includes('const play = await playEntitled(env, subject)') &&
       worker.includes('const web = await revenueCatEntitled(env, subject)'));

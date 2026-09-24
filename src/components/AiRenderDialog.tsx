@@ -26,9 +26,11 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [style, setStyle] = useState('photorealistic');
   const [prices, setPrices] = useState<Record<string, string>>({});
   const inFlight = useRef(false);
   const alive = useRef(true);
+  const restoredPurchases = useRef(false);
   const native = isNative();
   const reload = useCallback(async () => {
     const [next, balance] = await Promise.all([aiJson<AiState>('/v1/ai/renders'), aiJson<PointsState>('/v1/points')]);
@@ -41,6 +43,13 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
     if (account) void reload().catch(e => setError(e instanceof Error ? e.message : String(e)));
     return () => { alive.current = false; };
   }, [account, reload]);
+  useEffect(() => {
+    if (!native || !account || restoredPurchases.current) return;
+    restoredPurchases.current = true;
+    // Reconcile completed/pending point purchases automatically. This covers a
+    // successful Play payment followed by a network loss or app restart.
+    void restorePlayPoints().then(reload).catch(() => undefined);
+  }, [account, native, reload]);
   useEffect(() => {
     if (!native || !points) return;
     let cancelled = false;
@@ -91,9 +100,9 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
     if (!source || !consent || cost === undefined) return;
     // Track this request while the server persists it; reload resumes the latest job after a timeout.
     const id = crypto.randomUUID();
-    setJob({ id, status: 'reserved', charged: cost, error: null }); setResult('');
+    setJob({ id, status: 'reserved', style, charged: cost, error: null }); setResult('');
     try {
-      const next = await aiJson<AiJob>('/v1/ai/renders', { id, image: source, expectedCharge: cost });
+      const next = await aiJson<AiJob>('/v1/ai/renders', { id, image: source, style, expectedCharge: cost });
       if (alive.current) setJob(next);
     } catch (e) { await reload(); throw e; }
   });
@@ -114,6 +123,11 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
         {points && <p>{t('AI points')}: {points.balance.toLocaleString()} · {state?.freeAvailable ? t('Your first AI render is free') : `${cost ?? '—'} ${t('points per render')}`}</p>}
         {state && !state.isPro && <p>{t('AI rendering requires Pro linked to this account. Restore your purchase and try again.')}</p>}
         {state && !state.enabled && <p>{t('AI rendering is temporarily unavailable.')}</p>}
+        {!!state?.styles.length && <label className="ai-render-style">{t('Style')}
+          <select value={style} disabled={busy || pending} onChange={event => setStyle(event.target.value)}>
+            {state.styles.map(item => <option value={item.id} key={item.id}>{item.label}</option>)}
+          </select>
+        </label>}
         <label className="ai-render-consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
           {t('Send this preview to fal.ai to generate an image. No plan file or account details are sent.')}</label>
         {pending && <p role="status">{t('Generating your image… You can close this window and reopen AI render to resume.')}</p>}

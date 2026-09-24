@@ -26,10 +26,9 @@ export interface PlayPurchase {
 interface PlayBillingPlugin {
   connect(): Promise<{ ready: boolean }>;
   getProduct(options: { productId: string }): Promise<{ product: PlayProduct | null }>;
-  purchase(options: { productId: string }): Promise<{ purchase: PlayPurchase | null }>;
+  purchase(options: { productId: string; obfuscatedAccountId?: string }): Promise<{ purchase: PlayPurchase | null }>;
   getPurchases(): Promise<{ purchases: PlayPurchase[] }>;
   resetPurchaseFlow(): Promise<void>;
-  consumePoints(options: { purchaseToken: string }): Promise<{ consumed: boolean }>;
 }
 
 export const PlayBilling = registerPlugin<PlayBillingPlugin>('PlayBilling');

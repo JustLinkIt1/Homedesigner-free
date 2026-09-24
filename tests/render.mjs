@@ -14,7 +14,7 @@ try {
   await build({ stdin: { contents: `export * from './src/lib/renderCapture'; export * from './workers/design-sync/src/ai-render';`,
     resolveDir: process.cwd(), loader: 'ts' }, bundle: true, format: 'esm', platform: 'node', outfile: out });
   const { captureDimensions, captureRenderer, reserveRender, readRender, failRender, freeRenderAvailable,
-    validRenderImage, validRenderId, validResultUrl, dispatchRender, refreshRender } = await import(pathToFileURL(out).href);
+    validRenderImage, validRenderId, validResultUrl, validRenderStyle, renderPrompt, dispatchRender, refreshRender } = await import(pathToFileURL(out).href);
   for (const [w, h] of [[390, 844], [844, 390], [1440, 3200], [4096, 2160]]) {
     for (const scale of [2, 3, 4]) {
       const d = captureDimensions(w, h, scale, true);
@@ -50,7 +50,7 @@ try {
   assert.throws(() => captureRenderer(fixture({ lost: true }).gl, {}, {}, { width: 400, height: 800 }, null, 2, true)); checks++;
 
   const sql = new DatabaseSync(':memory:');
-  for (const file of ['0004_points.sql', '0005_ai_renders.sql']) sql.exec(readFileSync(`workers/design-sync/migrations/${file}`, 'utf8'));
+  for (const file of ['0004_points.sql', '0005_ai_renders.sql', '0006_ai_render_styles.sql']) sql.exec(readFileSync(`workers/design-sync/migrations/${file}`, 'utf8'));
   const db = { prepare(query) {
     const stmt = sql.prepare(query);
     const bound = args => ({ first: async () => stmt.get(...args) ?? null,
@@ -87,6 +87,8 @@ try {
   check(validRenderImage('data:image/jpeg;base64,/9j/AAAA'), 'Accept bounded JPEG input');
   for (const input of ['https://internal/image', 'data:image/svg+xml;base64,AAAA', 'data:image/jpeg;base64,/9j/' + 'A'.repeat(2_800_000)]) check(!validRenderImage(input), 'Reject remote URLs, wrong types and oversized input');
   check(validRenderId(id()) && !validRenderId('../../account'), 'Validate job identifiers');
+  check(validRenderStyle('modern') && !validRenderStyle('custom prompt'), 'Only server-owned render styles are accepted');
+  check(renderPrompt('scandinavian').includes('Scandinavian') && renderPrompt('scandinavian').includes('exact same room layout'), 'Style prompt preserves geometry');
   for (const url of ['https://evil.test/a', 'http://fal.media/a', 'https://fal.media.evil.test/a', 'https://user:pass@fal.media/a']) check(!validResultUrl(url), 'Reject unsafe generated asset URL');
   check(validResultUrl('https://v3b.fal.media/files/a.jpg'), 'Allow fal result host');
 
@@ -106,6 +108,7 @@ try {
     const payload = JSON.parse(calls[0].init.body);
     check(payload.num_images === 1 && payload.guidance_scale === 3.5 && payload.safety_tolerance === '2', 'Provider input fixes cost and safety options');
     check(!('subject' in payload), 'No account identity sent to fal');
+    check(payload.prompt.includes('Photorealistic') || payload.prompt.includes('Preserve the existing colours'), 'Selected style is expanded only on the server');
     const done = await refreshRender(db, 'test-key', queued);
     check(done.status === 'complete', 'Completed job is reusable without another charge');
     const rejected = await reserveRender(db, 'pro-rejected', id(), 0);

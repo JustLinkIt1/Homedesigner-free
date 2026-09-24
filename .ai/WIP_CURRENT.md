@@ -1,5 +1,41 @@
 # WIP — current handoff
 
+## 2026-09-24 — AI POINT PURCHASES HARDENED; RENDER STYLES + ANR MITIGATION LOCAL
+
+Correct worktree remains `work/Homedesigner-1.22.26`, package 1.22.27. The
+existing Play AAB and production web app do not include this batch. The earlier
+dirty AI work was checkpointed as commit `f627763`; the changes below are still
+local and the branch is behind the production source line.
+
+- Google Play consumable receipts are bound to a SHA-256 account identifier,
+  verified and credited by the Worker, then consumed server-side only after the
+  ledger settles. Reopening AI render automatically reconciles interrupted
+  purchases. The native client can no longer consume a token before credit.
+- Added six server-owned 200-point render treatments: Photorealistic, Modern,
+  Scandinavian, Industrial, Coastal and Luxury. Client-supplied prompts are not
+  accepted. Migration 0006 stores the selected style on the idempotent job.
+- Play Console vitals for production 12227 showed 1.77% user-perceived ANRs
+  against the 0.47% bad-behaviour threshold. Four of five ANR events were the
+  Android UI thread waiting in `HardwareRenderer.syncAndDrawFrame` for the GPU
+  (Infinix SMART 9 HD and realme 12 5G); one Redmi A1 trace was captured idle.
+- Native Android Auto quality now uses the low GPU tier (manual Medium/High is
+  still available): DPR 1, no MSAA, shadows, contact shadows or post effects,
+  and low-power context preference. Mobile Photo mode likewise uses one
+  demand-rendered DPR-1 canvas without real-time shadows/contact shadows.
+- TypeScript checks and the 68-check render suite passed before the ANR patch;
+  full CI/lint were rerun after it. All six Google Play consumable products are
+  active in 173 countries/regions: 2,000 / 6,000 / 15,000 points at USD 1.99 /
+  5.99 / 14.99, and Pro variants at USD 1.40 / 4.20 / 10.50 base prices. Play
+  localizes and charms the displayed regional prices. No D1 migration, Worker
+  deploy, licensed purchase, paid fal request, new AAB or web deployment has
+  been performed.
+
+Before launch: rebase/cherry-pick onto the current production source, apply D1
+migrations 0005 and 0006, deploy with `AI_RENDER_ENABLED` false, run a
+licensed-test purchase/restore/rebuy against the six active products, then
+perform one paid-provider render before enabling generation. Verify ANRs after
+rollout on affected/low-end phones; the metric has very low event volume.
+
 ## 2026-08-28 — WEB LOGIN HOTFIX LIVE; VERSION RESTORED TO 1.22.26
 
 The production Pages branch had been advanced from the released 1.22.26 commit

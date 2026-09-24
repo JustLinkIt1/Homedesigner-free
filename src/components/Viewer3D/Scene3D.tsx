@@ -1042,7 +1042,11 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       // real-time shadows) stay gated by lowPower.
       dpr={[1, caps.maxDpr]}
       performance={{ min: lowPower ? 0.6 : 0.5, debounce: 250 }}
-      gl={{ antialias: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' }}
+      gl={{
+        antialias: !lowPower,
+        preserveDrawingBuffer: false,
+        powerPreference: lowPower ? 'low-power' : 'high-performance',
+      }}
       camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => {

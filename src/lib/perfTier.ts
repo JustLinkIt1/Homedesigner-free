@@ -56,6 +56,28 @@ const isTouch = () =>
 
 let detected: PerfTier | null = null;
 
+export function autoTierForDevice({
+  nativeAndroid,
+  touch,
+  cores,
+  memory,
+}: {
+  nativeAndroid: boolean;
+  touch: boolean;
+  cores: number;
+  memory: number;
+}): PerfTier {
+  // Play vitals showed WebView GPU stalls in HardwareRenderer on both budget
+  // and nominally mid-range Android devices. CPU count and RAM are not useful
+  // GPU capability signals, so Auto must favour stability in the native app.
+  // Users can still explicitly choose Medium/High in Settings.
+  if (nativeAndroid) return 'low';
+  if (!touch) return 'high';
+  if (cores <= 4 || (memory > 0 && memory <= 2)) return 'low';
+  if (cores >= 8 && (memory === 0 || memory >= 6)) return 'high';
+  return 'mid';
+}
+
 /** Grade this device once per page load. */
 export function detectTier(): PerfTier {
   if (detected) return detected;
@@ -66,15 +88,12 @@ export function detectTier(): PerfTier {
   // Non-standard but widely available on Chrome/Android, which is our main target.
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 0;
 
-  // Desktop/laptop: assume capable.
-  if (!isTouch()) return (detected = 'high');
-
-  // Touch device. Budget phones (few cores / little RAM) keep the stripped path;
-  // anything mid-range or better gets shadows back.
-  if (cores <= 4 || (mem > 0 && mem <= 2)) detected = 'low';
-  else if (cores >= 8 && (mem === 0 || mem >= 6)) detected = 'high';
-  else detected = 'mid';
-  return detected;
+  return (detected = autoTierForDevice({
+    nativeAndroid: Capacitor.getPlatform() === 'android',
+    touch: isTouch(),
+    cores,
+    memory: mem,
+  }));
 }
 
 /** The tier actually in force, honouring the user's Settings override. */
@@ -105,7 +124,7 @@ export function tierCaps(tier: PerfTier, touch = isTouch()): TierCaps {
       return {
         tier, shadows: false, shadowMapSize: 0, softShadows: false,
         contactShadows: false, post: false, envResolution: 128,
-        derivedNormals: false, maxDpr: 1.5,
+        derivedNormals: false, maxDpr: 1,
       };
     case 'mid':
       return {
@@ -129,3 +148,4 @@ export function tierCaps(tier: PerfTier, touch = isTouch()): TierCaps {
       };
   }
 }
+import { Capacitor } from '@capacitor/core';
