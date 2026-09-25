@@ -23,9 +23,9 @@ changes and add an entry when you ship one.
 - Preserved the original local demo, presenter and Australian narration; the new edit adds smooth targeted zooms, chapter labels and branded framing. No personal name identifies the fictional presenter.
 - The marketing homepage and deployed app are unchanged; embedding on a site page is a separate follow-up.
 
-## Unreleased — 1.22.27
+## Unreleased — 1.22.28
 
-### Mobile capture and Pro AI rendering (2026-08-28; not in existing AAB)
+### Mobile capture and Pro AI rendering (not in existing 1.22.27 AAB)
 
 - Bounded render buffers on phones and restored the live 3D view after success
   or failure. Touch devices use a lighter raster Photo mode. Android image
@@ -48,10 +48,16 @@ changes and add an entry when you ship one.
   6,000 / 15,000 points at USD 1.99 / 5.99 / 14.99 and Pro variants at USD
   1.40 / 4.20 / 10.50 base prices. Google Play localizes and charms regional
   consumer prices.
-- Not deployed or enabled. Migrations 0005–0006 and backend/store readiness checks
-  are required; see docs/AI_RENDER_ROLLOUT.md. No new version number assigned.
+- Assigned app version 1.22.28 / versionCode 12228. Not deployed or enabled;
+  migrations 0005–0006 and backend readiness checks are required. See
+  docs/AI_RENDER_ROLLOUT.md.
+- Built and verified the signed 1.22.28 / 12228 AAB. It has not been uploaded
+  to Play; licensed point-purchase and paid-provider smoke tests remain gates.
+- Backed up production D1, applied AI migrations 0005–0006 and deployed the
+  rebased Worker with AI generation disabled. Pinned Wrangler 4.140 to avoid
+  its predecessor's incomplete `CREATE TRIGGER` migration parsing.
 
-### Android ANR mitigation (2026-09-24; not in existing AAB)
+### Android ANR mitigation (2026-09-24; not in existing 1.22.27 AAB)
 
 - Play vitals measured a 1.77% user-perceived ANR rate for 12227, above the
   0.47% bad-behaviour threshold. Four of five events were native GPU waits in

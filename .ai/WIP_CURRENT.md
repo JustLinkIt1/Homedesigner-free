@@ -1,11 +1,12 @@
 # WIP — current handoff
 
-## 2026-09-24 — AI POINT PURCHASES HARDENED; RENDER STYLES + ANR MITIGATION LOCAL
+## 2026-09-25 — 1.22.28 REBASED; AI PRODUCTS ACTIVE; RELEASE VERIFICATION GREEN
 
-Correct worktree remains `work/Homedesigner-1.22.26`, package 1.22.27. The
-existing Play AAB and production web app do not include this batch. The earlier
-dirty AI work was checkpointed as commit `f627763`; the changes below are still
-local and the branch is behind the production source line.
+Correct worktree remains `work/Homedesigner-1.22.26`, now assigned package
+1.22.28 / versionCode 12228. The existing 1.22.27 Play AAB and production web
+app do not include this batch. The AI work was rebased onto production source
+commit `3726520`, preserving the current same-tab web Google-login repair,
+editor fixes, `/buy` page and legal pages.
 
 - Google Play consumable receipts are bound to a SHA-256 account identifier,
   verified and credited by the Worker, then consumed server-side only after the
@@ -22,19 +23,32 @@ local and the branch is behind the production source line.
   still available): DPR 1, no MSAA, shadows, contact shadows or post effects,
   and low-power context preference. Mobile Photo mode likewise uses one
   demand-rendered DPR-1 canvas without real-time shadows/contact shadows.
-- TypeScript checks and the 68-check render suite passed before the ANR patch;
-  full CI/lint were rerun after it. All six Google Play consumable products are
+- After the production rebase, root and Worker TypeScript checks, full CI,
+  ESLint and the production build passed. The suite includes 68 render checks,
+  90 point/accounting checks, web auth tests and Android performance fences.
+  All six Google Play consumable products are
   active in 173 countries/regions: 2,000 / 6,000 / 15,000 points at USD 1.99 /
   5.99 / 14.99, and Pro variants at USD 1.40 / 4.20 / 10.50 base prices. Play
-  localizes and charms the displayed regional prices. No D1 migration, Worker
-  deploy, licensed purchase, paid fal request, new AAB or web deployment has
-  been performed.
+  localizes and charms the displayed regional prices.
+- Signed AAB `outputs/HomeDesigner-1.22.28-12228.aab` built and passed the AAB
+  verifier at 1.22.28 / 12228 (26,385,375 bytes; SHA-256
+  `82D47246ACE2F899E2CAE14379FFDAB5A0EDDBBBD8C386D98D309FDE61047D95`).
+- Backed up production D1 to
+  `backups/homedesigner-community-before-ai-2026-09-25.sql`, then applied
+  migrations 0005 and 0006. Wrangler 4.115 stripped the terminal semicolon
+  from `CREATE TRIGGER` statements and failed before applying them; 4.140
+  applied both successfully, so the Worker toolchain is now pinned to 4.140.
+- Deployed `homedesigner-sync` Worker version
+  `25357def-4259-4f82-91b8-28fcdc4b296d`. Public community smoke test returned
+  200 and the protected AI route returned 401 unauthenticated. `FAL_KEY` and
+  `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` are present, but `AI_RENDER_ENABLED` is
+  absent, so no generation can run. No licensed purchase, paid fal request,
+  Play upload or web deployment has been performed.
 
-Before launch: rebase/cherry-pick onto the current production source, apply D1
-migrations 0005 and 0006, deploy with `AI_RENDER_ENABLED` false, run a
-licensed-test purchase/restore/rebuy against the six active products, then
-perform one paid-provider render before enabling generation. Verify ANRs after
-rollout on affected/low-end phones; the metric has very low event volume.
+Before launch: upload 1.22.28 to an internal Play track, run a licensed-test
+purchase/restore/rebuy against the six active products, then perform one
+paid-provider render before enabling generation. Verify ANRs after rollout on
+affected/low-end phones; the metric has very low event volume.
 
 ## 2026-08-28 — WEB LOGIN HOTFIX LIVE; VERSION RESTORED TO 1.22.26
 

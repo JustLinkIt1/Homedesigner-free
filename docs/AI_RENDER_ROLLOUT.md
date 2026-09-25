@@ -2,11 +2,16 @@
 
 ## Status
 
-Implemented locally on the existing 1.22.27 worktree. No app version bump, AAB,
-Worker deployment, database migration, licensed purchase or paid fal request was
-made for this change. Previously built 1.22.27 AABs do **not** contain these
-changes. All six Play point products are active in 173 countries/regions at the
-approved USD base prices; Play localizes and charms the final regional prices.
+Implemented on the production source line and assigned app version 1.22.28 /
+versionCode 12228. A signed, verified AAB is available at
+`outputs/HomeDesigner-1.22.28-12228.aab`; it has not been uploaded to Play.
+Production D1 was backed up and migrations 0005–0006 are applied. Worker version
+`25357def-4259-4f82-91b8-28fcdc4b296d` is deployed with
+`AI_RENDER_ENABLED` absent, so generation remains disabled. No licensed
+purchase or paid fal request has been made yet. Previously built 1.22.27 AABs
+do **not** contain these changes. All six Play point products are active in 173
+countries/regions at the approved USD base prices; Play localizes and charms
+the final regional prices.
 
 ## Product behavior
 
@@ -70,14 +75,14 @@ Input images are not stored in D1. The fal key stays in Worker secrets.
 
 ## Release order / prerequisites
 
-1. Back up D1 and confirm the target is homedesigner-community. Apply
-   workers/design-sync/migrations/0005_ai_renders.sql and
-   workers/design-sync/migrations/0006_ai_render_styles.sql with the Wrangler
-   D1 migration workflow **before** deploying the new Worker (account deletion
-   also uses the table).
-2. Confirm the existing FAL_KEY secret is valid without printing it. Deploy with
-   AI_RENDER_ENABLED unset/false initially. Only the exact value true enables
-   generation. Existing completed results remain downloadable while disabled.
+1. Completed 2026-09-25: backed up D1, confirmed the
+   `homedesigner-community` target and applied migrations 0005 and 0006. Use
+   Wrangler 4.140 or newer: 4.115's splitter produced incomplete
+   `CREATE TRIGGER` statements. Account deletion also uses the new tables.
+2. Completed 2026-09-25: confirmed the FAL key name without printing the
+   secret and deployed the Worker with `AI_RENDER_ENABLED` absent. Only the
+   exact value `true` enables generation. Existing completed results remain
+   downloadable while disabled.
 3. Play consumable products points_2000, points_6000, points_15000 and their
    _pro variants are active in 173 countries/regions. Base prices are USD 1.99,
    5.99 and 14.99; Pro base prices are USD 1.40, 4.20 and 10.50. Confirm the
@@ -116,8 +121,9 @@ global paid-provider budget; retain fal-side spending limits/alerts.
   server-owned style prompts, actual fal SDK with stubbed HTTP, no automatic
   billable retry and stale jobs. Performance-tier checks fence Android Auto at
   the low GPU tier.
-- Root and Worker TypeScript checks, ESLint, production build and Android
-  compileDebugJavaWithJavac passed (SDK environment set locally for the command).
+- Root and Worker TypeScript checks, ESLint, production build and the signed
+  Android release bundle passed. The AAB verifier confirmed versionName 1.22.28,
+  versionCode 12228, the embedded 1.22.28 web bundle and bundled models.
 - Browser confirmed the AI menu and free-user Pro gate. Standard desktop export
   exercised locally; before/after screenshots confirm unchanged live framing.
   Real Android sharing, signed-in AI dialog end-to-end,
