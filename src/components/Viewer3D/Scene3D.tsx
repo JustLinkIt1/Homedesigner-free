@@ -1,7 +1,7 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { AdaptiveDpr, OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Sky, Html } from '@react-three/drei';
-import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
+import { AdaptiveDpr, OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Stars, Html } from '@react-three/drei';
+import { EffectComposer, N8AO, Bloom, ToneMapping, Vignette } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
@@ -22,6 +22,7 @@ import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
 import { slugify } from '../../lib/appInfo';
 import { sunModel } from '../../lib/sun';
+import { GradientSky, skyPalette } from './GradientSky';
 import { finishForFace, withFaceFinish } from '../../lib/wallFaces';
 import { CATALOG_BY_TYPE, FLOOR_MATERIALS } from '../../data/furnitureCatalog';
 import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl } from '../../data/materials';
@@ -190,6 +191,13 @@ const IS_TOUCH =
 /** Soft, fully-offline image-based lighting (no CDN HDR fetch). `day` (0..1)
  *  scales the sky-dome contribution so night actually reads dark and interior
  *  fixtures take over. Re-keyed on the day bucket so the env map rebakes. */
+/** Site lawn albedo. Separate from GROUND_DEFAULTS.grass (a drawn lawn area),
+ *  so a garden the user lays out still reads against the surrounding ground. */
+const SITE_GRASS = '#5f7a3e';
+/** Metres. Runs past the camera's far plane, so the lawn always reaches full
+ *  fog (the sky's horizon colour) and never ends in a visible edge. */
+const GROUND_SIZE = 2400;
+
 function StudioEnvironment({ day, envResolution }: { day: number; envResolution: number }) {
   const k = 0.24 + day * 0.96; // keep a dim floor so nothing goes pure black
   return (
@@ -837,13 +845,21 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
   const groundDef = GROUND_DEFAULTS[groundKind];
   const groundTex = useMemo(() => {
     const patchM = 4;
-    const t = getGroundTexture(groundKind, groundDef.color, patchM);
-    // Plane is 400 m and its UVs are 0..1, so repeat = size / patch.
-    t.repeat.set(400 / patchM, 400 / patchM);
+    const t = getGroundTexture(groundKind, SITE_GRASS, patchM);
+    // The plane's UVs are 0..1, so repeat = size / patch.
+    t.repeat.set(GROUND_SIZE / patchM, GROUND_SIZE / patchM);
     return t;
-  }, [groundKind, groundDef.color]);
-  // Sky wants a direction, not a world point.
-  const skySun: [number, number, number] = [sun.dir[0], Math.max(0.02, sun.dir[1]), sun.dir[2]];
+  }, [groundKind]);
+  // One palette drives the sky dome, the fog and the sky fill light, so the
+  // lawn fades into the horizon and the light always matches the sky.
+  const sky = skyPalette(sun.day, sun.moon);
+  // After dark the white fill turns moonlit blue and the lawn sinks back, so
+  // the lit rooms carry the picture. Under white fill the grass stayed a
+  // bright olive at midnight and sat lighter than the sky above it.
+  const nightMix = (to: string) =>
+    `#${new THREE.Color('#ffffff').lerp(new THREE.Color(to), sun.moon).getHexString()}`;
+  const ambientColor = nightMix('#a9bcee');
+  const groundTint = nightMix('#6f84ad');
 
   // Touch input state shared between the HTML overlay and the in-Canvas controller.
   const moveRef = useRef({ x: 0, y: 0 });
@@ -1046,6 +1062,10 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         antialias: !lowPower,
         preserveDrawingBuffer: false,
         powerPreference: lowPower ? 'low-power' : 'high-performance',
+        // Same curve on every tier: the composer applies it when post is on,
+        // three itself when it is off. Neutral keeps a chosen paint or fabric
+        // the colour it was picked as; ACES shifted hues and greyed the whites.
+        toneMapping: noPost ? THREE.NeutralToneMapping : THREE.NoToneMapping,
       }}
       camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
       style={{ position: 'absolute', inset: 0 }}
@@ -1064,25 +1084,19 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       {/* Soft daytime sky + gentle distance fog: gives renders a horizon and
           natural light falloff instead of a flat grey void. */}
       {/* Dome radius must sit inside the camera far plane (default 1000). */}
-      <Sky
-        distance={700}
-        sunPosition={skySun}
-        turbidity={sun.isNight ? 12 : 5}
-        rayleigh={sun.isNight ? 0.4 : 1.6 + (1 - sun.day) * 2}
-        mieCoefficient={0.004}
-        mieDirectionalG={0.85}
-      />
+      <GradientSky palette={sky} glowDir={sun.dir} glowColor={sun.sunColor} day={sun.day} moon={sun.moon} />
       {/* Distance fog for a soft horizon — kept BEYOND the max orbit distance
           (radius*8+20) so it only fades the far ground/grid, never the building
           itself. The old radius*5..14 range sat inside the zoom range, so zooming
           out washed the whole model to the fog colour ("fades to white"). */}
-      <fog attach="fog" args={[sun.isNight ? '#0e1420' : '#dfe6ee', radius * 8 + 15, radius * 18 + 80]} />
+      <fog attach="fog" args={[sky.horizon, radius * 8 + 15, radius * 18 + 80]} />
+      {sun.moon > 0.3 && <Stars radius={260} depth={50} count={caps.post ? 1600 : 700} factor={7} saturation={0} fade speed={0} />}
       {caps.softShadows && <SoftShadows size={24} samples={12} />}
 
       {/* Airier interiors: lifted ambient/hemisphere + softened shadows so
           rooms behind walls read bright and clean instead of murky. */}
-      <ambientLight intensity={sun.ambient * 1.4 + 0.06} />
-      <hemisphereLight intensity={0.26 + sun.day * 0.42} groundColor="#3a3d45" color={sun.isNight ? '#20293a' : '#ffffff'} />
+      <ambientLight intensity={sun.ambient * 1.2 + 0.06} color={ambientColor} />
+      <hemisphereLight intensity={0.3 + sun.light * 0.46} groundColor="#4d4840" color={sky.hemi} />
       {/* Sun key light — position, colour and intensity track time of day, so
           shadows and the light spilling through windows match the sky. */}
       <directionalLight
@@ -1110,10 +1124,10 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       {/* Cool sky fill from the opposite side (fades at night). */}
       <directionalLight
         position={[center[0] - sun.dir[0] * 14, 12, center[2] - sun.dir[2] * 10]}
-        intensity={0.1 + sun.day * 0.24}
+        intensity={0.1 + sun.light * 0.24}
         color="#cdd8ff"
       />
-      <StudioEnvironment key={Math.round(sun.day * 4)} day={sun.day} envResolution={caps.envResolution} />
+      <StudioEnvironment key={Math.round(sun.light * 4)} day={sun.light} envResolution={caps.envResolution} />
 
       {/* Soft contact shadows ground the furniture & walls realistically
           (desktop only — they re-render the scene each frame). */}
@@ -1142,8 +1156,10 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
           addDraftPoint({ x: e.point.x / 0.01, y: e.point.z / 0.01 });
         }}
       >
-        <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial map={groundTex} color={groundDef.color} roughness={groundDef.roughness} />
+        <planeGeometry args={[GROUND_SIZE, GROUND_SIZE]} />
+        {/* White, not the grass colour: the texture already carries it, and
+            multiplying the two squared the green into a dark, garish lawn. */}
+        <meshStandardMaterial map={groundTex} color={groundTint} roughness={groundDef.roughness} />
       </mesh>
       {/* CAD grid only while actually drawing. It used to render unconditionally,
           which put survey lines across the lawn in every exterior view (and every
@@ -1177,9 +1193,11 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       {!noPost && (
         <PostFXBoundary onFail={() => setPostFailed(true)}>
           <EffectComposer ref={composerRef} multisampling={4} enableNormalPass>
-            <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />
-            <Bloom mipmapBlur intensity={0.18} luminanceThreshold={1.0} />
-            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+            <N8AO aoRadius={0.6} intensity={1.35} distanceFalloff={1} halfRes />
+            {/* Lamps and lit shades glow more as daylight fades. */}
+            <Bloom mipmapBlur intensity={0.16 + (1 - sun.day) * 0.26} luminanceThreshold={1.0} />
+            <Vignette offset={0.3} darkness={0.38} />
+            <ToneMapping mode={ToneMappingMode.NEUTRAL} />
           </EffectComposer>
         </PostFXBoundary>
       )}

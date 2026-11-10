@@ -893,4 +893,8 @@ export const TR: Record<string, string> = {
   'Uncertain': 'Belirsiz',
   'Review every room name. Only checked names will be applied.': 'Her oda adını kontrol edin. Yalnızca işaretli adlar uygulanır.',
   'Refresh preview': 'Önizlemeyi yenile',
+  'Everything in Pro': 'Pro\'daki her şey',
+  'Cancel anytime.': 'İstediğiniz zaman iptal edin.',
+  'Sharper, higher-resolution photos': 'Daha net, yüksek çözünürlüklü fotoğraflar',
+  'PDF & DXF plan export': 'PDF ve DXF plan dışa aktarımı',
 };

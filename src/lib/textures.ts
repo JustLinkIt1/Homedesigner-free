@@ -141,29 +141,44 @@ function grassTexture(ctx: CanvasRenderingContext2D, color: string) {
   // Mown stripes. Keep these WIDE (2 per tile => ~2 m at the default 4 m patch):
   // narrow bands alias badly against the mip chain at grazing angles and show up
   // as coarse moiré banding across the lawn.
+  // The banding is only a hint (±2): at ±5 it read as a striped football pitch
+  // from the default overview and pulled the eye off the building.
   const bands = 2;
   for (let i = 0; i < bands; i++) {
-    ctx.fillStyle = shade(color, i % 2 ? 5 : -5);
+    ctx.fillStyle = shade(color, i % 2 ? 2 : -2);
     ctx.fillRect(0, (i * SIZE) / bands, SIZE, SIZE / bands);
   }
   // Blades: short strokes in varied greens.
   for (let i = 0; i < 9000; i++) {
     const x = rand() * SIZE;
     const y = rand() * SIZE;
-    ctx.strokeStyle = shade(color, (rand() - 0.45) * 46);
+    ctx.strokeStyle = shade(color, (rand() - 0.5) * 30);
     ctx.lineWidth = 0.7 + rand() * 0.6;
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(x + (rand() - 0.5) * 3, y - 1.5 - rand() * 3);
     ctx.stroke();
   }
-  // A few darker clumps to break up any perceived tiling.
-  for (let i = 0; i < 90; i++) {
+  // Soft sun-bleached patches, then a few darker clumps, to break up any
+  // perceived tiling without adding contrast.
+  for (let i = 0; i < 26; i++) {
+    const x = rand() * SIZE;
+    const y = rand() * SIZE;
+    const r = 18 + rand() * 46;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(236,232,170,${0.015 + rand() * 0.025})`);
+    g.addColorStop(1, 'rgba(236,232,170,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let i = 0; i < 70; i++) {
     const x = rand() * SIZE;
     const y = rand() * SIZE;
     const r = 4 + rand() * 12;
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(0,0,0,${0.05 + rand() * 0.06})`);
+    g.addColorStop(0, `rgba(0,0,0,${0.03 + rand() * 0.05})`);
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.beginPath();

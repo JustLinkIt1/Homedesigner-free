@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Crown, Layers, FileText, Sofa, FolderOpen, Sparkles, Check } from 'lucide-react';
+import {
+  Crown, Layers, FileText, Sofa, FolderOpen, Sparkles, Image as ImageIcon, Camera, CalendarCheck, BadgeCheck,
+} from 'lucide-react';
 import { useProStore } from '../store/proStore';
 import { isWebBillingConfigured, type ProFeature } from '../lib/pro';
 import { useAuthStore } from '../store/authStore';
@@ -37,11 +39,14 @@ const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blur
   },
 };
 
-const CORE_BENEFITS = [
-  'Unlimited floors & projects',
-  'Full furniture catalog',
-  'Watermark-free renders & photos',
-  'PDF plan export',
+// Every line here is something the code actually gates on Pro — see the
+// requirePro() call sites, and PhotoMode's capture scale for the photo one.
+const CORE_BENEFITS: { icon: typeof Crown; label: string }[] = [
+  { icon: Layers, label: 'Unlimited floors & projects' },
+  { icon: Sofa, label: 'Full furniture catalog' },
+  { icon: ImageIcon, label: 'Watermark-free renders & photos' },
+  { icon: Camera, label: 'Sharper, higher-resolution photos' },
+  { icon: FileText, label: 'PDF & DXF plan export' },
 ];
 
 /** Feature-triggered Pro purchase sheet (Play Billing on Android, Stripe-backed
@@ -142,8 +147,8 @@ export default function ProUpsellModal() {
   const benefits = [
     ...CORE_BENEFITS,
     webBilling || plans.length > 1
-      ? 'Monthly, yearly or lifetime — your choice'
-      : 'One-time purchase — no subscription',
+      ? { icon: CalendarCheck, label: 'Monthly, yearly or lifetime — your choice' }
+      : { icon: BadgeCheck, label: 'One-time purchase — no subscription' },
   ];
 
   return (
@@ -174,12 +179,19 @@ export default function ProUpsellModal() {
             </>
           )}
         </div>
+        <p className="pro-benefits-title">{t('Everything in Pro')}</p>
         <ul className="pro-benefits">
-          {benefits.map((b) => (
-            <li key={b}>
-              <Check className="icon" /> {t(b)}
-            </li>
-          ))}
+          {benefits.map((b) => {
+            const BenefitIcon = b.icon;
+            return (
+              <li key={b.label}>
+                <span className="pro-benefit-ico">
+                  <BenefitIcon className="icon" />
+                </span>
+                <span>{t(b.label)}</span>
+              </li>
+            );
+          })}
         </ul>
         {offerPlan && (
           <p className="pro-offer">
@@ -244,7 +256,7 @@ export default function ProUpsellModal() {
               <p className="pro-billing-terms">
                 {selectedPlan.id === 'lifetime'
                   ? t('One-time payment. No subscription.')
-                  : t('Subscription renews automatically until cancelled.')}
+                  : `${t('Subscription renews automatically until cancelled.')} ${t('Cancel anytime.')}`}
               </p>
             </>
           )}

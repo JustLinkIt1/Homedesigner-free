@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import {
-  OrbitControls, Sky, Environment, Lightformer, ContactShadows,
+  OrbitControls, Environment, Lightformer, ContactShadows,
 } from '@react-three/drei';
-import { EffectComposer, N8AO, Bloom, ToneMapping } from '@react-three/postprocessing';
+import { EffectComposer, N8AO, Bloom, ToneMapping, Vignette } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import { Pathtracer, usePathtracer } from '@react-three/gpu-pathtracer';
 import { GradientEquirectTexture } from 'three-gpu-pathtracer';
@@ -13,6 +13,7 @@ import { photoCapture } from '../../lib/renderBridge';
 import { saveImage } from '../../lib/native';
 import { slugify } from '../../lib/appInfo';
 import { sunModel } from '../../lib/sun';
+import { GradientSky, skyPalette } from './GradientSky';
 import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
@@ -166,26 +167,25 @@ function RasterContent({
     sun.dir[1] * radius * 1.6 + 4,
     center[2] + sun.dir[2] * radius * 1.5,
   ];
-  const skySun: [number, number, number] = [sun.dir[0], Math.max(0.02, sun.dir[1]), sun.dir[2]];
-  const k = 0.18 + sun.day * 0.82;
+  const sky = skyPalette(sun.day, sun.moon);
+  const k = 0.18 + sun.light * 0.82;
 
   return (
     <>
-      <Sky distance={700} sunPosition={skySun} turbidity={sun.isNight ? 12 : 5}
-        rayleigh={sun.isNight ? 0.4 : 1.6 + (1 - sun.day) * 2} mieCoefficient={0.004} mieDirectionalG={0.85} />
-      <fog attach="fog" args={[sun.isNight ? '#0e1420' : '#dfe6ee', radius * 5, radius * 14]} />
+      <GradientSky palette={sky} glowDir={sun.dir} glowColor={sun.sunColor} day={sun.day} moon={sun.moon} />
+      <fog attach="fog" args={[sky.horizon, radius * 5, radius * 14]} />
       {/* NB: no drei <SoftShadows> here — it globally patches the shadow shader
           and the live 3D canvas underneath already applies it; a second copy
           double-defines the PCSS functions and fails to compile. */}
       <ambientLight intensity={sun.ambient} />
-      <hemisphereLight intensity={0.18 + sun.day * 0.3} groundColor="#2a2c33" color={sun.isNight ? '#20293a' : '#ffffff'} />
+      <hemisphereLight intensity={0.2 + sun.light * 0.32} groundColor="#4d4840" color={sky.hemi} />
       <directionalLight
         position={sunPos} intensity={sun.sunIntensity} color={sun.sunColor} castShadow={!mobile}
         shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004}
         shadow-camera-left={-radius * 2} shadow-camera-right={radius * 2}
         shadow-camera-top={radius * 2} shadow-camera-bottom={-radius * 2} shadow-camera-far={80} />
       <directionalLight position={[center[0] - sun.dir[0] * 14, 12, center[2] - sun.dir[2] * 10]}
-        intensity={0.1 + sun.day * 0.24} color="#cdd8ff" />
+        intensity={0.1 + sun.light * 0.24} color="#cdd8ff" />
       <Environment resolution={mobile ? 64 : 256} frames={1}>
         <Lightformer intensity={1.1 * k} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
         <Lightformer intensity={0.8 * k} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
@@ -201,9 +201,10 @@ function RasterContent({
       <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant useRenderModels={!mobile} />
 
       {!mobile && <EffectComposer ref={composerRef} multisampling={4} enableNormalPass>
-        <N8AO aoRadius={0.5} intensity={1.1} distanceFalloff={1} halfRes />
-        <Bloom mipmapBlur intensity={0.18} luminanceThreshold={1.0} />
-        <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+        <N8AO aoRadius={0.6} intensity={1.35} distanceFalloff={1} halfRes />
+        <Bloom mipmapBlur intensity={0.16 + (1 - sun.day) * 0.26} luminanceThreshold={1.0} />
+        <Vignette offset={0.3} darkness={0.38} />
+        <ToneMapping mode={ToneMappingMode.NEUTRAL} />
       </EffectComposer>}
       <RasterCapture composerRef={composerRef} />
       <OrbitControls makeDefault target={center} enableDamping={!mobile} dampingFactor={0.09} />

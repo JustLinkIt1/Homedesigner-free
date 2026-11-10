@@ -893,4 +893,8 @@ export const IT: Record<string, string> = {
   'Uncertain': 'Incerto',
   'Review every room name. Only checked names will be applied.': 'Controlla ogni nome di stanza. Verranno applicati solo i nomi selezionati.',
   'Refresh preview': 'Aggiorna anteprima',
+  'Everything in Pro': 'Tutto in Pro',
+  'Cancel anytime.': 'Annulla quando vuoi.',
+  'Sharper, higher-resolution photos': 'Foto più nitide e ad alta risoluzione',
+  'PDF & DXF plan export': 'Esportazione piante in PDF e DXF',
 };

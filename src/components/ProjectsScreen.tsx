@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Home, Plus, Ruler, FolderOpen, Copy, Trash2, Pencil, Sofa, ChevronRight,
   LayoutGrid, Settings, Lightbulb, PenTool, Square,
-  MessageCircle,
+  MessageCircle, Crown,
 } from 'lucide-react';
 import { useDesign, type MaybeFloored } from '../store/designStore';
 import { confirmDialog, toast } from '../lib/ui';
@@ -158,6 +158,16 @@ export default function ProjectsScreen({
           </div>
         </div>
         <div className="ps-head-actions">
+          {!isPro && (
+            <button
+              className="lang-btn ps-pro-btn"
+              aria-label={t('Unlock Pro')}
+              onClick={() => useProStore.getState().openUpsell()}
+            >
+              <Crown className="icon" />
+              <span>{t('Unlock Pro')}</span>
+            </button>
+          )}
           <AccountButton />
           <button className="lang-btn ps-community-btn" onClick={() => void openCommunityForum()}>
             <MessageCircle className="icon" />

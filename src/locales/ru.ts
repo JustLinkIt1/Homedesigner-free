@@ -893,4 +893,8 @@ export const RU: Record<string, string> = {
   'Uncertain': 'Неуверенно',
   'Review every room name. Only checked names will be applied.': 'Проверьте каждое название комнаты. Будут применены только отмеченные названия.',
   'Refresh preview': 'Обновить предпросмотр',
+  'Everything in Pro': 'Всё в Pro',
+  'Cancel anytime.': 'Отмена в любой момент.',
+  'Sharper, higher-resolution photos': 'Более чёткие фото в высоком разрешении',
+  'PDF & DXF plan export': 'Экспорт планов в PDF и DXF',
 };

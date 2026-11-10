@@ -893,4 +893,8 @@ export const NL: Record<string, string> = {
   'Uncertain': 'Onzeker',
   'Review every room name. Only checked names will be applied.': 'Controleer elke kamernaam. Alleen aangevinkte namen worden toegepast.',
   'Refresh preview': 'Voorvertoning vernieuwen',
+  'Everything in Pro': 'Alles in Pro',
+  'Cancel anytime.': 'Altijd opzegbaar.',
+  'Sharper, higher-resolution photos': 'Scherpere foto\'s in hogere resolutie',
+  'PDF & DXF plan export': 'Plattegronden exporteren als PDF en DXF',
 };

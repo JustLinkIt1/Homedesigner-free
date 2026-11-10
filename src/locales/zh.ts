@@ -893,4 +893,8 @@ export const ZH: Record<string, string> = {
   'Uncertain': '不确定',
   'Review every room name. Only checked names will be applied.': '请检查每个房间名称。仅应用已勾选的名称。',
   'Refresh preview': '刷新预览',
+  'Everything in Pro': 'Pro 包含的一切',
+  'Cancel anytime.': '可随时取消。',
+  'Sharper, higher-resolution photos': '更清晰的高分辨率照片',
+  'PDF & DXF plan export': '导出 PDF 和 DXF 平面图',
 };

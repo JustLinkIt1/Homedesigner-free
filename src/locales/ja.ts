@@ -893,4 +893,8 @@ export const JA: Record<string, string> = {
   'Uncertain': '確信度低',
   'Review every room name. Only checked names will be applied.': 'すべての部屋名を確認してください。チェックした名前のみが適用されます。',
   'Refresh preview': 'プレビューを更新',
+  'Everything in Pro': 'Proに含まれるもの',
+  'Cancel anytime.': 'いつでもキャンセルできます。',
+  'Sharper, higher-resolution photos': 'より鮮明な高解像度の写真',
+  'PDF & DXF plan export': 'PDF・DXF形式で図面を書き出し',
 };

@@ -893,4 +893,8 @@ export const KO: Record<string, string> = {
   'Uncertain': '불확실',
   'Review every room name. Only checked names will be applied.': '모든 방 이름을 검토하세요. 선택한 이름만 적용됩니다.',
   'Refresh preview': '미리보기 새로고침',
+  'Everything in Pro': 'Pro에 포함된 모든 것',
+  'Cancel anytime.': '언제든지 해지할 수 있습니다.',
+  'Sharper, higher-resolution photos': '더 선명한 고해상도 사진',
+  'PDF & DXF plan export': 'PDF 및 DXF 도면 내보내기',
 };
