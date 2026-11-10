@@ -220,6 +220,8 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
     pathtracerSupported() ? 'trace' : 'raster',
   );
   const [samples, setSamples] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   // Same dollhouse flag as the 3D view, so framing carries over naturally.
   const dollhouse = useDesign((s) => s.dollhouse);
   const setDollhouse = useDesign((s) => s.setDollhouse);
@@ -239,14 +241,18 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
   const canSave = mode === 'raster' || samples > 0;
 
   const savePhoto = async () => {
+    if (savingRef.current) return;
     const capture = photoCapture.current;
-    if (!capture) return;
+    if (!capture) { toast.error('The 3D view is not ready. Try again in a moment.'); return; }
+    savingRef.current = true;
+    setSaving(true);
     try {
+      await new Promise(resolve => setTimeout(resolve, 30));
       await capture();
       await requestReviewAfterPhotoSave();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save the photo.');
-    }
+    } finally { savingRef.current = false; setSaving(false); }
   };
 
   return (
@@ -314,8 +320,8 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
           <button className="btn" onClick={onClose}>
             Close
           </button>
-          <button className="btn primary" disabled={!canSave} onClick={() => void savePhoto()}>
-            💾 Save photo
+          <button className="btn primary" disabled={!canSave || saving} onClick={() => void savePhoto()}>
+            {saving ? 'Saving…' : '💾 Save photo'}
           </button>
         </div>
       </div>

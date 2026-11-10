@@ -8,9 +8,12 @@ import {
 } from './community';
 import {
   FEATURES, PACKS, PRO_DISCOUNT, TYPICAL_ROOM_POINTS, readAccount, grantFreePoints, runMetered,
-  creditPurchase, packById, packPriceCents, UNSETTLED_BALANCE,
+  creditPurchase, packById, packPriceCents,
 } from './points';
-import { MAX_ROOMS_PER_CALL, generateRoomNames, validRoomSummaries } from './ai-features';
+import {
+  MAX_ROOMS_PER_CALL, generateRoomNames, generateColourScheme,
+  generateListingDescription, validRoomSummaries,
+} from './ai-features';
 import { stripeSignatureValid } from './stripe';
 import {
   RenderError, validRenderId, validRenderImage, validResultUrl, readRender,
@@ -1197,7 +1200,12 @@ async function claimPlayPoints(request: Request, env: Env, identity: AuthIdentit
 
   // The discounted SKU is otherwise just the cheap SKU. Play cannot enforce
   // this for us -- it has no idea what Pro is.
-  if (product.pro && !(await isProSubject(env, identity.subject))) {
+  const prior = await env.COMMUNITY.prepare(
+    'SELECT subject, delta, purchase_settled FROM point_ledger WHERE id = ?',
+  ).bind(`purchase:play:${purchaseToken}`).first<{ subject: string; delta: number; purchase_settled: number }>();
+  const alreadyCredited = prior?.subject === identity.subject && prior.delta === pack.points && prior.purchase_settled === 1;
+  // A previously credited pack must remain consumable/restorable after Pro ends.
+  if (product.pro && !alreadyCredited && !(await isProSubject(env, identity.subject))) {
     return json(request, { error: 'That pack is discounted for Pro members.' }, 403);
   }
 
@@ -1209,17 +1217,21 @@ async function claimPlayPoints(request: Request, env: Env, identity: AuthIdentit
     purchaseToken,
     packPriceCents(pack, product.pro),
   );
-  if (!credited.ok) return json(request, { error: 'That pack is no longer sold.' }, 400);
+  if (!credited.ok) {
+    if (credited.reason === 'unsettled') return json(request, { error: 'This earlier purchase needs reconciliation. Keep your receipt and contact support.' }, 503);
+    if (credited.reason === 'receipt_reused') return json(request, { error: 'This receipt is already associated with a different account or pack.' }, 409);
+    return json(request, { error: 'That pack is no longer sold.' }, 400);
+  }
 
   // A replay can race the original credit, or come from a different account.
   // Never tell Android to consume a receipt before this account owns a settled
   // credit. An interrupted credit remains recoverable through reconciliation.
-  const settled = await env.COMMUNITY.prepare('SELECT subject, balance_after FROM point_ledger WHERE id = ?')
-    .bind(`purchase:play:${purchaseToken}`).first<{ subject: string; balance_after: number }>();
+  const settled = await env.COMMUNITY.prepare('SELECT subject, purchase_settled FROM point_ledger WHERE id = ?')
+    .bind(`purchase:play:${purchaseToken}`).first<{ subject: string; purchase_settled: number }>();
   if (settled?.subject !== identity.subject) {
     return json(request, { error: 'This purchase belongs to another account. Sign in to that account to restore it.' }, 409);
   }
-  if (settled.balance_after === UNSETTLED_BALANCE) {
+  if (settled.purchase_settled !== 1) {
     return json(request, { error: 'Your points are still being credited. Keep the receipt and try restoring later; contact support if this persists.' }, 503);
   }
 
@@ -1330,7 +1342,9 @@ async function stripeWebhook(request: Request, env: Env): Promise<Response> {
   } catch {
     return json(request, { error: 'Bad payload' }, 400);
   }
-  if (event.type !== 'checkout.session.completed') return json(request, { ignored: true });
+  if (event.type !== 'checkout.session.completed' && event.type !== 'checkout.session.async_payment_succeeded') {
+    return json(request, { ignored: true });
+  }
 
   const session = event.data?.object;
   // `complete` is not `paid`: an async method can complete the session and
@@ -1351,7 +1365,11 @@ async function stripeWebhook(request: Request, env: Env): Promise<Response> {
     // What Stripe actually settled, not what we quoted. Already in cents.
     session.amount_total ?? 0,
   );
-  if (!credited.ok) return json(request, { ignored: true });
+  if (!credited.ok) {
+    // A verified paid receipt that could not be credited must not be ACKed as
+    // delivered. Keep provider retries and operational alerts available.
+    return json(request, { error: `Purchase credit failed: ${credited.reason}` }, 503);
+  }
   return json(request, { credited: credited.credited, replay: credited.replay });
 }
 
@@ -1390,7 +1408,7 @@ async function suggestRoomNames(request: Request, env: Env, identity: AuthIdenti
     }
     if (outcome.reason === 'key_reused') {
       return json(request, {
-        error: 'That request was already charged and refunded. Retry with a new key.',
+        error: 'That request key has already been used. No new AI call was made.',
         balance: outcome.balance,
       }, 409);
     }
@@ -1404,6 +1422,55 @@ async function suggestRoomNames(request: Request, env: Env, identity: AuthIdenti
     charged: outcome.charged,
     balance: outcome.balance,
   });
+}
+
+function validAiKey(value: unknown): string | null {
+  const key = cleanString(value, 100);
+  return key && /^[a-zA-Z0-9_:-]{8,100}$/.test(key) ? key : null;
+}
+
+function meteredError(request: Request, outcome: Exclude<Awaited<ReturnType<typeof runMetered>>, { ok: true }>): Response {
+  if (outcome.reason === 'insufficient') {
+    return json(request, { error: 'Not enough points', balance: outcome.balance, required: outcome.required }, 402);
+  }
+  if (outcome.reason === 'key_reused') {
+    return json(request, { error: 'That request key has already been used. No new AI call was made.', balance: outcome.balance }, 409);
+  }
+  return json(request, { error: outcome.error, balance: outcome.balance, refunded: true }, 502);
+}
+
+async function suggestColourScheme(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
+  if (!env.AI) return json(request, { error: 'AI features are not configured' }, 503);
+  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+  const rooms = validRoomSummaries(body.rooms);
+  const key = validAiKey(body.idempotencyKey);
+  if (!rooms) return json(request, { error: `Send between 1 and ${MAX_ROOMS_PER_CALL} rooms` }, 400);
+  if (!key) return json(request, { error: 'A valid idempotencyKey is required' }, 400);
+  const preference = cleanString(body.preference, 120) ?? '';
+  const outcome = await runMetered(
+    env.COMMUNITY, identity.subject, 'colour_scheme',
+    `colour_scheme:${identity.subject}:${key}`,
+    () => generateColourScheme(env.AI, rooms, preference, body.language),
+  );
+  if (!outcome.ok) return meteredError(request, outcome);
+  return json(request, { suggestion: outcome.result, charged: outcome.charged, balance: outcome.balance });
+}
+
+async function suggestListingDescription(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
+  if (!env.AI) return json(request, { error: 'AI features are not configured' }, 503);
+  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+  const rooms = validRoomSummaries(body.rooms);
+  const key = validAiKey(body.idempotencyKey);
+  if (!rooms) return json(request, { error: `Send between 1 and ${MAX_ROOMS_PER_CALL} rooms` }, 400);
+  if (!key) return json(request, { error: 'A valid idempotencyKey is required' }, 400);
+  const projectName = cleanString(body.projectName, 100) ?? 'Home design';
+  const outcome = await runMetered(
+    env.COMMUNITY, identity.subject, 'listing_description',
+    `listing_description:${identity.subject}:${key}`,
+    () => generateListingDescription(env.AI, projectName, rooms, body.language),
+  );
+  if (!outcome.ok) return meteredError(request, outcome);
+  return json(request, { copy: outcome.result, charged: outcome.charged, balance: outcome.balance });
 }
 
 async function suggestModelMetadata(request: Request, env: Env, job: ModelStudioJob): Promise<Response> {
@@ -1834,6 +1901,12 @@ export default {
       }
       if (request.method === 'POST' && url.pathname === '/v1/ai/room-names') {
         return await suggestRoomNames(request, env, identity);
+      }
+      if (request.method === 'POST' && url.pathname === '/v1/ai/colour-scheme') {
+        return await suggestColourScheme(request, env, identity);
+      }
+      if (request.method === 'POST' && url.pathname === '/v1/ai/listing-description') {
+        return await suggestListingDescription(request, env, identity);
       }
       if (request.method === 'POST' && url.pathname === '/v1/sync') return await sync(request, env, identity.subject);
       if (request.method === 'DELETE' && url.pathname === '/v1/account') {

@@ -352,7 +352,8 @@ const reset = (isPro) => {
   const aiRender = readFileSync(join(root, 'src/lib/aiRender.ts'), 'utf8');
   check('the app and Worker derive the same private Play account binding',
     aiRender.includes('homedesigner-play:${subject}') &&
-      aiRender.includes('obfuscatedAccountId: await playAccountId(subject)') &&
+      aiRender.includes('const obfuscatedAccountId = await playAccountId(subject)') &&
+      aiRender.includes('obfuscatedAccountId,') &&
       worker.includes('homedesigner-play:${subject}') &&
       worker.includes('verified.obfuscatedAccountId !== await playAccountId(identity.subject)'));
   check('point receipts are credited then consumed on the trusted backend',

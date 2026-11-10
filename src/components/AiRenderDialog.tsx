@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import Modal from './Modal';
+import AiPointPacks from './AiPointPacks';
 import { useAuthStore } from '../store/authStore';
-import { aiJson, imageDataUrl, buyPlayPoints, restorePlayPoints, type AiJob, type AiState, type PointsState, type PointPack } from '../lib/aiRender';
+import { aiJson, imageDataUrl, restorePlayPoints, type AiJob, type AiState, type PointsState } from '../lib/aiRender';
 import { sceneSnapshot } from '../lib/renderBridge';
 import { isNative, saveImage } from '../lib/native';
-import { PlayBilling } from '../lib/playBilling';
-import { withTimeout, STORE_TIMEOUT_MS } from '../lib/pro';
 import { useI18n } from '../lib/i18n';
+import { withPointBalanceRefresh } from '../lib/pointPurchases';
 
 export default function AiRenderDialog({ onClose }: { onClose: () => void }) {
   const account = useAuthStore(s => s.account);
@@ -21,17 +21,26 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
   const [points, setPoints] = useState<PointsState | null>(null);
   const [job, setJob] = useState<AiJob | null>(null);
   const [source, setSource] = useState('');
+  const [showSource, setShowSource] = useState(false);
   const [result, setResult] = useState('');
   const [imageRetry, setImageRetry] = useState(0);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [consent, setConsent] = useState(false);
   const [style, setStyle] = useState('photorealistic');
-  const [prices, setPrices] = useState<Record<string, string>>({});
   const inFlight = useRef(false);
   const alive = useRef(true);
   const restoredPurchases = useRef(false);
   const native = isNative();
+  const captureSource = useCallback(() => {
+    const preview = sceneSnapshot.current?.();
+    if (!preview) throw new Error(t('The 3D view is not ready. Try again in a moment.'));
+    setSource(preview);
+    setConsent(false);
+    setShowSource(true);
+    // The callback is invoked at user/mount boundaries, not on locale renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const reload = useCallback(async () => {
     const [next, balance] = await Promise.all([aiJson<AiState>('/v1/ai/renders'), aiJson<PointsState>('/v1/points')]);
     if (!alive.current) return;
@@ -39,28 +48,17 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
   }, []);
   useEffect(() => {
     alive.current = true;
-    try { setSource(sceneSnapshot.current?.() ?? ''); } catch (e) { setError(String(e)); }
-    if (account) void reload().catch(e => setError(e instanceof Error ? e.message : String(e)));
+    try { captureSource(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    if (account) void reload().catch(e => { if (alive.current) setError(e instanceof Error ? e.message : String(e)); });
     return () => { alive.current = false; };
-  }, [account, reload]);
+  }, [account, reload, captureSource]);
   useEffect(() => {
     if (!native || !account || restoredPurchases.current) return;
     restoredPurchases.current = true;
     // Reconcile completed/pending point purchases automatically. This covers a
     // successful Play payment followed by a network loss or app restart.
-    void restorePlayPoints().then(reload).catch(() => undefined);
+    void withPointBalanceRefresh(restorePlayPoints, reload).catch(() => undefined);
   }, [account, native, reload]);
-  useEffect(() => {
-    if (!native || !points) return;
-    let cancelled = false;
-    void Promise.all(points.packs.map(async pack => {
-      try {
-        const { product } = await withTimeout(PlayBilling.getProduct({ productId: pack.playProductId }), STORE_TIMEOUT_MS, 'Store unavailable');
-        return [pack.id, product?.priceString ?? ''] as const;
-      } catch { return [pack.id, ''] as const; }
-    })).then(entries => { if (!cancelled) setPrices(Object.fromEntries(entries)); });
-    return () => { cancelled = true; };
-  }, [native, points]);
   useEffect(() => {
     if (!job || !['reserved', 'queued'].includes(job.status)) return;
     let stopped = false;
@@ -81,9 +79,10 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id, job?.status, reload]);
   useEffect(() => {
+    setResult('');
     if (job?.status !== 'complete') return;
     let stopped = false;
-    void imageDataUrl(job.id).then(url => { if (!stopped) setResult(url); })
+    void imageDataUrl(job.id).then(url => { if (!stopped) { setResult(url); setShowSource(false); } })
       .catch(e => { if (!stopped) setError(e instanceof Error ? e.message : String(e)); });
     return () => { stopped = true; };
   }, [job?.id, job?.status, imageRetry]);
@@ -104,20 +103,20 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
     try {
       const next = await aiJson<AiJob>('/v1/ai/renders', { id, image: source, style, expectedCharge: cost });
       if (alive.current) setJob(next);
+      await reload();
     } catch (e) { await reload(); throw e; }
-  });
-  const buy = (pack: PointPack) => run(async () => {
-    if (native) { await buyPlayPoints(pack); await reload(); return; }
-    const checkout = await aiJson<{ url: string }>('/v1/points/checkout', { packId: pack.id });
-    const url = new URL(checkout.url);
-    if (url.protocol !== 'https:' || url.hostname !== 'checkout.stripe.com') throw new Error('Unexpected checkout address.');
-    window.location.assign(url.href);
   });
   return <Modal open onClose={onClose} className="ai-render-dialog" labelledBy="ai-render-title">
     <div className="modal-head" id="ai-render-title"><Sparkles className="icon" /> {t('AI render')}</div>
     <div className="modal-body ai-render-body">
       <p>{t('Make a photorealistic image from your current 3D view. Your editable plan stays unchanged.')}</p>
-      {(result || source) && <img className="ai-render-preview" src={result || source} alt={result ? t('AI-generated render') : t('Current 3D view')} />}
+      {result && source && <div className="ai-tool-actions">
+        <button className="btn" aria-pressed={showSource} onClick={() => setShowSource(true)}>{t('Current 3D view')}</button>
+        <button className="btn" aria-pressed={!showSource} onClick={() => setShowSource(false)}>{t('AI-generated render')}</button>
+      </div>}
+      {(result || source) && <img className="ai-render-preview" src={showSource && source ? source : result || source}
+        alt={showSource || !result ? t('Current 3D view') : t('AI-generated render')} />}
+      <button className="btn" disabled={busy || pending} onClick={() => void run(async () => captureSource())}>{t('Refresh preview')}</button>
       <p className="muted">{t('AI can change details. This is a visualisation, not an exact construction drawing.')}</p>
       {!account ? <button className="btn primary" disabled={busy} onClick={() => void run(signIn)}>{t('Sign in with Google')}</button> : <>
         {points && <p>{t('AI points')}: {points.balance.toLocaleString()} · {state?.freeAvailable ? t('Your first AI render is free') : `${cost ?? '—'} ${t('points per render')}`}</p>}
@@ -133,13 +132,8 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
         {pending && <p role="status">{t('Generating your image… You can close this window and reopen AI render to resume.')}</p>}
         <button className="btn primary" disabled={busy || pending || !consent || !source || !state?.isPro || !state.enabled || cost === undefined || (points?.balance ?? 0) < cost}
           onClick={() => void generate()}>{cost === 0 ? t('Generate my free render') : `${t('Generate')} · ${cost ?? '—'} ${t('AI points')}`}</button>
-        {result && <button className="btn" disabled={busy} onClick={() => void run(() => saveImage(result, `homedesigner-ai-${job?.id}.jpg`))}>{t('Save AI image')}</button>}
-        <details><summary>{t('Get AI points')}</summary>
-          <p>{t('Point packs are separate from Pro. Prices below include your account discount when available.')}</p>
-          <div className="ai-point-packs">{points?.packs.map(pack => <button className="btn" key={pack.id} disabled={busy || (native ? !prices[pack.id] : !points.cardCheckout)}
-            onClick={() => void buy(pack)}>{pack.points.toLocaleString()} {t('points')} · {native ? prices[pack.id] || t('Unavailable') : points.cardCheckout ? `$${(pack.priceCents / 100).toFixed(2)} USD` : t('Unavailable')}</button>)}</div>
-          {native && <button className="btn" disabled={busy} onClick={() => void run(async () => { await restorePlayPoints(); await reload(); })}>{t('Restore point purchases')}</button>}
-        </details>
+        {result && <button className="btn" disabled={busy} onClick={() => void run(() => saveImage(result, `homedesigner-ai-${job?.id}.${result.startsWith('data:image/png') ? 'png' : 'jpg'}`))}>{t('Save AI image')}</button>}
+        <AiPointPacks points={points} busy={busy} run={action => void run(action)} onRefresh={reload} />
         <button className="btn" disabled={busy} onClick={() => void run(async () => { await reload(); setImageRetry(n => n + 1); })}>{t('Refresh')}</button>
       </>}
       {error && <p className="ai-render-error" role="alert">{error}</p>}

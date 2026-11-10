@@ -24,6 +24,32 @@ export function captureRenderer(
 ): string {
   const context = gl.getContext();
   if (context.isContextLost()) throw new Error('The graphics context was lost. Reopen 3D and try again.');
+  if (mobile) {
+    // Resizing an Android WebView's live drawing buffer can stall/lose the GPU
+    // context even at Standard quality. Render/read the existing buffer in one
+    // synchronous turn, then downsample on a 2D canvas. Never allocate another
+    // WebGL framebuffer or promise detail above the device's real resolution.
+    const oldTarget = gl.getRenderTarget();
+    try {
+      gl.setRenderTarget(null);
+      gl.render(scene, camera);
+      if (context.isContextLost()) throw new Error('The graphics context was lost during capture.');
+      const canvas = gl.domElement;
+      const factor = Math.min(1, size.width * scale / canvas.width, size.height * scale / canvas.height);
+      const target = captureDimensions(canvas.width, canvas.height, factor, true);
+      const copy = document.createElement('canvas');
+      copy.width = target.width;
+      copy.height = target.height;
+      const ctx = copy.getContext('2d');
+      if (!ctx) throw new Error('Could not prepare the photo. Please try again.');
+      try {
+        ctx.drawImage(canvas, 0, 0, target.width, target.height);
+        const image = copy.toDataURL(format, 0.9);
+        if (image === 'data:,' || image.length < 100) throw new Error('The graphics driver returned an empty image.');
+        return image;
+      } finally { copy.width = 0; copy.height = 0; }
+    } finally { gl.setRenderTarget(oldTarget); }
+  }
   const viewport = context.getParameter(context.MAX_VIEWPORT_DIMS) as Int32Array;
   const limit = Math.min(gl.capabilities.maxTextureSize, context.getParameter(context.MAX_RENDERBUFFER_SIZE), ...viewport);
   const target = captureDimensions(size.width, size.height, scale, mobile, limit);

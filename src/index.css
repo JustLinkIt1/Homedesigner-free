@@ -5365,7 +5365,8 @@ button:focus:not(:focus-visible) {
 
 /* ---------- Account button + menu (home header) ---------- */
 .account-wrap { position: relative; }
-.toolbar-account { margin-right: 10px; flex: none; }
+.toolbar-account { margin-right: 10px; flex: none; display: flex; align-items: center; gap: 8px; }
+.toolbar-ai { color: var(--brand); border-color: var(--brand); gap: 5px; }
 .toolbar-account .account-menu { right: 0; left: auto; }
 .account-btn {
   width: 38px; height: 38px; border-radius: 50%;
@@ -5379,6 +5380,11 @@ button:focus:not(:focus-visible) {
 .account-btn .icon { width: 19px; height: 19px; }
 .account-btn img { width: 100%; height: 100%; object-fit: cover; }
 .account-btn.signed-in { border-color: var(--brand); }
+.account-btn.pro-member { border: 2px solid #d6a449; box-shadow: 0 0 0 3px rgba(214,164,73,.14); }
+.account-btn.points-member { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent); }
+.account-crown { position: absolute; right: -3px; top: -5px; display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; color: #3e2700; background: #f2cd77; border: 2px solid var(--surface); pointer-events: none; }
+.account-crown svg { width: 12px; height: 12px; }
+.account-points-badge { background: var(--brand); color: white; }
 .account-initial {
   width: 100%; height: 100%; display: grid; place-items: center;
   background: var(--grad-brand); color: #fff; font-weight: 800; font-size: 16px;
@@ -5387,7 +5393,7 @@ button:focus:not(:focus-visible) {
 
 .account-menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
-  width: 264px; max-width: 84vw;
+  width: 300px; max-width: calc(100vw - 20px); max-height: calc(100dvh - 85px); overflow-y: auto;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 16px; box-shadow: var(--shadow-lg, 0 16px 40px rgba(0,0,0,0.28));
   padding: 12px; display: flex; flex-direction: column; gap: 10px;
@@ -5414,6 +5420,26 @@ button:focus:not(:focus-visible) {
 .account-menu-item .icon { width: 17px; height: 17px; color: var(--text-2); }
 .account-menu-google { margin: 2px 0 0; }
 .account-menu-note { color: var(--text-3); font-size: 11.5px; line-height: 1.4; text-align: center; }
+.pro-member-menu { border-color: #d6a449; }
+.account-membership { display: flex; align-items: center; gap: 9px; padding: 10px; border-radius: 10px; background: var(--surface-2); }
+.account-membership > .icon { flex: none; width: 20px; height: 20px; }
+.account-membership > div { display: grid; gap: 3px; min-width: 0; }
+.account-membership strong { font-size: 13px; }
+.account-membership span { font-size: 11px; color: var(--text-2); line-height: 1.4; }
+.account-membership.is-pro { background: linear-gradient(120deg, rgba(214,164,73,.19), rgba(214,164,73,.05)); }
+.account-membership.is-pro > .icon { color: #bd8730; }
+.account-upgrade { margin-left: auto; display: flex; align-items: center; padding: 7px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.account-points-card { display: grid; gap: 5px; padding: 15px; width: 100%; border: 1px solid var(--brand); border-radius: 12px; text-align: left; color: var(--text); background: linear-gradient(120deg, color-mix(in srgb, var(--brand) 14%, var(--surface)), var(--surface)); }
+.account-points-card > span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
+.account-points-card strong { font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.account-points-card .icon { width: 15px; height: 15px; color: var(--brand); }
+.account-points-card small { color: var(--text-2); }
+button.account-points-card:hover { box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 16%, transparent); }
+.account-ai-action .icon { color: var(--brand); }
+.account-points-dialog { max-width: 480px; }
+.account-ai-features { display: grid; gap: 9px; margin: 15px 0; }
+.account-ai-features > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.account-ai-features strong { white-space: nowrap; }
 
 /* Explanatory line under a Settings control (e.g. the 3D graphics tier). */
 .settings-hint {
@@ -5633,3 +5659,22 @@ button:focus:not(:focus-visible) {
 .ai-render-style select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
 .ai-point-packs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .ai-render-error { color: #ef7373; overflow-wrap: anywhere; }
+.ai-design-dialog { width: min(680px, calc(100vw - 24px)); }
+.ai-design-body { display: flex; flex-direction: column; gap: 14px; }
+.ai-balance { display: flex; align-items: center; gap: 7px; margin: 0; }
+.ai-balance .icon, .ai-tool-title > .icon { width: 20px; height: 20px; flex: 0 0 auto; color: var(--accent); }
+.ai-tool-card { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.ai-tool-title { display: flex; align-items: flex-start; gap: 10px; }
+.ai-tool-title h3, .ai-tool-title p, .ai-suggestion p { margin: 0; }
+.ai-tool-title p { margin-top: 3px; color: var(--text-muted); line-height: 1.4; }
+.ai-tool-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-preference { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+.ai-name-list, .ai-suggestion { display: grid; gap: 6px; padding: 10px 12px; border-radius: 9px; background: var(--surface); }
+.ai-name-list > label { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
+.ai-name-list > label input { flex: 0 0 auto; width: 18px; height: 18px; }
+.ai-name-list small { color: var(--text-muted); }
+.ai-suggestion span { color: var(--text-muted); font-size: 0.9rem; }
+@media (max-width: 620px) {
+  .ai-design-dialog { max-height: calc(100dvh - 24px); }
+  .ai-tool-actions .btn { flex: 1 1 100%; }
+}

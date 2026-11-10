@@ -255,20 +255,17 @@ async function writeLedger(
 }
 
 export type SpendResult =
-  | { ok: true; charged: number; balance: number; spendId: string }
+  | { ok: true; charged: number; balance: number; spendId: string; replay: boolean }
   | { ok: false; reason: 'insufficient'; balance: number; required: number }
   | { ok: false; reason: 'key_reused'; balance: number };
 
 /**
  * G3: deducts server-side, before any dispatch.
  *
- * The deduction is a single conditional UPDATE. Two concurrent spends cannot
- * both pass `balance >= ?`, so a balance can never be driven negative by
- * spending -- which a read-then-write would allow under exactly the
- * double-tap a mobile client produces.
- *
- * `idempotencyKey` makes a retried request free: the ledger insert collides and
- * the second call reports the first call's outcome.
+ * D1 batch is transactional: claim the unique ledger key, debit only an
+ * unsettled claim, and settle its balance together. A race or process failure
+ * cannot separate the debit from its idempotency record. Replays never dispatch
+ * more provider work; `runMetered` refuses them explicitly.
  */
 export async function spendPoints(
   db: D1Database,
@@ -280,56 +277,34 @@ export async function spendPoints(
   const now = Date.now();
   const cost = pointsFor(feature, options);
 
-  const replay = await db
-    .prepare(`SELECT delta, balance_after FROM point_ledger WHERE id = ?`)
-    .bind(idempotencyKey)
-    .first<{ delta: number; balance_after: number }>();
-  if (replay) {
-    // A refunded spend is no longer in force, so replaying its key would hand
-    // back a "charged" result against points that were already returned --
-    // i.e. unlimited free work for anyone who can make one call fail. Reusing
-    // a reversed key is refused; the caller must mint a new one to retry.
-    const reversed = await db
-      .prepare(`SELECT 1 AS hit FROM point_ledger WHERE id = ?`)
-      .bind(`refund:${idempotencyKey}`)
-      .first<{ hit: number }>();
-    if (reversed) {
-      const account = await readAccount(db, subject);
-      return { ok: false, reason: 'key_reused', balance: account.balance };
-    }
-    return { ok: true, charged: -replay.delta, balance: replay.balance_after, spendId: idempotencyKey };
-  }
-
   await ensureAccount(db, subject, now);
-
-  const updated = await db
-    .prepare(
-      `UPDATE point_accounts
-         SET balance = balance - ?, lifetime_spent = lifetime_spent + ?, updated_at = ?
-       WHERE subject = ? AND balance >= ?
-       RETURNING balance`,
-    )
-    .bind(cost, cost, now, subject, cost)
-    .first<{ balance: number }>();
-
-  if (!updated) {
-    const account = await readAccount(db, subject);
-    return { ok: false, reason: 'insufficient', balance: account.balance, required: cost };
+  const result = await db.batch([
+    db.prepare(`INSERT INTO point_ledger
+      (id, subject, kind, delta, feature, cost_micros, balance_after, ref, price_version, created_at)
+      SELECT ?, subject, 'spend', ?, ?, ?, -1, ?, ?, ? FROM point_accounts
+      WHERE subject = ? AND balance >= ? ON CONFLICT(id) DO NOTHING`)
+      .bind(idempotencyKey, -cost, feature, Math.round(maxCostUsdFor(feature, options) * 1_000_000), idempotencyKey, PRICE_VERSION, now, subject, cost),
+    db.prepare(`UPDATE point_accounts SET balance = balance - ?, lifetime_spent = lifetime_spent + ?, updated_at = ?
+      WHERE subject = ? AND EXISTS (SELECT 1 FROM point_ledger
+      WHERE id = ? AND subject = ? AND kind = 'spend' AND balance_after = -1)`)
+      .bind(cost, cost, now, subject, idempotencyKey, subject),
+    db.prepare(`UPDATE point_ledger SET balance_after = (SELECT balance FROM point_accounts WHERE subject = ?)
+      WHERE id = ? AND subject = ? AND kind = 'spend' AND balance_after = -1`)
+      .bind(subject, idempotencyKey, subject),
+  ]);
+  const account = await readAccount(db, subject);
+  if ((result[0].meta.changes ?? 0) > 0) {
+    return { ok: true, charged: cost, balance: account.balance, spendId: idempotencyKey, replay: false };
   }
-
-  await writeLedger(db, {
-    id: idempotencyKey,
-    subject,
-    kind: 'spend',
-    delta: -cost,
-    feature,
-    costMicros: Math.round(maxCostUsdFor(feature, options) * 1_000_000),
-    balanceAfter: updated.balance,
-    ref: idempotencyKey,
-    now,
-  });
-
-  return { ok: true, charged: cost, balance: updated.balance, spendId: idempotencyKey };
+  const existing = await db.prepare(`SELECT subject, kind, feature, delta FROM point_ledger WHERE id = ?`)
+    .bind(idempotencyKey).first<{ subject: string; kind: string; feature: string; delta: number }>();
+  if (!existing) return { ok: false, reason: 'insufficient', balance: account.balance, required: cost };
+  const reversed = await db.prepare(`SELECT 1 AS hit FROM point_ledger WHERE id = ?`)
+    .bind(`refund:${idempotencyKey}`).first<{ hit: number }>();
+  if (reversed || existing.subject !== subject || existing.kind !== 'spend' || existing.feature !== feature || existing.delta !== -cost) {
+    return { ok: false, reason: 'key_reused', balance: account.balance };
+  }
+  return { ok: true, charged: cost, balance: account.balance, spendId: idempotencyKey, replay: true };
 }
 
 /**
@@ -353,37 +328,22 @@ export async function refundPoints(
 
   const amount = Math.abs(spend.delta);
   const refundId = `refund:${spendId}`;
+  const pendingRef = `pending:${spendId}`;
 
-  const existing = await db
-    .prepare(`SELECT balance_after FROM point_ledger WHERE id = ?`)
-    .bind(refundId)
-    .first<{ balance_after: number }>();
-  if (existing) return { refunded: 0, balance: existing.balance_after };
-
-  const updated = await db
-    .prepare(
-      `UPDATE point_accounts
-         SET balance = balance + ?, lifetime_spent = lifetime_spent - ?, updated_at = ?
-       WHERE subject = ?
-       RETURNING balance`,
-    )
-    .bind(amount, amount, now, subject)
-    .first<{ balance: number }>();
-  const balance = updated?.balance ?? amount;
-
-  await writeLedger(db, {
-    id: refundId,
-    subject,
-    kind: 'refund',
-    delta: amount,
-    feature: spend.feature,
-    costMicros: null,
-    balanceAfter: balance,
-    ref: spendId,
-    now,
-  });
-
-  return { refunded: amount, balance };
+  const result = await db.batch([
+    db.prepare(`INSERT INTO point_ledger
+      (id, subject, kind, delta, feature, cost_micros, balance_after, ref, price_version, created_at)
+      VALUES (?, ?, 'refund', ?, ?, NULL, -1, ?, ?, ?) ON CONFLICT(id) DO NOTHING`)
+      .bind(refundId, subject, amount, spend.feature, pendingRef, PRICE_VERSION, now),
+    db.prepare(`UPDATE point_accounts SET balance = balance + ?, lifetime_spent = lifetime_spent - ?, updated_at = ?
+      WHERE subject = ? AND EXISTS (SELECT 1 FROM point_ledger
+      WHERE id = ? AND subject = ? AND kind = 'refund' AND ref = ?)`)
+      .bind(amount, amount, now, subject, refundId, subject, pendingRef),
+    db.prepare(`UPDATE point_ledger SET balance_after = (SELECT balance FROM point_accounts WHERE subject = ?), ref = ?
+      WHERE id = ? AND subject = ? AND kind = 'refund' AND ref = ?`)
+      .bind(subject, spendId, refundId, subject, pendingRef),
+  ]);
+  return { refunded: (result[0].meta.changes ?? 0) > 0 ? amount : 0, balance: (await readAccount(db, subject)).balance };
 }
 
 /**
@@ -466,40 +426,22 @@ export function packPriceCents(pack: Pack, isPro: boolean): number {
 export type PurchaseSource = 'play' | 'stripe';
 
 /**
- * Sentinel `balance_after` for a purchase row that has been claimed but whose
- * balance has not moved yet. Only ever observable if the Worker dies between
- * the claim and the credit -- see `creditPurchase`. Negative so it can never be
- * mistaken for a real balance, which is `>= 0` by construction.
+ * Legacy purchase sentinel. Do not use to determine settlement: real balances
+ * can be negative after adjustments. Migration 0007 adds an explicit flag.
  */
 export const UNSETTLED_BALANCE = -1;
 
 export type CreditResult =
   | { ok: true; credited: number; balance: number; replay: boolean }
-  | { ok: false; reason: 'unknown_pack' };
+  | { ok: false; reason: 'unknown_pack' | 'receipt_reused' | 'unsettled' };
 
 /**
  * Credits a paid pack. The single entry point for money becoming points, used
  * by both the Play and Stripe rails.
  *
- * **Claim first, credit second, and the order is the whole design.** Both rails
- * deliver the same receipt more than once as a matter of course: Stripe retries
- * a webhook for up to three days until it gets a 2xx, and the Play verify route
- * can be called concurrently by two of the same user's devices. So the ledger
- * row is inserted as a *claim* before the balance moves, and the balance only
- * moves for the caller that won the insert.
- *
- * The failure directions are not symmetric, which is why it is arranged this
- * way round:
- *
- * * Crash between claim and credit -> the buyer is short their points, and a
- *   ledger row with `balance_after = UNSETTLED_BALANCE` names exactly which
- *   receipt to settle. Detectable and repairable.
- * * Credit before claim -> a retried delivery credits twice, silently, and
- *   under Stripe's retry schedule it can credit many times. Undetectable
- *   without reconciliation and unbounded.
- *
- * Being wrong the first way costs one support ticket. Being wrong the second
- * way gives away the product.
+ * Claim, credit and settlement are one D1 transaction. A unique per-attempt
+ * nonce ensures only a newly inserted receipt can move the balance; retries
+ * cannot credit an existing (including legacy unsettled) receipt again.
  *
  * The caller is responsible for having verified the receipt with the payment
  * provider first -- this function trusts `receiptId` and does not re-check it.
@@ -519,11 +461,12 @@ export async function creditPurchase(
   const id = `purchase:${source}:${receiptId}`;
   await ensureAccount(db, subject, now);
 
-  const claim = await db
+  const pendingRef = `pending-purchase:${crypto.randomUUID()}`;
+  const results = await db.batch([db
     .prepare(
       `INSERT INTO point_ledger
-         (id, subject, kind, delta, feature, cost_micros, balance_after, ref, price_version, created_at)
-       VALUES (?, ?, 'purchase', ?, NULL, ?, ?, ?, ?, ?)
+         (id, subject, kind, delta, feature, cost_micros, balance_after, ref, price_version, created_at, purchase_settled)
+       VALUES (?, ?, 'purchase', ?, NULL, ?, ?, ?, ?, ?, 0)
        ON CONFLICT(id) DO NOTHING`,
     )
     .bind(
@@ -536,13 +479,34 @@ export async function creditPurchase(
       // that sum is impossible after the fact if the amount is not on the row.
       paidCents * 10_000,
       UNSETTLED_BALANCE,
-      receiptId,
+      pendingRef,
       PRICE_VERSION,
       now,
-    )
-    .run();
+    ),
+    db.prepare(
+      `UPDATE point_accounts
+         SET balance = balance + ?, lifetime_purchased = lifetime_purchased + ?, updated_at = ?
+       WHERE subject = ? AND EXISTS (
+         SELECT 1 FROM point_ledger WHERE id = ? AND subject = ? AND kind = 'purchase'
+           AND ref = ? AND purchase_settled = 0
+       )`,
+    ).bind(pack.points, pack.points, now, subject, id, subject, pendingRef),
+    db.prepare(
+      `UPDATE point_ledger
+       SET balance_after = (SELECT balance FROM point_accounts WHERE subject = ?),
+           ref = ?, purchase_settled = 1
+       WHERE id = ? AND subject = ? AND kind = 'purchase' AND ref = ? AND purchase_settled = 0`,
+    ).bind(subject, receiptId, id, subject, pendingRef),
+  ]);
 
-  if (!claim.meta.changes) {
+  if (!results[0].meta.changes) {
+    const existing = await db.prepare(
+      `SELECT subject, kind, delta, purchase_settled FROM point_ledger WHERE id = ?`,
+    ).bind(id).first<{ subject: string; kind: string; delta: number; purchase_settled: number }>();
+    if (!existing || existing.subject !== subject || existing.kind !== 'purchase' || existing.delta !== pack.points) {
+      return { ok: false, reason: 'receipt_reused' };
+    }
+    if (existing.purchase_settled !== 1) return { ok: false, reason: 'unsettled' };
     // Someone already claimed this receipt. Report the balance as it stands
     // rather than the balance at claim time: the caller wants to render a
     // current figure, and a replayed webhook is not a second sale.
@@ -550,29 +514,13 @@ export async function creditPurchase(
     return { ok: true, credited: 0, balance: account.balance, replay: true };
   }
 
-  const updated = await db
-    .prepare(
-      `UPDATE point_accounts
-         SET balance = balance + ?, lifetime_purchased = lifetime_purchased + ?, updated_at = ?
-       WHERE subject = ?
-       RETURNING balance`,
-    )
-    .bind(pack.points, pack.points, now, subject)
-    .first<{ balance: number }>();
-
-  const balance = updated?.balance ?? pack.points;
-
-  await db
-    .prepare(`UPDATE point_ledger SET balance_after = ? WHERE id = ?`)
-    .bind(balance, id)
-    .run();
-
-  return { ok: true, credited: pack.points, balance, replay: false };
+  const account = await readAccount(db, subject);
+  return { ok: true, credited: pack.points, balance: account.balance, replay: false };
 }
 
 /**
- * Purchases claimed but never settled -- the repair list for the crash window
- * described in `creditPurchase`. Empty is the normal state.
+ * Legacy ambiguous purchases requiring provider/account reconciliation.
+ * New purchases settle atomically, so cannot leave partial rows behind.
  */
 export async function readUnsettledPurchases(db: D1Database): Promise<
   Array<{ id: string; subject: string; delta: number; createdAt: number }>
@@ -580,9 +528,9 @@ export async function readUnsettledPurchases(db: D1Database): Promise<
   const result = await db
     .prepare(
       `SELECT id, subject, delta, created_at AS createdAt FROM point_ledger
-       WHERE kind = 'purchase' AND balance_after = ? ORDER BY created_at`,
+       WHERE kind = 'purchase' AND purchase_settled = 0 ORDER BY created_at`,
     )
-    .bind(UNSETTLED_BALANCE)
+    .bind()
     .all<{ id: string; subject: string; delta: number; createdAt: number }>();
   return result.results ?? [];
 }
@@ -619,6 +567,9 @@ export async function runMetered<T>(
       ? { ok: false, reason: 'key_reused', balance: spend.balance }
       : { ok: false, reason: 'insufficient', balance: spend.balance, required: spend.required };
   }
+  // The balance/ledger are idempotent, but generated text is not cached. Never
+  // treat a prior charge as permission to run arbitrary provider work again.
+  if (spend.replay) return { ok: false, reason: 'key_reused', balance: spend.balance };
 
   try {
     const result = await work();

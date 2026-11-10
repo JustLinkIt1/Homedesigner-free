@@ -4,7 +4,8 @@ import { pointsFor, PRICE_VERSION } from './points';
 const ENDPOINT = 'fal-ai/flux-pro/kontext';
 const BASE_RENDER_PROMPT = 'Turn this 3D architectural preview into a photorealistic interior photograph. '
   + 'Keep the exact same room layout, camera angle, furniture positions, openings and proportions. '
-  + 'Do not add, remove or move furniture, walls, doors or windows. ';
+  + 'Do not add, remove, replace, resize or move furniture, walls, doors or windows. '
+  + 'Preserve the input framing, perspective, aspect ratio and visible room boundaries, including cutaway or overhead views. ';
 
 export const RENDER_STYLES = [
   { id: 'photorealistic', label: 'Photorealistic' },
@@ -17,13 +18,13 @@ export const RENDER_STYLES = [
 export type RenderStyleId = typeof RENDER_STYLES[number]['id'];
 const STYLE_PROMPTS: Record<RenderStyleId, string> = {
   photorealistic: 'Preserve the existing colours and design. Use natural wood grain, matte painted walls, woven fabric upholstery and glass with subtle reflections.',
-  modern: 'Restyle finishes and furnishings as refined contemporary modern design: clean lines, warm neutrals, natural oak, matte stone and restrained accents.',
-  scandinavian: 'Restyle finishes and furnishings as bright Scandinavian design: pale timber, soft off-whites, tactile natural fabrics and simple functional details.',
-  industrial: 'Restyle finishes and furnishings as polished industrial design: dark metal, warm reclaimed timber, concrete textures and controlled loft-style accents.',
-  coastal: 'Restyle finishes and furnishings as sophisticated coastal design: airy whites, sandy neutrals, pale timber, linen textures and subtle ocean-blue accents.',
-  luxury: 'Restyle finishes and furnishings as understated luxury design: premium stone, dark timber, brushed metal, tailored upholstery and elegant layered lighting.',
+  modern: 'Change only surface colours and materials toward contemporary modern design: warm neutrals, natural oak, matte stone and restrained accents.',
+  scandinavian: 'Change only surface colours and materials toward Scandinavian design: pale timber, soft off-whites and tactile natural fabrics.',
+  industrial: 'Change only surface colours and materials toward industrial design: dark metal, warm timber and concrete textures.',
+  coastal: 'Change only surface colours and materials toward coastal design: airy whites, sandy neutrals, pale timber, linen and subtle ocean-blue accents.',
+  luxury: 'Change only surface colours and materials toward understated luxury: premium stone, dark timber, brushed metal and tailored upholstery.',
 };
-const CAMERA_PROMPT = ' Warm natural afternoon daylight, soft realistic shadows, shot on a full frame camera at 24mm, high-end architectural interior photography. No text or watermark.';
+const CAMERA_PROMPT = ' Preserve the apparent time of day and direction of light. Use physically plausible lighting, natural contact shadows and realistic material detail. Keep all architecture in focus; do not introduce lens blur or change the camera lens. High-end architectural photography. No text or watermark.';
 export const validRenderStyle = (style: unknown): style is RenderStyleId =>
   typeof style === 'string' && RENDER_STYLES.some(item => item.id === style);
 export const renderPrompt = (style: RenderStyleId) => BASE_RENDER_PROMPT + STYLE_PROMPTS[style] + CAMERA_PROMPT;

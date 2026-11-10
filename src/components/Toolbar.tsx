@@ -66,6 +66,7 @@ export default function Toolbar({
   onHelp,
   onShoppingList,
   onSettings,
+  onAiDesign,
   onHome,
 }: {
   onImport: () => void;
@@ -73,6 +74,7 @@ export default function Toolbar({
   onHelp: () => void;
   onShoppingList: () => void;
   onSettings: () => void;
+  onAiDesign: () => void;
   onHome: () => void;
 }) {
   const s = useDesign(useShallow((st) => ({
@@ -280,6 +282,9 @@ export default function Toolbar({
           </button>
           {moreOpen && (
             <div className="export-menu more-menu" role="menu">
+              <button role="menuitem" onClick={() => { setMoreOpen(false); onAiDesign(); }}>
+                <WandSparkles className="icon" /> {t('AI design assistant')}
+              </button>
               <button role="menuitem" onClick={() => { setMoreOpen(false); onSettings(); }}>
                 <Settings className="icon" /> {t('Settings')}
               </button>
@@ -312,7 +317,8 @@ export default function Toolbar({
       <div className="spacer" />
 
       <div className="toolbar-account">
-        <AccountButton />
+        <button className="tbtn toolbar-ai" onClick={onAiDesign} aria-label={t('AI design assistant')} data-tip={t('AI design assistant')}><WandSparkles className="icon" /><span>AI</span></button>
+        <AccountButton onAiDesign={onAiDesign} />
       </div>
 
       <div className="view-toggle">

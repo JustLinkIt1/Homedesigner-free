@@ -1,0 +1,203 @@
+<en-GB>
+Your profile now shows Pro status and AI points, with faster access to AI tools.
+New AI assistant: suggest room names, coordinated room styles, and project descriptions.
+Buy AI point packs with Google Play and restore interrupted purchases. Point balances and refunds are protected against duplicate requests.
+Improved mobile image capture and lower-power 3D rendering.
+Review AI suggestions before applying them to your plan.
+</en-GB>
+<ar>
+يعرض ملفك الآن حالة Pro ورصيد نقاط الذكاء الاصطناعي، مع وصول أسرع إلى أدواته.
+مساعد ذكاء اصطناعي جديد لاقتراح أسماء الغرف وأنماط متناسقة ووصف المشاريع.
+اشترِ حزم نقاط الذكاء الاصطناعي عبر Google Play واستعد عمليات الشراء المتوقفة، مع حماية الرصيد والمبالغ المستردة من الطلبات المكررة.
+تحسين التقاط الصور على الهاتف والعرض ثلاثي الأبعاد باستهلاك أقل للطاقة.
+راجع اقتراحات الذكاء الاصطناعي قبل تطبيقها على مخططك.
+</ar>
+<cs-CZ>
+Profil nyní zobrazuje stav Pro a AI body, s rychlejším přístupem k AI nástrojům.
+Nový AI asistent navrhuje názvy místností, sladěné styly a popisy projektů.
+Kupujte balíčky AI bodů přes Google Play a obnovujte přerušené nákupy. Zůstatky a vrácení bodů jsou chráněny před duplicitními požadavky.
+Lepší pořizování obrázků na mobilu a úspornější 3D vykreslování.
+Před použitím v plánu návrhy AI zkontrolujte.
+</cs-CZ>
+<da-DK>
+Din profil viser nu Pro-status og AI-point med hurtigere adgang til AI-værktøjer.
+Ny AI-assistent foreslår rumnavne, sammenhængende rumstile og projektbeskrivelser.
+Køb AI-pointpakker via Google Play, og gendan afbrudte køb. Pointsaldo og tilbagebetalinger er beskyttet mod gentagne anmodninger.
+Forbedret billedoptagelse på mobil og mere strømbesparende 3D-visning.
+Gennemgå AI-forslag, før du anvender dem i din plan.
+</da-DK>
+<de-DE>
+Dein Profil zeigt jetzt Pro-Status und KI-Punkte mit direktem Zugang zu KI-Werkzeugen.
+Neuer KI-Assistent für Raumnamen, abgestimmte Raumstile und Projektbeschreibungen.
+KI-Punktepakete über Google Play kaufen und unterbrochene Käufe wiederherstellen. Punktestand und Erstattungen sind vor doppelten Anfragen geschützt.
+Verbesserte Bildaufnahme auf Mobilgeräten und energiesparendere 3D-Darstellung.
+KI-Vorschläge vor dem Anwenden im Plan prüfen.
+</de-DE>
+<es-419>
+Tu perfil ahora muestra el estado Pro y los puntos de IA, con acceso más rápido a las herramientas.
+Nuevo asistente de IA: nombres de habitaciones, estilos coordinados y descripciones de proyectos.
+Compra paquetes de puntos de IA con Google Play y restaura compras interrumpidas. Saldos y reembolsos protegidos contra solicitudes duplicadas.
+Mejor captura de imágenes en móviles y renderizado 3D de menor consumo.
+Revisa las sugerencias de IA antes de aplicarlas al plano.
+</es-419>
+<es-ES>
+Tu perfil ahora muestra el estado Pro y los puntos de IA, con acceso más rápido a las herramientas.
+Nuevo asistente de IA: nombres de habitaciones, estilos coordinados y descripciones de proyectos.
+Compra paquetes de puntos de IA con Google Play y restaura compras interrumpidas. Saldos y reembolsos protegidos contra solicitudes duplicadas.
+Mejor captura de imágenes en móviles y renderizado 3D de menor consumo.
+Revisa las sugerencias de IA antes de aplicarlas al plano.
+</es-ES>
+<fi-FI>
+Profiili näyttää nyt Pro-tilan ja tekoälypisteet sekä nopeamman pääsyn tekoälytyökaluihin.
+Uusi tekoälyavustaja ehdottaa huoneiden nimiä, yhtenäisiä tyylejä ja projektikuvauksia.
+Osta tekoälypisteitä Google Playsta ja palauta keskeytyneet ostokset. Pistesaldot ja palautukset on suojattu päällekkäisiltä pyynnöiltä.
+Parempi kuvantallennus mobiilissa ja vähemmän virtaa kuluttava 3D-renderöinti.
+Tarkista tekoälyn ehdotukset ennen niiden käyttöä suunnitelmassa.
+</fi-FI>
+<fr-FR>
+Votre profil affiche le statut Pro et les points IA, avec un accès plus rapide aux outils.
+Nouvel assistant IA : noms de pièces, styles harmonisés et descriptions de projets.
+Achetez des packs de points IA via Google Play et restaurez les achats interrompus. Soldes et remboursements protégés contre les demandes en double.
+Capture d’images sur mobile améliorée et rendu 3D moins énergivore.
+Vérifiez les suggestions IA avant de les appliquer au plan.
+</fr-FR>
+<hi-IN>
+प्रोफ़ाइल में अब Pro स्थिति और AI पॉइंट दिखते हैं, और AI टूल आसानी से मिलते हैं।
+नया AI सहायक: कमरों के नाम, मेल खाते स्टाइल और प्रोजेक्ट विवरण सुझाता है।
+Google Play से AI पॉइंट पैक खरीदें और बाधित खरीदारी बहाल करें। पॉइंट बैलेंस और रिफ़ंड दोहराए गए अनुरोधों से सुरक्षित हैं।
+मोबाइल पर बेहतर इमेज कैप्चर और कम ऊर्जा वाला 3D रेंडरिंग।
+प्लान में लागू करने से पहले AI सुझावों की समीक्षा करें।
+</hi-IN>
+<hu-HU>
+A profilod mutatja a Pro-státuszt és az AI-pontokat, az AI-eszközök pedig könnyebben elérhetők.
+Új AI-asszisztens szobanevekhez, összehangolt stílusokhoz és projektleírásokhoz.
+Vásárolj AI-pontcsomagokat a Google Playen, és állítsd helyre a megszakadt vásárlásokat. A pontegyenleg és a visszatérítések védettek a duplikált kérésektől.
+Jobb mobilos képrögzítés és energiatakarékosabb 3D-megjelenítés.
+Alkalmazás előtt ellenőrizd az AI javaslatait.
+</hu-HU>
+<id>
+Profil kini menampilkan status Pro dan poin AI, dengan akses lebih cepat ke alat AI.
+Asisten AI baru menyarankan nama ruangan, gaya yang selaras, dan deskripsi proyek.
+Beli paket poin AI melalui Google Play dan pulihkan pembelian yang terputus. Saldo dan pengembalian poin dilindungi dari permintaan duplikat.
+Pengambilan gambar di ponsel lebih baik dan rendering 3D lebih hemat daya.
+Tinjau saran AI sebelum menerapkannya pada denah.
+</id>
+<it-IT>
+Il profilo ora mostra lo stato Pro e i punti IA, con accesso più rapido agli strumenti.
+Nuovo assistente IA: nomi delle stanze, stili coordinati e descrizioni dei progetti.
+Acquista pacchetti di punti IA con Google Play e ripristina gli acquisti interrotti. Saldi e rimborsi protetti dalle richieste duplicate.
+Acquisizione immagini su mobile migliorata e rendering 3D a consumo ridotto.
+Controlla i suggerimenti IA prima di applicarli alla pianta.
+</it-IT>
+<iw-IL>
+הפרופיל מציג כעת את סטטוס Pro ונקודות AI, עם גישה מהירה יותר לכלים.
+עוזר AI חדש מציע שמות לחדרים, סגנונות מתואמים ותיאורי פרויקטים.
+רכשו חבילות נקודות AI דרך Google Play ושחזרו רכישות שנקטעו. יתרות והחזרים מוגנים מפני בקשות כפולות.
+שיפור בצילום תמונות בנייד ותצוגת תלת־ממד חסכונית יותר בחשמל.
+בדקו את הצעות ה-AI לפני החלתן על התוכנית.
+</iw-IL>
+<ja-JP>
+プロフィールにProステータスとAIポイントを表示し、AIツールにすばやくアクセスできます。
+新しいAIアシスタントが、部屋の名前、統一感のあるスタイル、プロジェクトの説明を提案します。
+Google PlayでAIポイントパックを購入し、中断した購入を復元できます。重複リクエストによる残高や返金への影響を防ぎます。
+モバイルでの画像キャプチャを改善し、3D表示の消費電力を抑えました。
+AIの提案は、間取りに適用する前に確認してください。
+</ja-JP>
+<ko-KR>
+프로필에서 Pro 상태와 AI 포인트를 확인하고 AI 도구를 더 빠르게 이용하세요.
+새 AI 도우미가 방 이름, 조화로운 스타일, 프로젝트 설명을 제안합니다.
+Google Play에서 AI 포인트 팩을 구매하고 중단된 구매를 복원하세요. 중복 요청으로부터 포인트 잔액과 환불을 보호합니다.
+모바일 이미지 캡처를 개선하고 3D 렌더링의 전력 소비를 줄였습니다.
+AI 제안을 평면도에 적용하기 전에 검토하세요.
+</ko-KR>
+<nl-NL>
+Je profiel toont nu je Pro-status en AI-punten, met snellere toegang tot AI-tools.
+Nieuwe AI-assistent voor kamernamen, bijpassende stijlen en projectbeschrijvingen.
+Koop AI-puntenpakketten via Google Play en herstel onderbroken aankopen. Saldo en terugbetalingen zijn beschermd tegen dubbele verzoeken.
+Verbeterde beeldopname op mobiel en energiezuinigere 3D-weergave.
+Controleer AI-suggesties voordat je ze op je plattegrond toepast.
+</nl-NL>
+<no-NO>
+Profilen viser nå Pro-status og AI-poeng, med raskere tilgang til AI-verktøy.
+Ny AI-assistent foreslår romnavn, samordnede romstiler og prosjektbeskrivelser.
+Kjøp AI-poengpakker via Google Play og gjenopprett avbrutte kjøp. Poengsaldo og refusjoner er beskyttet mot dupliserte forespørsler.
+Bedre bildeopptak på mobil og mer strømsparende 3D-visning.
+Se gjennom AI-forslag før du bruker dem i plantegningen.
+</no-NO>
+<pl-PL>
+Profil pokazuje teraz status Pro i punkty AI, z szybszym dostępem do narzędzi AI.
+Nowy asystent AI proponuje nazwy pomieszczeń, spójne style i opisy projektów.
+Kupuj pakiety punktów AI przez Google Play i przywracaj przerwane zakupy. Salda i zwroty są chronione przed powielonymi żądaniami.
+Lepsze zapisywanie obrazów na telefonie i bardziej energooszczędne renderowanie 3D.
+Sprawdź sugestie AI przed zastosowaniem ich w planie.
+</pl-PL>
+<pt-BR>
+Seu perfil agora mostra o status Pro e os pontos de IA, com acesso mais rápido às ferramentas.
+Novo assistente de IA: nomes de cômodos, estilos coordenados e descrições de projetos.
+Compre pacotes de pontos de IA pelo Google Play e restaure compras interrompidas. Saldos e reembolsos protegidos contra solicitações duplicadas.
+Captura de imagens no celular aprimorada e renderização 3D com menor consumo.
+Revise as sugestões de IA antes de aplicá-las à planta.
+</pt-BR>
+<ro>
+Profilul arată acum starea Pro și punctele AI, cu acces mai rapid la instrumente.
+Noul asistent AI sugerează nume de camere, stiluri asortate și descrieri de proiecte.
+Cumpără pachete de puncte AI prin Google Play și restabilește achizițiile întrerupte. Soldurile și rambursările sunt protejate de cererile duplicate.
+Captură de imagini îmbunătățită pe mobil și randare 3D cu consum redus.
+Verifică sugestiile AI înainte de a le aplica în plan.
+</ro>
+<ru-RU>
+В профиле теперь видны статус Pro и ИИ-баллы, а доступ к ИИ-инструментам стал быстрее.
+Новый ИИ-помощник предлагает названия комнат, согласованные стили и описания проектов.
+Покупайте пакеты ИИ-баллов через Google Play и восстанавливайте прерванные покупки. Баланс и возвраты защищены от повторных запросов.
+Улучшен захват изображений на телефоне, снижено энергопотребление 3D-рендеринга.
+Проверяйте предложения ИИ перед применением к плану.
+</ru-RU>
+<sk>
+Profil teraz zobrazuje stav Pro a AI body, s rýchlejším prístupom k AI nástrojom.
+Nový AI asistent navrhuje názvy miestností, zladené štýly a opisy projektov.
+Kupujte balíky AI bodov cez Google Play a obnovujte prerušené nákupy. Zostatky a vrátenie bodov sú chránené pred duplicitnými požiadavkami.
+Lepšie snímanie obrázkov na mobile a úspornejšie 3D vykresľovanie.
+Pred použitím v pláne si návrhy AI skontrolujte.
+</sk>
+<sv-SE>
+Din profil visar nu Pro-status och AI-poäng, med snabbare åtkomst till AI-verktyg.
+Ny AI-assistent föreslår rumsnamn, samordnade stilar och projektbeskrivningar.
+Köp AI-poängpaket via Google Play och återställ avbrutna köp. Poängsaldo och återbetalningar skyddas mot dubbla förfrågningar.
+Förbättrad bildtagning på mobilen och mer energisnål 3D-rendering.
+Granska AI-förslag innan du använder dem i din planritning.
+</sv-SE>
+<th>
+โปรไฟล์แสดงสถานะ Pro และคะแนน AI พร้อมเข้าถึงเครื่องมือ AI ได้รวดเร็วขึ้น
+ผู้ช่วย AI ใหม่แนะนำชื่อห้อง สไตล์ที่เข้ากัน และคำอธิบายโครงการ
+ซื้อแพ็กคะแนน AI ผ่าน Google Play และกู้คืนการซื้อที่หยุดชะงัก ปกป้องยอดคะแนนและการคืนคะแนนจากคำขอซ้ำ
+ปรับปรุงการจับภาพบนมือถือและการเรนเดอร์ 3D ให้ใช้พลังงานน้อยลง
+ตรวจสอบคำแนะนำ AI ก่อนนำไปใช้กับแปลน
+</th>
+<tr-TR>
+Profiliniz artık Pro durumunu ve AI puanlarını gösterir; AI araçlarına daha hızlı erişebilirsiniz.
+Yeni AI asistanı oda adları, uyumlu stiller ve proje açıklamaları önerir.
+Google Play'den AI puan paketleri satın alın ve kesintiye uğrayan satın alımları geri yükleyin. Bakiyeler ve iadeler yinelenen isteklere karşı korunur.
+Mobil görüntü yakalama iyileştirildi, 3D işleme daha az enerji tüketiyor.
+AI önerilerini plana uygulamadan önce inceleyin.
+</tr-TR>
+<uk>
+У профілі тепер видно статус Pro та ШІ-бали, а доступ до ШІ-інструментів став швидшим.
+Новий ШІ-помічник пропонує назви кімнат, узгоджені стилі та описи проєктів.
+Купуйте пакети ШІ-балів через Google Play і відновлюйте перервані покупки. Баланс і повернення захищені від повторних запитів.
+Покращено захоплення зображень на телефоні та зменшено енергоспоживання 3D-рендерингу.
+Перевіряйте пропозиції ШІ перед застосуванням до плану.
+</uk>
+<vi>
+Hồ sơ nay hiển thị trạng thái Pro và điểm AI, giúp truy cập công cụ AI nhanh hơn.
+Trợ lý AI mới gợi ý tên phòng, phong cách đồng bộ và mô tả dự án.
+Mua gói điểm AI qua Google Play và khôi phục giao dịch bị gián đoạn. Số dư và hoàn điểm được bảo vệ khỏi yêu cầu trùng lặp.
+Cải thiện chụp ảnh trên di động và kết xuất 3D tiết kiệm năng lượng hơn.
+Kiểm tra gợi ý AI trước khi áp dụng vào bản vẽ.
+</vi>
+<zh-CN>
+个人资料现在显示Pro状态和AI积分，让您更快找到AI工具。
+全新AI助手，可建议房间名称、协调的房间风格和项目描述。
+通过Google Play购买AI积分包，并恢复中断的购买。积分余额和退款受到保护，避免重复请求造成影响。
+改进移动端图像捕获，降低3D渲染功耗。
+将AI建议应用到平面图之前，请先仔细检查。
+</zh-CN>

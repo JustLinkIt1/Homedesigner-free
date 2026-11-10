@@ -1,5 +1,295 @@
 # WIP — current handoff
 
+## 2026-10-06 — 1.22.30 SIGNED AAB BUILT FOR MANUAL UPLOAD
+
+User requested the new Android bundle. Ran node scripts/prepare-ai-release.mjs
+from the correct worktree. Fresh focused/full CI, typechecks, lint, web build and
+assembly passed, then Capacitor sync and Gradle bundleRelease succeeded.
+
+- Delivery: outputs/HomeDesigner-1.22.30-12230.aab, 26,402,721 bytes.
+- SHA256: DB5D6608DD27ECC72663C5B6EE91764E7748AEBADFF1D731F2319B835864A92B.
+- Native version 1.22.30 / 12230, embedded web 1.22.30, no stale app version,
+  and bundled model assets verified. AssetBuildId 20261006204451884.
+- Jarsigner: jar verified (exit 0); SHA256 upload-certificate fingerprint
+  matches the existing 1.22.29 AAB. Normal self-signed-chain/stream-order
+  warnings are unchanged from the prior verified release.
+- Prepared docs/PLAY_RELEASE_NOTES_1.22.30.txt for all 29 Play locales;
+  maximum 472 characters per locale. Existing 1.22.29 notes/AAB preserved;
+  prior bundle checksum remains BAEF9281FA3C1939A542F1DFA44234AEE43C1C03415B19A4EFDF586673376066.
+- No Play upload/submission, web deployment, Worker deployment, purchase or
+  provider call. These client changes use the already-live 1.22.29 backend.
+  Browser visual/mobile QA remains unverified due to the earlier local-access
+  denial; no bypass was attempted. AI photo remains disabled. No commit/push.
+
+## 2026-10-06 — 1.22.30 MEMBER PROFILE / POINT WALLET (LOCAL, NOT DEPLOYED)
+
+User parked photo-to-model Studio and requested more prominent AI features,
+account point balances and a premium Pro/member experience. Correct worktree and
+dirty prior batch preserved. Bumped package/lock/Android to 1.22.30 / 12230 so
+the already-uploaded 12229 bundle is not silently changed.
+
+- Account menu now shows explicit Pro/free/checking status, a gold Pro avatar
+  crown and thank-you panel, a prominent points card and a lazy point-wallet
+  dialog. Non-Pro accounts with points have a sparkle badge. No paid-points
+  claim is inferred from the account's free grant.
+- Wallet reuses existing purchase/restore controls, shows server-provided tool
+  costs, works from project home and editor, and closes first on Android Back.
+  AI assistant has a direct toolbar button and account-menu shortcut.
+- Added display-only, memory-only pointsStore. Successful API balance reads,
+  charges and purchase credits update it. Sign-out/account changes clear it;
+  account generation protects round trips, stale reads cannot overwrite charges,
+  concurrent mutation responses trigger a fresh server read. Unknown/error
+  balance is never invented as zero; real zero/negative values remain visible.
+  Render reservations now refresh the displayed balance immediately.
+- Added 21 points-view regression checks to focused gate and full CI; all new
+  copy translated across the 12 app locales. Final node scripts/check-ai.mjs
+  --release PASSED: 274 focused behavioral checks, full CI including the new
+  suite, both typechecks, lint, production build and web assembly.
+  Final assetBuildId 20261006203426457; dist/site-dist are local 1.22.30 builds.
+- CUA browser DENIED access to http://127.0.0.1:4617. Do not use alternate
+  browsers, headless screenshots, raw CDP or other routes to bypass that denial.
+  Visual/mobile browser QA is NOT completed. Removed the unused temporary
+  preview fixture and stopped Vite. Dev dependency scanner also reported the
+  pre-existing Android output referencing @emotion/is-prop-valid; production
+  build succeeds. Do not claim a successful local interactive preview.
+- No 1.22.30 web/Worker deploy, Android AAB build/upload, purchase/provider call,
+  commit or push. Original outputs/HomeDesigner-1.22.29-12229.aab still matches
+  BAEF9281FA3C1939A542F1DFA44234AEE43C1C03415B19A4EFDF586673376066.
+  Production web/backend remain 1.22.29; Play production draft 25 still has the
+  user's 12229 bundle and 29-language notes, not this new membership batch.
+  AI photo remains disabled. Next: user-authorized visual access/check, then
+  deploy/build the new candidate if requested; do not overwrite the 12229 AAB.
+
+## 2026-10-06 — USER UPLOADED AAB; ALL PLAY RELEASE LANGUAGES SAVED
+
+User manually uploaded the final bundle. Production draft 25 now visibly contains
+12229 (1.22.29); no alternate upload route was used. Added and saved release notes
+for all 29 configured Play locales. Console confirms "29 of 29 languages" and
+"Changes saved". Each locale is below 500 characters (maximum 372).
+Canonical text: docs/PLAY_RELEASE_NOTES_1.22.29.txt; proof:
+outputs/play-release-notes-29-languages-2026-10-06.png.
+Android remains a production draft, not submitted or rolled out in this turn.
+AI photo remains disabled and is not advertised in these notes. The earlier
+upload-blocked status below is historical and superseded by the manual upload.
+
+## 2026-10-06 — BUILT; WEB/BACKEND LIVE; PLAY UPLOAD DENIED
+
+Full terminal/network access was granted. Native esbuild/full CI now work.
+The release script passed focused QA, ALL full CI suites, typechecks, lint,
+production build and web assembly. Gradle initially failed because this
+worktree lacked android/local.properties; added the machine-local ignored SDK
+path C:/Users/jopps/AppData/Local/Android/Sdk. Signed AAB build then succeeded.
+
+- Final candidate: 1.22.29 / 12229, outputs/HomeDesigner-1.22.29-12229.aab,
+  26,398,279 bytes, SHA256
+  BAEF9281FA3C1939A542F1DFA44234AEE43C1C03415B19A4EFDF586673376066.
+  Native + embedded web versions/models verified; jarsigner reports jar verified.
+  An earlier build is retained as ...-before-final-review.aab; use ONLY the final
+  filename above. No 12229 AAB was uploaded.
+- Backed up D1 to backups/homedesigner-community-before-1.22.29-2026-10-06.sql
+  (21,789 bytes). There were zero paid purchase receipts. Applied 0007 with
+  cached Wrangler 4.140.0 (local installed version is still 4.115.0; do not use
+  it for CREATE TRIGGER migrations). Confirmed compatibility trigger exists and
+  unsettled receipt count is zero.
+- Deployed homedesigner-sync Worker d1d7c150-086a-42d9-823c-bdb31b486796.
+  Live protected points/AI routes return 401 without auth; community returns 200.
+  Secret names present: FAL_KEY, GOOGLE_PLAY_SERVICE_ACCOUNT_JSON,
+  MODEL_ADMIN_EMAIL, REVENUECAT_SECRET_KEY. Stripe point checkout remains absent.
+- Deployed web 1.22.29 to production Pages project homedesignerapp, production
+  branch claude/home-design-app-2d-plans-12y5u5, deployment 33926097. Confirmed
+  /app/version.json = 1.22.29, assetBuildId 20261006200414070. Existing marketing
+  homepage compared byte-for-byte equal before deploy, Buy/Terms preserved.
+- Real Workers AI room naming on sample fixtures: 42 scored, 34 accepted, 3 near,
+  5 wrong, 0 missing; three wrong outputs claimed high confidence. Do not treat
+  confidence as accuracy. Made review notice unconditional for all name results,
+  updated assistant/points privacy disclosure, rebuilt final web/AAB. Targeted
+  lint, app typecheck, assistant tests and translations passed after these edits.
+- Live web Google sign-in returned to /app/ correctly. Opened existing Sunlit
+  plan, generated names/style/description through the actual production routes.
+  Displayed balance 400 -> 390 -> 365 -> 340: exactly 10/25/25 points. No names,
+  styles or descriptions were applied to the plan. Live test used 60 grant points
+  on the signed-in owner's account; not silently reimbursed or adjusted.
+  Proof: outputs/ai-release-live-proof-2026-10-06.png. No phone is attached to adb.
+- Created/saved PRODUCTION draft release 25 with name and English release notes:
+  https://play.google.com/console/u/0/developers/5546882976912831580/app/4975201371808527279/tracks/4697953586600509460/releases/25/prepare
+  The browser REJECTED fileChooser.setFiles: user declined upload permission for
+  Play Console. Do not retry through an API, another browser, raw CDP or another
+  upload route. User must allow that browser upload permission or manually upload
+  the final AAB. Draft has NO AAB; no Android review/submission/rollout happened.
+  Production Android remains 12227 (1.22.27). All six point products previously
+  verified active. Regional product pricing and Data safety still need final
+  Console review; physical license buy/restore/rebuy remains unverified.
+- AI_RENDER_ENABLED remains absent. Pro AI PHOTO generation remains DISABLED
+  until paid fal/live-device gates pass; do not describe it as activated. New web
+  assistant tools are live. No real fal request was made during this release.
+  Temporary remote room-naming harness stopped; no recurring automation exists.
+
+No commit or push yet; source worktree contains the full AI batch and final docs.
+Finish Play upload/review when user resolves permission, then update Android
+release status accurately. Browser-created draft tab should be retained for
+handoff, not silently replaced with the older internal draft.
+
+## 2026-10-06 — CONTINUATION: PURCHASE GATES COMPLETE LOCALLY
+
+- Fixed automatic restore's partial-success balance refresh in both dialogs.
+- Migration 0007 now includes a compatibility trigger for the old Worker's
+  final balance_after update during deployment, including a real -1 balance.
+  Existing ambiguous -1 records still require manual reconciliation. This
+  supersedes the migration compatibility TODO in the earlier entry below.
+- Added tests/point-routes.mjs: actual Worker handlers plus real SQLite, with
+  stubbed provider HTTP; no real purchases or network calls. Covers delayed
+  Stripe success/replays/signature rejection/conflicting receipt, Pro expiry,
+  account binding, pending payments, non-point SKU rejection, and credit before
+  consumption. Updated the billing source fence for the earlier account guard.
+- Focused gate passed: 36 assistant + 126 ledger + 11 purchase recovery + 12
+  backend route + 68 render = 253 behavioral checks; app/Worker typechecks,
+  translations and lint passed. Both new purchase suites are now in test:ci/test.
+- Added scripts/prepare-ai-release.mjs for the normal authorized local terminal:
+  full CI/fresh build, Capacitor sync, signed AAB build, native/web version check,
+  versioned copy without overwrite, SHA256. No deploy, live transaction, remote
+  migration or Play submission. --plan only prints steps.
+- Known full-build filesystem restriction is unchanged; no permission grant
+  was obtained. Do not bypass it with an alternate executor. Next user action:
+  run the prepare script from the correct worktree in a normal terminal and
+  share any failure/output. Then finish live billing/provider and Play privacy/
+  policy gates before production deployment. Production unchanged at 1.22.27;
+  candidate 1.22.29 / 12229 remains unbuilt and unpublished.
+
+## 2026-10-06 — PRODUCTION AI RELEASE AUDIT (NOT PUBLISHED)
+
+User wants the AI release in PRODUCTION, not a testing-track rollout. User then
+requested a fast wrap-up due to low battery. Same correct worktree/branch;
+candidate remains 1.22.29 / 12229. All earlier dirty work preserved.
+
+- Live Play Console confirms production 12227 (1.22.27), 100% rollout, 178
+  countries/regions; no unpublished changes on the dashboard. Internal testing
+  has an Untitled draft (contents not reverified), existing served build 12209.
+  Do not publish that older draft as the new AI release.
+- Live one-time-products table confirms all six points_2000/6000/15000 and _pro
+  SKUs each have one active purchase option. Regional prices, licensing, data
+  safety and receipt/provider behavior still need final release verification.
+- Fixed paid purchase crash window: claim, balance credit and settlement now
+  use one D1 batch. Added migration 0007 with explicit purchase_settled flag;
+  negative balances no longer masquerade as unsettled purchases. Foreign-account
+  or different-pack receipt replay fails explicitly. Legacy ambiguous -1 rows
+  require reconciliation, never blind recrediting.
+- Play claims use explicit settlement before consumption; already-settled Pro
+  packs can be consumed/restored after Pro expires. Stripe now handles delayed
+  payment success and returns retryable failures if a paid credit fails.
+- Restore processes all valid receipts even alongside pending/foreign receipts,
+  stops on account changes, and manual purchase/restore refreshes balances even
+  after partial failure. Store price cache is keyed by actual Play SKU.
+- Focused gate PASSED: assistant 36, SQLite accounting 124, purchase recovery 11,
+  render/capture 68; 12 locales/486 keys, both typechecks and ESLint passed.
+  New tests/point-purchases.mjs is included in scripts/check-ai.mjs.
+- Full release gate remains blocked: native esbuild cannot read ancestor paths
+  (Access is denied), stopping at geometry tests before build/assembly. Read-only
+  permission request returned no grant. No new AAB, deployment, migration,
+  purchase, fal request, release submission, commit or push was made.
+
+Next: finish backend route-level regression checks (Stripe async + expired-Pro
+replay); auto-restore effects in both dialogs still use then(reload), so update
+them to refresh after partial restore failure as manual controls now do. Run
+full CI/build in an authorized release environment, back up D1 and apply 0007
+before Worker deployment, then test licensed buy/restore/rebuy and real provider
+generation before enabling/render rollout. Migration deployment needs care:
+an OLD Worker credit during the migration-to-deploy interval defaults settlement
+to 0; reconcile completed legacy rows after old Worker requests drain (do not
+guess -1 rows), or add/test an old-Worker-compatible settlement update trigger.
+Keep AI_RENDER_ENABLED absent until live gates pass. Play still reports GPU/
+WebView crashes and futex-wait ANRs on 12227; rates unavailable, not zero.
+
+
+## 2026-10-02 — REAL AI PHOTO TEST BLOCKED
+
+User authorized one US$0.04 FLUX Kontext Pro API test with the earlier
+demo-specific key. No credential was written to a file or printed in console
+output. A direct, non-retrying POST to `queue.fal.run` failed with network
+`EACCES`; no provider request ID or generation acknowledgement was received.
+The network permission request returned no grant. Do not treat this as a
+successful provider check or assume that a result exists. The temporary key
+variable was cleared and the local preview server stopped.
+
+The existing 1.22.28 local bundle loaded its Sunlit sample in 3D, but its
+in-app-browser export did not yield an accessible download. An already-local
+demo frame was cropped to a bounded JPEG for the attempted API test at
+`outputs/ai-photo-test-2026-10-02/input.jpg`; it still contains selection lines
+and is not a clean capture quality baseline. No production flag, balance,
+release or purchase was changed. Saved browser permission still blocks
+`v3b.fal.media`; do not fetch its images through another surface as a workaround.
+
+## 2026-10-02 — 1.22.29 AI QUALITY HARDENING (LOCAL, NOT SHIPPED)
+
+Read current WIP/changelog and confirmed the same `work/Homedesigner-1.22.26`
+worktree, `codex/homedesigner-1.22.26`, version 1.22.29 / 12229. Preserved the
+unfinished assistant batch. No new version/binary, deployment, paid call,
+purchase or Play rollout was made.
+
+- Found and fixed concurrent duplicate debit/refund races in the shared text-AI
+  ledger. Spend claim/debit/settlement and refund claim/credit/settlement now
+  each use a transactional D1 batch. Reusing an already-charged text-AI key
+  returns 409 and cannot run the provider again for free. No migration needed.
+- Added SQLite concurrency, rollback, account/feature key isolation and
+  negative-balance refund regressions. The points suite now transpiles with
+  TypeScript instead of native esbuild: 106 checks pass in this session.
+- Bound assistant results to local project, floor and plan facts; changed
+  geometry/furniture invalidates old results and application rechecks the live
+  context. Names apply in the current UI language; uncertain names and generated
+  copy request human review. Failed requests refresh the point balance.
+- Reject non-finite/negative/oversized dimensions, duplicate IDs, unbounded
+  furniture strings and invalid door/window counts before charging. Reject
+  over-20-room levels rather than silently styling an incomplete summary.
+- AI styles now target indoor rooms and their boundary walls only, preserving
+  outdoor surfaces; legacy manual styling retains its existing default.
+- AI render clears previous result imagery when job identity/status changes,
+  and both dialogs avoid late error updates after unmount. The render suite now
+  uses portable TS transpilation with actual modules: 68 checks pass. Assistant
+  tests: 36 pass. Both typechecks, repository lint and 12-locale coverage pass
+  (486 UI keys). The focused gate passes all 210 behavioral checks.
+- Added `node scripts/check-ai.mjs` for repeatable focused QA and `--release`
+  for complete CI/build/web assembly. See `docs/AI_QUALITY_CHECKLIST.md`.
+
+Release gates remain: full CI and production build cannot run successfully here
+because native esbuild cannot access the workspace's parent path. The final
+`node scripts/check-ai.mjs --release` attempt passed the focused gate, then
+stopped at `tests/geometry.mjs` with that access error; build/assembly did not
+run in that attempt. Physical
+device/purchase/provider verification and UI apply/undo smoke tests remain.
+Daily follow-up creation failed with `MCP tool call requires approval, but
+approval policy is never`; **no recurring automation is active**. Auto-furnish
+was intentionally deferred when accounting bugs were found, not marked done.
+
+## 2026-09-25 — 1.22.29 AI DESIGN ASSISTANT IN PROGRESS
+
+Correct worktree remains `work/Homedesigner-1.22.26`. The new batch is assigned
+1.22.29 / versionCode 12229 because a different 1.22.28 binary already exists
+and is attached to an internal-testing draft. Nothing from 1.22.29 has been
+built, deployed or uploaded.
+
+- Added an editor-level AI design assistant with smart room names (10 points),
+  coordinated room style (25 points), and factual project/share description
+  (25 points). These cheap Workers AI tools are available to signed-in free and
+  Pro accounts and use the existing account grant and point packs.
+- Suggestions use bounded geometry summaries and closed output sets. Applying
+  room names is one undoable edit; styles may only select one of the eight
+  existing tested presets. Description output is length-limited and instructed
+  not to invent location, price, condition, views or amenities.
+- Worker routes use the existing `runMetered` path: atomic server debit before
+  dispatch, per-request idempotency and automatic refund on invalid/provider
+  output. No migration or fal call is involved.
+- Extracted reusable point-pack purchase/restore UI so users can buy points
+  from either AI surface. Added all 12 translations and focused structured
+  output tests. Root/Worker typechecks, ESLint, i18n coverage and 11 new AI
+  feature checks pass.
+- Full CI/build remain to run. The current restricted execution environment
+  blocks the native esbuild subprocess used by several pre-existing tests; this
+  is an environment limitation, not a test failure in the feature code.
+
+Before deployment: run full CI/build in the normal release environment, deploy
+the Worker and web/app together, then smoke-test debit, refund, apply/undo and
+point purchase recovery. Keep `AI_RENDER_ENABLED` absent until the separate
+licensed Play purchase and paid fal-render checks pass.
+
 ## 2026-09-25 — 1.22.28 REBASED; AI PRODUCTS ACTIVE; RELEASE VERIFICATION GREEN
 
 Correct worktree remains `work/Homedesigner-1.22.26`, now assigned package
@@ -42,11 +332,13 @@ editor fixes, `/buy` page and legal pages.
   `25357def-4259-4f82-91b8-28fcdc4b296d`. Public community smoke test returned
   200 and the protected AI route returned 401 unauthenticated. `FAL_KEY` and
   `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` are present, but `AI_RENDER_ENABLED` is
-  absent, so no generation can run. No licensed purchase, paid fal request,
-  Play upload or web deployment has been performed.
+  absent, so no generation can run. No licensed purchase, paid fal request or
+  web deployment has been performed. The AAB was uploaded to an internal-track
+  draft, but that release has not been submitted or rolled out.
 
-Before launch: upload 1.22.28 to an internal Play track, run a licensed-test
-purchase/restore/rebuy against the six active products, then perform one
+Before launch: decide whether to discard/supersede the unsubmitted 1.22.28
+internal draft with 1.22.29, run a licensed-test purchase/restore/rebuy against
+the six active products, then perform one
 paid-provider render before enabling generation. Verify ANRs after rollout on
 affected/low-end phones; the metric has very low event volume.
 

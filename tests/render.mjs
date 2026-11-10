@@ -1,18 +1,29 @@
 import assert from 'node:assert/strict';
-import { build } from 'esbuild';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import ts from 'typescript';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-const dir = mkdtempSync(join(tmpdir(), 'hd-render-'));
+// Keep runtime package resolution under this repo; no native esbuild process
+// is necessary to exercise the real capture and Worker modules.
+const dir = mkdtempSync(join(process.cwd(), '.render-tests-'));
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
 try {
   const out = join(dir, 'tests.mjs');
-  await build({ stdin: { contents: `export * from './src/lib/renderCapture'; export * from './workers/design-sync/src/ai-render';`,
-    resolveDir: process.cwd(), loader: 'ts' }, bundle: true, format: 'esm', platform: 'node', outfile: out });
+  for (const [name, path] of [
+    ['renderCapture', 'src/lib/renderCapture.ts'],
+    ['points', 'workers/design-sync/src/points.ts'],
+    ['ai-render', 'workers/design-sync/src/ai-render.ts'],
+  ]) {
+    const source = readFileSync(join(process.cwd(), path), 'utf8');
+    const compiled = ts.transpileModule(source, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
+    }).outputText.replace("from './points'", "from './points.mjs'");
+    writeFileSync(join(dir, `${name}.mjs`), compiled);
+  }
+  writeFileSync(out, "export * from './renderCapture.mjs'; export * from './ai-render.mjs';");
   const { captureDimensions, captureRenderer, reserveRender, readRender, failRender, freeRenderAvailable,
     validRenderImage, validRenderId, validResultUrl, validRenderStyle, renderPrompt, dispatchRender, refreshRender } = await import(pathToFileURL(out).href);
   for (const [w, h] of [[390, 844], [844, 390], [1440, 3200], [4096, 2160]]) {
@@ -50,7 +61,7 @@ try {
   assert.throws(() => captureRenderer(fixture({ lost: true }).gl, {}, {}, { width: 400, height: 800 }, null, 2, true)); checks++;
 
   const sql = new DatabaseSync(':memory:');
-  for (const file of ['0004_points.sql', '0005_ai_renders.sql', '0006_ai_render_styles.sql']) sql.exec(readFileSync(`workers/design-sync/migrations/${file}`, 'utf8'));
+  for (const file of ['0004_points.sql', '0005_ai_renders.sql', '0006_ai_render_styles.sql', '0007_purchase_settlement.sql']) sql.exec(readFileSync(`workers/design-sync/migrations/${file}`, 'utf8'));
   const db = { prepare(query) {
     const stmt = sql.prepare(query);
     const bound = args => ({ first: async () => stmt.get(...args) ?? null,

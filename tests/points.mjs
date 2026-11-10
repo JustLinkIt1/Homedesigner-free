@@ -10,7 +10,7 @@
 //
 //   node tests/points.mjs
 import { writeFileSync, mkdtempSync, rmSync, readFileSync } from 'node:fs';
-import { build } from 'esbuild';
+import ts from 'typescript';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -23,26 +23,18 @@ process.removeAllListeners('warning');
 const { DatabaseSync } = await import('node:sqlite');
 
 const root = process.cwd();
-const rootImport = root.replaceAll('\\', '/');
 const dir = mkdtempSync(join(tmpdir(), 'hdpoints-'));
-const entry = join(root, '.points-entry.tmp.ts');
-writeFileSync(entry, `
-export * from '${rootImport}/workers/design-sync/src/points.ts';
-export * from '${rootImport}/workers/design-sync/src/stripe.ts';
-`);
-
 const out = join(dir, 'bundle.mjs');
-let mod;
-try {
-  // esbuild JS API, not the bin shim -- same cross-platform reason as
-  // tests/billing.mjs and tests/geometry.mjs.
-  await build({
-    entryPoints: [entry], bundle: true, format: 'esm', platform: 'node', outfile: out,
-  });
-  mod = await import(pathToFileURL(out).href);
-} finally {
-  rmSync(entry, { force: true });
+// These modules have no runtime imports. Transpile them with TypeScript's JS
+// API so the SQLite accounting suite does not require a native build process.
+for (const name of ['points', 'stripe']) {
+  const source = readFileSync(join(root, 'workers', 'design-sync', 'src', `${name}.ts`), 'utf8');
+  writeFileSync(join(dir, `${name}.mjs`), ts.transpileModule(source, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
+  }).outputText);
 }
+writeFileSync(out, "export * from './points.mjs'; export * from './stripe.mjs';");
+const mod = await import(pathToFileURL(out).href);
 
 const {
   FEATURES, PACKS, USD_PER_POINT, PLAY_FEE_RATE, PRO_DISCOUNT,
@@ -84,13 +76,36 @@ function makeDb() {
     'utf8',
   );
   db.exec(migration);
+  db.exec(readFileSync(join(root, 'workers', 'design-sync', 'migrations', '0007_purchase_settlement.sql'), 'utf8'));
   return {
     raw: db,
+    failBatchAt: null,
+    batch(statements) {
+      db.exec('BEGIN');
+      try {
+        const results = statements.map((statement, index) => {
+          if (this.failBatchAt === index) {
+            this.failBatchAt = null;
+            throw new Error('Injected transaction failure');
+          }
+          return statement.execute();
+        });
+        db.exec('COMMIT');
+        return Promise.resolve(results);
+      } catch (error) {
+        db.exec('ROLLBACK');
+        return Promise.reject(error);
+      }
+    },
     prepare(sql) {
       return {
         bind(...args) {
           const stmt = db.prepare(sql);
           return {
+            execute() {
+              const info = stmt.run(...args);
+              return { success: true, meta: { changes: info.changes } };
+            },
             first() {
               const row = stmt.get(...args);
               return Promise.resolve(row ?? null);
@@ -523,6 +538,115 @@ console.log('Liability (§5)');
 }
 
 // ------------------------------------------------------------------ schema
+
+console.log('Concurrent accounting and provider replay');
+{
+  const db = makeDb();
+  await grantFreePoints(db, 'race');
+  const cost = pointsFor('auto_furnish');
+  const spends = await Promise.all(Array.from({ length: 12 }, () => spendPoints(db, 'race', 'auto_furnish', 'same-key')));
+  check('concurrent same-key spends debit exactly once', (await readAccount(db, 'race')).balance === FREE_GRANT_POINTS - cost);
+  check('exactly one same-key caller owns the charge', spends.filter(result => result.ok && !result.replay).length === 1);
+  const refunds = await Promise.all(Array.from({ length: 12 }, () => refundPoints(db, 'race', 'same-key')));
+  check('concurrent refunds credit exactly once', refunds.reduce((sum, result) => sum + result.refunded, 0) === cost);
+  check('concurrent refunds restore accounting totals', (await readAccount(db, 'race')).balance === FREE_GRANT_POINTS && (await readAccount(db, 'race')).lifetimeSpent === 0);
+}
+{
+  const db = makeDb();
+  await grantFreePoints(db, 'provider-race');
+  let dispatches = 0;
+  const results = await Promise.all(Array.from({ length: 8 }, () => runMetered(db, 'provider-race', 'room_naming', 'provider-key', async () => { dispatches++; return 'names'; })));
+  check('concurrent replay dispatches the provider once', dispatches === 1);
+  check('provider replay is explicitly refused', results.filter(result => !result.ok && result.reason === 'key_reused').length === 7);
+  const replay = await runMetered(db, 'provider-race', 'room_naming', 'provider-key', async () => { dispatches++; });
+  check('successful historical key cannot generate free work', !replay.ok && replay.reason === 'key_reused' && dispatches === 1);
+}
+{
+  const db = makeDb();
+  await grantFreePoints(db, 'owner');
+  await grantFreePoints(db, 'other');
+  await spendPoints(db, 'owner', 'room_naming', 'isolated-key');
+  const foreign = await spendPoints(db, 'other', 'room_naming', 'isolated-key');
+  check('a key owned by another account is refused', !foreign.ok && foreign.reason === 'key_reused');
+  check('foreign key collision does not debit the caller', (await readAccount(db, 'other')).balance === FREE_GRANT_POINTS);
+  const wrongFeature = await spendPoints(db, 'owner', 'colour_scheme', 'isolated-key');
+  check('a key cannot be reused for another feature', !wrongFeature.ok && wrongFeature.reason === 'key_reused');
+}
+{
+  const db = makeDb();
+  await grantFreePoints(db, 'rollback');
+  db.failBatchAt = 2;
+  let failed = false;
+  try { await spendPoints(db, 'rollback', 'room_naming', 'rollback-key'); } catch { failed = true; }
+  check('injected settlement failure rejects the spend', failed);
+  check('failed transaction rolls back the balance and claim', (await readAccount(db, 'rollback')).balance === FREE_GRANT_POINTS && !db.raw.prepare('SELECT id FROM point_ledger WHERE id = ?').get('rollback-key'));
+  await spendPoints(db, 'rollback', 'room_naming', 'rollback-key');
+  db.failBatchAt = 2;
+  try { await refundPoints(db, 'rollback', 'rollback-key'); } catch { /* expected */ }
+  check('failed refund rolls back the credit and claim', (await readAccount(db, 'rollback')).balance === FREE_GRANT_POINTS - 10 && !db.raw.prepare('SELECT id FROM point_ledger WHERE id = ?').get('refund:rollback-key'));
+  const restored = await refundPoints(db, 'rollback', 'rollback-key');
+  check('failed refund is safely retryable', restored.refunded === 10 && restored.balance === FREE_GRANT_POINTS);
+}
+{
+  const db = makeDb();
+  await grantFreePoints(db, 'negative');
+  await spendPoints(db, 'negative', 'room_naming', 'negative-key');
+  // G9 permits chargeback deficits. -1 is a valid settled refund balance.
+  db.raw.prepare('UPDATE point_accounts SET balance = -11 WHERE subject = ?').run('negative');
+  const first = await refundPoints(db, 'negative', 'negative-key');
+  const second = await refundPoints(db, 'negative', 'negative-key');
+  check('a refund may settle to a negative balance', first.balance === -1);
+  check('negative settled balance never looks like a pending refund', second.refunded === 0 && second.balance === -1);
+}
+
+console.log('Atomic purchase settlement');
+for (const failAt of [1, 2]) {
+  const db = makeDb();
+  db.failBatchAt = failAt;
+  let rejected = false;
+  try { await creditPurchase(db, 'interrupted', PACKS[0].id, 'play', 'retryable', 199); }
+  catch { rejected = true; }
+  check(`purchase failure at step ${failAt} propagates`, rejected);
+  check(`purchase failure at step ${failAt} rolls back balance`, (await readAccount(db, 'interrupted')).balance === 0);
+  check(`purchase failure at step ${failAt} rolls back receipt`, db.raw.prepare('SELECT COUNT(*) AS n FROM point_ledger').get().n === 0);
+  const retry = await creditPurchase(db, 'interrupted', PACKS[0].id, 'play', 'retryable', 199);
+  check(`purchase failure at step ${failAt} can safely retry`, retry.ok && retry.credited === PACKS[0].points);
+}
+{
+  const db = makeDb();
+  await creditPurchase(db, 'owner', PACKS[0].id, 'play', 'owned', 199);
+  const foreign = await creditPurchase(db, 'stranger', PACKS[0].id, 'play', 'owned', 199);
+  check('foreign receipt replay is explicitly rejected', !foreign.ok && foreign.reason === 'receipt_reused');
+  check('foreign replay never credits the other account', (await readAccount(db, 'stranger')).balance === 0);
+  const differentPack = await creditPurchase(db, 'owner', PACKS[1].id, 'play', 'owned', 599);
+  check('receipt cannot be reused for a different pack', !differentPack.ok && differentPack.reason === 'receipt_reused');
+  db.raw.prepare('UPDATE point_accounts SET balance = ? WHERE subject = ?').run(-PACKS[0].points - 1, 'owner');
+  const negative = await creditPurchase(db, 'owner', PACKS[0].id, 'play', 'negative', 199);
+  const replay = await creditPurchase(db, 'owner', PACKS[0].id, 'play', 'negative', 199);
+  check('purchase can settle to a legitimate minus-one balance', negative.ok && negative.balance === -1);
+  check('minus-one balance does not become an unsettled purchase', replay.ok && replay.replay && replay.credited === 0 && (await readUnsettledPurchases(db)).length === 0);
+  db.raw.prepare(`INSERT INTO point_ledger (id, subject, kind, delta, balance_after, created_at)
+    VALUES ('purchase:play:legacy', 'owner', 'purchase', ?, ?, 0)`).run(PACKS[0].points, UNSETTLED_BALANCE);
+  const legacy = await creditPurchase(db, 'owner', PACKS[0].id, 'play', 'legacy', 199);
+  check('ambiguous legacy purchase requires reconciliation', !legacy.ok && legacy.reason === 'unsettled');
+  check('ambiguous legacy purchase cannot be blindly recredited', (await readAccount(db, 'owner')).balance === -1);
+  check('legacy repair list uses explicit settlement state', (await readUnsettledPurchases(db)).length === 1);
+}
+{
+  const db = new DatabaseSync(':memory:');
+  db.exec(readFileSync(join(root, 'workers/design-sync/migrations/0004_points.sql'), 'utf8'));
+  db.exec(`INSERT INTO point_ledger (id, subject, kind, delta, balance_after, created_at) VALUES
+    ('settled', 's', 'purchase', 2000, 2400, 0), ('ambiguous', 's', 'purchase', 2000, -1, 0);`);
+  db.exec(readFileSync(join(root, 'workers/design-sync/migrations/0007_purchase_settlement.sql'), 'utf8'));
+  check('migration preserves completed legacy purchases', db.prepare("SELECT purchase_settled FROM point_ledger WHERE id = 'settled'").get().purchase_settled === 1);
+  check('migration does not guess ambiguous legacy purchase outcome', db.prepare("SELECT purchase_settled FROM point_ledger WHERE id = 'ambiguous'").get().purchase_settled === 0);
+  db.exec(`INSERT INTO point_ledger (id, subject, kind, delta, balance_after, ref, created_at)
+    VALUES ('in-flight-old-worker', 's', 'purchase', 2000, -1, 'old-receipt', 0);`);
+  check('old Worker claim is not prematurely settled', db.prepare("SELECT purchase_settled FROM point_ledger WHERE id = 'in-flight-old-worker'").get().purchase_settled === 0);
+  db.exec("UPDATE point_ledger SET balance_after = -1 WHERE id = 'in-flight-old-worker'");
+  check('old Worker finishing during deployment settles even at minus one', db.prepare("SELECT purchase_settled FROM point_ledger WHERE id = 'in-flight-old-worker'").get().purchase_settled === 1);
+  db.close();
+}
 
 console.log('Schema');
 {

@@ -41,6 +41,7 @@ import IntroVideo from './components/IntroVideo';
 import FurnitureLockIcon from './components/FurnitureLockIcon';
 import MobileSelectionDock from './components/MobileSelectionDock';
 import { useProStore } from './store/proStore';
+import { usePointsStore } from './store/pointsStore';
 import { useAuthStore } from './store/authStore';
 import { requirePro } from './lib/pro';
 import { Toaster, ConfirmHost } from './components/Overlays';
@@ -66,6 +67,7 @@ const Scene3D = lazy(loadScene3D);
 const ImportDialog = lazy(() => import('./components/ImportDialog'));
 const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
 const AiRenderDialog = lazy(() => import('./components/AiRenderDialog'));
+const AiDesignDialog = lazy(() => import('./components/AiDesignDialog'));
 
 export default function App() {
   const {
@@ -135,6 +137,7 @@ export default function App() {
   const [showList, setShowList] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
   const [aiRenderOpen, setAiRenderOpen] = useState(false);
+  const [aiDesignOpen, setAiDesignOpen] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderScale, setRenderScale] = useState(3); // supersample factor for captures
   const [renderMenuOpen, setRenderMenuOpen] = useState(false);
@@ -209,8 +212,8 @@ export default function App() {
   };
 
   // Keep latest UI state for the hardware back-button handler.
-  const stateRef = useRef({ photoMode, aiRenderOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings });
-  stateRef.current = { photoMode, aiRenderOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings };
+  const stateRef = useRef({ photoMode, aiRenderOpen, aiDesignOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings });
+  stateRef.current = { photoMode, aiRenderOpen, aiDesignOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings };
 
   // Going home: capture the plan synchronously (the canvas may unmount right
   // after), switch screens immediately so the tap feels instant, and finish
@@ -248,6 +251,10 @@ export default function App() {
   useEffect(() => {
     initNative(() => {
       const st = stateRef.current;
+      if (usePointsStore.getState().walletOpen) {
+        usePointsStore.getState().closeWallet();
+        return true;
+      }
       // Close any open modal/overlay FIRST so hardware-back dismisses it
       // instead of falling through and exiting the app. (Reported: pressing
       // back on the Pro unlock sheet closed the whole app.)
@@ -279,6 +286,7 @@ export default function App() {
         setWalkMode(false);
         return true;
       }
+      if (st.aiDesignOpen) { setAiDesignOpen(false); return true; }
       if (st.aiRenderOpen) { setAiRenderOpen(false); return true; }
       if (st.photoMode) {
         setPhotoMode(false);
@@ -363,13 +371,16 @@ export default function App() {
   }, [viewOpen]);
 
   const handleRender = async (scale = renderScale) => {
-    if (!sceneCapture.current) return;
+    if (rendering) return;
+    const capture = sceneCapture.current;
+    if (!capture) { toast.error(t('The 3D view is not ready. Try again in a moment.')); return; }
     setRenderScale(scale); // remember the last-used quality
     setRendering(true);
     // Let the spinner paint before the synchronous high-res render blocks.
     await new Promise((r) => setTimeout(r, 30));
     try {
-      await sceneCapture.current(scale);
+      if (capture !== sceneCapture.current) throw new Error(t('The 3D view is not ready. Try again in a moment.'));
+      await capture(scale);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('Render failed — try a lower quality'));
     } finally {
@@ -470,6 +481,7 @@ export default function App() {
         onHelp={() => setShowHelp(true)}
         onShoppingList={() => setShowList(true)}
         onSettings={() => setShowSettings(true)}
+        onAiDesign={() => setAiDesignOpen(true)}
         onHome={goHome}
       />
       <div className="body">
@@ -1073,6 +1085,7 @@ export default function App() {
         </Suspense>
       )}
       {aiRenderOpen && <Suspense fallback={null}><AiRenderDialog onClose={() => setAiRenderOpen(false)} /></Suspense>}
+      {aiDesignOpen && <Suspense fallback={null}><AiDesignDialog onClose={() => setAiDesignOpen(false)} /></Suspense>}
 
       <ProUpsellModal />
       <UpdateBanner />

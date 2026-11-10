@@ -1,8 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { User, LogOut, Check, RefreshCw, WandSparkles } from 'lucide-react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { User, LogOut, Check, RefreshCw, WandSparkles, Crown, Sparkles, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useI18n } from '../lib/i18n';
 import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
+import { useProStore } from '../store/proStore';
+import { usePointsStore } from '../store/pointsStore';
+import { aiJson, type PointsState } from '../lib/aiRender';
+
+const AccountPointsDialog = lazy(() => import('./AccountPointsDialog'));
 
 function GoogleMark() {
   return (
@@ -22,18 +27,43 @@ function GoogleMark() {
  * profile and a sign-out action. Renders nothing when Google Sign-In isn't
  * configured in this build.
  */
-export default function AccountButton() {
+export default function AccountButton({ onAiDesign }: { onAiDesign?: () => void }) {
   const account = useAuthStore((s) => s.account);
   const configured = useAuthStore((s) => s.configured);
   const busy = useAuthStore((s) => s.busy);
   const signIn = useAuthStore((s) => s.signIn);
   const signOut = useAuthStore((s) => s.signOut);
   const syncNow = useAuthStore((s) => s.syncNow);
+  const ready = useAuthStore(s => s.ready);
+  const isPro = useProStore(s => s.isPro);
+  const proBusy = useProStore(s => s.busy);
+  const balance = usePointsStore(s => s.subject === account?.subject ? s.balance : null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceError, setBalanceError] = useState(false);
+  const pointsOpen = usePointsStore(s => s.walletOpen);
   const t = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [nudge, setNudge] = useState(0);
+
+  useEffect(() => {
+    if (!account?.subject || !ready) return;
+    if (!open && usePointsStore.getState().balance !== null) return;
+    let cancelled = false;
+    setBalanceLoading(true); setBalanceError(false);
+    void aiJson<PointsState>('/v1/points')
+      .catch(() => { if (!cancelled) setBalanceError(true); })
+      .finally(() => { if (!cancelled) setBalanceLoading(false); });
+    return () => { cancelled = true; };
+  }, [account?.subject, ready, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -100,7 +130,7 @@ export default function AccountButton() {
   return (
     <div className="account-wrap" ref={ref}>
       <button
-        className={`account-btn ${account ? 'signed-in' : ''}`}
+        className={`account-btn ${account ? 'signed-in' : ''} ${account && isPro ? 'pro-member' : account && balance !== null && balance > 0 ? 'points-member' : ''}`}
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -115,10 +145,12 @@ export default function AccountButton() {
           <User className="icon" />
         )}
       </button>
+      {account && isPro && <span className="account-crown" title="HomeDesigner Pro"><Crown aria-hidden="true" /></span>}
+      {account && !isPro && balance !== null && balance > 0 && <span className="account-crown account-points-badge" title={t('AI points')}><Sparkles aria-hidden="true" /></span>}
 
       {open && (
         <div
-          className="account-menu"
+          className={`account-menu ${account && isPro ? 'pro-member-menu' : ''}`}
           role="menu"
           ref={menuRef}
           style={nudge ? { right: -nudge } : undefined}
@@ -136,6 +168,19 @@ export default function AccountButton() {
                   {account.email ? <span>{account.email}</span> : null}
                 </div>
               </div>
+              <div className={`account-membership ${isPro ? 'is-pro' : ''}`}>
+                {isPro ? <Crown className="icon" /> : <User className="icon" />}
+                <div><strong>{isPro ? 'HomeDesigner Pro' : proBusy || busy || !ready ? t('Checking Pro access…') : t('Free plan')}</strong>
+                  <span>{isPro ? t('Thanks for supporting HomeDesigner.') : t('Unlock more with Pro')}</span></div>
+                {!isPro && ready && !busy && !proBusy && <button className="account-upgrade" role="menuitem" onClick={() => { setOpen(false); useProStore.getState().openUpsell(); }}>Pro <ChevronRight className="icon" /></button>}
+              </div>
+              <button className="account-points-card" role="menuitem" onClick={() => { setOpen(false); usePointsStore.getState().openWallet(); }}>
+                <span><Sparkles className="icon" /> {t('Your creative balance')}</span>
+                <strong>{balanceLoading && balance === null ? '…' : balance === null ? '—' : balance.toLocaleString()}</strong>
+                <span>{t('AI points')} <ChevronRight className="icon" /></span>
+                {balanceError && <small>{t('Balance unavailable')} · {t('Try again')}</small>}
+              </button>
+              {onAiDesign && <button className="account-menu-item account-ai-action" role="menuitem" onClick={() => { setOpen(false); onAiDesign(); }}><WandSparkles className="icon" /> {t('AI design assistant')}</button>}
               <div className="account-menu-synced">
                 <Check className="icon" /> {t('Plans and Pro access sync across your signed-in devices.')}
               </div>
@@ -178,6 +223,7 @@ export default function AccountButton() {
           )}
         </div>
       )}
+      {pointsOpen && account && <Suspense fallback={null}><AccountPointsDialog key={account.subject} onClose={() => usePointsStore.getState().closeWallet()} /></Suspense>}
     </div>
   );
 }

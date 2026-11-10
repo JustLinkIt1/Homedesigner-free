@@ -140,6 +140,8 @@ interface DesignState extends DesignSnapshot {
   /** Create an enclosed room and its structural walls as one undo step. */
   addRoomWithWalls: (points: Point[]) => void;
   updateRoom: (id: string, patch: Partial<Room>) => void;
+  /** Apply AI room-name suggestions in one undoable edit. Unknown ids are ignored. */
+  renameRooms: (names: { id: string; name: string }[]) => void;
   addFurniture: (
     type: string,
     position: Point,
@@ -168,7 +170,7 @@ interface DesignState extends DesignSnapshot {
   alignSelected: (edge: 'left' | 'hcenter' | 'right' | 'top' | 'vmiddle' | 'bottom') => void;
   distributeSelected: (axis: 'h' | 'v') => void;
   /** Apply a coordinated style (wall paint + flooring) to one room or 'all'. */
-  applyRoomStyle: (roomId: string | 'all', styleId: string) => void;
+  applyRoomStyle: (roomId: string | 'all', styleId: string, includeOutdoor?: boolean) => void;
   /** Finish every outward-facing wall face at once (exterior cladding). */
   applyExteriorFinish: (color: string, texture?: CustomTexture) => number;
   duplicateSelection: () => void;
@@ -609,6 +611,17 @@ export const useDesign = create<DesignState>((set, get) => {
         if (i >= 0) d.rooms[i] = { ...d.rooms[i], ...patch };
       }),
 
+    renameRooms: (names) => {
+      const byId = new Map(names.map(({ id, name }) => [id, name.trim().slice(0, 60)]));
+      commit((d) => {
+        d.rooms = d.rooms.map((room) => {
+          const name = byId.get(room.id);
+          return name ? { ...room, name } : room;
+        });
+      });
+      haptics.tapLight();
+    },
+
     addFurniture: (type, position, placement) => {
       const id = uid();
       const entry = CATALOG_BY_TYPE[type];
@@ -1039,7 +1052,7 @@ export const useDesign = create<DesignState>((set, get) => {
       set({ selection: { kind: null, id: null }, selectedIds: [] });
     },
 
-    applyRoomStyle: (roomId, styleId) => {
+    applyRoomStyle: (roomId, styleId, includeOutdoor = true) => {
       const style = ROOM_STYLE_BY_ID[styleId];
       if (!style) return;
       const { rooms, walls } = get();
@@ -1067,10 +1080,11 @@ export const useDesign = create<DesignState>((set, get) => {
         }
         return total;
       };
-      const targets = roomId === 'all' ? rooms : rooms.filter((r) => r.id === roomId);
+      const targets = (roomId === 'all' ? rooms : rooms.filter((r) => r.id === roomId))
+        .filter(room => includeOutdoor || !room.outdoor);
       if (targets.length === 0) return;
       const wallIds = new Set<string>();
-      if (roomId === 'all') {
+      if (roomId === 'all' && includeOutdoor) {
         for (const w of walls) wallIds.add(w.id);
       } else {
         for (const r of targets) {

@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.22.30 — account membership and AI visibility (signed Android candidate)
+
+- Added a gold Pro avatar badge, explicit account membership status and a
+  thank-you treatment for Pro members. Pending entitlement checks no longer
+  label the user as free or offer an upgrade before the check completes.
+- Added a prominent account AI-point balance and a dedicated wallet/pack sheet
+  reachable from both project home and the editor. Unknown/error balances are
+  not shown as zero, and zero/negative balances remain accurate.
+- Added a direct editor-toolbar AI shortcut and an assistant action in the
+  account menu. The wallet lists the existing assistant tools and their
+  server-provided point costs; purchases retain the existing store checks.
+- Shared account-scoped, memory-only balance display updates after AI charges,
+  purchase credits and refreshes. Account changes clear the wallet and cached
+  balance; stale reads and account round trips cannot expose old results.
+- Android hardware Back closes the wallet first. New copy is translated in all
+  12 app locales. The uploaded 1.22.29 AAB and Play draft are unchanged.
+- Built signed AAB 12230 with fresh full CI/build checks, verified native and
+  embedded web versions and the existing upload certificate. Added release
+  notes for all 29 Play locales. Not uploaded or deployed; visual/mobile QA
+  remains pending browser access.
+
 ## Web hotfix — 2026-08-28
 
 - Restored the web app to 1.22.26 after a marketing-site deployment from the
@@ -23,7 +44,65 @@ changes and add an entry when you ship one.
 - Preserved the original local demo, presenter and Australian narration; the new edit adds smooth targeted zooms, chapter labels and branded framing. No personal name identifies the fictional presenter.
 - The marketing homepage and deployed app are unchanged; embedding on a site page is a separate follow-up.
 
-## Unreleased — 1.22.28
+## 1.22.29 — web/backend released; Android production draft
+
+- Web app and AI/purchase backend deployed on 6 October 2026. Signed Android
+  build 12229 is verified and manually uploaded by the user to the production
+  draft. Release notes are saved for all 29 Play languages. Android has not been
+  submitted or rolled out. Pro AI photo generation remains disabled pending its
+  live provider/device checks.
+- Verified real web sign-in and names/style/description generation with exact
+  point debits. AI names can be inaccurate even at high reported confidence;
+  every names result now asks for review before Apply. Added the assistant and
+  point-purchase privacy disclosure.
+
+### Purchase recovery and balance integrity
+
+- Made paid point credits atomic and rejected receipt reuse across accounts or
+  packs. Added explicit settlement tracking (migration 0007) so negative account
+  balances are not confused with interrupted purchases.
+- Restore now continues past individual pending/mismatched receipts; manual
+  purchase/restore refreshes balances after partial failures. Prices are keyed
+  by Play product ID to prevent a stale free/Pro price from being displayed.
+- Previously credited Pro packs remain recoverable after membership expires.
+  Stripe delayed-payment success now credits points, and credit failures remain
+  retryable. Migration 0007 and these backend fixes are deployed.
+- Automatic restore now refreshes balances after partial success as well.
+  Added backend handler regressions for delayed Stripe payments, expired-Pro
+  restoration, receipt ownership and settlement-before-consumption. Migration
+  0007 handles an old Worker finishing a purchase while the new one deploys.
+
+### AI design assistant
+
+- Fixed concurrent duplicate AI-point charges and refunds using transactional
+  ledger updates; duplicate text-AI keys no longer dispatch free provider calls.
+- Prevented stale suggestions from applying to a changed project/floor/plan.
+  Added strict request bounds, localized applied names, uncertain-label and
+  AI-copy review notices, and indoor-only styling that preserves outdoor areas.
+- Cleared stale AI-render result imagery when jobs change and added repeatable
+  quality/release checks with concurrent accounting and rollback regressions.
+
+- Added a single AI assistant in the editor's More menu with three point-using
+  tools: smart room names (10 points), a coordinated wall/floor style for the
+  current level (25 points), and a factual share/listing description (25 points).
+- Made the inexpensive tools available to every signed-in account, including
+  free users. They use the existing 400-point account grant and the same Play
+  point packs, so users can try the assistant before deciding whether to buy Pro.
+- Kept project mutations safe and undoable: room names are applied in one edit,
+  and style recommendations can only select one of the app's eight tested room
+  presets. Unknown room IDs and model-invented materials never enter a project.
+- Added bounded plan summaries, server-owned prompts, structured-output
+  validation, server-side debit-before-dispatch, idempotency and automatic
+  refunds. Only room dimensions, furniture type slugs and the optional mood or
+  project name are sent; the full plan and coordinates stay on device.
+- Added reusable point-pack purchase/restore controls to both the new assistant
+  and AI render dialog, full translations for all 12 locales, and focused AI
+  output-validation tests. See `docs/AI_DESIGN_ASSISTANT.md`.
+- Assigned version 1.22.29 / versionCode 12229 because the 1.22.28 AAB already
+  exists and has been uploaded to an internal-track draft. The 1.22.29 AAB is
+  built, verified and attached to the production draft.
+
+## 1.22.28 — internal candidate (not rolled out)
 
 ### Mobile capture and Pro AI rendering (not in existing 1.22.27 AAB)
 
@@ -48,11 +127,11 @@ changes and add an entry when you ship one.
   6,000 / 15,000 points at USD 1.99 / 5.99 / 14.99 and Pro variants at USD
   1.40 / 4.20 / 10.50 base prices. Google Play localizes and charms regional
   consumer prices.
-- Assigned app version 1.22.28 / versionCode 12228. Not deployed or enabled;
-  migrations 0005–0006 and backend readiness checks are required. See
+- Assigned app version 1.22.28 / versionCode 12228. See
   docs/AI_RENDER_ROLLOUT.md.
-- Built and verified the signed 1.22.28 / 12228 AAB. It has not been uploaded
-  to Play; licensed point-purchase and paid-provider smoke tests remain gates.
+- Built and verified the signed 1.22.28 / 12228 AAB and uploaded it to an
+  internal-testing draft. The rollout was not submitted; licensed point-purchase
+  and paid-provider smoke tests remain gates.
 - Backed up production D1, applied AI migrations 0005–0006 and deployed the
   rebased Worker with AI generation disabled. Pinned Wrangler 4.140 to avoid
   its predecessor's incomplete `CREATE TRIGGER` migration parsing.

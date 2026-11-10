@@ -2,9 +2,18 @@
 
 ## Status
 
+6 October update: the 1.22.29 signed Android bundle is built and verified; its
+production draft is saved but upload is blocked by denied browser permission.
+Web 1.22.29 and Worker d1d7c150-086a-42d9-823c-bdb31b486796 are deployed, with
+0007 purchase settlement applied after backup. The three text assistant features
+passed live; AI_RENDER_ENABLED remains absent and photo generation is still
+disabled. No license purchase or paid fal request has been completed. The status
+below describes the earlier 1.22.28 candidate history.
+
 Implemented on the production source line and assigned app version 1.22.28 /
 versionCode 12228. A signed, verified AAB is available at
-`outputs/HomeDesigner-1.22.28-12228.aab`; it has not been uploaded to Play.
+`outputs/HomeDesigner-1.22.28-12228.aab`; it is attached to an internal-testing
+draft but that release has not been submitted or rolled out.
 Production D1 was backed up and migrations 0005–0006 are applied. Worker version
 `25357def-4259-4f82-91b8-28fcdc4b296d` is deployed with
 `AI_RENDER_ENABLED` absent, so generation remains disabled. No licensed
@@ -93,8 +102,13 @@ Input images are not stored in D1. The fal key stays in Worker secrets.
    native client never consumes a point token. Unavailable products have
    disabled purchase buttons; opening the dialog reconciles interrupted claims.
    Cross-account or unsettled ledger receipts are never consumed. The existing
-   point-purchase ledger has a detectable interrupted-credit window: monitor
-   readUnsettledPurchases and reconcile through support before launch.
+   deployed point-purchase ledger has a detectable interrupted-credit window.
+   The 1.22.29 candidate fixes it with atomic credits and migration 0007's
+   explicit settlement flag. Back up D1, apply 0007 before deploying the new
+   Worker, and inspect readUnsettledPurchases. Existing ambiguous -1 rows need
+   reconciliation, not blind recrediting. A compatibility trigger marks an old
+   Worker's final settlement update during deployment; it does not guess the
+   outcome of pre-existing ambiguous rows. Use Wrangler 4.140+ for the trigger.
 4. Web point checkout requires STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and the
    existing signed-webhook credit flow. Do not enable a checkout with no working
    webhook. No payment configuration was changed in this implementation.
