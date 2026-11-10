@@ -889,4 +889,8 @@ export const FR: Record<string, string> = {
   'Add an indoor room first.': 'Ajoutez d’abord une pièce intérieure.',
   'Review uncertain room names before applying.': 'Vérifiez les noms de pièces incertains avant de les appliquer.',
   'Review AI-written details before sharing.': 'Vérifiez les détails rédigés par l’IA avant de les partager.',
+  'The 3D view is not ready. Try again in a moment.': 'La vue 3D n’est pas prête. Réessayez dans un instant.',
+  'Uncertain': 'Incertain',
+  'Review every room name. Only checked names will be applied.': 'Vérifiez chaque nom de pièce. Seuls les noms cochés seront appliqués.',
+  'Refresh preview': 'Actualiser l’aperçu',
 };

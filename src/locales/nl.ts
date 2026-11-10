@@ -889,4 +889,8 @@ export const NL: Record<string, string> = {
   'Add an indoor room first.': 'Voeg eerst een binnenruimte toe.',
   'Review uncertain room names before applying.': 'Controleer onzekere kamernamen voordat je ze toepast.',
   'Review AI-written details before sharing.': 'Controleer door AI geschreven details voordat je ze deelt.',
+  'The 3D view is not ready. Try again in a moment.': 'De 3D-weergave is nog niet klaar. Probeer het zo meteen opnieuw.',
+  'Uncertain': 'Onzeker',
+  'Review every room name. Only checked names will be applied.': 'Controleer elke kamernaam. Alleen aangevinkte namen worden toegepast.',
+  'Refresh preview': 'Voorvertoning vernieuwen',
 };

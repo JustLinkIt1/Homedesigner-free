@@ -889,4 +889,8 @@ export const KO: Record<string, string> = {
   'Add an indoor room first.': '먼저 실내 방을 추가하세요.',
   'Review uncertain room names before applying.': '적용하기 전에 불확실한 방 이름을 검토하세요.',
   'Review AI-written details before sharing.': '공유하기 전에 AI가 작성한 내용을 검토하세요.',
+  'The 3D view is not ready. Try again in a moment.': '3D 보기가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.',
+  'Uncertain': '불확실',
+  'Review every room name. Only checked names will be applied.': '모든 방 이름을 검토하세요. 선택한 이름만 적용됩니다.',
+  'Refresh preview': '미리보기 새로고침',
 };

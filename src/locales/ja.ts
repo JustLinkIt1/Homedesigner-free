@@ -889,4 +889,8 @@ export const JA: Record<string, string> = {
   'Add an indoor room first.': 'まず室内の部屋を追加してください。',
   'Review uncertain room names before applying.': '適用する前に確信度の低い部屋名を確認してください。',
   'Review AI-written details before sharing.': '共有する前にAIが作成した内容を確認してください。',
+  'The 3D view is not ready. Try again in a moment.': '3Dビューの準備ができていません。しばらくしてからもう一度お試しください。',
+  'Uncertain': '確信度低',
+  'Review every room name. Only checked names will be applied.': 'すべての部屋名を確認してください。チェックした名前のみが適用されます。',
+  'Refresh preview': 'プレビューを更新',
 };

@@ -889,4 +889,8 @@ export const ZH: Record<string, string> = {
   'Add an indoor room first.': '请先添加一个室内房间。',
   'Review uncertain room names before applying.': '应用前请检查不确定的房间名称。',
   'Review AI-written details before sharing.': '分享前请检查AI撰写的细节。',
+  'The 3D view is not ready. Try again in a moment.': '3D 视图尚未就绪。请稍后再试。',
+  'Uncertain': '不确定',
+  'Review every room name. Only checked names will be applied.': '请检查每个房间名称。仅应用已勾选的名称。',
+  'Refresh preview': '刷新预览',
 };

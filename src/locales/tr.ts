@@ -889,4 +889,8 @@ export const TR: Record<string, string> = {
   'Add an indoor room first.': 'Önce bir iç mekân odası ekleyin.',
   'Review uncertain room names before applying.': 'Uygulamadan önce belirsiz oda adlarını kontrol edin.',
   'Review AI-written details before sharing.': 'Paylaşmadan önce yapay zekânın yazdığı ayrıntıları kontrol edin.',
+  'The 3D view is not ready. Try again in a moment.': '3B görünüm hazır değil. Birazdan tekrar deneyin.',
+  'Uncertain': 'Belirsiz',
+  'Review every room name. Only checked names will be applied.': 'Her oda adını kontrol edin. Yalnızca işaretli adlar uygulanır.',
+  'Refresh preview': 'Önizlemeyi yenile',
 };
