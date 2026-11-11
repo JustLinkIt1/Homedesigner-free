@@ -28,14 +28,10 @@ export const MODEL_FILE: Record<string, string> = {
   dining_chair: 'wooden_dining_chair',
   round_dining_table: 'round_dining_table',
   // Kitchen
+  // The modular units (base/drawer/corner/wall cabinets, sink, stove) are no
+  // longer models: they draw through KitchenUnit3D (see lib/kitchenUnits.ts).
   fridge: 'fridge',
-  stove: 'stove',
-  kitchen_sink: 'kitchen_sink',
   cabinets: 'cabinets',
-  kitchen_base_cabinet: 'kitchen_base_cabinet',
-  kitchen_drawer_cabinet: 'kitchen_drawer_cabinet',
-  kitchen_corner_cabinet: 'kitchen_corner_cabinet',
-  wall_cabinet: 'wall_cabinet',
   bar_stool: 'bar_stool',
   // Office
   desk: 'desk',
@@ -93,15 +89,7 @@ export const MODEL_YAW: Record<string, number> = {};
  *  stubby and half-height; 'stretch' fills each cabinet's real footprint and
  *  counter/upper height instead (boxy cabinetry survives non-uniform scale). */
 export const MODEL_FIT: Record<string, ModelFit> = {
-  kitchen_base_cabinet: 'stretch',
-  kitchen_drawer_cabinet: 'stretch',
-  kitchen_corner_cabinet: 'stretch',
-  wall_cabinet: 'stretch',
   cabinets: 'stretch',
-  // Same ~45 cm-cube Kenney models — stretch so the stove and sink line up with
-  // the 90 cm cabinets instead of sitting half-height beside them.
-  stove: 'stretch',
-  kitchen_sink: 'stretch',
   // Foliage and lamps: the catalogue box is the POT or the BASE, but the mesh
   // spans the whole leaf spread / lamp arm, so the footprint fit shrinks the
   // object to fit its own overhang inside the pot — this plant draws 36cm

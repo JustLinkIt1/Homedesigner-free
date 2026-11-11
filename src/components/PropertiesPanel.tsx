@@ -25,18 +25,8 @@ import {
 } from '../lib/fence';
 import type { CustomTexture, FenceStyle, OpeningStyle, RoofType, Room, Wall } from '../types';
 
-import { MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
-
-// Kitchen-run slot types: a selected unit can be swapped between these in place
-// (cabinet ↔ appliance) while keeping its slot footprint and facing.
-const KITCHEN_SLOTS: { type: string; label: string }[] = [
-  { type: 'kitchen_base_cabinet', label: 'Cabinet' },
-  { type: 'kitchen_drawer_cabinet', label: 'Drawers' },
-  { type: 'stove', label: 'Stove' },
-  { type: 'kitchen_sink', label: 'Sink' },
-  { type: 'dishwasher', label: 'Dishwasher' },
-];
-const KITCHEN_SLOT_TYPES = new Set(KITCHEN_SLOTS.map((k) => k.type));
+import { MATERIAL_GROUPS, floorMaterials, wallMaterials, worktopMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
+import { hasFronts, hasWorktop, swapTargets, worktopId } from '../lib/kitchenUnits';
 
 // Opening styles whose catalog entry is Pro — derived from the catalog's
 // `pro` flags so the Style dropdown gate can never drift from it.
@@ -446,6 +436,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
     updateBackground: st.updateBackground,
     updateFurniture: st.updateFurniture,
     swapFurnitureType: st.swapFurnitureType,
+    applyKitchenWorktop: st.applyKitchenWorktop,
+    applyKitchenColor: st.applyKitchenColor,
+    applyKitchenHandles: st.applyKitchenHandles,
     updateOpening: st.updateOpening,
     updateRoom: st.updateRoom,
     updateWall: st.updateWall,
@@ -761,12 +754,19 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 <label>{t('Colour')}</label>
                 <input type="color" value={item.color} onChange={(e) => s.updateFurniture(item.id, { color: e.target.value })} />
               </div>
+              {hasFronts(item.type) && (
+                <button className="btn block" style={{ marginTop: 10, minHeight: 36, height: 'auto', padding: '7px 10px', whiteSpace: 'normal', lineHeight: 1.25 }} onClick={() => s.applyKitchenColor(item.color)}>
+                  {t('Apply colour to all kitchen units')}
+                </button>
+              )}
             </div>
-            {KITCHEN_SLOT_TYPES.has(item.type) && (
+            {/* A selected unit swaps to any other unit of its family (base /
+                tall / wall) in place: same slot, facing, colour and worktop. */}
+            {swapTargets(item.type).length > 0 && (
               <div className="prop-card">
                 <div className="prop-label">{t('Kitchen unit')}</div>
                 <div className="swap-chips">
-                  {KITCHEN_SLOTS.map((k) => {
+                  {swapTargets(item.type).map((k) => {
                     const gated = !isPro && !!CATALOG_BY_TYPE[k.type]?.pro;
                     return (
                       <button
@@ -784,6 +784,46 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     );
                   })}
                 </div>
+              </div>
+            )}
+            {hasFronts(item.type) && (
+              <div className="prop-card">
+                <div className="prop-label">{t('Handles')}</div>
+                <div className="swap-chips">
+                  {(['bar', 'none'] as const).map((style) => (
+                    <button
+                      key={style}
+                      className={`swap-chip ${(item.handles ?? 'bar') === style ? 'on' : ''}`}
+                      onClick={() => s.updateFurniture(item.id, { handles: style })}
+                    >
+                      {style === 'bar' ? t('Bar handles') : t('Handleless')}
+                    </button>
+                  ))}
+                </div>
+                <button className="btn block" style={{ marginTop: 10, minHeight: 36, height: 'auto', padding: '7px 10px', whiteSpace: 'normal', lineHeight: 1.25 }} onClick={() => s.applyKitchenHandles(item.handles ?? 'bar')}>
+                  {t('Apply handles to all kitchen units')}
+                </button>
+              </div>
+            )}
+            {hasWorktop(item.type) && (
+              <div className="prop-card">
+                <div className="prop-label">{t('Worktop')}</div>
+                <div className="swatches">
+                  {worktopMaterials().map((m) => (
+                    <button
+                      key={m.id}
+                      className={`swatch ${worktopId(item) === m.id ? 'active' : ''}`}
+                      style={{ backgroundColor: m.color, backgroundImage: `url(${materialUrl(m.id)})` }}
+                      onClick={() => s.updateFurniture(item.id, { worktop: m.id })}
+                      data-tip={t(m.name)} aria-label={t(m.name)}
+                    >
+                      <span className="sw-name">{t(m.name)}</span>
+                    </button>
+                  ))}
+                </div>
+                <button className="btn block" style={{ marginTop: 12, minHeight: 36, height: 'auto', padding: '7px 10px', whiteSpace: 'normal', lineHeight: 1.25 }} onClick={() => s.applyKitchenWorktop(worktopId(item))}>
+                  {t('Apply to all kitchen units')}
+                </button>
               </div>
             )}
             <button className="btn-danger" onClick={() => s.deleteById('furniture', item.id)}>

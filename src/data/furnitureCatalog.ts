@@ -31,6 +31,11 @@ export type Shape3D =
   | 'cabinets'
   | 'counter'
   | 'dishwasher'
+  // modular kitchen units (plan symbols; their 3D is KitchenUnit3D)
+  | 'oven'
+  | 'microwave'
+  | 'hood'
+  | 'shelf'
   | 'washer'
   | 'shower'
   | 'vanity'
@@ -190,16 +195,30 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'fridge', name: 'Refrigerator', category: 'Kitchen', width: 70, depth: 70, height: 180, color: '#d6d9dd', shape: 'fridge', icon: '🧊' },
   { type: 'counter', name: 'Counter', category: 'Kitchen', width: 200, depth: 60, height: 90, color: '#cfd2d6', shape: 'counter', icon: '🍳' },
   { type: 'island', pro: true, name: 'Kitchen Island', category: 'Kitchen', width: 180, depth: 90, height: 90, color: '#bfc3c8', shape: 'counter', icon: '🍳' },
-  { type: 'stove', name: 'Stove / Oven', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cdd0d4', shape: 'stove', icon: '🍳' },
+  { type: 'stove', name: 'Stove / Oven', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cfd2d6', shape: 'stove', icon: '🍳' },
   { type: 'kitchen_sink', name: 'Kitchen Sink', category: 'Kitchen', width: 90, depth: 60, height: 90, color: '#cfd2d6', shape: 'sink', icon: '🚰' },
   { type: 'cabinets', name: 'Kitchen Cabinets', category: 'Kitchen', width: 120, depth: 35, height: 70, color: '#e6e2da', shape: 'cabinets', icon: '🗄️' },
-  // Modular Kenney base units — place in a row to build a custom kitchen run
-  // (each is a single ~60 cm cabinet with its own countertop).
+  // Modular base units — place in a row to build a custom kitchen run (each
+  // is a single cabinet whose worktop joins its neighbours').
   { type: 'kitchen_base_cabinet', name: 'Base Cabinet', category: 'Kitchen', width: 55, depth: 60, height: 90, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
   { type: 'kitchen_drawer_cabinet', pro: true, name: 'Drawer Unit', category: 'Kitchen', width: 55, depth: 60, height: 90, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
   { type: 'kitchen_corner_cabinet', pro: true, name: 'Corner Cabinet', category: 'Kitchen', width: 90, depth: 90, height: 90, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
   { type: 'wall_cabinet', pro: true, name: 'Wall Cabinet', category: 'Kitchen', width: 80, depth: 35, height: 60, color: '#cfd2d6', shape: 'cabinets', icon: '🗄️', mountY: 120 },
-  { type: 'dishwasher', pro: true, name: 'Dishwasher', category: 'Kitchen', width: 60, depth: 60, height: 85, color: '#c9cdd2', shape: 'dishwasher', icon: '🧼' },
+  { type: 'dishwasher', pro: true, name: 'Dishwasher', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cfd2d6', shape: 'dishwasher', icon: '🧼' },
+  // Modular kitchen units. Every type listed in lib/kitchenUnits.ts renders
+  // through one parametric renderer (KitchenUnit3D): `color` is the fronts,
+  // and base units carry a worktop whose material is the item's `worktop`.
+  { type: 'kitchen_hob_induction', pro: true, name: 'Induction Hob Unit', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cfd2d6', shape: 'stove', icon: '🍳' },
+  { type: 'kitchen_hob_gas', pro: true, name: 'Gas Hob Unit', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cfd2d6', shape: 'stove', icon: '🔥' },
+  { type: 'kitchen_oven', pro: true, name: 'Built-under Oven', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cfd2d6', shape: 'oven', icon: '♨️' },
+  { type: 'kitchen_range_gas', pro: true, name: 'Oven with Gas Hob', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cfd2d6', shape: 'stove', icon: '🔥' },
+  { type: 'kitchen_fridge_tall', pro: true, name: 'Integrated Fridge-Freezer', category: 'Kitchen', width: 60, depth: 60, height: 210, color: '#cfd2d6', shape: 'fridge', icon: '🧊' },
+  { type: 'kitchen_oven_tower', pro: true, name: 'Oven Tower', category: 'Kitchen', width: 60, depth: 60, height: 210, color: '#cfd2d6', shape: 'oven', icon: '♨️' },
+  { type: 'kitchen_larder', pro: true, name: 'Larder Unit', category: 'Kitchen', width: 60, depth: 60, height: 210, color: '#cfd2d6', shape: 'cabinets', icon: '🗄️' },
+  { type: 'kitchen_wall_microwave', pro: true, name: 'Microwave Wall Cabinet', category: 'Kitchen', width: 60, depth: 35, height: 60, color: '#cfd2d6', shape: 'microwave', icon: '📟', mountY: 120 },
+  { type: 'kitchen_hood', pro: true, name: 'Extractor Hood', category: 'Kitchen', width: 60, depth: 50, height: 75, color: '#b9bcc0', shape: 'hood', icon: '💨', mountY: 155 },
+  { type: 'kitchen_open_shelf', name: 'Open Shelf', category: 'Kitchen', width: 90, depth: 25, height: 45, color: '#b98a56', shape: 'shelf', icon: '🪵', mountY: 120 },
+  { type: 'kitchen_open_niche', name: 'Open Niche', category: 'Kitchen', width: 60, depth: 35, height: 45, color: '#b98a56', shape: 'shelf', icon: '🪵', mountY: 120 },
   { type: 'bar_stool', pro: true, name: 'Bar Stool', category: 'Kitchen', width: 38, depth: 38, height: 75, color: '#4a3a28', shape: 'stool', icon: '🪑' },
 
   // Bathroom

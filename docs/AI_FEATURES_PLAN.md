@@ -56,7 +56,10 @@ Internal cost basis: **$0.000375 of real spend per point**. **List: $1.00 =
 | Listing or share description | ~$0.0005 | **25** | Workers AI |
 | Auto-furnish a room by style | ~$0.001 | **50** | Workers AI, geometry-validated |
 | Text → layout ("describe your room") | ~$0.002 | **100** | Workers AI, geometry-validated |
-| **AI render from a view** | $0.03–0.04 | **200** | fal image |
+| **AI render from a view** | $0.03–0.04 on fal; about 1,000 ElevenLabs credits | **150** with watermark or Pro; **200** clean on a free account | ElevenLabs Nano Banana 2 first, fal FLUX Kontext as backup |
+| **Designer review** | <= $0.068 | **200** | Claude Opus 5.5, see AI_DESIGN_ASSISTANT.md |
+| **Voice tour** | <= $0.078 | **250** | Claude script + ElevenLabs narration, **Pro only** |
+| **AI plan** (text -> editable floor plan) | <= $0.10 | **300** | Claude Opus 5.5; supersedes the unbuilt 100-point Workers AI `text_to_layout` row above. Multi-storey is **Pro only** |
 | 3D model — Rapid | $0.225 | **600** | **Pro only** — see §3a |
 | 3D model — Rapid + PBR | $0.375 | **1,000** | **Pro only** |
 | 3D model — Pro | $0.525 *(→ $0.375 if face count dropped)* | **1,400** | **Pro only** |

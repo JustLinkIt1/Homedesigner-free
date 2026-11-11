@@ -5926,3 +5926,426 @@ button.account-points-card:hover { box-shadow: 0 0 0 2px color-mix(in srgb, var(
   .ai-design-dialog { max-height: calc(100dvh - 24px); }
   .ai-tool-actions .btn { flex: 1 1 100%; }
 }
+
+/* ======================================================================
+   Controls pass (1.22.31): one switch, one checkbox, one toggle chip.
+   Native checkboxes rendered as the platform's blue square everywhere,
+   which read as an unstyled form inside an otherwise custom UI.
+   ====================================================================== */
+:root {
+  /* The AI dialogs referenced this token before it existed, so their
+     secondary text rendered at full strength. */
+  --text-muted: var(--text-2);
+  --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.4 6.4 4.9 8.8 9.6 3.6'/%3E%3C/svg%3E");
+}
+input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: var(--cb-w, 18px) !important;
+  height: var(--cb-h, 18px) !important;
+  min-width: 0;
+  margin: 0;
+  padding: 0 !important;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface) center / 12px 12px no-repeat;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color var(--dur-fast), border-color var(--dur-fast),
+    background-position var(--dur) var(--ease), box-shadow var(--dur-fast);
+}
+input[type='checkbox']:checked {
+  background-color: var(--brand);
+  border-color: var(--brand);
+  background-image: var(--check-mark);
+}
+input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+input[type='checkbox']:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Settings rows are on/off preferences, so they get a switch. */
+.settings-row input[type='checkbox'] {
+  --cb-w: 44px;
+  --cb-h: 26px;
+  border: 0;
+  border-radius: 999px;
+  background-color: var(--surface-3);
+  background-image: radial-gradient(circle at center, #fff 0 9.5px, transparent 10.5px);
+  background-size: 22px 22px;
+  background-position: 2px center;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.settings-row input[type='checkbox']:checked {
+  background-color: var(--brand);
+  background-image: radial-gradient(circle at center, #fff 0 9.5px, transparent 10.5px);
+  background-position: calc(100% - 2px) center;
+  box-shadow: none;
+}
+.settings-row {
+  min-height: 44px;
+}
+
+/* Canvas HUD: a pressed chip says "on" better than a checkbox beside an icon,
+   and it frees the width the box took on a phone. The input stays in the DOM
+   for the label, the keyboard and screen readers. */
+@supports selector(:has(*)) {
+  .pill > label.toggle {
+    position: relative;
+    padding: 7px 10px;
+    border-radius: 999px;
+    color: var(--text-2);
+    transition: background var(--dur-fast), color var(--dur-fast);
+  }
+  .pill > label.toggle > input[type='checkbox'] {
+    position: absolute;
+    inset: 0;
+    --cb-w: 100%;
+    --cb-h: 100%;
+    opacity: 0;
+    border-radius: inherit;
+  }
+  .pill > label.toggle:has(> input:checked) {
+    background: var(--brand-soft-2);
+    color: var(--brand-600);
+  }
+  .pill > label.toggle:has(> input:focus-visible) {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
+  }
+  .pill > button.toggle {
+    padding: 7px 10px;
+    border-radius: 999px;
+  }
+  .pill > .toggle.on {
+    border-radius: 999px;
+  }
+}
+
+/* The chosen segment was darker than its track in dark mode, so it looked
+   pressed in rather than selected. Lift it instead. */
+:root[data-theme='dark'] .seg button.active {
+  background: var(--surface-3);
+  box-shadow: inset 0 0 0 1px var(--border-strong), 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.seg button.active .icon {
+  color: var(--brand-600);
+}
+
+/* Phone home nav: every label on one line, and the current tab marked by
+   more than a colour change. */
+.ps-nav button span {
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .ps-nav button .icon {
+    box-sizing: content-box;
+    padding: 4px 16px;
+    border-radius: 999px;
+    transition: background var(--dur-fast);
+  }
+  .ps-nav button.active .icon {
+    background: var(--brand-soft);
+  }
+}
+
+/* Phone editor: the HUD rows sat 2-4px off the tab bar and the 3D render
+   button touched it. Give every row the same 10px of air. */
+@media (max-width: 880px) {
+  .hud-2d {
+    bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+  .render-actions {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  .hud-3d {
+    bottom: calc(130px + env(safe-area-inset-bottom));
+  }
+  .render-menu,
+  .view-menu {
+    bottom: calc(182px + env(safe-area-inset-bottom));
+  }
+  .lighting-menu {
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  .rotate3d-pill {
+    bottom: calc(186px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ======================================================================
+   Flow pass (1.22.31): a standing way into Pro from the editor, and a
+   one-time pointer at 3D for phones.
+   ====================================================================== */
+.toolbar-pro {
+  gap: 5px;
+  color: var(--pro-ink);
+  background: var(--grad-pro);
+  border-color: transparent;
+  font-weight: 800;
+  box-shadow: 0 4px 12px -6px rgba(239, 159, 44, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.toolbar-pro:hover {
+  background: var(--grad-pro);
+  filter: brightness(1.05);
+}
+.toolbar-pro .icon {
+  color: var(--pro-ink);
+}
+/* On phones `.tbtn span` is hidden and the toolbar scrolls; the canvas chip
+   below takes over there. */
+.pro-chip {
+  display: none;
+}
+@media (max-width: 880px) {
+  .toolbar-pro {
+    display: none;
+  }
+  .pro-chip {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 6;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 42px;
+    padding: 0 14px 0 12px;
+    border-radius: 999px;
+    color: var(--pro-ink);
+    background: var(--grad-pro);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    box-shadow: 0 8px 18px -8px rgba(239, 159, 44, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    transition: transform 0.12s var(--ease), filter 0.14s var(--ease);
+  }
+  .pro-chip .icon {
+    width: 16px;
+    height: 16px;
+  }
+  .pro-chip:active {
+    transform: scale(0.95);
+    filter: brightness(0.96);
+  }
+}
+
+.view3d-nudge {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 14px 30px -12px var(--brand), 0 2px 6px rgba(0, 0, 0, 0.25);
+  animation: nudge-in 0.32s var(--ease-spring) both;
+}
+/* The pointer that ties the bubble to the switch above it. */
+.view3d-nudge::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 22px;
+  width: 12px;
+  height: 12px;
+  background: var(--brand);
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+.view3d-nudge-go {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 10px 0 12px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.view3d-nudge-go .icon {
+  width: 18px;
+  height: 18px;
+}
+.view3d-nudge-x {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 40px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.8);
+}
+.view3d-nudge-x .icon {
+  width: 16px;
+  height: 16px;
+}
+.view3d-nudge-go:active,
+.view3d-nudge-x:active {
+  background: rgba(255, 255, 255, 0.16);
+}
+@keyframes nudge-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+.view-toggle button.nudge-ring {
+  animation: nudge-ring 1.6s ease-out infinite;
+}
+@keyframes nudge-ring {
+  0% { box-shadow: 0 0 0 0 var(--brand-soft-2); }
+  70% { box-shadow: 0 0 0 9px rgba(47, 123, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(47, 123, 255, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view3d-nudge,
+  .view-toggle button.nudge-ring {
+    animation: none;
+  }
+}
+.intro-video {
+  transition: background-color 0.18s linear;
+}
+/* Toast actions: a calm pill instead of shouting capitals, and gold for the
+   one that opens the paywall. */
+.toast .toast-action {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.toast .toast-action.pro,
+.toast .toast-action.pro:hover {
+  color: var(--pro-ink);
+  background: var(--grad-pro);
+}
+@media (max-width: 520px) {
+  .toast .toast-action.pro {
+    flex: 1;
+    min-height: 36px;
+  }
+}
+
+/* ---- Claude-backed AI tools: designer review and voice tour -------------- */
+.ai-premium-card { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.ai-tool-title h3 .pro-tag { margin-left: 6px; vertical-align: middle; }
+.ai-check { display: flex; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; }
+.ai-check input { flex: 0 0 auto; }
+.ai-fineprint { margin: 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; }
+.ai-review { display: grid; gap: 12px; padding: 12px; border-radius: 9px; background: var(--surface); }
+.ai-review-head { display: flex; align-items: flex-start; gap: 12px; }
+.ai-review-head p { margin: 0; line-height: 1.45; }
+.ai-score {
+  flex: 0 0 auto; display: inline-flex; align-items: baseline; gap: 1px;
+  padding: 6px 10px; border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--text-muted); font-size: 0.85rem; font-variant-numeric: tabular-nums;
+}
+.ai-score strong { color: var(--text); font-size: 1.5rem; line-height: 1; }
+.ai-review-list { display: grid; gap: 12px; margin: 0; padding: 0 0 0 20px; }
+.ai-review-list li { padding-left: 2px; }
+.ai-review-list li > strong { display: block; }
+.ai-review-list li p { margin: 4px 0 0; line-height: 1.45; }
+.ai-review-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-top: 3px; color: var(--text-muted); font-size: 0.85rem;
+}
+.ai-impact { padding: 1px 8px; border-radius: 999px; font-style: normal; font-size: 0.78rem; border: 1px solid var(--border); }
+.ai-impact.high { border-color: transparent; background: var(--pro-gold); color: var(--pro-ink); }
+.ai-impact.medium { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); color: var(--text); }
+.ai-tour audio { width: 100%; min-height: 40px; }
+.ai-tour p { line-height: 1.5; }
+@media (max-width: 520px) {
+  /* Beside the score the summary wrapped into a tall, narrow column. */
+  .ai-review-head { flex-direction: column; gap: 8px; }
+}
+
+/* ---- AI plan: questions, preview and revise ------------------------------ */
+.ai-plan-field { display: grid; gap: 6px; }
+.ai-plan-field > span { font-weight: 600; }
+.ai-plan-field textarea { resize: vertical; min-height: 64px; font: inherit; line-height: 1.4; }
+.ai-plan-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.ai-plan-row > span { font-weight: 600; }
+.ai-plan-row .seg button { min-width: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.ai-stepper { display: inline-flex; align-items: center; gap: 4px; }
+.ai-stepper .btn { width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.ai-stepper .btn .icon { width: 18px; height: 18px; }
+.ai-stepper output { min-width: 78px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ai-plan-title h3, .ai-plan-title p { margin: 0; }
+.ai-plan-title p { margin-top: 4px; color: var(--text-muted); line-height: 1.45; }
+.ai-plan-floors { align-self: flex-start; }
+.ai-plan-preview {
+  display: block; width: 100%; height: auto; max-height: 46vh;
+  border-radius: 10px; background: #fbfaf7; border: 1px solid var(--border);
+  font-family: inherit;
+}
+
+/* AI render: watermark choice for free accounts */
+.ai-render-mark { display: flex; width: 100%; }
+.ai-render-mark button { flex: 1 1 0; min-height: 44px; white-space: normal; line-height: 1.2; }
+.ai-render-pro-note { margin: -4px 0 0; font-size: 0.9rem; }
+
+/* Phones: the profile picture used to ride in the scrolling toolbar, where it
+   ended up underneath the pinned 2D/3D switch with only a sliver showing at
+   the screen edge. It is pinned beside the switch instead, and the scrolled
+   buttons stop short of both. */
+@media (max-width: 880px) {
+  .toolbar-account .account-wrap {
+    position: fixed;
+    top: calc(10px + env(safe-area-inset-top));
+    right: 98px; /* 8px edge + 84px switch + 6px gap */
+    z-index: 26;
+  }
+  /* The open menu must sit above floating canvas chips, like before. */
+  .toolbar-account .account-wrap:has(.account-menu) { z-index: 60; }
+  .toolbar-account .account-btn { width: 34px; height: 34px; }
+  .toolbar-account .account-initial { font-size: 15px; }
+  .toolbar:has(.account-wrap) { padding-right: 138px; }
+}
+/* Narrow phones: make room so Undo, Redo, Import, Export and More all stay in
+   view next to the pinned picture and switch. The save tick moves onto the
+   corner of the logo, and the AI wand leaves the bar (it is in the More menu
+   and in the profile menu). */
+@media (max-width: 520px) {
+  .toolbar { position: relative; padding-left: 6px; }
+  .brand { padding-right: 2px; margin-right: 0; }
+  .saved-badge {
+    position: absolute;
+    left: 29px;
+    top: 31px;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    border-radius: 50%;
+    background: var(--surface);
+    justify-content: center;
+    pointer-events: none;
+  }
+  .saved-badge svg { width: 11px; height: 11px; }
+  .tool-group + .tool-group { margin-left: 0; padding-left: 3px; }
+  .toolbar .tbtn.icon-only { width: 42px; min-width: 0; }
+  .toolbar-ai { display: none; }
+  .toolbar-account { margin-right: 0; }
+}
+/* 360px-class phones: everything a little narrower, so More is not left
+   underneath the pinned picture. */
+@media (max-width: 380px) {
+  .view-toggle button { padding: 0 9px; }
+  .toolbar-account .account-wrap { right: 88px; top: calc(12px + env(safe-area-inset-top)); }
+  .toolbar-account .account-btn { width: 30px; height: 30px; }
+  .toolbar-account .account-initial { font-size: 13px; }
+  .toolbar:has(.account-wrap) { padding-right: 122px; }
+  .toolbar .tbtn.icon-only { width: 38px; min-width: 0; padding: 0 6px; }
+  .toolbar .tbtn { padding: 0 6px; }
+}

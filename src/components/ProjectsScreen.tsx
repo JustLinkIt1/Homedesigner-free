@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Home, Plus, Ruler, FolderOpen, Copy, Trash2, Pencil, Sofa, ChevronRight,
   LayoutGrid, Settings, Lightbulb, PenTool, Square,
-  MessageCircle, Crown,
+  MessageCircle, Crown, WandSparkles,
 } from 'lucide-react';
 import { useDesign, type MaybeFloored } from '../store/designStore';
 import { confirmDialog, toast } from '../lib/ui';
@@ -11,6 +11,7 @@ import { requirePro } from '../lib/pro';
 import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { SAMPLES, samplePreviewUrl } from '../data/samples';
 import { useI18n } from '../lib/i18n';
+import { useAiCapabilities } from '../lib/aiCapabilities';
 import LanguagePicker from './LanguagePicker';
 import AccountButton from './AccountButton';
 import * as projects from '../lib/projects';
@@ -36,11 +37,13 @@ export default function ProjectsScreen({
   onImport,
   onHelp,
   onSettings,
+  onAiPlan,
 }: {
   onOpenEditor: () => void;
   onImport: () => void;
   onHelp: () => void;
   onSettings: () => void;
+  onAiPlan: () => void;
 }) {
   // Only actions are needed here — select them individually so this screen
   // doesn't re-render on every design edit (actions are stable references).
@@ -48,6 +51,7 @@ export default function ProjectsScreen({
   const newProjectAction = useDesign((st) => st.newProject);
   const addStarterRoom = useDesign((st) => st.addStarterRoom);
   const loadSample = useDesign((st) => st.loadSample);
+  const canPlan = useAiCapabilities((caps) => caps.plan_design === true);
   const t = useI18n();
   const [list, setList] = useState<projects.ProjectMeta[]>(() => projects.listProjects());
   const isPro = useProStore((state) => state.isPro);
@@ -103,6 +107,16 @@ export default function ProjectsScreen({
 
   // Template row = the bundled samples plus Import + Blank actions.
   const templates = [
+    // Leads the row when the server can draw one: it is the only starting
+    // point that asks nothing of a newcomer but a sentence.
+    ...(canPlan ? [{
+      key: '__ai',
+      title: t('Create a plan with AI'),
+      sub: t('Describe your home in your own words'),
+      icon: <WandSparkles className="icon" />,
+      preview: undefined,
+      onClick: onAiPlan,
+    }] : []),
     ...SAMPLES.map((smp) => ({
       key: smp.id,
       title: t(smp.name),
@@ -185,7 +199,7 @@ export default function ProjectsScreen({
         {/* Hero */}
         <section className="ps-hero">
           <div className="ps-hero-text">
-            <h1>{t('Welcome back')} <span className="ps-wave">👋</span></h1>
+            <h1>{list.length === 0 ? t('Welcome') : t('Welcome back')} <span className="ps-wave">👋</span></h1>
             <p>{t('Design your dream home')}</p>
           </div>
           <button className="btn primary ps-hero-new" onClick={() => newProject()}>
@@ -236,7 +250,7 @@ export default function ProjectsScreen({
                 }
               }}
             >
-              <FolderOpen className="icon" /> {t('Open .json')}
+              <FolderOpen className="icon" /> {t('Open project file')}
             </button>
           </div>
           {list.length === 0 ? (
@@ -360,8 +374,8 @@ export default function ProjectsScreen({
         >
           <LayoutGrid className="icon" /> <span>{t('Templates')}</span>
         </button>
-        <button onClick={() => void openCommunityForum()}>
-          <MessageCircle className="icon" /> <span>{t('Community & support')}</span>
+        <button onClick={() => void openCommunityForum()} aria-label={t('Community & support')}>
+          <MessageCircle className="icon" /> <span>{t('Community')}</span>
         </button>
         <button onClick={onSettings}>
           <Settings className="icon" /> <span>{t('Settings')}</span>

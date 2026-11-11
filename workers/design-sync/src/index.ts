@@ -14,11 +14,21 @@ import {
   MAX_ROOMS_PER_CALL, generateRoomNames, generateColourScheme,
   generateListingDescription, validRoomSummaries,
 } from './ai-features';
+import {
+  REVIEW_MAX_TOKENS, REVIEW_SCHEMA, TOUR_MAX_TOKENS, TOUR_SCHEMA, DEFAULT_VOICE_ID,
+  describePlan, planImageBase64, reviewFocus, reviewPrompt, roomLabels, speechLanguage,
+  tourPrompt, validVoiceId, validateReview, validateTourScript,
+} from './ai-advisor';
+import { claudeJson, elevenLabsSpeech, toBase64 } from './ai-providers';
+import {
+  MAX_PREVIOUS_PLAN_CHARS, PLAN_MAX_TOKENS, PLAN_SCHEMA, compilePlan, planBrief, planChange, planPrompt,
+  sanitizePlan, type PlanSource,
+} from './ai-plan';
 import { stripeSignatureValid } from './stripe';
 import {
-  RenderError, validRenderId, validRenderImage, validResultUrl, readRender,
+  RenderError, validRenderId, validRenderImage, readRender,
   reserveRender, dispatchRender, refreshRender, publicRender, freeRenderAvailable,
-  validRenderStyle, RENDER_STYLES,
+  validRenderStyle, RENDER_STYLES, renderAvailable, renderImageUrl,
 } from './ai-render';
 import {
   PRO_ENTITLEMENT_ID, liveEntitlements, matchesProEntitlement, proIdsFromCatalogue,
@@ -42,6 +52,13 @@ interface Env {
   AI_RENDER_ENABLED?: string;
   /** Workers AI, used only by the Model Studio metadata assistant. */
   AI: Ai;
+  /** Claude, for the designer review and the voice-tour script. Absent means
+   *  both features are off and the client hides them. */
+  ANTHROPIC_API_KEY?: string;
+  /** ElevenLabs, for the voice-tour narration. Absent means no voice tour. */
+  ELEVENLABS_API_KEY?: string;
+  /** Optional narration voice from the ElevenLabs account's library. */
+  ELEVENLABS_VOICE_ID?: string;
   MODEL_ADMIN_EMAIL: string;
   MODEL_ADMIN_SUBJECT?: string;
   MODEL_CATALOG_PUBLIC_BASE: string;
@@ -1127,6 +1144,13 @@ async function pointsState(request: Request, env: Env, identity: AuthIdentity): 
       Object.entries(FEATURES).map(([id, price]) => [id, { points: price.points, label: price.label }]),
     ),
     isPro,
+    // Which provider-backed tools this deployment can actually run. The client
+    // hides the rest rather than offering a button that 503s.
+    available: {
+      design_review: !!env.ANTHROPIC_API_KEY,
+      voice_tour: !!env.ANTHROPIC_API_KEY && !!env.ELEVENLABS_API_KEY,
+      plan_design: !!env.ANTHROPIC_API_KEY,
+    },
     // Whether card checkout is available at all. The client hides the button
     // rather than offering one that 503s.
     cardCheckout: !!env.STRIPE_SECRET_KEY && !!env.STRIPE_WEBHOOK_SECRET,
@@ -1473,6 +1497,140 @@ async function suggestListingDescription(request: Request, env: Env, identity: A
   return json(request, { copy: outcome.result, charged: outcome.charged, balance: outcome.balance });
 }
 
+/** Shared request parsing for the two Claude-backed tools. Everything that
+ *  can be refused is refused here, before any points are spent. */
+async function planRequest(request: Request, maxBytes: number): Promise<
+  | { ok: false; error: string }
+  | { ok: true; body: Record<string, unknown>; key: string; rooms: NonNullable<ReturnType<typeof validRoomSummaries>>; plan: string }
+> {
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(new TextDecoder().decode(await boundedBody(request, maxBytes))) as Record<string, unknown>;
+  } catch {
+    return { ok: false, error: 'The request could not be read.' };
+  }
+  if (!body || typeof body !== 'object') return { ok: false, error: 'The request could not be read.' };
+  const rooms = validRoomSummaries(body.rooms);
+  if (!rooms) return { ok: false, error: `Send between 1 and ${MAX_ROOMS_PER_CALL} rooms` };
+  const key = validAiKey(body.idempotencyKey);
+  if (!key) return { ok: false, error: 'A valid idempotencyKey is required' };
+  const plan = describePlan(rooms, roomLabels(body.roomNames, rooms));
+  if (!plan) return { ok: false, error: 'This plan is too large for the AI designer. Try one level with fewer rooms.' };
+  return { ok: true, body, key, rooms, plan };
+}
+
+/**
+ * Designer review: Claude reads the plan (and a picture of it, when the app
+ * sends one) and returns a score and a short list of concrete changes.
+ * Open to every signed-in account; it is the tool points are bought for.
+ */
+async function reviewDesign(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
+  const apiKey = env.ANTHROPIC_API_KEY;
+  if (!apiKey) return json(request, { error: 'The AI designer is not available yet.' }, 503);
+  const parsed = await planRequest(request, 1_300_000);
+  if (!parsed.ok) return json(request, { error: parsed.error }, 400);
+  const { body, key, rooms, plan } = parsed;
+  const image = planImageBase64(body.image);
+  if (image === null) return json(request, { error: 'The plan picture could not be used. Try again.' }, 400);
+  const prompt = reviewPrompt(plan, reviewFocus(body.focus), body.language, !!image);
+  const outcome = await runMetered(
+    env.COMMUNITY, identity.subject, 'design_review',
+    `design_review:${identity.subject}:${key}`,
+    async () => validateReview(await claudeJson(apiKey, {
+      ...prompt, imageBase64: image, schema: REVIEW_SCHEMA, maxTokens: REVIEW_MAX_TOKENS,
+    }), rooms),
+  );
+  if (!outcome.ok) return meteredError(request, outcome);
+  return json(request, { review: outcome.result, charged: outcome.charged, balance: outcome.balance });
+}
+
+/**
+ * Voice tour: Claude writes a short narration from the plan, ElevenLabs
+ * speaks it. Pro only, like AI render: it is the one tool here with a second
+ * paid provider behind it, so the free grant cannot be spent on it.
+ */
+async function narrateTour(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
+  const claudeKey = env.ANTHROPIC_API_KEY;
+  const voiceKey = env.ELEVENLABS_API_KEY;
+  if (!claudeKey || !voiceKey) return json(request, { error: 'Voice tours are not available yet.' }, 503);
+  if (!identity.emailVerified || !(await isProSubject(env, identity.subject))) {
+    return json(request, { error: 'Voice tours require a signed-in Pro account.' }, 403);
+  }
+  const parsed = await planRequest(request, 200_000);
+  if (!parsed.ok) return json(request, { error: parsed.error }, 400);
+  const { body, key, plan } = parsed;
+  const projectName = cleanString(body.projectName, 100) ?? 'Home design';
+  const voiceId = validVoiceId(env.ELEVENLABS_VOICE_ID) ? env.ELEVENLABS_VOICE_ID : DEFAULT_VOICE_ID;
+  const prompt = tourPrompt(plan, projectName, body.language);
+  const outcome = await runMetered(
+    env.COMMUNITY, identity.subject, 'voice_tour',
+    `voice_tour:${identity.subject}:${key}`,
+    async () => {
+      const script = validateTourScript(await claudeJson(claudeKey, {
+        ...prompt, schema: TOUR_SCHEMA, maxTokens: TOUR_MAX_TOKENS,
+      }));
+      const audio = await elevenLabsSpeech(voiceKey, voiceId, script, speechLanguage(body.language));
+      return { script, audio: toBase64(audio), mime: 'audio/mpeg' };
+    },
+  );
+  if (!outcome.ok) return meteredError(request, outcome);
+  return json(request, { tour: outcome.result, charged: outcome.charged, balance: outcome.balance });
+}
+
+/**
+ * AI plan: a brief plus a description in plain words becomes a floor plan;
+ * sending the plan back with a change request revises it. Each call is one
+ * generation and costs the same. Open to every signed-in account, except that
+ * more than one storey is a Pro feature here exactly as it is in the editor.
+ */
+async function designPlan(request: Request, env: Env, identity: AuthIdentity): Promise<Response> {
+  const apiKey = env.ANTHROPIC_API_KEY;
+  if (!apiKey) return json(request, { error: 'The AI planner is not available yet.' }, 503);
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(new TextDecoder().decode(await boundedBody(request, 60_000))) as Record<string, unknown>;
+  } catch {
+    return json(request, { error: 'The request could not be read.' }, 400);
+  }
+  if (!body || typeof body !== 'object') return json(request, { error: 'The request could not be read.' }, 400);
+  const key = validAiKey(body.idempotencyKey);
+  if (!key) return json(request, { error: 'A valid idempotencyKey is required' }, 400);
+  const brief = planBrief(body.brief);
+  if (!brief) return json(request, { error: 'Those answers do not fit together. Try a larger area or fewer rooms.' }, 400);
+
+  let previous: PlanSource | undefined;
+  let change: string | undefined;
+  if (body.previous !== undefined || body.change !== undefined) {
+    const wanted = planChange(body.change);
+    if (!wanted) return json(request, { error: 'Describe the change in a few words (up to 300 characters).' }, 400);
+    try {
+      previous = sanitizePlan(body.previous);
+    } catch {
+      return json(request, { error: 'The current plan could not be read. Start a new plan.' }, 400);
+    }
+    if (JSON.stringify(previous).length > MAX_PREVIOUS_PLAN_CHARS) {
+      return json(request, { error: 'This plan is too large to revise. Start a new plan.' }, 400);
+    }
+    change = wanted;
+  }
+  // The same gate the editor applies to adding a storey.
+  const storeys = Math.max(brief.storeys, previous?.floors.length ?? 0);
+  if (storeys > 1 && !(identity.emailVerified && await isProSubject(env, identity.subject))) {
+    return json(request, { error: 'Plans with more than one storey require Pro.' }, 403);
+  }
+
+  const prompt = planPrompt(brief, body.language, previous, change);
+  const outcome = await runMetered(
+    env.COMMUNITY, identity.subject, 'plan_design',
+    `plan_design:${identity.subject}:${key}`,
+    async () => compilePlan(await claudeJson(apiKey, {
+      ...prompt, schema: PLAN_SCHEMA, maxTokens: PLAN_MAX_TOKENS, effort: 'medium', timeoutMs: 85_000,
+    }), brief, !!previous),
+  );
+  if (!outcome.ok) return meteredError(request, outcome);
+  return json(request, { plan: outcome.result, charged: outcome.charged, balance: outcome.balance });
+}
+
 async function suggestModelMetadata(request: Request, env: Env, job: ModelStudioJob): Promise<Response> {
   if (!env.AI) return json(request, { error: 'The metadata assistant is not configured' }, 503);
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
@@ -1790,6 +1948,17 @@ export default {
       }
     }
 
+    // Which provider-backed AI tools this deployment can run. Public, so the
+    // app can decide whether to offer "Create a plan with AI" before anyone
+    // signs in. It says only whether features are switched on.
+    if (request.method === 'GET' && url.pathname === '/v1/ai/capabilities') {
+      return json(request, {
+        design_review: !!env.ANTHROPIC_API_KEY,
+        voice_tour: !!env.ANTHROPIC_API_KEY && !!env.ELEVENLABS_API_KEY,
+        plan_design: !!env.ANTHROPIC_API_KEY,
+      }, 200, { 'Cache-Control': 'public, max-age=300' });
+    }
+
     // Community reads are PUBLIC and are therefore matched before
     // authenticate(). A support forum only signed-in people can read is not a
     // support forum, and Google cannot index what it cannot fetch. Writes fall
@@ -1841,30 +2010,36 @@ export default {
       }
       if (url.pathname.startsWith('/v1/ai/renders')) {
         try {
-          const enabled = env.AI_RENDER_ENABLED === 'true' && !!env.FAL_KEY;
+          const renderKeys = { fal: env.FAL_KEY, elevenlabs: env.ELEVENLABS_API_KEY };
+          const enabled = env.AI_RENDER_ENABLED === 'true' && renderAvailable(renderKeys);
           if (request.method === 'GET' && url.pathname === '/v1/ai/renders') {
             const active = await env.COMMUNITY.prepare("SELECT * FROM ai_render_jobs WHERE subject = ? ORDER BY created_at DESC LIMIT 1")
               .bind(identity.subject).first<import('./ai-render').RenderJob>();
-            return json(request, { enabled, isPro: await isProSubject(env, identity.subject),
-              freeAvailable: await freeRenderAvailable(env.COMMUNITY, identity.subject),
+            const isPro = await isProSubject(env, identity.subject);
+            return json(request, { enabled, isPro,
+              freeAvailable: isPro && await freeRenderAvailable(env.COMMUNITY, identity.subject),
               styles: RENDER_STYLES,
               latest: active ? publicRender(active) : null });
           }
           if (request.method === 'POST' && url.pathname === '/v1/ai/renders') {
             if (!enabled) return json(request, { error: 'AI rendering is temporarily unavailable.' }, 503);
-            if (!identity.emailVerified || !(await isProSubject(env, identity.subject))) {
-              return json(request, { error: 'AI rendering requires a signed-in Pro account.' }, 403);
+            if (!identity.emailVerified) {
+              return json(request, { error: 'Sign in with a verified Google account to use AI rendering.' }, 403);
             }
             const bytes = await boundedBody(request, 2_810_000);
             let body: Record<string, unknown>;
             try { body = JSON.parse(new TextDecoder().decode(bytes)); }
             catch { return json(request, { error: 'Invalid render request.' }, 400); }
             if (!body || !validRenderId(body.id) || !validRenderImage(body.image) || !validRenderStyle(body.style)
-              || !Number.isSafeInteger(body.expectedCharge) || Number(body.expectedCharge) < 0) {
+              || !Number.isSafeInteger(body.expectedCharge) || Number(body.expectedCharge) < 0
+              || (body.watermark !== undefined && typeof body.watermark !== 'boolean')) {
               return json(request, { error: 'Send a JPEG preview up to 2 MB and a unique request ID.' }, 400);
             }
-            const { job, created } = await reserveRender(env.COMMUNITY, identity.subject, body.id, Number(body.expectedCharge), body.style);
-            if (created) ctx.waitUntil(dispatchRender(env.COMMUNITY, env.FAL_KEY, job, body.image));
+            // Older apps never send `watermark`; a free account on one gets a clean render at the premium.
+            const isPro = await isProSubject(env, identity.subject);
+            const { job, created } = await reserveRender(env.COMMUNITY, identity.subject, body.id, Number(body.expectedCharge), body.style,
+              { isPro, watermark: body.watermark === true });
+            if (created) ctx.waitUntil(dispatchRender(env.COMMUNITY, renderKeys, job, body.image));
             return json(request, publicRender(job), 202);
           }
           const match = url.pathname.match(/^\/v1\/ai\/renders\/([a-f0-9-]{36})(\/image)?$/);
@@ -1872,14 +2047,15 @@ export default {
             let job = await readRender(env.COMMUNITY, identity.subject, match[1]);
             if (!job) return json(request, { error: 'Render not found.' }, 404);
             if (match[2]) {
-              if (job.status !== 'complete' || !validResultUrl(job.result_url)) return json(request, { error: 'Image is not ready.' }, 409);
-              const image = await fetch(job.result_url, { redirect: 'error', signal: AbortSignal.timeout(20_000) });
+              const source = await renderImageUrl(renderKeys, job);
+              if (!source) return json(request, { error: 'Image is not ready.' }, 409);
+              const image = await fetch(source, { redirect: 'error', signal: AbortSignal.timeout(20_000) });
               if (!image.ok) return json(request, { error: 'Image download failed. Try again.' }, 502);
               const contentType = image.headers.get('Content-Type')?.split(';')[0];
               if (!['image/jpeg', 'image/png'].includes(contentType ?? '')) return json(request, { error: 'Unexpected image format.' }, 502);
               return new Response(await boundedBody(image, 12_000_000), { headers: { ...cors(request), 'Content-Type': contentType!, 'Cache-Control': 'no-store' } });
             }
-            job = await refreshRender(env.COMMUNITY, env.FAL_KEY, job);
+            job = await refreshRender(env.COMMUNITY, renderKeys, job);
             return json(request, publicRender(job));
           }
           return json(request, { error: 'Not found.' }, 404);
@@ -1907,6 +2083,15 @@ export default {
       }
       if (request.method === 'POST' && url.pathname === '/v1/ai/listing-description') {
         return await suggestListingDescription(request, env, identity);
+      }
+      if (request.method === 'POST' && url.pathname === '/v1/ai/design-review') {
+        return await reviewDesign(request, env, identity);
+      }
+      if (request.method === 'POST' && url.pathname === '/v1/ai/voice-tour') {
+        return await narrateTour(request, env, identity);
+      }
+      if (request.method === 'POST' && url.pathname === '/v1/ai/plan') {
+        return await designPlan(request, env, identity);
       }
       if (request.method === 'POST' && url.pathname === '/v1/sync') return await sync(request, env, identity.subject);
       if (request.method === 'DELETE' && url.pathname === '/v1/account') {

@@ -9,6 +9,7 @@ import { APP_VERSION, PLAY_STORE_URL } from './appInfo';
 import { getCloudProEntitlement, linkPlayPurchases, verifyPlayPurchase } from './cloudSync';
 import {
   PlayBilling,
+  PLAY_PRO_PLANS,
   PLAY_PRO_PRODUCT_ID,
   isCompletedProPurchase,
   ownedProPurchases,
@@ -16,7 +17,7 @@ import {
   type PlayPurchase,
 } from './playBilling';
 
-export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects' | 'aiRender';
+export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects' | 'aiRender' | 'cleanExport' | 'voiceTour';
 export type ProPlanID = 'monthly' | 'yearly' | 'lifetime';
 
 export interface ProPlan {
@@ -614,6 +615,28 @@ class RevenueCatProvider implements ProProvider {
   }
 }
 
+const PLAN_LABELS: Record<ProPlanID, string> = { monthly: 'Monthly', yearly: 'Yearly', lifetime: 'Lifetime' };
+
+/** Turn what Play returned for each rung of `PLAY_PRO_PLANS` (same order, null
+ * where Play returned nothing) into the plans the paywall may show. A product
+ * without a price is not for sale to this buyer, so it is left out rather than
+ * listed with a blank where the price goes. */
+export function playPlansFromProducts(products: ReadonlyArray<PlayProduct | null | undefined>): ProPlan[] {
+  const plans: ProPlan[] = [];
+  PLAY_PRO_PLANS.forEach((plan, index) => {
+    const product = products[index];
+    if (!product?.priceString) return;
+    plans.push({
+      id: plan.id,
+      label: PLAN_LABELS[plan.id],
+      priceLabel: product.priceString,
+      priceMicros: product.priceAmountMicros,
+      currency: product.currencyCode,
+    });
+  });
+  return plans;
+}
+
 /** Direct Google Play Billing provider. RevenueCat is deliberately absent from
  * this path: the native plugin queries and launches the exact Play product,
  * while the Worker verifies/acknowledges receipts and links them to Google. */
@@ -671,23 +694,36 @@ class DirectPlayProvider implements ProProvider {
     return (await this.product())?.priceString ?? null;
   }
 
+  /** One rung of the ladder, straight from Play. A subscription and a one-time
+   * product live in different namespaces, so each is asked for by its type. */
+  private async planProduct(plan: typeof PLAY_PRO_PLANS[number]): Promise<PlayProduct | null> {
+    const { product } = await withTimeout(
+      PlayBilling.getProduct({ productId: plan.productId, productType: plan.productType }),
+      STORE_TIMEOUT_MS,
+      'Timed out loading the Google Play product.',
+    );
+    return product;
+  }
+
+  /** Every plan Play will actually sell this buyer, in ladder order. Until
+   * 1.22.31 this returned Lifetime alone, so Monthly and Yearly were live in
+   * Play Console but could not be bought from the app. Each rung is queried on
+   * its own: a subscription Play withholds in one country must not take the
+   * lifetime unlock down with it. */
   async getPlans(): Promise<ProPlan[]> {
-    const product = await this.product();
-    if (!product?.priceString) return [];
-    return [{
-      id: 'lifetime',
-      label: 'Lifetime',
-      priceLabel: product.priceString,
-      priceMicros: product.priceAmountMicros,
-      currency: product.currencyCode,
-    }];
+    const products = await Promise.all(PLAY_PRO_PLANS.map((plan) =>
+      this.planProduct(plan).catch((error) => {
+        console.warn(`[pro] Play did not return ${plan.productId}`, error);
+        return null;
+      })));
+    return playPlansFromProducts(products);
   }
 
   async purchase(planID?: ProPlanID): Promise<boolean> {
-    if (planID && planID !== 'lifetime') {
-      throw new Error('Google Play currently offers Pro as a lifetime purchase only.');
-    }
-    const product = await this.product();
+    // No plan named means the single-button sheet, which sells the lifetime unlock.
+    const plan = PLAY_PRO_PLANS.find((entry) => entry.id === (planID ?? 'lifetime'));
+    if (!plan) throw new Error('That plan is not sold on Google Play.');
+    const product = await this.planProduct(plan);
     if (!product?.priceString) {
       throw new Error('Google Play did not return the Pro product for this account and country.');
     }
@@ -700,7 +736,7 @@ class DirectPlayProvider implements ProProvider {
     let purchase: PlayPurchase | null;
     try {
       ({ purchase } = await withTimeout(
-        PlayBilling.purchase({ productId: PLAY_PRO_PRODUCT_ID }),
+        PlayBilling.purchase({ productId: plan.productId, productType: plan.productType }),
         PURCHASE_TIMEOUT_MS,
         PURCHASE_TIMEOUT,
       ));

@@ -26,7 +26,7 @@ const dir = mkdtempSync(join(tmpdir(), 'hdbilling-'));
 const entry = join(root, '.billing-entry.tmp.ts');
 writeFileSync(entry, `
 export { useProStore } from '${rootImport}/src/store/proStore.ts';
-export { setProProvider, playPackage, playStoreProduct, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics, resolveWebEntitlement } from '${rootImport}/src/lib/pro.ts';
+export { setProProvider, playPackage, playStoreProduct, playPlansFromProducts, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics, resolveWebEntitlement } from '${rootImport}/src/lib/pro.ts';
 `);
 
 const out = join(dir, 'bundle.mjs');
@@ -305,8 +305,34 @@ const reset = (isPro) => {
   const proProvider = readFileSync(join(root, 'src/lib/pro.ts'), 'utf8');
   check('native checkout bypasses offerings and package lookup end to end',
     proProvider.includes('new DirectPlayProvider()') &&
-      proProvider.includes('PlayBilling.getProduct({ productId: PLAY_PRO_PRODUCT_ID })') &&
-      proProvider.includes('PlayBilling.purchase({ productId: PLAY_PRO_PRODUCT_ID })'));
+      proProvider.includes('PlayBilling.getProduct({ productId: plan.productId, productType: plan.productType })') &&
+      proProvider.includes('PlayBilling.purchase({ productId: plan.productId, productType: plan.productType })'));
+
+  // Monthly and Yearly were live in Play Console for months while the app
+  // could only sell Lifetime: the provider returned one plan and refused any
+  // other. These pin the ladder so that cannot silently come back.
+  check('Android no longer refuses the subscription plans',
+    !proProvider.includes('lifetime purchase only'));
+  const playProduct = (identifier, priceString, priceAmountMicros) =>
+    ({ identifier, title: identifier, description: '', priceString, priceAmountMicros, currencyCode: 'EUR' });
+  const ladder = mod.playPlansFromProducts([
+    playProduct('pro_monthly', '€1.99', 1_990_000),
+    playProduct('pro_yearly', '€4.99', 4_990_000),
+    playProduct('pro_lifetime', '€6.99', 6_990_000),
+  ]);
+  check('Android offers monthly, yearly and lifetime, in that order',
+    ladder.map((plan) => plan.id).join() === 'monthly,yearly,lifetime' &&
+      ladder.map((plan) => plan.priceLabel).join() === '€1.99,€4.99,€6.99' &&
+      ladder.every((plan) => plan.currency === 'EUR' && plan.priceMicros > 0));
+  const lifetimeOnly = mod.playPlansFromProducts([null, null, playProduct('pro_lifetime', '€6.99', 6_990_000)]);
+  check('a country where Play withholds the subscriptions still sells lifetime',
+    lifetimeOnly.length === 1 && lifetimeOnly[0].id === 'lifetime');
+  check('a subscription Play lists without a price is not advertised',
+    mod.playPlansFromProducts([
+      { identifier: 'pro_monthly', title: '', description: '' },
+      playProduct('pro_yearly', '€4.99', 4_990_000),
+      null,
+    ]).map((plan) => plan.id).join() === 'yearly');
   check('the release diagnostic uses the same direct Play product query',
     proProvider.includes('PlayBilling.getProduct({ productId: PLAY_PRO_PRODUCT_ID })') &&
       proProvider.includes('billing FAILED:') &&
@@ -319,7 +345,16 @@ const reset = (isPro) => {
       nativePlugin.includes('@CapacitorPlugin(name = "PlayBilling")'));
   check('native product query uses one-time purchase offers',
     nativePlugin.includes('getOneTimePurchaseOfferDetailsList()') &&
-      nativePlugin.includes('setOfferToken(offer.getOfferToken())'));
+      nativePlugin.includes('offer.getOfferToken()') &&
+      nativePlugin.includes('.setOfferToken(offerToken)'));
+  check('native checkout can query and buy a subscription base plan',
+    nativePlugin.includes('.setProductType(billingType(productType))') &&
+      nativePlugin.includes('getSubscriptionOfferDetails()') &&
+      nativePlugin.includes('plan.getOfferToken()') &&
+      nativePlugin.includes('if (offer.getOfferId() == null) return offer;'));
+  check('a subscription is priced by its recurring phase',
+    nativePlugin.includes('phases.get(phases.size() - 1)') &&
+      nativePlugin.includes('phase.getFormattedPrice()'));
   check('point purchases are bound to the signed-in account',
     nativePlugin.includes('setObfuscatedAccountId(obfuscatedAccountId)'));
   check('native timeout invalidates late purchase callbacks',

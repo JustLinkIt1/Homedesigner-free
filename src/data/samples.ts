@@ -921,7 +921,7 @@ function suburbanClassic(): MaybeFloored {
  * to 3D. This dresses the shell without touching the interior: only the wall
  * faces that no room sits against are clad, so inside stays painted.
  */
-function dressed(
+export function dressed(
   snap: MaybeFloored,
   opts: { roof: Roof; exterior: { color: string; material?: string } },
 ): MaybeFloored {
@@ -988,7 +988,7 @@ function dressed(
 }
 
 /** Roof presets, so each sample reads as the kind of house it is. */
-const ROOFS = {
+export const ROOFS = {
   clayGable: { type: 'gable', pitch: 32, overhang: 45, thickness: 18, covering: 'tile', coveringScaleCm: 100, color: '#b45f3c' },
   slateGable: { type: 'gable', pitch: 38, overhang: 40, thickness: 18, covering: 'slate', coveringScaleCm: 90, color: '#4a4f55' },
   greyHip: { type: 'hip', pitch: 28, overhang: 50, thickness: 18, covering: 'tile', coveringScaleCm: 100, color: '#6f7275' },

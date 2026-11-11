@@ -1,0 +1,232 @@
+<en-GB>
+New: Pro Monthly and Pro Yearly subscriptions, alongside Lifetime.
+Fresh 3D look with a softer sky and lighting, and the whole house framed on phones.
+A quick "See it in 3D" tip after you open a plan.
+Cleaner controls: switches, toggle chips and a sharper dark mode.
+Remove the watermark from renders and photos straight from the save message.
+Launch screen fix and other small improvements.
+</en-GB>
+<ar>
+جديد: اشتراكات Pro الشهرية والسنوية إلى جانب الاشتراك مدى الحياة.
+مظهر ثلاثي الأبعاد جديد بسماء وإضاءة أنعم، مع عرض المنزل كاملًا على الهاتف.
+تلميح سريع "شاهده ثلاثي الأبعاد" بعد فتح المخطط.
+عناصر تحكم أوضح: مفاتيح تبديل وأزرار اختيار ووضع داكن محسّن.
+أزل العلامة المائية من الصور والعروض مباشرةً من رسالة الحفظ.
+إصلاح شاشة البدء وتحسينات صغيرة أخرى.
+</ar>
+<cs-CZ>
+Novinka: předplatné Pro měsíční a roční vedle doživotní licence.
+Nový 3D vzhled s jemnější oblohou a osvětlením, na telefonu je vidět celý dům.
+Rychlý tip „Zobrazit ve 3D“ po otevření plánu.
+Přehlednější ovládání: přepínače, tlačítka a vylepšený tmavý režim.
+Vodoznak z renderů a fotek odstraníte přímo ze zprávy o uložení.
+Oprava úvodní obrazovky a další drobná vylepšení.
+</cs-CZ>
+<da-DK>
+Nyt: Pro månedligt og Pro årligt abonnement ved siden af livstidsadgang.
+Nyt 3D-look med blødere himmel og lys, og hele huset vises på telefonen.
+Et hurtigt "Se det i 3D"-tip, når du åbner en plan.
+Pænere betjening: kontakter, valgknapper og en skarpere mørk tilstand.
+Fjern vandmærket fra renderinger og fotos direkte fra gem-beskeden.
+Rettelse af startskærmen og andre små forbedringer.
+</da-DK>
+<de-DE>
+Neu: Pro-Monatsabo und Pro-Jahresabo neben der Lifetime-Version.
+Neuer 3D-Look mit weicherem Himmel und Licht, auf dem Handy ist das ganze Haus im Bild.
+Ein kurzer „In 3D ansehen“-Tipp, wenn du einen Plan öffnest.
+Klarere Bedienung: Schalter, Auswahlchips und ein besserer Dunkelmodus.
+Wasserzeichen von Renderings und Fotos direkt aus der Speichermeldung entfernen.
+Startbildschirm korrigiert und weitere kleine Verbesserungen.
+</de-DE>
+<es-419>
+Nuevo: suscripciones Pro mensual y anual, además de Pro de por vida.
+Nuevo aspecto 3D con cielo e iluminación más suaves, y la casa completa en pantalla en el celular.
+Un consejo rápido "Velo en 3D" al abrir un plano.
+Controles más claros: interruptores, botones de selección y mejor modo oscuro.
+Quita la marca de agua de renders y fotos desde el mensaje de guardado.
+Corrección de la pantalla de inicio y otras mejoras.
+</es-419>
+<es-ES>
+Novedad: suscripciones Pro mensual y anual, además de Pro de por vida.
+Nuevo aspecto 3D con cielo e iluminación más suaves, y la casa completa en pantalla en el móvil.
+Un consejo rápido «Velo en 3D» al abrir un plano.
+Controles más claros: interruptores, botones de selección y mejor modo oscuro.
+Quita la marca de agua de renders y fotos desde el aviso de guardado.
+Corrección de la pantalla de inicio y otras mejoras.
+</es-ES>
+<fi-FI>
+Uutta: Pro-kuukausi- ja vuositilaus elinikäisen version rinnalle.
+Uusi 3D-ilme pehmeämmällä taivaalla ja valaistuksella, ja koko talo näkyy puhelimessa.
+Nopea "Katso 3D:nä" -vinkki, kun avaat pohjapiirroksen.
+Selkeämmät säätimet: kytkimet, valintapainikkeet ja parempi tumma tila.
+Poista vesileima renderöinneistä ja kuvista suoraan tallennusilmoituksesta.
+Aloitusnäytön korjaus ja muita pieniä parannuksia.
+</fi-FI>
+<fr-FR>
+Nouveau : abonnements Pro mensuel et annuel, en plus de Pro à vie.
+Nouveau rendu 3D avec un ciel et un éclairage plus doux, et la maison entière cadrée sur mobile.
+Une astuce « Voir en 3D » à l'ouverture d'un plan.
+Commandes plus claires : interrupteurs, boutons de sélection et mode sombre amélioré.
+Retirez le filigrane des rendus et photos directement depuis le message d'enregistrement.
+Écran de lancement corrigé et autres petites améliorations.
+</fr-FR>
+<hi-IN>
+नया: लाइफ़टाइम के साथ अब Pro मासिक और Pro वार्षिक सदस्यता।
+नया 3D रूप, हल्का आसमान और रोशनी, और फ़ोन पर पूरा घर एक नज़र में।
+प्लान खोलने पर "3D में देखें" का छोटा सुझाव।
+साफ़ नियंत्रण: स्विच, चुनने वाले बटन और बेहतर डार्क मोड।
+सेव संदेश से ही रेंडर और फ़ोटो का वॉटरमार्क हटाएँ।
+लॉन्च स्क्रीन सुधार और अन्य छोटे सुधार।
+</hi-IN>
+<hu-HU>
+Újdonság: Pro havi és éves előfizetés az örökös licenc mellett.
+Új 3D-megjelenés lágyabb éggel és fényekkel, telefonon az egész ház látszik.
+Gyors „Nézd meg 3D-ben” tipp az alaprajz megnyitásakor.
+Letisztultabb vezérlők: kapcsolók, választógombok és jobb sötét mód.
+A vízjelet a mentési üzenetből egyből eltávolíthatod a renderekről és fotókról.
+Javított indítóképernyő és egyéb apró fejlesztések.
+</hu-HU>
+<id>
+Baru: langganan Pro Bulanan dan Pro Tahunan, selain Pro Seumur Hidup.
+Tampilan 3D baru dengan langit dan pencahayaan lebih lembut, seluruh rumah terlihat di ponsel.
+Tips singkat "Lihat dalam 3D" setelah membuka denah.
+Kontrol lebih rapi: sakelar, tombol pilihan, dan mode gelap yang lebih baik.
+Hapus tanda air dari render dan foto langsung dari pesan simpan.
+Perbaikan layar pembuka dan peningkatan kecil lainnya.
+</id>
+<it-IT>
+Novità: abbonamenti Pro mensile e annuale, oltre a Pro a vita.
+Nuovo aspetto 3D con cielo e luci più morbidi, e la casa intera inquadrata sul telefono.
+Un rapido suggerimento "Guarda in 3D" quando apri una pianta.
+Comandi più chiari: interruttori, pulsanti di selezione e modalità scura migliorata.
+Rimuovi la filigrana da render e foto direttamente dal messaggio di salvataggio.
+Schermata di avvio corretta e altri piccoli miglioramenti.
+</it-IT>
+<iw-IL>
+חדש: מנויי Pro חודשי ושנתי, לצד רישיון לכל החיים.
+מראה תלת־ממדי חדש עם שמיים ותאורה רכים יותר, וכל הבית נראה בטלפון.
+טיפ מהיר "לצפייה בתלת־ממד" אחרי פתיחת תוכנית.
+פקדים נקיים יותר: מתגים, כפתורי בחירה ומצב כהה משופר.
+הסירו את סימן המים מהדמיות ותמונות ישירות מהודעת השמירה.
+תיקון מסך הפתיחה ושיפורים קטנים נוספים.
+</iw-IL>
+<ja-JP>
+新機能：買い切りに加えて、Pro月額・年額プランが登場。
+空と光がやわらかい新しい3D表示。スマホでも家全体が収まります。
+プランを開くと「3Dで見る」のヒントを表示。
+スイッチや選択ボタンなど操作をすっきり整理し、ダークモードも改善。
+保存メッセージから、レンダーや写真の透かしをすぐに削除できます。
+起動画面の修正、その他の細かな改善。
+</ja-JP>
+<ko-KR>
+신규: 평생 이용권과 함께 Pro 월간·연간 구독을 제공합니다.
+더 부드러운 하늘과 조명의 새 3D 화면, 휴대폰에서도 집 전체가 보입니다.
+도면을 열면 "3D로 보기" 안내가 잠깐 표시됩니다.
+스위치, 선택 버튼, 개선된 다크 모드로 더 깔끔해진 조작.
+저장 메시지에서 바로 렌더와 사진의 워터마크를 제거하세요.
+시작 화면 수정 및 기타 개선.
+</ko-KR>
+<nl-NL>
+Nieuw: Pro-maand- en Pro-jaarabonnement naast Pro voor altijd.
+Nieuwe 3D-look met zachtere lucht en verlichting, en op je telefoon zie je het hele huis.
+Een korte tip "Bekijk in 3D" als je een plattegrond opent.
+Duidelijkere bediening: schakelaars, keuzeknoppen en een betere donkere modus.
+Verwijder het watermerk van renders en foto's direct vanuit de opslagmelding.
+Startscherm hersteld en andere kleine verbeteringen.
+</nl-NL>
+<no-NO>
+Nytt: Pro månedlig og Pro årlig abonnement i tillegg til livstidstilgang.
+Nytt 3D-utseende med mykere himmel og lys, og hele huset vises på telefonen.
+Et raskt «Se i 3D»-tips når du åpner en plan.
+Ryddigere kontroller: brytere, valgknapper og bedre mørk modus.
+Fjern vannmerket fra gjengivelser og bilder rett fra lagringsmeldingen.
+Retting av startskjermen og andre små forbedringer.
+</no-NO>
+<pl-PL>
+Nowość: subskrypcje Pro miesięczna i roczna obok wersji dożywotniej.
+Nowy wygląd 3D z łagodniejszym niebem i oświetleniem, a na telefonie widać cały dom.
+Krótka wskazówka „Zobacz w 3D” po otwarciu planu.
+Czytelniejsze sterowanie: przełączniki, przyciski wyboru i lepszy tryb ciemny.
+Usuń znak wodny z renderów i zdjęć prosto z komunikatu o zapisie.
+Poprawiony ekran startowy i inne drobne ulepszenia.
+</pl-PL>
+<pt-BR>
+Novidade: assinaturas Pro mensal e anual, além do Pro vitalício.
+Novo visual 3D com céu e iluminação mais suaves, e a casa inteira enquadrada no celular.
+Uma dica rápida "Veja em 3D" ao abrir uma planta.
+Controles mais claros: chaves, botões de seleção e modo escuro aprimorado.
+Remova a marca d'água de renders e fotos direto da mensagem de salvamento.
+Correção da tela de abertura e outras melhorias.
+</pt-BR>
+<ro>
+Nou: abonamente Pro lunar și anual, pe lângă Pro pe viață.
+Aspect 3D nou, cu cer și lumini mai blânde, iar pe telefon se vede toată casa.
+Un sfat rapid „Vezi în 3D” când deschizi un plan.
+Comenzi mai clare: comutatoare, butoane de selecție și mod întunecat îmbunătățit.
+Elimină filigranul de pe randări și fotografii direct din mesajul de salvare.
+Ecran de pornire reparat și alte mici îmbunătățiri.
+</ro>
+<ru-RU>
+Новое: подписки Pro на месяц и на год в дополнение к бессрочной версии.
+Новый 3D-вид с мягким небом и освещением, на телефоне дом виден целиком.
+Короткая подсказка «Посмотреть в 3D» при открытии плана.
+Понятнее управление: переключатели, кнопки выбора и улучшенная тёмная тема.
+Убирайте водяной знак с рендеров и фото прямо из сообщения о сохранении.
+Исправлен экран запуска и другие небольшие улучшения.
+</ru-RU>
+<sk>
+Novinka: predplatné Pro mesačné a ročné popri doživotnej licencii.
+Nový 3D vzhľad s jemnejšou oblohou a osvetlením, na telefóne vidno celý dom.
+Rýchly tip „Pozrieť v 3D“ po otvorení plánu.
+Prehľadnejšie ovládanie: prepínače, tlačidlá výberu a lepší tmavý režim.
+Vodoznak z renderov a fotiek odstránite priamo zo správy o uložení.
+Oprava úvodnej obrazovky a ďalšie drobné vylepšenia.
+</sk>
+<sv-SE>
+Nytt: Pro månad och Pro år som prenumeration, utöver livstidsköp.
+Nytt 3D-utseende med mjukare himmel och ljus, och hela huset syns på mobilen.
+Ett snabbt ”Se i 3D”-tips när du öppnar en planritning.
+Tydligare reglage: brytare, valknappar och bättre mörkt läge.
+Ta bort vattenstämpeln från renderingar och foton direkt från sparmeddelandet.
+Fixad startskärm och andra små förbättringar.
+</sv-SE>
+<th>
+ใหม่: สมัครสมาชิก Pro รายเดือนและรายปี เพิ่มจากแบบตลอดชีพ
+ภาพ 3D แบบใหม่ ท้องฟ้าและแสงนุ่มขึ้น และเห็นบ้านทั้งหลังบนโทรศัพท์
+มีคำแนะนำ "ดูแบบ 3D" สั้นๆ เมื่อเปิดแปลน
+ปุ่มควบคุมเรียบร้อยขึ้น ทั้งสวิตช์ ปุ่มเลือก และโหมดมืดที่ดีขึ้น
+ลบลายน้ำออกจากภาพเรนเดอร์และรูปถ่ายได้ทันทีจากข้อความบันทึก
+แก้ไขหน้าจอเปิดแอปและปรับปรุงเล็กน้อยอื่นๆ
+</th>
+<tr-TR>
+Yeni: Ömür boyu sürümün yanında Pro aylık ve yıllık abonelik.
+Daha yumuşak gökyüzü ve ışıkla yeni 3D görünüm; telefonda evin tamamı görünür.
+Bir plan açtığınızda kısa bir "3D'de gör" ipucu.
+Daha net kontroller: anahtarlar, seçim düğmeleri ve geliştirilmiş karanlık mod.
+Filigranı render ve fotoğraflardan doğrudan kaydetme mesajından kaldırın.
+Açılış ekranı düzeltmesi ve diğer küçük iyileştirmeler.
+</tr-TR>
+<uk>
+Нове: підписки Pro на місяць і на рік на додачу до безстрокової версії.
+Новий 3D-вигляд із м'якшим небом і світлом, на телефоні будинок видно повністю.
+Коротка підказка «Переглянути в 3D» після відкриття плану.
+Зрозуміліше керування: перемикачі, кнопки вибору та краща темна тема.
+Прибирайте водяний знак із рендерів і фото просто з повідомлення про збереження.
+Виправлено екран запуску та інші дрібні покращення.
+</uk>
+<vi>
+Mới: gói Pro theo tháng và theo năm, bên cạnh Pro trọn đời.
+Giao diện 3D mới với bầu trời và ánh sáng dịu hơn, xem trọn ngôi nhà trên điện thoại.
+Gợi ý nhanh "Xem ở dạng 3D" khi bạn mở một bản vẽ.
+Điều khiển gọn gàng hơn: công tắc, nút chọn và chế độ tối tốt hơn.
+Xóa hình mờ khỏi ảnh render và ảnh chụp ngay từ thông báo lưu.
+Sửa màn hình khởi động và các cải tiến nhỏ khác.
+</vi>
+<zh-CN>
+新增：除永久版外，现可订阅 Pro 月度和年度方案。
+全新 3D 外观，天空与光线更柔和，手机上可看到整栋房子。
+打开平面图后会提示“在 3D 中查看”。
+控件更清爽：开关、选择按钮，深色模式也更出色。
+可直接在保存提示中去除渲染图和照片的水印。
+修复启动画面及其他细节改进。
+</zh-CN>

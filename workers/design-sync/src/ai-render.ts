@@ -2,6 +2,14 @@ import { createFalClient } from '@fal-ai/client';
 import { pointsFor, PRICE_VERSION } from './points';
 
 const ENDPOINT = 'fal-ai/flux-pro/kontext';
+/** ElevenLabs renders first (prepaid credits); fal is the backup. */
+const ELEVENLABS_API = 'https://api.elevenlabs.io';
+export const ELEVENLABS_IMAGE_MODEL = 'gemini-3.1-flash-image';
+/** Jobs rendered by ElevenLabs store their generation id with this prefix. */
+const ELEVENLABS_PREFIX = 'el:';
+export interface RenderKeys { fal?: string; elevenlabs?: string }
+const keysOf = (keys: string | RenderKeys): RenderKeys => typeof keys === 'string' ? { fal: keys } : keys;
+export const renderAvailable = (keys: RenderKeys) => !!keys.fal?.trim() || !!keys.elevenlabs?.trim();
 const BASE_RENDER_PROMPT = 'Turn this 3D architectural preview into a photorealistic interior photograph. '
   + 'Keep the exact same room layout, camera angle, furniture positions, openings and proportions. '
   + 'Do not add, remove, replace, resize or move furniture, walls, doors or windows. '
@@ -39,6 +47,20 @@ export interface RenderJob {
   style: RenderStyleId;
   charge: number; request_id: string | null; result_url: string | null;
   error: string | null; created_at: number;
+  /** 1 when the app must stamp the homedesignerapp.com watermark on the result. */
+  watermark?: number;
+}
+export interface RenderOptions {
+  /** A free account asks for the cheaper watermarked render. Ignored for Pro. */
+  watermark?: boolean;
+  /** Pro renders are always clean at the base price. Older apps only ever sent Pro renders. */
+  isPro?: boolean;
+}
+/** What a render costs this account, and whether its free first render can pay for it. */
+export function renderTerms({ watermark = false, isPro = true }: RenderOptions = {}) {
+  const marked = !isPro && watermark;
+  // The free first render stays a Pro perk; free accounts start on their point grant.
+  return { marked, freeEligible: isPro, price: pointsFor(isPro || marked ? 'ai_render' : 'ai_render_clean') };
 }
 export const validRenderId = (id: unknown): id is string => typeof id === 'string' && /^[a-f0-9-]{36}$/.test(id);
 
@@ -54,6 +76,86 @@ export function validResultUrl(value: unknown): value is string {
     return url.protocol === 'https:' && !url.username && !url.password && !url.port
       && (url.hostname === 'fal.media' || url.hostname.endsWith('.fal.media'));
   } catch { return false; }
+}
+/** ElevenLabs hands back short-lived signed links; only these hosts are fetched. */
+export function validElevenLabsAssetUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port
+      && (url.hostname === 'storage.googleapis.com' || url.hostname === 'elevenlabs.io' || url.hostname.endsWith('.elevenlabs.io'));
+  } catch { return false; }
+}
+/** Width and height from a JPEG's frame header (same reader as ai-advisor's jpegSize). */
+function jpegDimensions(bytes: Uint8Array) {
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+  let offset = 2;
+  while (offset + 9 < bytes.length) {
+    if (bytes[offset] !== 0xff) return null;
+    const marker = bytes[offset + 1];
+    if (marker === 0xff) { offset += 1; continue; }
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { offset += 2; continue; }
+    const length = (bytes[offset + 2] << 8) | bytes[offset + 3];
+    if (length < 2) return null;
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      const height = (bytes[offset + 5] << 8) | bytes[offset + 6];
+      const width = (bytes[offset + 7] << 8) | bytes[offset + 8];
+      return width > 0 && height > 0 ? { width, height } : null;
+    }
+    offset += 2 + length;
+  }
+  return null;
+}
+const ASPECTS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'] as const;
+/** The model's supported aspect ratio closest to the capture, so framing survives. */
+export function renderAspect(width: number, height: number): typeof ASPECTS[number] {
+  const distance = (aspect: string) => {
+    const [w, h] = aspect.split(':').map(Number);
+    return Math.abs(Math.log(w / h) - Math.log(width / height));
+  };
+  return ASPECTS.reduce((best, aspect) => distance(aspect) < distance(best) ? aspect : best);
+}
+function base64Bytes(base64: string, limit: number) {
+  const binary = atob(base64.slice(0, Math.ceil(limit / 3) * 4));
+  return Uint8Array.from(binary, c => c.charCodeAt(0));
+}
+/** One POST to ElevenLabs. Returns the generation id, or null if it refused or failed to answer. */
+async function submitElevenLabs(key: string, job: RenderJob, image: string) {
+  const base64 = image.slice(image.indexOf(',') + 1);
+  const size = jpegDimensions(base64Bytes(base64, 64 * 1024));
+  try {
+    const response = await fetch(`${ELEVENLABS_API}/v1/flows/image`, {
+      method: 'POST', signal: AbortSignal.timeout(20_000),
+      headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model_id: ELEVENLABS_IMAGE_MODEL, prompt: renderPrompt(job.style), resolution: '1K',
+        aspect_ratio: size ? renderAspect(size.width, size.height) : '16:9',
+        images: [{ type: 'inline_base64', content_base64: base64, mime_type: 'image/jpeg' }],
+      }),
+    });
+    if (!response.ok) return null;
+    const data = await response.json() as { id?: unknown };
+    return typeof data.id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(data.id) ? data.id : null;
+  } catch { return null; }
+}
+type ElevenLabsGeneration = { status?: string; content_url?: string; failure_reason?: string };
+async function elevenLabsGeneration(key: string, id: string) {
+  const response = await fetch(`${ELEVENLABS_API}/v1/flows/image/${encodeURIComponent(id)}`, {
+    headers: { 'xi-api-key': key }, signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`ElevenLabs status ${response.status}`);
+  return await response.json() as ElevenLabsGeneration;
+}
+/** The link to download a finished render: fal's stored URL, or a fresh signed link from ElevenLabs. */
+export async function renderImageUrl(keys: string | RenderKeys, job: RenderJob) {
+  if (job.status !== 'complete') return null;
+  if (job.request_id?.startsWith(ELEVENLABS_PREFIX)) {
+    const key = keysOf(keys).elevenlabs;
+    if (!key) return null;
+    const generation = await elevenLabsGeneration(key, job.request_id.slice(ELEVENLABS_PREFIX.length));
+    return generation.status === 'completed' && validElevenLabsAssetUrl(generation.content_url) ? generation.content_url : null;
+  }
+  return validResultUrl(job.result_url) ? job.result_url : null;
 }
 export async function readRender(db: D1Database, subject: string, id: string) {
   return db.prepare('SELECT * FROM ai_render_jobs WHERE subject = ? AND id = ?').bind(subject, id).first<RenderJob>();
@@ -71,19 +173,23 @@ export async function failRender(db: D1Database, subject: string, id: string, me
 }
 /** A unique INSERT plus SQL triggers owns the allowance/debit atomically.
  * Replaying a request only returns its job; it never dispatches twice. */
-export async function reserveRender(db: D1Database, subject: string, id: string, expectedCharge: number, style: RenderStyleId = 'photorealistic') {
+export async function reserveRender(db: D1Database, subject: string, id: string, expectedCharge: number,
+  style: RenderStyleId = 'photorealistic', options: RenderOptions = {}) {
   const existing = await readRender(db, subject, id);
   if (existing) return { job: existing, created: false };
   const now = Date.now();
   const allowance = await allowanceKey(subject);
+  const { marked, freeEligible, price } = renderTerms(options);
+  const eligible = freeEligible ? 1 : 0;
   await db.prepare(`INSERT INTO point_accounts(subject, created_at, updated_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING`)
     .bind(subject, now, now).run();
   try {
-    const inserted = await db.prepare(`INSERT INTO ai_render_jobs(id, subject, allowance_key, status, style, charge, price_version, created_at)
-      SELECT ?, ?, ?, 'reserved', ?, CASE WHEN EXISTS(SELECT 1 FROM ai_render_allowances WHERE subject = ?)
-        THEN ? ELSE 0 END, ?, ? WHERE (CASE WHEN EXISTS(SELECT 1 FROM ai_render_allowances WHERE subject = ?)
-        THEN ? ELSE 0 END) = ?`).bind(id, subject, allowance, style, allowance, pointsFor('ai_render'), PRICE_VERSION, now,
-          allowance, pointsFor('ai_render'), expectedCharge).run();
+    // The free first render is only ever spent by a Pro account.
+    const inserted = await db.prepare(`INSERT INTO ai_render_jobs(id, subject, allowance_key, status, style, watermark, charge, price_version, created_at)
+      SELECT ?, ?, ?, 'reserved', ?, ?, CASE WHEN ? = 1 AND NOT EXISTS(SELECT 1 FROM ai_render_allowances WHERE subject = ?)
+        THEN 0 ELSE ? END, ?, ? WHERE (CASE WHEN ? = 1 AND NOT EXISTS(SELECT 1 FROM ai_render_allowances WHERE subject = ?)
+        THEN 0 ELSE ? END) = ?`).bind(id, subject, allowance, style, marked ? 1 : 0, eligible, allowance, price, PRICE_VERSION, now,
+          eligible, allowance, price, expectedCharge).run();
     const job = await readRender(db, subject, id);
     if (!job) throw new RenderError('The render price or free allowance changed. Refresh before trying again.', 409);
     return { job, created: inserted.meta.changes === 1 };
@@ -99,11 +205,26 @@ export async function reserveRender(db: D1Database, subject: string, id: string,
     throw error;
   }
 }
-export async function dispatchRender(db: D1Database, key: string, job: RenderJob, image: string) {
+export async function dispatchRender(db: D1Database, keys: string | RenderKeys, job: RenderJob, image: string) {
+  const { fal: falKey, elevenlabs } = keysOf(keys);
+  if (elevenlabs?.trim()) {
+    const generation = await submitElevenLabs(elevenlabs, job, image);
+    if (generation) {
+      await db.prepare("UPDATE ai_render_jobs SET status = 'queued', request_id = ? WHERE subject = ? AND id = ? AND status = 'reserved'")
+        .bind(ELEVENLABS_PREFIX + generation, job.subject, job.id).run();
+      return;
+    }
+    // ElevenLabs refused or didn't answer: fal renders it instead. A lost
+    // ElevenLabs request costs at most one unread generation, never the user.
+  }
+  if (!falKey?.trim()) {
+    await failRender(db, job.subject, job.id, 'AI render could not start. Your allowance or points were returned.');
+    return;
+  }
   // The SDK retries queue POSTs by default, including ambiguous network errors.
   // A render is billable: allow one outgoing submission, not an implicit retry.
   let sent = false;
-  const client = createFalClient({ credentials: key, fetch: async (url, init) => {
+  const client = createFalClient({ credentials: falKey, fetch: async (url, init) => {
     if (sent) throw new Error('A render submission cannot be retried automatically.');
     sent = true;
     return fetch(url, init);
@@ -121,13 +242,32 @@ export async function dispatchRender(db: D1Database, key: string, job: RenderJob
     await failRender(db, job.subject, job.id, 'AI render could not start. Your allowance or points were returned.');
   }
 }
-export async function refreshRender(db: D1Database, key: string, job: RenderJob) {
+export async function refreshRender(db: D1Database, keys: string | RenderKeys, job: RenderJob) {
+  const { fal: falKey, elevenlabs } = keysOf(keys);
   if (job.status === 'queued' && Date.now() - job.created_at > 30 * 60_000) {
     await failRender(db, job.subject, job.id, 'The render timed out. Your allowance or points were returned.');
   } else if (job.status === 'reserved' && Date.now() - job.created_at > 120_000) {
     await failRender(db, job.subject, job.id, 'The render did not start. Your allowance or points were returned.');
+  } else if (job.status === 'queued' && job.request_id?.startsWith(ELEVENLABS_PREFIX)) {
+    if (!elevenlabs) throw new Error('ElevenLabs is not configured');
+    // Network errors are not failed generations: keep the job and allow polling again.
+    const generation = await elevenLabsGeneration(elevenlabs, job.request_id.slice(ELEVENLABS_PREFIX.length));
+    if (generation.status === 'completed') {
+      if (!validElevenLabsAssetUrl(generation.content_url)) {
+        await failRender(db, job.subject, job.id, 'No usable image was generated. Your allowance or points were returned.');
+      } else {
+        // The signed link expires in about an hour; the image route asks for a fresh one.
+        await db.prepare("UPDATE ai_render_jobs SET status = 'complete', result_url = ? WHERE subject = ? AND id = ? AND status = 'queued'")
+          .bind(generation.content_url, job.subject, job.id).run();
+      }
+    } else if (generation.status === 'failed') {
+      await failRender(db, job.subject, job.id, generation.failure_reason === 'moderated'
+        ? 'No usable image was generated. Your allowance or points were returned.'
+        : 'Generation failed. Your allowance or points were returned.');
+    }
   } else if (job.status === 'queued' && job.request_id) {
-    const client = createFalClient({ credentials: key });
+    if (!falKey) throw new Error('fal is not configured');
+    const client = createFalClient({ credentials: falKey });
     // Network errors are not failed generations: keep the job and allow polling again.
     const status = await client.queue.status(ENDPOINT, { requestId: job.request_id, logs: false, abortSignal: AbortSignal.timeout(15_000) });
     if (status.status === 'COMPLETED') {
@@ -153,5 +293,5 @@ export async function refreshRender(db: D1Database, key: string, job: RenderJob)
   return (await readRender(db, job.subject, job.id))!;
 }
 export function publicRender(job: RenderJob) {
-  return { id: job.id, status: job.status, style: job.style, charged: job.charge, error: job.error };
+  return { id: job.id, status: job.status, style: job.style, charged: job.charge, error: job.error, watermark: job.watermark === 1 };
 }

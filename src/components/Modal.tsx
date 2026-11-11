@@ -72,9 +72,11 @@ export default function Modal({
     restoreRef.current = document.activeElement as HTMLElement | null;
 
     // Move focus into the dialog. Prefer the first control so keyboard users
-    // land somewhere useful; fall back to the panel itself.
+    // land somewhere useful; fall back to the panel itself. A dialog whose
+    // first control is a text field can mark another element `data-autofocus`,
+    // so opening it on a phone does not throw the keyboard over its contents.
     const panel = panelRef.current;
-    const first = panel?.querySelector<HTMLElement>(FOCUSABLE);
+    const first = panel?.querySelector<HTMLElement>('[data-autofocus]') ?? panel?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? panel)?.focus({ preventScroll: true });
 
     const onKey = (e: KeyboardEvent) => {

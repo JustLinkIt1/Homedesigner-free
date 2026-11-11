@@ -46,7 +46,7 @@ export function Toaster() {
               {t.actions?.map((action) => (
                 <button
                   key={action.label}
-                  className="toast-action"
+                  className={action.tone === 'pro' ? 'toast-action pro' : 'toast-action'}
                   onClick={() => {
                     action.onClick();
                     dismiss(t.id);

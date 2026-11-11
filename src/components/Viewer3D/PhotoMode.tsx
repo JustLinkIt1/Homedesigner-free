@@ -20,6 +20,7 @@ import { applyWatermark } from '../../lib/watermark';
 import { requestReviewAfterPhotoSave } from '../../lib/appReview';
 import { captureRenderer } from '../../lib/renderCapture';
 import { toast } from '../../lib/ui';
+import { nudgeWatermarkedExport } from '../../lib/watermarkNudge';
 
 const MAX_SAMPLES = 200;
 
@@ -250,6 +251,7 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
     try {
       await new Promise(resolve => setTimeout(resolve, 30));
       await capture();
+      nudgeWatermarkedExport();
       await requestReviewAfterPhotoSave();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save the photo.');
@@ -279,7 +281,11 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
           shadows={!mobile}
           frameloop={mobile ? 'demand' : 'always'}
           dpr={mobile ? 1 : [1, 1.5]}
-          gl={{ antialias: !mobile, preserveDrawingBuffer: true, powerPreference: mobile ? 'low-power' : 'high-performance' }}
+          gl={{
+            antialias: !mobile, preserveDrawingBuffer: true, powerPreference: mobile ? 'low-power' : 'high-performance',
+            // Phones skip the composer, so three applies the same Neutral curve itself.
+            toneMapping: mobile ? THREE.NeutralToneMapping : THREE.NoToneMapping,
+          }}
           camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
           style={{ position: 'absolute', inset: 0 }}
         >

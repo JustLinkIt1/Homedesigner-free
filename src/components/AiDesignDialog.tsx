@@ -3,6 +3,7 @@ import { Check, Copy, Palette, Sparkles, Tags, WandSparkles } from 'lucide-react
 import { useShallow } from 'zustand/react/shallow';
 import Modal from './Modal';
 import AiPointPacks from './AiPointPacks';
+import { AiReviewCard, AiTourCard } from './AiPremiumTools';
 import { useAuthStore } from '../store/authStore';
 import { useDesign } from '../store/designStore';
 import { aiJson, restorePlayPoints, type PointsState } from '../lib/aiRender';
@@ -23,16 +24,16 @@ interface MeteredResult { charged: number; balance: number }
 interface BoundSuggestion<T> { context: string; value: T }
 const readContext = () => aiDesignContext(getActiveId(), useDesign.getState());
 
-export default function AiDesignDialog({ onClose }: { onClose: () => void }) {
+export default function AiDesignDialog({ onClose, onAiPlan }: { onClose: () => void; onAiPlan?: () => void }) {
   const account = useAuthStore(state => state.account);
   const floor = useDesign(state => state.activeFloorId);
   // Also subscribe to room replacement: importing another project can retain
   // the same floor id while changing its persistent project identity.
   useDesign(state => state.rooms);
-  return <AiDesignSession key={`${account?.subject ?? 'signed-out'}:${getActiveId()}:${floor}`} onClose={onClose} />;
+  return <AiDesignSession key={`${account?.subject ?? 'signed-out'}:${getActiveId()}:${floor}`} onClose={onClose} onAiPlan={onAiPlan} />;
 }
 
-function AiDesignSession({ onClose }: { onClose: () => void }) {
+function AiDesignSession({ onClose, onAiPlan }: { onClose: () => void; onAiPlan?: () => void }) {
   const t = useI18n();
   const account = useAuthStore(state => state.account);
   const signIn = useAuthStore(state => state.signIn);
@@ -155,6 +156,26 @@ function AiDesignSession({ onClose }: { onClose: () => void }) {
       {!account ? <button className="btn primary" disabled={busy} onClick={() => run(signIn)}>{t('Sign in with Google')}</button> : <>
         {points && <p className="ai-balance"><Sparkles className="icon" /> {t('AI points')}: <strong>{points.balance.toLocaleString()}</strong></p>}
         {stale && <p role="status">{t('The plan changed. Generate a new suggestion before applying it.')}</p>}
+
+        {/* The Claude-backed tools lead: they are what points are bought for.
+            Each shows only when this server can actually run it. */}
+        {points?.available?.plan_design && onAiPlan && (
+          <section className="ai-tool-card ai-premium-card">
+            <div className="ai-tool-title"><WandSparkles className="icon" /><div>
+              <h3>{t('Create a plan with AI')}</h3>
+              <p>{t('Answer a few questions, describe your home, and get a floor plan you can edit.')}</p>
+            </div></div>
+            <div className="ai-tool-actions">
+              <button className="btn primary" disabled={busy} onClick={onAiPlan}>{t('Start')} · {cost('plan_design') ?? '—'} {t('points')}</button>
+            </div>
+          </section>
+        )}
+        {points?.available?.design_review && (
+          <AiReviewCard points={points} busy={busy} run={run} ensureRooms={ensureRooms} updateBalance={updateBalance} />
+        )}
+        {points?.available?.voice_tour && (
+          <AiTourCard points={points} busy={busy} run={run} ensureRooms={ensureRooms} updateBalance={updateBalance} onUpgrade={onClose} />
+        )}
 
         <section className="ai-tool-card">
           <div className="ai-tool-title"><Tags className="icon" /><div><h3>{t('Smart room names')}</h3><p>{t('Choose clear room names from layout and furniture.')}</p></div></div>

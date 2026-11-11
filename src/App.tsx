@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import {
   Minus,
@@ -19,6 +19,7 @@ import {
   PenTool,
   X,
   Crown,
+  Sparkles,
   RotateCcw,
   RotateCw,
 } from 'lucide-react';
@@ -33,6 +34,8 @@ import AboutDialog from './components/AboutDialog';
 import HelpPanel from './components/HelpPanel';
 import SettingsDialog from './components/SettingsDialog';
 import CoachMarks from './components/CoachMarks';
+import View3DNudge, { hasSeen3D, markSeen3D } from './components/View3DNudge';
+import { nudgeWatermarkedExport } from './lib/watermarkNudge';
 import WelcomeTour from './components/WelcomeTour';
 import ShoppingList from './components/ShoppingList';
 import ProUpsellModal from './components/ProUpsellModal';
@@ -54,6 +57,7 @@ import { sceneCapture } from './lib/renderBridge';
 import { capturePlanThumbnail } from './lib/thumb';
 import { useDraw, drawBridge, useConfirm, toast } from './lib/ui';
 import { initNative } from './lib/native';
+import { loadAiCapabilities } from './lib/aiCapabilities';
 import { isWebGLAvailable } from './lib/webgl';
 import { orbitZoom } from './lib/renderBridge';
 import { useI18n, t as translate } from './lib/i18n';
@@ -68,6 +72,7 @@ const ImportDialog = lazy(() => import('./components/ImportDialog'));
 const PhotoMode = lazy(() => import('./components/Viewer3D/PhotoMode'));
 const AiRenderDialog = lazy(() => import('./components/AiRenderDialog'));
 const AiDesignDialog = lazy(() => import('./components/AiDesignDialog'));
+const AiPlanDialog = lazy(() => import('./components/AiPlanDialog'));
 
 export default function App() {
   const {
@@ -138,6 +143,8 @@ export default function App() {
   const [photoMode, setPhotoMode] = useState(false);
   const [aiRenderOpen, setAiRenderOpen] = useState(false);
   const [aiDesignOpen, setAiDesignOpen] = useState(false);
+  const [aiPlanOpen, setAiPlanOpen] = useState(false);
+  useEffect(() => { loadAiCapabilities(); }, []);
   const [rendering, setRendering] = useState(false);
   const [renderScale, setRenderScale] = useState(3); // supersample factor for captures
   const [renderMenuOpen, setRenderMenuOpen] = useState(false);
@@ -191,6 +198,26 @@ export default function App() {
     }
   }, [screen]);
 
+  // Phones only: the 3D switch there is an unlabelled icon. Offered once, a
+  // moment after a plan with walls is on screen, and never again once 3D has
+  // been opened.
+  const [nudge3d, setNudge3d] = useState(false);
+  useEffect(() => {
+    if (view === '3d') markSeen3D();
+    if (screen !== 'editor' || view !== '2d' || !coarsePointer || hasSeen3D()) {
+      setNudge3d(false);
+      return;
+    }
+    const id = window.setTimeout(() => {
+      if (useDesign.getState().walls.length > 0) setNudge3d(true);
+    }, 1800);
+    return () => window.clearTimeout(id);
+  }, [screen, view, coarsePointer]);
+  const dismissNudge3d = useCallback(() => {
+    markSeen3D();
+    setNudge3d(false);
+  }, []);
+
   const replayTour = () => {
     try {
       localStorage.removeItem('homedesigner.tour.v1');
@@ -212,8 +239,8 @@ export default function App() {
   };
 
   // Keep latest UI state for the hardware back-button handler.
-  const stateRef = useRef({ photoMode, aiRenderOpen, aiDesignOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings });
-  stateRef.current = { photoMode, aiRenderOpen, aiDesignOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings };
+  const stateRef = useRef({ photoMode, aiRenderOpen, aiDesignOpen, aiPlanOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings });
+  stateRef.current = { photoMode, aiRenderOpen, aiDesignOpen, aiPlanOpen, showImport, walkMode, screen, showHelp, showAbout, showList, showSettings };
 
   // Going home: capture the plan synchronously (the canvas may unmount right
   // after), switch screens immediately so the tap feels instant, and finish
@@ -286,6 +313,7 @@ export default function App() {
         setWalkMode(false);
         return true;
       }
+      if (st.aiPlanOpen) { setAiPlanOpen(false); return true; }
       if (st.aiDesignOpen) { setAiDesignOpen(false); return true; }
       if (st.aiRenderOpen) { setAiRenderOpen(false); return true; }
       if (st.photoMode) {
@@ -381,6 +409,7 @@ export default function App() {
     try {
       if (capture !== sceneCapture.current) throw new Error(t('The 3D view is not ready. Try again in a moment.'));
       await capture(scale);
+      nudgeWatermarkedExport();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('Render failed — try a lower quality'));
     } finally {
@@ -434,7 +463,9 @@ export default function App() {
           onImport={() => setShowImport(true)}
           onHelp={() => setShowHelp(true)}
           onSettings={() => setShowSettings(true)}
+          onAiPlan={() => setAiPlanOpen(true)}
         />
+        {aiPlanOpen && <Suspense fallback={null}><AiPlanDialog onClose={() => setAiPlanOpen(false)} onApplied={() => setScreen('editor')} /></Suspense>}
         {showImport && (
           <Suspense fallback={null}>
             <ImportDialog onClose={() => setShowImport(false)} />
@@ -482,6 +513,7 @@ export default function App() {
         onShoppingList={() => setShowList(true)}
         onSettings={() => setShowSettings(true)}
         onAiDesign={() => setAiDesignOpen(true)}
+        onAiPlan={() => setAiPlanOpen(true)}
         onHome={goHome}
       />
       <div className="body">
@@ -922,8 +954,9 @@ export default function App() {
                     <div className="export-menu render-menu" role="menu">
                       <button role="menuitem" onClick={() => {
                         setRenderMenuOpen(false);
-                        if (requirePro('aiRender')) setAiRenderOpen(true);
-                      }}><Crown className="icon" /> {t('AI render')} · Pro</button>
+                        // Open to every account: the dialog prices it (watermark or not) and offers Pro.
+                        setAiRenderOpen(true);
+                      }}><Sparkles className="icon" /> {t('AI render')}</button>
                       {/* Photo mode folded in here as the top quality tier —
                           it used to be its own button next to this one. */}
                       <button
@@ -973,6 +1006,13 @@ export default function App() {
           {!walkMode && !drawing &&
             !(view === '2d' && (tool === 'wall' || tool === 'halfWall' || tool === 'fence' || tool === 'room' || tool === 'kitchen') && !tipsDismissed) && (
             <FloorSwitcher variant="floating" />
+          )}
+          {/* Phones: the one standing way into Pro from inside the editor. The
+              toolbar scrolls there, so it lives on the canvas corner instead. */}
+          {!isPro && !walkMode && !drawing && !nudge3d && (
+            <button className="pro-chip" onClick={() => useProStore.getState().openUpsell()} aria-label={t('Unlock Pro')}>
+              <Crown className="icon" /> <span>Pro</span>
+            </button>
           )}
         </div>
         <PropertiesPanel open={drawer === 'props'} />
@@ -1060,6 +1100,9 @@ export default function App() {
         />
       )}
 
+      {nudge3d && !offerTour && !showTour && !showImport && !photoMode && drawer === null && !selection.id && (
+        <View3DNudge onOpen={() => { dismissNudge3d(); setView('3d'); }} onDismiss={dismissNudge3d} />
+      )}
       {showTour && view === '2d' && !showImport && !photoMode && (
         <CoachMarks
           onDone={() => {
@@ -1085,7 +1128,8 @@ export default function App() {
         </Suspense>
       )}
       {aiRenderOpen && <Suspense fallback={null}><AiRenderDialog onClose={() => setAiRenderOpen(false)} /></Suspense>}
-      {aiDesignOpen && <Suspense fallback={null}><AiDesignDialog onClose={() => setAiDesignOpen(false)} /></Suspense>}
+      {aiDesignOpen && <Suspense fallback={null}><AiDesignDialog onClose={() => setAiDesignOpen(false)} onAiPlan={() => { setAiDesignOpen(false); setAiPlanOpen(true); }} /></Suspense>}
+      {aiPlanOpen && <Suspense fallback={null}><AiPlanDialog onClose={() => setAiPlanOpen(false)} onApplied={() => setScreen('editor')} /></Suspense>}
 
       <ProUpsellModal />
       <UpdateBanner />

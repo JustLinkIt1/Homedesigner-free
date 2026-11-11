@@ -19,7 +19,9 @@ import {
   Settings,
   MoreVertical,
   WandSparkles,
+  Sparkles,
   MessageCircle,
+  Crown,
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
@@ -29,6 +31,7 @@ import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { requirePro } from '../lib/pro';
 import { useProStore } from '../store/proStore';
 import { useI18n } from '../lib/i18n';
+import { useAiCapabilities } from '../lib/aiCapabilities';
 import { capturePlanThumbnail } from '../lib/thumb';
 import AccountButton from './AccountButton';
 import { useAuthStore } from '../store/authStore';
@@ -67,6 +70,7 @@ export default function Toolbar({
   onShoppingList,
   onSettings,
   onAiDesign,
+  onAiPlan,
   onHome,
 }: {
   onImport: () => void;
@@ -75,6 +79,7 @@ export default function Toolbar({
   onShoppingList: () => void;
   onSettings: () => void;
   onAiDesign: () => void;
+  onAiPlan: () => void;
   onHome: () => void;
 }) {
   const s = useDesign(useShallow((st) => ({
@@ -102,6 +107,7 @@ export default function Toolbar({
   const account = useAuthStore((st) => st.account);
   const canOpenModelStudio = isModelStudioOwner(account?.email);
   const t = useI18n();
+  const canPlan = useAiCapabilities((caps) => caps.plan_design === true);
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -285,6 +291,11 @@ export default function Toolbar({
               <button role="menuitem" onClick={() => { setMoreOpen(false); onAiDesign(); }}>
                 <WandSparkles className="icon" /> {t('AI design assistant')}
               </button>
+              {canPlan && (
+                <button role="menuitem" onClick={() => { setMoreOpen(false); onAiPlan(); }}>
+                  <Sparkles className="icon" /> {t('Create a plan with AI')}
+                </button>
+              )}
               <button role="menuitem" onClick={() => { setMoreOpen(false); onSettings(); }}>
                 <Settings className="icon" /> {t('Settings')}
               </button>
@@ -317,6 +328,13 @@ export default function Toolbar({
       <div className="spacer" />
 
       <div className="toolbar-account">
+        {/* Desktop entry point; phones get the canvas chip in App.tsx, where
+            it cannot scroll out of the toolbar. */}
+        {!isPro && (
+          <button className="tbtn toolbar-pro" onClick={() => useProStore.getState().openUpsell()} aria-label={t('Unlock Pro')} data-tip={t('Unlock Pro')}>
+            <Crown className="icon" /><span>Pro</span>
+          </button>
+        )}
         <button className="tbtn toolbar-ai" onClick={onAiDesign} aria-label={t('AI design assistant')} data-tip={t('AI design assistant')}><WandSparkles className="icon" /><span>AI</span></button>
         <AccountButton onAiDesign={onAiDesign} />
       </div>

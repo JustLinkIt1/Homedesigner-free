@@ -7,7 +7,7 @@ import { Paintbrush, X } from 'lucide-react';
 import DesignScene, { useDesignBounds, type SurfaceTap } from './DesignScene';
 import { angleDeg, snapToGrid } from '../../lib/geometry';
 import { activeTier, tierCaps } from '../../lib/perfTier';
-import { getGroundTexture, GROUND_DEFAULTS, type GroundKind } from '../../lib/textures';
+import { getGroundTexture, getGroundMacroTexture, GROUND_DEFAULTS, type GroundKind } from '../../lib/textures';
 import { buildSnapElements, nearestSnap, lockToAngle } from '../../lib/snapping';
 import { formatLength } from '../../lib/units';
 import { drawBridge, useDraw } from '../../lib/ui';
@@ -23,6 +23,7 @@ import { applyWatermark } from '../../lib/watermark';
 import { slugify } from '../../lib/appInfo';
 import { sunModel } from '../../lib/sun';
 import { GradientSky, skyPalette } from './GradientSky';
+import { SunShade, shadeStrength } from './FakeShadows';
 import { finishForFace, withFaceFinish } from '../../lib/wallFaces';
 import { CATALOG_BY_TYPE, FLOOR_MATERIALS } from '../../data/furnitureCatalog';
 import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl } from '../../data/materials';
@@ -193,15 +194,41 @@ const IS_TOUCH =
  *  fixtures take over. Re-keyed on the day bucket so the env map rebakes. */
 /** Site lawn albedo. Separate from GROUND_DEFAULTS.grass (a drawn lawn area),
  *  so a garden the user lays out still reads against the surrounding ground. */
-const SITE_GRASS = '#5f7a3e';
+const SITE_GRASS = '#526b3c';
 /** Metres. Runs past the camera's far plane, so the lawn always reaches full
  *  fog (the sky's horizon colour) and never ends in a visible edge. */
 const GROUND_SIZE = 2400;
 
-function StudioEnvironment({ day, envResolution }: { day: number; envResolution: number }) {
+/** On a portrait phone the bottom fifth of the canvas sits under the tab bar
+ *  and the render/view chips, so a model framed on the canvas centre looks low
+ *  and half covered. Shift the projection up a little instead of moving the
+ *  orbit target: pointer rays use the same matrix, so taps still land true. */
+function PortraitLift({ enabled }: { enabled: boolean }) {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    if (!cam.isPerspectiveCamera) return;
+    const portrait = enabled && size.height > size.width * 1.15;
+    if (portrait) cam.setViewOffset(size.width, size.height, 0, size.height * 0.09, size.width, size.height);
+    else cam.clearViewOffset();
+    cam.updateProjectionMatrix();
+    invalidate();
+    return () => {
+      cam.clearViewOffset();
+      cam.updateProjectionMatrix();
+    };
+  }, [camera, size.width, size.height, enabled, invalidate]);
+  return null;
+}
+
+function StudioEnvironment({ day, envResolution, gain }: { day: number; envResolution: number; gain: number }) {
   const k = 0.24 + day * 0.96; // keep a dim floor so nothing goes pure black
   return (
-    <Environment resolution={envResolution} frames={1}>
+    // `gain` scales the baked map at use (scene.environmentIntensity), so it
+    // can follow the clock continuously without re-baking the environment.
+    <Environment resolution={envResolution} frames={1} environmentIntensity={gain}>
       <Lightformer intensity={1.35 * k} position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} color="#ffffff" />
       <Lightformer intensity={0.95 * k} position={[7, 3, 3]} scale={[4, 8, 1]} color="#fff3e0" />
       <Lightformer intensity={0.7 * k} position={[-7, 3, -3]} scale={[4, 8, 1]} color="#cfe0ff" />
@@ -850,6 +877,13 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
     t.repeat.set(GROUND_SIZE / patchM, GROUND_SIZE / patchM);
     return t;
   }, [groundKind]);
+  // Broad light/dark drift over the lawn (see getGroundMacroTexture). 37 m is
+  // deliberately not a multiple of the 4 m grass tile.
+  const groundMacro = useMemo(() => {
+    const t = getGroundMacroTexture();
+    t.repeat.set(GROUND_SIZE / 37, GROUND_SIZE / 37);
+    return t;
+  }, []);
   // One palette drives the sky dome, the fog and the sky fill light, so the
   // lawn fades into the horizon and the light always matches the sky.
   const sky = skyPalette(sun.day, sun.moon);
@@ -859,7 +893,32 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
   const nightMix = (to: string) =>
     `#${new THREE.Color('#ffffff').lerp(new THREE.Color(to), sun.moon).getHexString()}`;
   const ambientColor = nightMix('#a9bcee');
-  const groundTint = nightMix('#6f84ad');
+  const groundTintBase = nightMix('#6f84ad');
+  // Daylight contrast. The rig used to be mostly fill: ambient + hemisphere +
+  // sky fill + environment together out-shone the sun, so lit and unlit faces
+  // sat a few percent apart and the view read flat and washed out. By day the
+  // fill now steps back and the key steps up; `keyed` fades the change out
+  // toward dusk, so the evening and night balance stay as they were tuned.
+  const keyed = Math.min(1, sun.day * 1.6);
+  // With less fill, a wall the sun does not reach went grey. Outdoors it never
+  // would: the sunlit floor and lawn throw light back up at it. So by day the
+  // hemisphere light's ground side carries that bounce. It reaches walls,
+  // ceilings and the sides of furniture but not upward-facing floors, which is
+  // what keeps walls bright while cast shadows on the floor stay dark. It
+  // follows the sun on the ground (squared, so dusk and night keep the old
+  // dark ground colour). Colour values above 1 are intentional.
+  const hemiIntensity = (0.3 + sun.light * 0.46) * (1 - 0.45 * keyed);
+  const hemiGround = useMemo(() => {
+    const bounce = new THREE.Color('#fff1dc').multiplyScalar(2 / hemiIntensity);
+    return new THREE.Color('#4d4840').lerp(bounce, keyed * keyed);
+  }, [hemiIntensity, keyed]);
+  // The lawn's albedo is now a deeper green, chosen for full daylight. Under
+  // the dimmer dusk and night rigs that would sink it well below where those
+  // were tuned, so the tint lifts it back as the daylight contrast fades.
+  const groundTint = useMemo(
+    () => new THREE.Color(groundTintBase).multiplyScalar(1 + 0.7 * (1 - keyed)),
+    [groundTintBase, keyed],
+  );
 
   // Touch input state shared between the HTML overlay and the in-Canvas controller.
   const moveRef = useRef({ x: 0, y: 0 });
@@ -882,6 +941,13 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
   // phone keeps shadows. Post-processing stays off for any non-`post` tier, and a
   // driver crash (postFailed) disables it permanently for this session.
   const lowPower = !caps.shadows;
+  // The 50° field of view is vertical, so a portrait phone sees less than half
+  // the width a desktop does and the opening view cropped the house at both
+  // sides. Start further back there; pinch still zooms in as far as before.
+  const portraitPull = useMemo(() => {
+    const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+    return aspect < 1 ? Math.min(1.7, Math.max(1, 0.8 / aspect)) : 1;
+  }, []);
   const noPost = postFailed || !caps.post;
   useEffect(() => {
     if (walkMode) setPaintTap(null);
@@ -1067,7 +1133,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         // the colour it was picked as; ACES shifted hues and greyed the whites.
         toneMapping: noPost ? THREE.NeutralToneMapping : THREE.NoToneMapping,
       }}
-      camera={{ position: [center[0] + radius * 0.95, radius * 1.0, center[2] + radius * 0.95], fov: 50 }}
+      camera={{ position: [center[0] + radius * 0.95 * portraitPull, radius * 1.0 * portraitPull, center[2] + radius * 0.95 * portraitPull], fov: 50 }}
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => {
         useDesign.getState().clearSelection();
@@ -1095,16 +1161,25 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
 
       {/* Airier interiors: lifted ambient/hemisphere + softened shadows so
           rooms behind walls read bright and clean instead of murky. */}
-      <ambientLight intensity={sun.ambient * 1.2 + 0.06} color={ambientColor} />
-      <hemisphereLight intensity={0.3 + sun.light * 0.46} groundColor="#4d4840" color={sky.hemi} />
+      <ambientLight intensity={(sun.ambient * 1.2 + 0.06) * (1 - 0.4 * keyed)} color={ambientColor} />
+      <hemisphereLight intensity={hemiIntensity} groundColor={hemiGround} color={sky.hemi} />
       {/* Sun key light — position, colour and intensity track time of day, so
           shadows and the light spilling through windows match the sky. */}
       <directionalLight
+        // Aim at the design, not the world origin (the default target). The
+        // light sits at centre + dir, so anything else skews the shadows off
+        // the sky's sun and, on a plan drawn away from the origin, slides the
+        // shadow frustum off the building altogether.
+        ref={(light: THREE.DirectionalLight | null) => {
+          if (!light) return;
+          light.target.position.set(center[0], center[1], center[2]);
+          light.target.updateMatrixWorld();
+        }}
         position={sunPos}
-        intensity={sun.sunIntensity}
+        intensity={sun.sunIntensity * (1 + 0.38 * keyed)}
         color={sun.sunColor}
         castShadow={caps.shadows}
-        shadow-intensity={0.8}
+        shadow-intensity={0.8 + 0.12 * keyed}
         // 2048 over a frustum tightened to the design (was 1024 over ±radius*2,
         // i.e. ~4x fewer texels per metre) — shadow edges now read as edges.
         shadow-mapSize={[caps.shadowMapSize, caps.shadowMapSize]}
@@ -1124,23 +1199,32 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       {/* Cool sky fill from the opposite side (fades at night). */}
       <directionalLight
         position={[center[0] - sun.dir[0] * 14, 12, center[2] - sun.dir[2] * 10]}
-        intensity={0.1 + sun.light * 0.24}
+        intensity={(0.1 + sun.light * 0.24) * (1 - 0.6 * keyed)}
         color="#cdd8ff"
       />
-      <StudioEnvironment key={Math.round(sun.light * 4)} day={sun.light} envResolution={caps.envResolution} />
+      <StudioEnvironment key={Math.round(sun.light * 4)} day={sun.light} envResolution={caps.envResolution} gain={1 - 0.6 * keyed} />
 
       {/* Soft contact shadows ground the furniture & walls realistically
           (desktop only — they re-render the scene each frame). */}
       {caps.contactShadows && (
         <ContactShadows
           position={[center[0], 0.015, center[2]]}
-          scale={Math.max(20, radius * 4)}
+          // Sized to the plan, not twice past it: the same 1024 px now covers
+          // half the width, so a chair leg is a few texels instead of one and
+          // the contact shadow reads as a shadow rather than a faint haze.
+          scale={Math.max(20, radius * 2)}
           resolution={1024}
-          blur={2.4}
+          blur={2}
           far={2.2}
-          opacity={0.42}
+          opacity={0.55}
           color="#100d0a"
         />
+      )}
+
+      {/* Battery saver tier: the walls' sun shadows, baked on the CPU into one
+          small texture on one quad (no shadow map, no extra pass). */}
+      {!caps.shadows && !caps.contactShadows && (
+        <SunShade center={center} radius={radius} dir={sun.dir} strength={0.5 * shadeStrength(sun.sunIntensity, sun.dir[1])} />
       )}
 
       {/* Ground + grid */}
@@ -1159,7 +1243,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         <planeGeometry args={[GROUND_SIZE, GROUND_SIZE]} />
         {/* White, not the grass colour: the texture already carries it, and
             multiplying the two squared the green into a dark, garish lawn. */}
-        <meshStandardMaterial map={groundTex} color={groundTint} roughness={groundDef.roughness} />
+        <meshStandardMaterial map={groundTex} aoMap={groundMacro} aoMapIntensity={0.8} color={groundTint} roughness={groundDef.roughness} />
       </mesh>
       {/* CAD grid only while actually drawing. It used to render unconditionally,
           which put survey lines across the lawn in every exterior view (and every
@@ -1193,7 +1277,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       {!noPost && (
         <PostFXBoundary onFail={() => setPostFailed(true)}>
           <EffectComposer ref={composerRef} multisampling={4} enableNormalPass>
-            <N8AO aoRadius={0.6} intensity={1.35} distanceFalloff={1} halfRes />
+            <N8AO aoRadius={1.1} intensity={2.1} distanceFalloff={1} halfRes />
             {/* Lamps and lit shades glow more as daylight fades. */}
             <Bloom mipmapBlur intensity={0.16 + (1 - sun.day) * 0.26} luminanceThreshold={1.0} />
             <Vignette offset={0.3} darkness={0.38} />
@@ -1204,6 +1288,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
 
       <CaptureBridge composerRef={composerRef} />
       {!walkMode && <ZoomBridge />}
+      <PortraitLift enabled={!walkMode} />
       {!walkMode && !buildArmed && <FocusAnchor />}
       {!walkMode && !buildArmed && <WallEndpointHandles />}
       {buildArmed && draft.length > 0 && <BuildGhost draft={draft} tool={tool} />}

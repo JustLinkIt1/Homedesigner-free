@@ -240,6 +240,32 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: 'M4,82 H96', sw: 2 },
     { d: 'M40,90 H60', sw: 2 },
   ],
+  // Built-in oven: the cavity, the door line and the bar handle at the front.
+  oven: [
+    { d: rect(4, 4, 92, 92, 4) },
+    { d: rect(20, 18, 60, 46, 5), sw: 2 },
+    { d: 'M4,78 H96', sw: 2 },
+    { d: 'M26,88 H74', sw: 2.5 },
+  ],
+  // Built-in microwave: door window and two dials.
+  microwave: [
+    { d: rect(4, 4, 92, 92, 4) },
+    { d: rect(13, 20, 52, 60, 4), sw: 2 },
+    { d: circle(81, 36, 5), sw: 2 },
+    { d: circle(81, 60, 5), sw: 2 },
+  ],
+  // Extractor hood: canopy outline, chimney at the wall, grease-filter lines.
+  // Drawn dashed on the plan like every unit that hangs above the worktop.
+  hood: [
+    { d: rect(4, 4, 92, 92) },
+    { d: rect(30, 4, 40, 46), sw: 2 },
+    { d: 'M18,66 H82 M18,80 H82', sw: 2 },
+  ],
+  // Open shelf / niche: outline and the brackets.
+  shelf: [
+    { d: rect(4, 4, 92, 92) },
+    { d: 'M20,4 V96 M80,4 V96', sw: 1.5 },
+  ],
   // Generic closed volume (chests, boxes): outline + light diagonals so it
   // doesn't read as an unstyled fallback rectangle.
   box: [

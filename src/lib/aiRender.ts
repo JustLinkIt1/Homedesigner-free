@@ -13,13 +13,20 @@ useAuthStore.subscribe((state, previous) => {
 });
 
 const BASE = (import.meta.env.VITE_CLOUD_SYNC_URL ?? '').replace(/\/$/, '');
-export interface AiJob { id: string; status: 'reserved' | 'queued' | 'complete' | 'failed'; style: string; charged: number; error: string | null }
+export interface AiJob { id: string; status: 'reserved' | 'queued' | 'complete' | 'failed'; style: string; charged: number; error: string | null;
+  /** The result must carry the homedesignerapp.com watermark (free account, cheaper render). */
+  watermark?: boolean }
 export interface AiRenderStyle { id: string; label: string }
 export interface AiState { enabled: boolean; isPro: boolean; freeAvailable: boolean; styles: AiRenderStyle[]; latest: AiJob | null }
 export interface PointPack { id: string; points: number; playProductId: string; priceCents: number }
-export interface PointsState { balance: number; features: Record<string, { points: number }>; packs: PointPack[]; cardCheckout: boolean }
+export interface PointsState {
+  balance: number; features: Record<string, { points: number }>; packs: PointPack[]; cardCheckout: boolean;
+  /** Provider-backed tools this server can run. Absent on an older Worker,
+   *  which is read as "none" so the app never offers a tool that would 404. */
+  available?: { design_review?: boolean; voice_tour?: boolean; plan_design?: boolean };
+}
 
-async function aiRequest<T>(path: string, body: unknown, read: (response: Response) => Promise<T>): Promise<T> {
+async function aiRequest<T>(path: string, body: unknown, read: (response: Response) => Promise<T>, timeoutMs = 30_000): Promise<T> {
   if (!BASE) throw new Error('AI features are not configured in this build.');
   const subject = useAuthStore.getState().account?.subject;
   if (!subject) throw new Error('Sign in to use AI features.');
@@ -28,7 +35,7 @@ async function aiRequest<T>(path: string, body: unknown, read: (response: Respon
   const token = await getGoogleIdToken();
   if (subject !== useAuthStore.getState().account?.subject || accountGeneration !== usePointsStore.getState().generation) throw new Error('Account changed. Please reopen AI tools.');
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30_000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(`${BASE}${path}`, {
       method: body === undefined ? 'GET' : 'POST', signal: controller.signal,
@@ -49,7 +56,7 @@ async function aiRequest<T>(path: string, body: unknown, read: (response: Respon
     return value;
   } finally { clearTimeout(timer); }
 }
-export async function aiJson<T>(path: string, body?: unknown): Promise<T> { return aiRequest(path, body, response => response.json() as Promise<T>); }
+export async function aiJson<T>(path: string, body?: unknown, timeoutMs?: number): Promise<T> { return aiRequest(path, body, response => response.json() as Promise<T>, timeoutMs); }
 
 export async function imageDataUrl(id: string): Promise<string> {
   const blob = await aiRequest(`/v1/ai/renders/${id}/image`, undefined, response => response.blob());

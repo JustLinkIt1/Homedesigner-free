@@ -17,6 +17,7 @@ import SymbolIcon from './SymbolIcon';
 import ProTag from './ProTag';
 import { loadRemoteCatalog, useRemoteCatalog } from '../lib/remoteCatalog';
 import { FURNITURE_SPRITES, spriteUrl } from '../data/furnitureSprites';
+import { isKitchenUnit } from '../lib/kitchenUnits';
 import { catalogEntryMatches } from '../lib/catalogSearch';
 
 // Keep Three.js out of the initial 2D editor path; load it only after a user
@@ -84,7 +85,7 @@ function CatalogVisual({ entry, className }: { entry: CatalogEntry; className: s
       decoding="async"
       draggable={false}
     />
-  ) : FURNITURE_SPRITES.has(entry.type) && !entry.cloud ? (
+  ) : FURNITURE_SPRITES.has(entry.type) && !entry.cloud && !isKitchenUnit(entry.type) ? (
     <img
       className={`${className} ci-sprite`}
       src={spriteUrl(entry.type)}

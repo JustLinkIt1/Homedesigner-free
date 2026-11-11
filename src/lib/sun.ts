@@ -14,7 +14,14 @@ export function sunModel(t: number) {
   // model clamped the sun high all day (`y = 0.15 + day*1.2`), so cast shadows
   // were always short and hidden under the building — the main reason exteriors
   // read as unlit. Floored at ~6 deg so shadows never stretch to infinity.
-  const elevRad = Math.max(0.105, Math.asin(Math.min(1, day)));
+  //
+  // The altitude peaks at SUN_PEAK, not the zenith. A sun straight overhead
+  // (what plain asin(day) gives at noon) puts no direct light on any wall and
+  // tucks every shadow under the thing casting it, so the default midday view
+  // was the flattest of the whole day. A temperate-latitude summer sun keeps a
+  // readable shadow beside walls, trees and furniture from mid-morning to
+  // mid-afternoon; dawn and dusk are all but unchanged (sin scales, not clamps).
+  const elevRad = Math.max(0.105, Math.asin(Math.min(1, day) * SUN_PEAK_SIN));
   // Azimuth sweeps east -> south -> west, so the lit face and the shadow
   // direction actually change through the day instead of sitting behind the
   // default camera all the time.
@@ -46,6 +53,9 @@ export function sunModel(t: number) {
   const isNight = day < 0.12;
   return { dir, skyDir: sunDir, sunColor, sunIntensity, ambient, day, light, moon, isNight };
 }
+
+/** sin of the sun's peak altitude (58 deg, a temperate-latitude summer noon). */
+const SUN_PEAK_SIN = 0.848;
 
 /** A high, front-left moon: keeps night shadows short and the model readable. */
 const MOON_DIR: [number, number, number] = [-0.4, 0.76, 0.51];

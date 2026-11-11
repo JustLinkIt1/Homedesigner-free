@@ -3,13 +3,22 @@ import * as THREE from 'three';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { CATALOG_BY_TYPE, type Shape3D } from '../../data/furnitureCatalog';
 import { ResilientGltfFurniture } from './GltfFurniture';
+import KitchenUnit3D from './KitchenUnit3D';
+import { isKitchenUnit, unitHeightCm } from '../../lib/kitchenUnits';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { useDesign } from '../../store/designStore';
 import { getFoliageTexture, getBarkTexture } from '../../lib/textures';
+import { activeTier, tierCaps } from '../../lib/perfTier';
+import { sunModel } from '../../lib/sun';
+import { ItemShade } from './FakeShadows';
 import type { FurnitureItem } from '../../types';
 import { isSurfacePlaceable, supportElevationAt } from '../../lib/furniturePlacement';
 import { notifyPlacementComplete } from '../../lib/placementFeedback';
 
 const M = 0.01; // cm -> m
+/** Battery saver tier has no shadow maps: floor-standing items carry a soft
+ *  stand-in quad instead (see FakeShadows). Resolved once, not per item. */
+const FAKE_SHADE = !tierCaps(activeTier()).shadows;
 
 /** Lighten (amt>0) / darken (amt<0) a hex color by an integer amount. */
 function shade(hex: string, amt: number): string {
@@ -50,7 +59,9 @@ export default function Furniture3D({
 }) {
   const w = item.width * M;
   const d = item.depth * M;
-  const h = item.height * M;
+  // Modular kitchen units draw through their own parametric renderer.
+  const kitchenUnit = isKitchenUnit(item.type);
+  const h = (kitchenUnit ? unitHeightCm(item) : item.height) * M;
   const entry = CATALOG_BY_TYPE[item.type];
   const shape: Shape3D = entry?.shape ?? 'box';
   const color = item.color;
@@ -193,11 +204,26 @@ export default function Furniture3D({
           <meshBasicMaterial color="#4c8dff" wireframe transparent opacity={0.7} />
         </mesh>
       )}
-      <ResilientGltfFurniture
-        item={item}
-        preferRender={preferRenderModel}
-        fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} />}
-      />
+      {/* Not in photo renders that ask for the render models: those are path
+          traced or shadow mapped, and a painted shadow would double up. */}
+      {FAKE_SHADE && !preferRenderModel && mountY < 0.05 && h > 0.08 && !entry?.opening && !CEILING_SHAPES.has(shape) && (
+        <ItemShade
+          w={w}
+          d={d}
+          h={h}
+          rotationDeg={item.rotation}
+          canopy={shape === 'tree' ? { height: h * 0.42 + (Math.max(w, d) / 2) * 0.62, radius: Math.max(w, d) / 2 } : undefined}
+        />
+      )}
+      {kitchenUnit ? (
+        <KitchenUnit3D item={item} w={w} d={d} h={h} />
+      ) : (
+        <ResilientGltfFurniture
+          item={item}
+          preferRender={preferRenderModel}
+          fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} seed={item.position.x * 0.013 + item.position.y * 0.029} />}
+        />
+      )}
     </group>
   );
 }
@@ -220,8 +246,15 @@ function LampLight({
   position, intensity, distance, color = '#ffe9c0', castShadow = false,
 }: { position: [number, number, number]; intensity: number; distance: number; color?: string; castShadow?: boolean }) {
   const on = useDesign((s) => s.lightsOn);
+  const sunTime = useDesign((s) => s.sunTime);
   if (!on) return null;
-  return <pointLight position={position} intensity={intensity} distance={distance} color={color} castShadow={castShadow} />;
+  // Lamps left on in full daylight barely register next to the sun. At full
+  // strength they filled every sun shadow in the room back in and flattened
+  // it; they come up to full again as the daylight goes (unchanged by dusk).
+  const day = sunModel(sunTime).day;
+  const t = Math.max(0, Math.min(1, (day - 0.3) / 0.5));
+  const daylight = 1 - 0.75 * t * t * (3 - 2 * t);
+  return <pointLight position={position} intensity={intensity * daylight} distance={distance} color={color} castShadow={castShadow} />;
 }
 
 /** Cylindrical leg / post helper. */
@@ -252,8 +285,12 @@ function FourLegs({
 }
 
 export function ShapeMesh({
-  shape, w, d, h, color,
-}: { shape: Shape3D; w: number; d: number; h: number; color: string }) {
+  shape, w, d, h, color, seed = 0,
+}: {
+  shape: Shape3D; w: number; d: number; h: number; color: string;
+  /** Turns otherwise identical garden shapes so two trees never match. */
+  seed?: number;
+}) {
   switch (shape) {
     case 'sofa': {
       const seatTop = h * 0.45;
@@ -383,44 +420,36 @@ export function ShapeMesh({
       const bark = getBarkTexture('#6b5136');
       const trunkH = h * 0.42;
       const r = Math.max(w, d) / 2;
-      // Three offset lobes, not one sphere: a single ball reads as a lollipop
-      // from every angle, and the whole trick to a believable tree at this
-      // distance is an irregular silhouette.
-      const lobes: [number, number, number, number][] = [
-        [0, trunkH + r * 0.62, 0, r * 0.78],
-        [r * 0.40, trunkH + r * 0.30, r * 0.16, r * 0.56],
-        [-r * 0.34, trunkH + r * 0.44, -r * 0.24, r * 0.50],
-      ];
+      // The crown is one merged mesh of nine bumpy, overlapping lobes (see
+      // canopyGeometry): an irregular silhouette, and shading baked into its
+      // vertex colours so it has depth on tiers with no shadows at all.
       return (
         <group>
-          <mesh position={[0, trunkH / 2, 0]} castShadow receiveShadow>
-            <cylinderGeometry args={[w * 0.07, w * 0.11, trunkH, 10]} />
+          <mesh position={[0, (trunkH + r * 0.3) / 2, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[w * 0.05, w * 0.11, trunkH + r * 0.3, 10]} />
             <meshStandardMaterial map={bark} roughness={0.95} />
           </mesh>
-          {lobes.map(([lx, ly, lz, lr], i) => (
-            <mesh key={i} position={[lx, ly, lz]} castShadow receiveShadow>
-              <sphereGeometry args={[lr, 14, 12]} />
-              <meshStandardMaterial map={canopy} roughness={1} />
-            </mesh>
-          ))}
+          <mesh
+            geometry={canopyGeometry()}
+            position={[0, trunkH + r * 0.62, 0]}
+            rotation={[0, seed, 0]}
+            scale={r * 1.02}
+            castShadow
+            receiveShadow
+          >
+            <meshStandardMaterial map={canopy} vertexColors roughness={1} />
+          </mesh>
         </group>
       );
     }
     case 'hedge': {
       const leaf = getFoliageTexture(color);
+      // One softly rounded, slightly lumpy block (see hedgeGeometry) instead
+      // of a sharp box with a lid: a clipped hedge, not a painted crate.
       return (
-        <group>
-          <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
-            <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial map={leaf} roughness={1} />
-          </mesh>
-          {/* A slightly proud, slightly narrower cap reads as a clipped top and
-              stops the hedge looking like a painted crate. */}
-          <mesh position={[0, h * 1.02, 0]} castShadow>
-            <boxGeometry args={[w * 0.94, h * 0.06, d * 0.9]} />
-            <meshStandardMaterial map={leaf} roughness={1} />
-          </mesh>
-        </group>
+        <mesh geometry={hedgeGeometry(w, h, d)} castShadow receiveShadow>
+          <meshStandardMaterial map={leaf} vertexColors roughness={1} />
+        </mesh>
       );
     }
     case 'parasol': {
@@ -966,4 +995,138 @@ export function ShapeMesh({
     default:
       return <Box w={w} d={d} h={h} y={h * 0.5} color={color} />;
   }
+}
+
+const smooth01 = (a: number, b: number, v: number) => {
+  const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+let canopyGeo: THREE.BufferGeometry | null = null;
+/**
+ * Tree crown, built once and shared by every tree (unit radius, origin at the
+ * crown centre; trees scale it). Three plain spheres read as a lollipop, so
+ * this is nine lobes with a lumpy surface, merged into ONE mesh: fewer draw
+ * calls than the three spheres it replaces. Two things are baked in so the
+ * crown has form even where nothing casts a shadow:
+ *  - normals lean toward the centre-out direction of the whole crown, so it
+ *    shades as one soft mass rather than nine separate balls;
+ *  - vertex colours darken the underside, the core and the dips between lumps.
+ */
+function canopyGeometry(): THREE.BufferGeometry {
+  if (canopyGeo) return canopyGeo;
+  // x, y, z, radius
+  const lobes: [number, number, number, number][] = [
+    [0, 0.08, 0, 0.66],
+    [0.46, -0.12, 0.14, 0.44],
+    [-0.4, -0.02, -0.3, 0.42],
+    [0.06, -0.16, -0.5, 0.4],
+    [-0.2, -0.14, 0.48, 0.42],
+    [0.3, 0.34, -0.22, 0.4],
+    [-0.3, 0.4, 0.16, 0.38],
+    [0.1, 0.56, 0.2, 0.34],
+    [-0.5, -0.24, 0.1, 0.32],
+  ];
+  const parts = lobes.map(([cx, cy, cz, rad], i) => {
+    const geo = new THREE.IcosahedronGeometry(1, i === 0 ? 3 : 2);
+    const pos = geo.attributes.position as THREE.BufferAttribute;
+    const nor = geo.attributes.normal as THREE.BufferAttribute;
+    const uv = geo.attributes.uv as THREE.BufferAttribute;
+    const col = new Float32Array(pos.count * 3);
+    const tint = 0.93 + 0.14 * ((i * 0.618) % 1);
+    for (let v = 0; v < pos.count; v++) {
+      const nx = pos.getX(v);
+      const ny = pos.getY(v);
+      const nz = pos.getZ(v);
+      // Lumps: a function of direction only, so shared corners stay welded.
+      const bump =
+        0.1 * Math.sin(nx * 6.3 + i * 2.1) * Math.sin(ny * 5.7 + i * 1.3) * Math.sin(nz * 6.9 + i * 0.7) +
+        0.05 * Math.sin(nx * 13 + nz * 11 + ny * 9 + i);
+      const k = rad * (1 + bump);
+      const x = cx + nx * k;
+      const y = cy + ny * k;
+      const z = cz + nz * k;
+      pos.setXYZ(v, x, y, z);
+      const out = Math.hypot(x, y - 0.1, z) || 1;
+      const mx = nx * 0.6 + (x / out) * 0.4;
+      const my = ny * 0.6 + ((y - 0.1) / out) * 0.4;
+      const mz = nz * 0.6 + (z / out) * 0.4;
+      const ml = Math.hypot(mx, my, mz) || 1;
+      nor.setXYZ(v, mx / ml, my / ml, mz / ml);
+      uv.setXY(v, uv.getX(v) * rad * 3.2 + i * 0.37, uv.getY(v) * rad * 3.2 + i * 0.21);
+      const up = smooth01(-0.6, 0.75, y);
+      const shadeV = (0.5 + 0.58 * up) * (0.74 + 0.32 * Math.min(1, out / 0.85)) * (1 + 2.2 * bump) * tint;
+      col[v * 3] = shadeV * (0.95 + 0.11 * up);
+      col[v * 3 + 1] = shadeV;
+      col[v * 3 + 2] = shadeV * (0.97 - 0.1 * up);
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return geo;
+  });
+  canopyGeo = mergeGeometries(parts) ?? parts[0];
+  return canopyGeo;
+}
+
+const hedgeGeos = new Map<string, THREE.BufferGeometry>();
+/**
+ * Clipped hedge: a box with rounded top and side edges and a gently lumpy
+ * surface, darker toward the ground and in the dips. Sized in metres (base on
+ * y = 0) rather than scaled from a unit box, so the lumps and the leaf texture
+ * keep the same real-world size on a long hedge and a short one.
+ */
+function hedgeGeometry(w: number, h: number, d: number): THREE.BufferGeometry {
+  const key = `${w.toFixed(2)}:${h.toFixed(2)}:${d.toFixed(2)}`;
+  const hit = hedgeGeos.get(key);
+  if (hit) return hit;
+  const seg = (len: number) => Math.max(2, Math.min(22, Math.round(len / 0.11)));
+  const geo = new THREE.BoxGeometry(w, h, d, seg(w), seg(h), seg(d));
+  geo.translate(0, h / 2, 0);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const nor = geo.attributes.normal as THREE.BufferAttribute;
+  const uv = geo.attributes.uv as THREE.BufferAttribute;
+  const col = new Float32Array(pos.count * 3);
+  const rr = Math.min(w, d, h) * 0.3;
+  for (let v = 0; v < pos.count; v++) {
+    let x = pos.getX(v);
+    let y = pos.getY(v);
+    let z = pos.getZ(v);
+    const fx = nor.getX(v);
+    const fy = nor.getY(v);
+    // Leaf map in world metres, picked per box face.
+    if (Math.abs(fx) > 0.5) uv.setXY(v, z / 1.4, y / 1.4);
+    else if (Math.abs(fy) > 0.5) uv.setXY(v, x / 1.4, z / 1.4);
+    else uv.setXY(v, x / 1.4, y / 1.4);
+    // Rounded box: clamp to an inner box, then go out at most `rr` from it.
+    // The base stays square so the hedge still meets the ground cleanly.
+    const ix = Math.max(-(w / 2 - rr), Math.min(w / 2 - rr, x));
+    const iy = Math.min(h - rr, y);
+    const iz = Math.max(-(d / 2 - rr), Math.min(d / 2 - rr, z));
+    let ox = x - ix;
+    let oy = y - iy;
+    let oz = z - iz;
+    const ol = Math.hypot(ox, oy, oz);
+    let bump = 0;
+    if (ol > 1e-6) {
+      ox /= ol;
+      oy /= ol;
+      oz /= ol;
+      // Position-only, so the duplicated edge vertices of the box move together.
+      bump =
+        Math.sin(x * 9.1 + z * 3.3) * Math.sin(y * 8.3 + x * 2.1) * Math.sin(z * 10.7 + y * 1.9) +
+        0.5 * Math.sin(x * 23 + y * 19 + z * 17);
+      const k = Math.min(ol, rr) + 0.03 * bump * Math.min(1, y / 0.15);
+      x = ix + ox * k;
+      y = iy + oy * k;
+      z = iz + oz * k;
+      pos.setXYZ(v, x, y, z);
+      nor.setXYZ(v, ox, oy, oz);
+    }
+    const shadeV = (0.5 + 0.5 * smooth01(0, 0.5, y)) * (1 + 0.16 * bump) * (0.96 + 0.1 * (y / h));
+    col[v * 3] = shadeV;
+    col[v * 3 + 1] = shadeV;
+    col[v * 3 + 2] = shadeV * 0.96;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  hedgeGeos.set(key, geo);
+  return geo;
 }

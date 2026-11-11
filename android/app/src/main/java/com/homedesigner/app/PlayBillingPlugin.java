@@ -26,10 +26,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Deliberately small Google Play Billing bridge. HomeDesigner sells a lifetime
- * one-time product, but Play promotions can grant a monthly/yearly subscription
- * outside the app. Ownership therefore has to read both product types even
- * though checkout itself remains the one-time product.
+ * Deliberately small Google Play Billing bridge. HomeDesigner sells Pro as a
+ * lifetime one-time product and as monthly/yearly subscriptions, plus one-time
+ * AI point packs. Play keeps the two product types in separate namespaces, so
+ * product queries, checkout and ownership all name the type they mean.
  */
 @CapacitorPlugin(name = "PlayBilling")
 public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListener {
@@ -124,10 +124,16 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
             result -> reject(call, "Store connection", result));
     }
 
-    private void queryProduct(String productId, ProductCallback callback, FailureCallback failed) {
+    /** The JS side says "subs" for a subscription; anything else, including a
+     * call from before the option existed, is a one-time product. */
+    private static String billingType(String productType) {
+        return "subs".equals(productType) ? BillingClient.ProductType.SUBS : BillingClient.ProductType.INAPP;
+    }
+
+    private void queryProduct(String productId, String productType, ProductCallback callback, FailureCallback failed) {
         QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
             .setProductId(productId)
-            .setProductType(BillingClient.ProductType.INAPP)
+            .setProductType(billingType(productType))
             .build();
         QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
             .setProductList(Collections.singletonList(product))
@@ -193,11 +199,45 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
         return offers == null || offers.isEmpty() ? null : offers.get(0);
     }
 
+    /** The base plan itself: the entry with no offer id. Play also lists any
+     * promotional offer this buyer qualifies for (a trial, an intro price); those
+     * are a pricing decision made in Play Console, and the price shown in the app
+     * has to be the one that is charged, so checkout stays on the base plan until
+     * the paywall is taught to present an offer's phases. */
+    private static ProductDetails.SubscriptionOfferDetails chooseSubscriptionOffer(ProductDetails details) {
+        List<ProductDetails.SubscriptionOfferDetails> offers = details.getSubscriptionOfferDetails();
+        if (offers == null || offers.isEmpty()) return null;
+        for (ProductDetails.SubscriptionOfferDetails offer : offers) {
+            if (offer.getOfferId() == null) return offer;
+        }
+        return null;
+    }
+
+    /** A base plan has exactly one phase, the recurring price. Read the last
+     * one so the answer is still the recurring price if that ever changes. */
+    private static ProductDetails.PricingPhase recurringPhase(ProductDetails.SubscriptionOfferDetails offer) {
+        List<ProductDetails.PricingPhase> phases = offer.getPricingPhases().getPricingPhaseList();
+        return phases.isEmpty() ? null : phases.get(phases.size() - 1);
+    }
+
     private static JSObject productJson(ProductDetails details) {
         JSObject result = new JSObject();
         result.put("identifier", details.getProductId());
         result.put("title", details.getTitle());
         result.put("description", details.getDescription());
+        if (BillingClient.ProductType.SUBS.equals(details.getProductType())) {
+            ProductDetails.SubscriptionOfferDetails plan = chooseSubscriptionOffer(details);
+            ProductDetails.PricingPhase phase = plan == null ? null : recurringPhase(plan);
+            if (phase != null) {
+                result.put("priceString", phase.getFormattedPrice());
+                result.put("priceAmountMicros", phase.getPriceAmountMicros());
+                result.put("currencyCode", phase.getPriceCurrencyCode());
+                result.put("billingPeriod", phase.getBillingPeriod());
+                result.put("basePlanId", plan.getBasePlanId());
+                result.put("offerToken", plan.getOfferToken());
+            }
+            return result;
+        }
         ProductDetails.OneTimePurchaseOfferDetails offer = chooseOffer(details);
         if (offer != null) {
             result.put("priceString", offer.getFormattedPrice());
@@ -215,7 +255,8 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
             call.reject("productId is required");
             return;
         }
-        withReady(() -> queryProduct(productId, details -> {
+        String productType = call.getString("productType");
+        withReady(() -> queryProduct(productId, productType, details -> {
             JSObject result = new JSObject();
             result.put("product", details == null ? null : productJson(details));
             call.resolve(result);
@@ -237,6 +278,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
     @PluginMethod
     public void purchase(PluginCall call) {
         String productId = call.getString("productId");
+        String productType = call.getString("productType");
         String obfuscatedAccountId = call.getString("obfuscatedAccountId");
         if (productId == null || productId.isBlank()) {
             call.reject("productId is required");
@@ -257,7 +299,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
             generation = ++purchaseGeneration;
         }
 
-        withReady(() -> queryProduct(productId, details -> {
+        withReady(() -> queryProduct(productId, productType, details -> {
             if (!isCurrentPurchase(call, generation)) return;
             if (details == null) {
                 if (clearCurrentPurchase(call, generation)) {
@@ -266,8 +308,17 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
                 }
                 return;
             }
-            ProductDetails.OneTimePurchaseOfferDetails offer = chooseOffer(details);
-            if (offer == null) {
+            // A subscription is bought through its base plan's offer token, a
+            // one-time product through its purchase option's.
+            final String offerToken;
+            if (BillingClient.ProductType.SUBS.equals(details.getProductType())) {
+                ProductDetails.SubscriptionOfferDetails plan = chooseSubscriptionOffer(details);
+                offerToken = plan == null ? null : plan.getOfferToken();
+            } else {
+                ProductDetails.OneTimePurchaseOfferDetails offer = chooseOffer(details);
+                offerToken = offer == null ? null : offer.getOfferToken();
+            }
+            if (offerToken == null) {
                 if (clearCurrentPurchase(call, generation)) {
                     call.reject("Google Play returned the product without a purchasable offer.",
                         "OFFER_NOT_FOUND");
@@ -277,7 +328,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
             BillingFlowParams.ProductDetailsParams productParams =
                 BillingFlowParams.ProductDetailsParams.newBuilder()
                     .setProductDetails(details)
-                    .setOfferToken(offer.getOfferToken())
+                    .setOfferToken(offerToken)
                     .build();
             BillingFlowParams.Builder flowBuilder = BillingFlowParams.newBuilder()
                 .setProductDetailsParamsList(Collections.singletonList(productParams));

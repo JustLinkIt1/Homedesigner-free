@@ -5,6 +5,8 @@ import type { CatalogEntry } from '../data/furnitureCatalog';
 import type { FurnitureItem } from '../types';
 import { ResilientGltfFurniture } from './Viewer3D/GltfFurniture';
 import { ShapeMesh } from './Viewer3D/Furniture3D';
+import KitchenUnit3D from './Viewer3D/KitchenUnit3D';
+import { isKitchenUnit } from '../lib/kitchenUnits';
 
 function PreviewObject({ entry }: { entry: CatalogEntry }) {
   const item = useMemo<FurnitureItem>(() => ({
@@ -19,6 +21,9 @@ function PreviewObject({ entry }: { entry: CatalogEntry }) {
     color: entry.color,
   }), [entry]);
 
+  if (isKitchenUnit(entry.type)) {
+    return <KitchenUnit3D item={item} w={entry.width / 100} d={entry.depth / 100} h={entry.height / 100} />;
+  }
   const fallback = (
     <ShapeMesh
       shape={entry.shape}

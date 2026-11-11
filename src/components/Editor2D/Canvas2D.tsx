@@ -21,6 +21,7 @@ import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
 import { FURNITURE_SPRITES, spriteUrl } from '../../data/furnitureSprites';
 import { SPRITE_FILL } from '../../data/furnitureModels';
 import { spriteBox } from '../../lib/spriteFit';
+import { hasWorktop, isKitchenUnit, worktopMaterial } from '../../lib/kitchenUnits';
 import DimensionsLayer, { DimensionPlate } from './DimensionsLayer';
 import SelectionRing from '../SelectionRing';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
@@ -2034,6 +2035,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
                     width={width}
                     depth={depth}
                     color={f.color}
+                    worktopColor={hasWorktop(f.type) ? worktopMaterial(f).color : undefined}
                     symbolColor={sel ? C.selection : C.symbolInk}
                     outlineColor={C.furnitureOutline}
                     selected={sel || selectedIds.includes(f.id)}
@@ -2881,18 +2883,27 @@ function RoomFloorFill({
   );
 }
 
+/** Perceived lightness of a #rrggbb colour, 0..1. */
+function hexLuma(hex: string): number {
+  const n = parseInt(hex.replace('#', '').slice(0, 6), 16);
+  if (!Number.isFinite(n)) return 1;
+  return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+}
+
 // ---- Furniture graphic (photoreal top-down sprite, vector-symbol fallback) ----
 // Types with a rendered sprite (public/sprites/<type>.webp — top-down renders of
 // the 3D model) draw the photo; fixtures without a model (toilet, bathtub, TV,
 // lights…) and any still-loading sprite fall back to the clean line symbol.
 function FurnitureItemGraphic({
-  type, shape, width, depth, color, symbolColor, outlineColor, selected, selectionColor, zoom, dashed,
+  type, shape, width, depth, color, worktopColor, symbolColor, outlineColor, selected, selectionColor, zoom, dashed,
 }: {
   type: string;
   shape: Shape3D;
   width: number;
   depth: number;
   color: string;
+  /** Kitchen units with a worktop show its material colour from above. */
+  worktopColor?: string;
   symbolColor: string;
   outlineColor: string;
   selected: boolean;
@@ -2900,7 +2911,10 @@ function FurnitureItemGraphic({
   zoom: number;
   dashed: boolean;
 }) {
-  const hasSprite = FURNITURE_SPRITES.has(type);
+  // Modular kitchen units are drawn, not photographed: the old sprites were
+  // renders of models they no longer use, and could not show the worktop.
+  const kitchenUnit = isKitchenUnit(type);
+  const hasSprite = FURNITURE_SPRITES.has(type) && !kitchenUnit;
   const img = useHtmlImage(hasSprite ? spriteUrl(type) : undefined);
   const outline = selected ? (
     <Rect
@@ -2940,21 +2954,31 @@ function FurnitureItemGraphic({
     );
   }
 
-  // Fallback: the classic flat footprint + line symbol.
+  // Fallback: the classic flat footprint + line symbol. A worktop is opaque
+  // and can be near-black or near-white, so its symbol picks whichever ink
+  // reads against it rather than the theme's.
+  const ink = worktopColor && !selected ? (hexLuma(worktopColor) > 0.5 ? '#242a33' : '#e4e7ec') : symbolColor;
+  // Wall units hang over the base run: a dashed outline with only a wash of
+  // colour, so the worktop and the sink or hob beneath stay readable.
+  const overhead = kitchenUnit && dashed;
   return (
     <>
+      {overhead && (
+        <Rect x={-width / 2} y={-depth / 2} width={width} height={depth} fill={color} opacity={0.16} listening={false} />
+      )}
       <Rect
         x={-width / 2}
         y={-depth / 2}
         width={width}
         height={depth}
-        fill={color}
-        opacity={0.55}
-        cornerRadius={Math.min(width, depth) * 0.08}
-        stroke={selected ? selectionColor : outlineColor}
-        strokeWidth={(selected ? 3 : 1) / zoom}
+        fill={overhead ? undefined : worktopColor ?? color}
+        opacity={overhead ? 0.9 : worktopColor ? 0.96 : 0.55}
+        cornerRadius={kitchenUnit ? 0 : Math.min(width, depth) * 0.08}
+        stroke={selected ? selectionColor : overhead ? symbolColor : outlineColor}
+        strokeWidth={(selected ? 3 : overhead ? 1.4 : 1) / zoom}
+        dash={overhead ? [6 / zoom, 4 / zoom] : undefined}
       />
-      <FurnitureSymbol shape={shape} width={width} depth={depth} color={symbolColor} dashed={dashed} />
+      <FurnitureSymbol shape={shape} width={width} depth={depth} color={ink} opacity={overhead ? 0.5 : 0.85} dashed={dashed} />
     </>
   );
 }

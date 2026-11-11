@@ -58,13 +58,17 @@ export default function IntroVideo() {
     if (!v || !v.videoWidth) return;
     try {
       const c = document.createElement('canvas');
-      c.width = 8;
-      c.height = 8;
+      c.width = 1;
+      c.height = 1;
       const ctx = c.getContext('2d');
       if (!ctx) return;
-      ctx.drawImage(v, 0, 0, 8, 8);
-      const [r, g, b] = ctx.getImageData(1, 1, 1, 1).data;
-      setBg(`rgb(${r}, ${g}, ${b})`);
+      // The clip's own corner, not a scaled-down frame: shrinking the whole
+      // frame to 8x8 put the sample a fifth of the way in, inside the blue
+      // logo tile, so the backdrop never matched the white card around it.
+      ctx.drawImage(v, 2, 2, 4, 4, 0, 0, 1, 1);
+      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+      const next = `rgb(${r}, ${g}, ${b})`;
+      setBg((prev) => (prev === next ? prev : next));
     } catch {
       /* tainted canvas / not ready — keep the default backdrop */
     }
@@ -88,6 +92,10 @@ export default function IntroVideo() {
         preload="auto"
         onLoadedData={matchBackdrop}
         onPlaying={matchBackdrop}
+        // The clip opens on solid blue and settles on a white card. Sampled
+        // once, the backdrop stayed blue and left the logo in a white band
+        // across a blue phone screen, so keep following the clip's corner.
+        onTimeUpdate={matchBackdrop}
         onEnded={dismiss}
         onError={dismiss}
       />

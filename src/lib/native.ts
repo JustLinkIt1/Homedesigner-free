@@ -61,6 +61,28 @@ export async function saveImage(dataUrl: string, filename: string): Promise<void
   }
 }
 
+/**
+ * Save an audio data URL (a voice tour). On Android it goes through the share
+ * sheet like a render does, so it can be sent on or saved to Files.
+ */
+export async function saveAudio(dataUrl: string, filename: string): Promise<void> {
+  if (!isNative()) {
+    webDownload(dataUrl, filename);
+    return;
+  }
+  const { Filesystem, Directory } = await import('@capacitor/filesystem');
+  const { Share } = await import('@capacitor/share');
+  const path = `audio/${filename}`;
+  await Filesystem.writeFile({ path, data: dataUrlToBase64(dataUrl), directory: Directory.Cache, recursive: true });
+  const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
+  try {
+    await Share.share({ title: `${APP_NAME} voice tour`, files: [uri] });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/cancel(?:led|ed)?/i.test(message)) throw error;
+  }
+}
+
 /** Save a text file (e.g. exported project JSON). */
 export async function saveText(text: string, filename: string, mime = 'application/json'): Promise<void> {
   if (!isNative()) {

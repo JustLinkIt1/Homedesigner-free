@@ -21,6 +21,7 @@ import { exteriorFaces } from '../lib/exteriorFaces';
 import { withFaceFinish } from '../lib/wallFaces';
 import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from '../data/furnitureCatalog';
 import { kitchenRunUnits, kitchenUpperUnits } from '../lib/kitchenRun';
+import { applyFrontColorToAll, applyHandlesToAll, applyWorktopToAll, swapUnit } from '../lib/kitchenUnits';
 import { splitPolygonBySegment } from '../lib/roomSplit';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
@@ -153,9 +154,15 @@ interface DesignState extends DesignSnapshot {
   /** Tile a run of base cabinets from a→b (the kitchen-run tool). One undo step.
    *  Adds wall cabinets above when `kitchenUppers` is on. */
   addKitchenRun: (a: Point, b: Point) => void;
-  /** Change a placed item's type in place (kitchen slot swaps: cabinet↔appliance),
-   *  keeping its slot footprint, position and facing so the run stays aligned. */
+  /** Change a placed kitchen unit's type in place (cabinet↔appliance, within
+   *  its base/tall/wall family), keeping its slot, facing, colour and worktop
+   *  so the run stays aligned. See `swapUnit`. */
   swapFurnitureType: (id: string, newType: string) => void;
+  /** Whole-kitchen finishes for the current floor, each one undo step: the
+   *  worktop material, the front colour, and bar handles / handleless. */
+  applyKitchenWorktop: (materialId: string) => void;
+  applyKitchenColor: (color: string) => void;
+  applyKitchenHandles: (handles: 'bar' | 'none') => void;
   updateFurniture: (id: string, patch: Partial<FurnitureItem>) => void;
   /** `type` is a catalog key (door, double_door, sliding_door, window, french_window…). */
   addOpening: (wallId: string, offset: number, type: string) => string;
@@ -675,17 +682,23 @@ export const useDesign = create<DesignState>((set, get) => {
       commit((d) => {
         const i = d.furniture.findIndex((f) => f.id === id);
         if (i < 0) return;
-        const entry = CATALOG_BY_TYPE[newType];
-        if (!entry) return;
-        // Keep the slot footprint (width/depth), position, rotation so a run
-        // stays aligned; take name/height/colour from the new type.
-        d.furniture[i] = {
-          ...d.furniture[i],
-          type: newType,
-          name: entry.name,
-          height: entry.height,
-          color: entry.color,
-        };
+        const next = swapUnit(d.furniture[i], newType);
+        if (next) d.furniture[i] = next;
+      }),
+
+    applyKitchenWorktop: (materialId) =>
+      commit((d) => {
+        d.furniture = applyWorktopToAll(d.furniture, materialId);
+      }),
+
+    applyKitchenColor: (color) =>
+      commit((d) => {
+        d.furniture = applyFrontColorToAll(d.furniture, color);
+      }),
+
+    applyKitchenHandles: (handles) =>
+      commit((d) => {
+        d.furniture = applyHandlesToAll(d.furniture, handles);
       }),
 
     updateFurniture: (id, patch) =>

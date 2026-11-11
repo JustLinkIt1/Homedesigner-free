@@ -20,7 +20,7 @@ export const USD_PER_POINT = 0.000375;
  * Bumped whenever a price or point cost below changes. Written onto every
  * ledger row so history stays readable after a repricing.
  */
-export const PRICE_VERSION = 2;
+export const PRICE_VERSION = 4;
 
 /**
  * Google's cut. The plan models both tiers and notes the 30% case is the one
@@ -32,11 +32,15 @@ export const PLAY_FEE_RATE = 0.30;
 
 export type FeatureId =
   | 'ai_render'
+  | 'ai_render_clean'
   | 'room_naming'
   | 'colour_scheme'
   | 'listing_description'
   | 'auto_furnish'
-  | 'text_to_layout';
+  | 'text_to_layout'
+  | 'design_review'
+  | 'voice_tour'
+  | 'plan_design';
 
 interface FeaturePrice {
   /** Points charged. Must satisfy G1 against `maxCostUsd`. */
@@ -56,12 +60,40 @@ interface FeaturePrice {
  * rounded *up* here.
  */
 export const FEATURES: Record<FeatureId, FeaturePrice> = {
-  ai_render: { points: 200, maxCostUsd: 0.04, label: 'AI render' },
+  /**
+   * One AI render: with the homedesignerapp.com watermark, or clean for Pro.
+   * A free account pays the small premium below to drop the watermark. Both
+   * cost the same to make: ~1,000 prepaid ElevenLabs credits, or $0.04 when
+   * fal renders it as the backup.
+   */
+  ai_render: { points: 150, maxCostUsd: 0.04, label: 'AI render' },
+  ai_render_clean: { points: 200, maxCostUsd: 0.04, label: 'AI render without watermark' },
   room_naming: { points: 10, maxCostUsd: 0.0002, label: 'Room naming' },
   colour_scheme: { points: 25, maxCostUsd: 0.0005, label: 'Colour scheme' },
   listing_description: { points: 25, maxCostUsd: 0.0005, label: 'Description' },
   auto_furnish: { points: 50, maxCostUsd: 0.001, label: 'Auto-furnish' },
   text_to_layout: { points: 100, maxCostUsd: 0.002, label: 'Text to layout' },
+  /**
+   * Claude Opus 5.5 at $4 in / $20 out per million tokens, from the caps in
+   * ai-advisor.ts: up to ~4,800 input tokens (prompt, plan text, one picture
+   * of at most 1100px) = $0.019, plus REVIEW_MAX_TOKENS of output = $0.048.
+   */
+  design_review: { points: 200, maxCostUsd: 0.068, label: 'Designer review' },
+  /**
+   * The script: ~2,600 input tokens ($0.011) plus TOUR_MAX_TOKENS of output
+   * ($0.030). The narration: MAX_TOUR_CHARS on ElevenLabs Flash at $0.04 per
+   * 1,000 characters ($0.036). Priced at list rates on purpose -- startup
+   * credits make the early calls free, and the price has to still hold on the
+   * day they run out.
+   */
+  voice_tour: { points: 250, maxCostUsd: 0.078, label: 'Voice tour' },
+  /**
+   * One plan, new or revised: the same call either way, so the same price.
+   * Up to ~5,000 input tokens (instructions, brief, and the current plan when
+   * revising) = $0.020, plus PLAN_MAX_TOKENS of output at medium effort =
+   * $0.080. See ai-plan.ts for the caps.
+   */
+  plan_design: { points: 300, maxCostUsd: 0.1, label: 'AI plan' },
 };
 
 /**

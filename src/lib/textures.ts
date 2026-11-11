@@ -132,59 +132,64 @@ function marbleTexture(ctx: CanvasRenderingContext2D, color: string) {
   }
 }
 
-/** Lawn: mown tonal banding plus fine blade speckle. Deliberately procedural —
- *  a photo texture would add APK weight for something noise-based reads fine as. */
+/** Lawn: tufts and blades only, no banding and nothing bigger than a hand.
+ *
+ *  It used to carry mown stripes plus a few large pale patches. Tiled every
+ *  4 m across the site, anything that large repeats as a visible grid, and the
+ *  stripes read as a football pitch from the overview. So the tile now holds
+ *  only fine detail with the same statistics everywhere (it cannot show a
+ *  seam or a repeat), drawn wrap-around; the broad light/dark drift a real
+ *  lawn has comes from getGroundMacroTexture, at a much larger scale.
+ *  Still procedural: a photo would add APK weight for what noise does fine. */
 function grassTexture(ctx: CanvasRenderingContext2D, color: string) {
   const rand = rng(53);
-  ctx.fillStyle = color;
+  const { r, g, b } = hexToRgb(color);
+  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  // `dv` moves the value, `dy` leans the hue toward straw (+) or blue-green (-).
+  const tone = (dv: number, dy: number) =>
+    `rgb(${c(r + dv + dy * 0.9)},${c(g + dv + dy * 0.45)},${c(b + dv - dy * 0.5)})`;
+  // Everything is drawn at the wrapped positions too, so the tile is seamless.
+  const wrapped = (x: number, y: number, m: number, draw: (px: number, py: number) => void) => {
+    for (const ox of x < m ? [0, SIZE] : x > SIZE - m ? [0, -SIZE] : [0]) {
+      for (const oy of y < m ? [0, SIZE] : y > SIZE - m ? [0, -SIZE] : [0]) draw(x + ox, y + oy);
+    }
+  };
+  ctx.fillStyle = tone(-6, 0);
   ctx.fillRect(0, 0, SIZE, SIZE);
-  // Mown stripes. Keep these WIDE (2 per tile => ~2 m at the default 4 m patch):
-  // narrow bands alias badly against the mip chain at grazing angles and show up
-  // as coarse moiré banding across the lawn.
-  // The banding is only a hint (±2): at ±5 it read as a striped football pitch
-  // from the default overview and pulled the eye off the building.
-  const bands = 2;
-  for (let i = 0; i < bands; i++) {
-    ctx.fillStyle = shade(color, i % 2 ? 2 : -2);
-    ctx.fillRect(0, (i * SIZE) / bands, SIZE, SIZE / bands);
-  }
-  // Blades: short strokes in varied greens.
-  for (let i = 0; i < 9000; i++) {
+  // Tufts: the grain that survives minification. From the overview the blades
+  // average away, and without these the lawn went back to a flat sheet.
+  for (let i = 0; i < 3400; i++) {
     const x = rand() * SIZE;
     const y = rand() * SIZE;
-    ctx.strokeStyle = shade(color, (rand() - 0.5) * 30);
-    ctx.lineWidth = 0.7 + rand() * 0.6;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + (rand() - 0.5) * 3, y - 1.5 - rand() * 3);
-    ctx.stroke();
+    const rad = 2.5 + rand() * 6.5;
+    const dark = rand() < 0.56;
+    ctx.globalAlpha = dark ? 0.1 + rand() * 0.16 : 0.08 + rand() * 0.13;
+    ctx.fillStyle = dark ? tone(-58, -8) : tone(40, 16);
+    wrapped(x, y, rad, (px, py) => {
+      ctx.beginPath();
+      ctx.arc(px, py, rad, 0, Math.PI * 2);
+      ctx.fill();
+    });
   }
-  // Soft sun-bleached patches, then a few darker clumps, to break up any
-  // perceived tiling without adding contrast.
-  for (let i = 0; i < 26; i++) {
+  // Blades: short strokes in every direction (this is seen from above).
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 15000; i++) {
     const x = rand() * SIZE;
     const y = rand() * SIZE;
-    const r = 18 + rand() * 46;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(236,232,170,${0.015 + rand() * 0.025})`);
-    g.addColorStop(1, 'rgba(236,232,170,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+    const a = rand() * Math.PI * 2;
+    const len = 2 + rand() * 5;
+    const k = rand();
+    ctx.globalAlpha = 0.5 + rand() * 0.45;
+    ctx.strokeStyle = k < 0.07 ? tone(46, 34) : tone((rand() - 0.55) * 62, (rand() - 0.5) * 18);
+    ctx.lineWidth = 0.6 + rand() * 0.8;
+    wrapped(x, y, 8, (px, py) => {
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + Math.cos(a) * len, py + Math.sin(a) * len);
+      ctx.stroke();
+    });
   }
-  for (let i = 0; i < 70; i++) {
-    const x = rand() * SIZE;
-    const y = rand() * SIZE;
-    const r = 4 + rand() * 12;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(0,0,0,${0.03 + rand() * 0.05})`);
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.globalAlpha = 1;
 }
 
 /** Decking: sawn boards with a visible gap between them, run along one axis. */
@@ -256,7 +261,7 @@ const GROUND_GENERATORS: Record<GroundKind, (c: CanvasRenderingContext2D, col: s
 };
 
 export const GROUND_DEFAULTS: Record<GroundKind, { color: string; roughness: number }> = {
-  grass: { color: '#7c9455', roughness: 0.95 },
+  grass: { color: '#5f7c3c', roughness: 0.95 },
   gravel: { color: '#b6b2a8', roughness: 0.95 },
   paving: { color: '#c9c5bd', roughness: 0.7 },
   decking: { color: '#9c7a52', roughness: 0.75 },
@@ -408,6 +413,50 @@ export function getGroundTexture(kind: GroundKind, color: string, patchM = 4): T
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.anisotropy = 8;
   tex.colorSpace = THREE.SRGBColorSpace;
+  cache.set(key, tex);
+  return tex;
+}
+
+/**
+ * Broad light/dark drift for the site lawn, used as the ground material's
+ * aoMap at a ~40 m repeat. The grass tile only holds fine detail (see
+ * grassTexture), so on its own a large lawn is one even tone; this lays soft
+ * patches a few metres across over it. It rides the ao slot because that is a
+ * stock, already-compiled path in the standard material: one more fetch from
+ * a 128 px texture, no shader patch, no extra pass.
+ */
+export function getGroundMacroTexture(): THREE.CanvasTexture {
+  const key = 'ground-macro';
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const N = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = N;
+  canvas.height = N;
+  const ctx = canvas.getContext('2d')!;
+  const rand = rng(211);
+  // ao reads the red channel: 255 is untouched, lower is shaded.
+  ctx.fillStyle = 'rgb(214,214,214)';
+  ctx.fillRect(0, 0, N, N);
+  for (let i = 0; i < 90; i++) {
+    const x = rand() * N;
+    const y = rand() * N;
+    const rad = 7 + rand() * 24;
+    const up = rand() < 0.45;
+    const a = up ? 0.1 + rand() * 0.2 : 0.08 + rand() * 0.2;
+    for (const ox of [-N, 0, N]) {
+      for (const oy of [-N, 0, N]) {
+        if (x + ox < -rad || x + ox > N + rad || y + oy < -rad || y + oy > N + rad) continue;
+        const grd = ctx.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad);
+        grd.addColorStop(0, up ? `rgba(255,255,255,${a})` : `rgba(96,96,96,${a})`);
+        grd.addColorStop(1, up ? 'rgba(255,255,255,0)' : 'rgba(96,96,96,0)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, N, N);
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   cache.set(key, tex);
   return tex;
 }

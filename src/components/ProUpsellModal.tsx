@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import {
-  Crown, Layers, FileText, Sofa, FolderOpen, Sparkles, Image as ImageIcon, Camera, CalendarCheck, BadgeCheck,
+  Crown, Layers, FileText, Sofa, FolderOpen, Sparkles, Image as ImageIcon, Camera, CalendarCheck, BadgeCheck, Mic,
 } from 'lucide-react';
 import { useProStore } from '../store/proStore';
+import { usePointsStore } from '../store/pointsStore';
 import { isWebBillingConfigured, type ProFeature } from '../lib/pro';
 import { useAuthStore } from '../store/authStore';
 import { APP_NAME } from '../lib/appInfo';
@@ -16,6 +17,16 @@ const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blur
     icon: Sparkles,
     title: 'Photorealistic AI renders',
     blurb: 'Pro includes one free AI render per account. Further AI renders use AI points. Sign-in and internet required.',
+  },
+  voiceTour: {
+    icon: Mic,
+    title: 'AI voice tours of your home',
+    blurb: 'Pro can turn your plan into a narrated audio tour. Each tour uses AI points. Sign-in and internet required.',
+  },
+  cleanExport: {
+    icon: ImageIcon,
+    title: 'Watermark-free renders & photos',
+    blurb: 'Pro removes the watermark from every render and photo you save or share.',
   },
   multiFloor: {
     icon: Layers,
@@ -102,6 +113,21 @@ export default function ProUpsellModal() {
         plans[0]?.id ?? null);
   }, [plans, showPlanChoices]);
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanID) ?? null;
+  // "Best value" has to be true at the prices the store actually returns.
+  // Lifetime wins once it costs no more than two years of Yearly — at the
+  // current Play prices (€4.99 a year, €6.99 lifetime) it pays for itself in
+  // well under two years, and a badge on Yearly would mislead.
+  const bestValueID = useMemo(() => {
+    const yearly = plans.find((plan) => plan.id === 'yearly');
+    const lifetime = plans.find((plan) => plan.id === 'lifetime');
+    if (
+      yearly?.priceMicros && lifetime?.priceMicros && yearly.currency &&
+      yearly.currency === lifetime.currency && lifetime.priceMicros <= yearly.priceMicros * 2
+    ) {
+      return 'lifetime';
+    }
+    return yearly ? 'yearly' : null;
+  }, [plans]);
   const comparison = useMemo(() => {
     const monthly = plans.find((plan) => plan.id === 'monthly');
     const yearly = plans.find((plan) => plan.id === 'yearly');
@@ -144,8 +170,11 @@ export default function ProUpsellModal() {
   const offerPlan = plans.find((plan) => plan.originalPriceLabel);
   // Web knows its ladder before sign-in; native only learns it from the store,
   // so fall back to the one-time claim until the plans are actually loaded.
+  // Only claimed once the server has said it can record one for this account.
+  const voiceTours = usePointsStore((s) => s.state?.available?.voice_tour === true);
   const benefits = [
     ...CORE_BENEFITS,
+    ...(voiceTours ? [{ icon: Mic, label: 'AI voice tours of your home' }] : []),
     webBilling || plans.length > 1
       ? { icon: CalendarCheck, label: 'Monthly, yearly or lifetime — your choice' }
       : { icon: BadgeCheck, label: 'One-time purchase — no subscription' },
@@ -206,13 +235,13 @@ export default function ProUpsellModal() {
               {plans.map((plan) => (
                 <button
                   key={plan.id}
-                  className={`pro-plan${plan.id === 'yearly' ? ' recommended' : ''}${selectedPlanID === plan.id ? ' selected' : ''}`}
+                  className={`pro-plan${plan.id === bestValueID ? ' recommended' : ''}${selectedPlanID === plan.id ? ' selected' : ''}`}
                   onClick={() => setSelectedPlanID(plan.id)}
                   disabled={actionBusy}
                   aria-label={`${plan.label} Pro plan, ${plan.priceLabel}`}
                   aria-pressed={selectedPlanID === plan.id}
                 >
-                  {plan.id === 'yearly' && <span className="pro-plan-badge">{t('Best value')}</span>}
+                  {plan.id === bestValueID && <span className="pro-plan-badge">{t('Best value')}</span>}
                   <span className="pro-plan-name">{t(plan.label)}</span>
                   {plan.originalPriceLabel && (
                     <span className="pro-offer-was">{plan.originalPriceLabel}</span>

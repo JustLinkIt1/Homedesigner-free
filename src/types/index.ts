@@ -141,6 +141,12 @@ export interface FurnitureItem {
    * surface-snapped objects; omitted/zero keeps normal floor placement. */
   elevation?: number;
   color: string;
+  /** Worktop material id (see data/materials.ts) for kitchen units that carry
+   *  a worktop. Absent means the default (`DEFAULT_WORKTOP`). */
+  worktop?: string;
+  /** Kitchen-unit fronts: bar handles (default) or handleless, which draws a
+   *  dark shadow gap along the top of each front instead. */
+  handles?: 'bar' | 'none';
 }
 
 /** A raster plan (from PDF or image) shown beneath the editor for tracing. */

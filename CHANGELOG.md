@@ -1,5 +1,120 @@
 # Changelog
 
+## 1.22.34 — modular kitchens, AI render for everyone, photo-like 3D
+
+The 1.22.33 bundle was built but Play refused its upload; 1.22.34 is the same
+app with a higher version code, plus the privacy page naming Anthropic and
+ElevenLabs for the AI plan, designer review and voice tour.
+
+
+- Photo mode's AI render now goes to ElevenLabs first (Nano Banana 2,
+  `gemini-3.1-flash-image`, 1K, at the capture's nearest aspect ratio), paid
+  from the prepaid ElevenLabs credit grant, with fal's FLUX Kontext as the
+  backup whenever ElevenLabs refuses or can't be reached. Server-only: the app
+  is unchanged. ElevenLabs links expire after about an hour, so the image
+  route asks for a fresh one on every download. Live test on one sample: about
+  1,000 credits and 14-17 seconds a render; the layout held, but renders add
+  small decor and one dropped the staircase.
+- AI render is open to every signed-in account, at two prices. With the
+  homedesignerapp.com watermark: 150 points. Without it: 200 points on a free
+  account. Pro renders are never watermarked and cost 150 (was 200); the one
+  free render per account stays a Pro perk. The server decides the price and
+  records whether a job is watermarked (migration `0008_ai_render_watermark`);
+  the app stamps the watermark when it shows and saves the image, so the
+  server still hands the unmarked picture to the signed-in owner. An app
+  older than this build keeps working: it never asks for a watermark, so a
+  free account on it would pay the 200-point clean price. `PRICE_VERSION` 4.
+- Modular kitchen planner. Every kitchen unit now draws through one parametric
+  renderer (plinth, carcass, fronts in the item's colour, bar handles or
+  handleless) instead of stretched models, so units of any width line up and
+  join. New units: induction and gas hob units, built-under oven, oven with gas
+  hob, integrated fridge-freezer, oven tower with microwave, larder, microwave
+  wall cabinet, extractor hood, open shelf and open niche; the existing base,
+  drawer, corner and wall cabinets, sink, stove, dishwasher, counter and island
+  keep their ids and move onto the same renderer. Base units, the counter and
+  the island carry a worktop whose material is chosen in Properties (15
+  finishes, white quartz by default) and runs unbroken through neighbouring
+  units; "Apply to all kitchen units" sets the worktop, the front colour or the
+  handle style across the floor in one undo step. A selected unit swaps in
+  place to any other unit of its family (base, tall or wall). Thirteen new
+  library materials (quartz, granite, two marbles, travertine, slate, terrazzo,
+  smooth concrete, oak butcher block, walnut, brushed steel, white hex tile,
+  green zellige) also appear in the floor and wall pickers. An older app opens
+  a project that uses the new units without error and shows them as plain
+  boxes.
+- 3D view, closer to a photo: natural lawn with no mowing stripes, fuller
+  trees and hedges, a lower sun with a stronger key light, and real wall
+  and tree shadows. The phone (Battery saver) tier gets wall shadows baked
+  once on the CPU and a soft shadow under each item, at about the cost of
+  the old ground halo, which also stopped darkening every interior floor.
+  Not measured on a device.
+- Phone toolbar: the profile picture is pinned beside the 2D/3D switch
+  instead of scrolling under it, and on narrow phones the save tick moves
+  onto the logo and the AI wand leaves the bar (it is in More and in the
+  profile menu) so Undo, Redo, Import, Export and More stay in view.
+
+## 1.22.32 — subscriptions on Android, AI plans, phone-first polish (not uploaded)
+
+- Android can now sell Pro Monthly and Yearly. Both subscriptions had been
+  active in Play Console while the app listed and sold Lifetime only: the
+  native plugin queried one-time products alone and the Play provider refused
+  any other plan. The plugin now queries and launches a subscription through
+  its base plan's offer token, and the provider builds the plan ladder from
+  whatever Play returns for each product, so a country without the
+  subscriptions still sells Lifetime. The Worker already verified, acknowledged
+  and expired subscription receipts; it is unchanged.
+- The paywall's "Best value" badge follows the store's real prices: it sits on
+  Lifetime whenever Lifetime costs no more than two years of Yearly.
+- 3D restyle carried onto 1.22.30: gradient sky, one palette for sky, fog and
+  fill light, neutral tone curve on every tier, moonlit night, calmer lawn.
+  The 1.22.30 Android GPU limits are kept as shipped.
+- Phone 3D: the opening view frames the whole house in portrait and sits above
+  the bottom controls, and the Battery saver tier gets a one-quad ground shade
+  in place of the shadows it cannot afford.
+- Controls: settings use switches, the canvas toggles are pressed chips instead
+  of checkboxes, the selected segment is lifted in dark mode, and the phone
+  home bar keeps every label on one line. HUD rows no longer touch the tab bar.
+- "Open .json" on the home screen now reads "Open project file".
+- Two AI tools that cost real compute and are priced to cover it, both in the
+  AI design assistant and both off until the Worker has the provider keys:
+  **Designer review** (200 points, every signed-in account) sends the room
+  list and a picture of the plan to Claude and returns a score out of ten and
+  a short list of concrete changes; the last review is kept per project level
+  on the device. **Voice tour** (250 points, Pro only) has Claude write a
+  roughly fifty-second narration and ElevenLabs record it, played in the
+  dialog and saved or shared as an MP3. Prices are computed from list rates
+  and hard caps on prompt size, picture size, output tokens and narration
+  length, so they hold after the startup credits run out. See
+  `docs/AI_DESIGN_ASSISTANT.md`.
+- **AI plan** (300 points per plan, new or revised): answer a few questions
+  (storeys, bedrooms, bathrooms, total size, furnished, garage), describe the
+  home in plain words, and Claude returns a floor plan that opens as a normal
+  editable project with walls, doors, windows, floors, a roof and, if asked,
+  furniture. "Say what to change" revises it in plain words. Claude never
+  writes coordinates: it describes each storey as nested rows and columns of
+  rooms, and the Worker turns that into exact rectangles, places doors on the
+  wall two rooms really share, connects any room left sealed off, and adds
+  windows and the front door. More than one storey needs Pro, as in the
+  editor; a free account's plan replaces its one project only after a
+  confirmation, a Pro account's opens as a new project. Entry points (home
+  screen card, More menu, AI assistant) appear only once the server reports
+  the feature is switched on, via a new public `/v1/ai/capabilities` route.
+  `node scripts/try-ai-plan.mjs` runs real briefs against the API to measure
+  how often answers compile; it has not been run.
+- Flow, aimed at the phone funnel: a one-time "See it in 3D" pointer at the
+  unlabelled 3D switch after a plan opens; a "Saved with a watermark" toast
+  after a free render or photo, with a gold "Remove watermark" action that
+  opens the paywall on that benefit; a Pro chip on the editor canvas (phones)
+  and a Pro button in the toolbar (desktop) for free users, who until now had
+  no way into the paywall from the editor except by hitting a locked feature.
+- The launch clip's backdrop now follows the clip's real corner colour. It was
+  sampled from inside the logo tile, which left the logo in a white band
+  across a blue screen on phones. A first visit is greeted with "Welcome"
+  rather than "Welcome back".
+- Verified: typecheck, lint, the CI test suite, and a Gradle compile of the
+  Android Java against Play Billing 9.1.0. Not verified: a real subscription
+  purchase on a device. That needs a signed build on a Play test track.
+
 ## 1.22.30 — account membership and AI visibility (signed Android candidate)
 
 - Added a gold Pro avatar badge, explicit account membership status and a

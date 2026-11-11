@@ -5,6 +5,9 @@ export type ToastKind = 'info' | 'success' | 'error';
 export interface ToastAction {
   label: string;
   onClick: () => void;
+  /** `pro` paints the button in the Pro gold, for the one action that leads
+   *  to the paywall. */
+  tone?: 'pro';
 }
 export interface Toast {
   id: string;
