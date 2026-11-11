@@ -268,6 +268,60 @@ Als Einmalkauf oder als Monats- oder Jahresabo:
 Starte mit einem eingerichteten Beispielhaus und mach es zu deinem eigenen.
 </de-DE>
 
+<es-419>
+App name: Home Designer: Planos casa 3D
+Short description: Dibuja planos de casas, diseña tu cocina, amuebla y recorre tu hogar en 3D
+Full description:
+Diseña tu casa desde el celular: dibuja un plano, amuebla cada habitación, planifica la cocina y recórrelo todo en 3D. Sin experiencia previa.
+
+HomeDesigner es un creador de planos, un planificador de habitaciones y una app de diseño de casas en 3D, todo en uno. Úsalo para preparar una remodelación, probar la distribución de los muebles antes de comprar, diseñar una cocina o bosquejar la casa de tus sueños.
+
+DIBUJA PLANOS A ESCALA
+• Traza paredes con ajuste inteligente y escribe medidas exactas
+• Agrega puertas, ventanas y vanos en muchos estilos
+• Las habitaciones y sus áreas se calculan mientras dibujas
+• Importa un plano en PDF, foto o DXF y cálcalo
+• Unidades métricas e imperiales
+
+AMUEBLA Y DECORA
+• Un gran catálogo de muebles para sala, recámara, baño, oficina y jardín
+• Cambia el tamaño, gira y coloca cada objeto a escala
+• Pisos, colores de pared y materiales: madera, cerámica, mármol, granito, concreto y más
+
+PLANIFICADOR DE COCINAS
+• Gabinetes bajos, altos y torres, cajoneras, esquineros e islas
+• Horno empotrado, parrilla, refrigerador, microondas, lavavajillas, fregadero y campana
+• Elige la cubierta, el color de los frentes y las jaladeras
+
+MÍRALO EN 3D
+• Pasa del plano 2D al 3D con un toque
+• Mira tu casa como una maqueta o camina por ella
+• Iluminación realista con hora del día ajustable
+• Modo foto para guardar imágenes
+
+HERRAMIENTAS DE IA
+• Plano con IA: describe tu casa y obtén un plano editable
+• Render con IA: convierte la vista 3D en una imagen fotorrealista
+• Revisión de un diseñador IA y recorrido narrado con voz (Pro)
+Las herramientas de IA requieren una cuenta gratuita y usan puntos. Las cuentas nuevas reciben puntos gratis para probarlas.
+
+GUARDA Y COMPARTE
+• Exporta los planos como imagen PNG
+• Funciona sin conexión: los diseños se guardan en tu dispositivo
+• Inicia sesión con Google para sincronizar tus proyectos
+• No necesitas cuenta para empezar
+
+HOMEDESIGNER PRO
+Con un pago único o una suscripción mensual o anual:
+• Varios pisos y sótanos
+• El catálogo de muebles completo
+• Renders y fotos sin marca de agua
+• Exportación de planos en PDF para obras y permisos
+• Proyectos guardados ilimitados
+
+Empieza con una casa de ejemplo amueblada y hazla tuya.
+</es-419>
+
 <es-ES>
 App name: Home Designer: Planos casa 3D
 Short description: Dibuja planos de casas, diseña tu cocina, amuebla y recorre tu hogar en 3D
