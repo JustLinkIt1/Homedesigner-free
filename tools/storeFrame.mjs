@@ -29,6 +29,10 @@ export const SHOTS = [
   // 3D leads: it is the difference between this and every 2D-only floor plan
   // app, and it reads in under a second at thumbnail size.
   { source: '3-view3d', key: 'walk3d' },
+  // Kitchen and AI next: they are what people search for ("kitchen planner",
+  // "AI home design") and the three shots Play shows before any scrolling.
+  { source: '5-kitchen', key: 'kitchen' },
+  { source: '6-airender', key: 'airender' },
   { source: '2-plan2d', key: 'draw' },
   { source: '4-catalog', key: 'furnish' },
   { source: '1-home', key: 'templates' },
@@ -38,30 +42,40 @@ export const SHOTS = [
 export const CAPTIONS = {
   en: {
     walk3d: 'Walk through it in 3D',
+    kitchen: 'Plan your dream kitchen',
+    airender: 'Turn 3D into a photo with AI',
     draw: 'Draw a floor plan fast',
     furnish: 'Furnish every room',
     templates: 'Start from a real home',
   },
   de: {
     walk3d: 'In 3D hindurchgehen',
+    kitchen: 'Plane deine Traumküche',
+    airender: 'Aus 3D wird ein Foto per KI',
     draw: 'Grundriss schnell zeichnen',
     furnish: 'Jeden Raum einrichten',
     templates: 'Mit echtem Haus starten',
   },
   es: {
     walk3d: 'Recórrelo en 3D',
+    kitchen: 'Diseña tu cocina ideal',
+    airender: 'De 3D a foto con IA',
     draw: 'Dibuja un plano rápido',
     furnish: 'Amuebla cada estancia',
     templates: 'Empieza con una casa real',
   },
   fr: {
     walk3d: 'Parcourez-le en 3D',
+    kitchen: 'Imaginez votre cuisine',
+    airender: 'Du 3D à la photo par IA',
     draw: 'Dessinez un plan vite fait',
     furnish: 'Meublez chaque pièce',
     templates: 'Partez d’une vraie maison',
   },
   pt: {
     walk3d: 'Percorra em 3D',
+    kitchen: 'Planeie a sua cozinha',
+    airender: 'De 3D a foto com IA',
     draw: 'Desenhe a planta depressa',
     furnish: 'Mobile cada divisão',
     templates: 'Comece com uma casa real',

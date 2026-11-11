@@ -1,0 +1,261 @@
+<en-GB>
+New kitchen planner: built-in ovens, hobs, sinks, fridges, microwaves, hoods, drawers and wall cupboards, and pick your worktop.
+13 new materials, including marble, granite, oak and terrazzo.
+AI plan: describe your home and get an editable floor plan.
+AI designer review, and a narrated voice tour for Pro.
+AI renders are now open to every account.
+Pro Monthly and Yearly subscriptions.
+A more realistic 3D view and phone layout fixes.
+</en-GB>
+<ar>
+مخطط مطبخ جديد: أفران وأسطح طهي وأحواض وثلاجات وميكروويف وشفاطات وأدراج وخزائن علوية مدمجة، مع اختيار سطح العمل.
+13 خامة جديدة منها الرخام والجرانيت والبلوط والتيرازو.
+مخطط بالذكاء الاصطناعي: صف منزلك واحصل على مخطط قابل للتعديل.
+مراجعة تصميم بالذكاء الاصطناعي وجولة صوتية لمشتركي Pro.
+صور الذكاء الاصطناعي متاحة الآن لكل الحسابات.
+اشتراكات Pro شهرية وسنوية.
+عرض ثلاثي الأبعاد أكثر واقعية وتحسينات للهاتف.
+</ar>
+<cs-CZ>
+Nový plánovač kuchyně: vestavné trouby, varné desky, dřezy, lednice, mikrovlnky, digestoře, zásuvky a horní skříňky a výběr pracovní desky.
+13 nových materiálů včetně mramoru, žuly, dubu a terrazza.
+AI plán: popište svůj dům a získejte upravitelný půdorys.
+AI hodnocení návrhu a namluvená prohlídka pro Pro.
+AI vizualizace jsou nyní dostupné pro každý účet.
+Předplatné Pro měsíční a roční.
+Realističtější 3D zobrazení a opravy pro telefony.
+</cs-CZ>
+<da-DK>
+Ny køkkenplanlægger: indbyggede ovne, kogeplader, vaske, køleskabe, mikroovne, emhætter, skuffer og overskabe, og vælg din bordplade.
+13 nye materialer, bl.a. marmor, granit, eg og terrazzo.
+AI-plan: beskriv dit hus og få en plantegning, du kan redigere.
+AI-designvurdering og en indtalt rundvisning til Pro.
+AI-renderinger er nu åbne for alle konti.
+Pro månedligt og årligt abonnement.
+Mere realistisk 3D-visning og rettelser på telefon.
+</da-DK>
+<de-DE>
+Neuer Küchenplaner: Einbaubacköfen, Kochfelder, Spülen, Kühlschränke, Mikrowellen, Dunstabzüge, Schubladen und Oberschränke, dazu die Arbeitsplatte nach Wahl.
+13 neue Materialien, u. a. Marmor, Granit, Eiche und Terrazzo.
+KI-Plan: Beschreibe dein Zuhause und erhalte einen bearbeitbaren Grundriss.
+KI-Designbewertung und eine gesprochene Hausführung für Pro.
+KI-Renderings jetzt für alle Konten.
+Pro als Monats- und Jahresabo.
+Realistischere 3D-Ansicht und Verbesserungen fürs Handy.
+</de-DE>
+<es-419>
+Nuevo planificador de cocinas: hornos, anafes, tarjas, refrigeradores, microondas, campanas, cajones y alacenas empotrados, y elige tu cubierta.
+13 materiales nuevos, como mármol, granito, roble y terrazo.
+Plano con IA: describe tu casa y recibe un plano editable.
+Revisión de diseño con IA y recorrido narrado para Pro.
+Los renders con IA ya están disponibles para todas las cuentas.
+Suscripciones Pro mensual y anual.
+Vista 3D más realista y mejoras en el celular.
+</es-419>
+<es-ES>
+Nuevo planificador de cocinas: hornos, placas, fregaderos, frigoríficos, microondas, campanas, cajones y muebles altos integrados, y elige tu encimera.
+13 materiales nuevos, como mármol, granito, roble y terrazo.
+Plano con IA: describe tu casa y recibe un plano editable.
+Revisión de diseño con IA y visita narrada para Pro.
+Los renders con IA ya están disponibles para todas las cuentas.
+Suscripciones Pro mensual y anual.
+Vista 3D más realista y mejoras en el móvil.
+</es-ES>
+<fi-FI>
+Uusi keittiösuunnittelija: kalusteuunit, liesitasot, altaat, jääkaapit, mikroaaltouunit, liesituulettimet, laatikostot ja yläkaapit sekä työtason valinta.
+13 uutta materiaalia, mm. marmori, graniitti, tammi ja terrazzo.
+AI-pohjapiirros: kuvaile kotisi ja saat muokattavan pohjapiirroksen.
+AI-suunnitteluarvio ja kerrottu kierros Pro-käyttäjille.
+AI-renderöinnit ovat nyt kaikkien tilien käytössä.
+Pro kuukausi- ja vuositilauksena.
+Realistisempi 3D-näkymä ja korjauksia puhelimelle.
+</fi-FI>
+<fr-FR>
+Nouveau planificateur de cuisine : fours, plaques, éviers, réfrigérateurs, micro-ondes, hottes, tiroirs et meubles hauts encastrés, avec le plan de travail de votre choix.
+13 nouveaux matériaux, dont marbre, granit, chêne et terrazzo.
+Plan IA : décrivez votre maison et obtenez un plan modifiable.
+Avis design IA et visite commentée pour Pro.
+Les rendus IA sont ouverts à tous les comptes.
+Abonnements Pro mensuel et annuel.
+Vue 3D plus réaliste et corrections sur mobile.
+</fr-FR>
+<hi-IN>
+नया किचन प्लानर: बिल्ट-इन ओवन, हॉब, सिंक, फ़्रिज, माइक्रोवेव, चिमनी, दराज़ और ऊपरी कैबिनेट, साथ में अपना वर्कटॉप चुनें।
+13 नए मटीरियल, जैसे मार्बल, ग्रेनाइट, ओक और टेराज़ो।
+AI प्लान: अपने घर का वर्णन करें और बदलने योग्य फ़्लोर प्लान पाएँ।
+AI डिज़ाइन समीक्षा और Pro के लिए आवाज़ वाला टूर।
+AI रेंडर अब हर खाते के लिए उपलब्ध।
+Pro मासिक और वार्षिक सदस्यता।
+ज़्यादा असली 3D दृश्य और फ़ोन के लिए सुधार।
+</hi-IN>
+<hu-HU>
+Új konyhatervező: beépített sütők, főzőlapok, mosogatók, hűtők, mikrók, páraelszívók, fiókok és felső szekrények, választható munkalappal.
+13 új anyag, köztük márvány, gránit, tölgy és terrazzo.
+AI alaprajz: írd le az otthonod, és szerkeszthető alaprajzot kapsz.
+AI tervértékelés és narrált bejárás Pro előfizetőknek.
+Az AI renderek mostantól minden fiók számára elérhetők.
+Pro havi és éves előfizetés.
+Valósághűbb 3D nézet és javítások telefonon.
+</hu-HU>
+<id>
+Perencana dapur baru: oven, kompor tanam, bak cuci, kulkas, microwave, cooker hood, laci dan kabinet atas, plus pilihan meja dapur.
+13 material baru, termasuk marmer, granit, kayu oak, dan terrazzo.
+Denah AI: jelaskan rumah Anda dan dapatkan denah yang bisa diedit.
+Ulasan desain AI dan tur bersuara untuk Pro.
+Render AI kini terbuka untuk semua akun.
+Langganan Pro bulanan dan tahunan.
+Tampilan 3D lebih realistis dan perbaikan di ponsel.
+</id>
+<it-IT>
+Nuovo progettista di cucine: forni, piani cottura, lavelli, frigoriferi, microonde, cappe, cassetti e pensili da incasso, e il piano di lavoro che vuoi.
+13 nuovi materiali, tra cui marmo, granito, rovere e terrazzo.
+Progetto IA: descrivi la tua casa e ottieni una pianta modificabile.
+Revisione del design IA e visita guidata con voce per Pro.
+I render IA sono ora disponibili per tutti gli account.
+Abbonamenti Pro mensile e annuale.
+Vista 3D più realistica e correzioni su telefono.
+</it-IT>
+<iw-IL>
+מתכנן מטבחים חדש: תנורים, כיריים, כיורים, מקררים, מיקרוגל, קולטי אדים, מגירות וארונות עליונים בהתקנה מובנית, ובחירת משטח עבודה.
+13 חומרים חדשים, כולל שיש, גרניט, אלון וטראצו.
+תוכנית AI: תארו את הבית וקבלו תוכנית קומה שאפשר לערוך.
+סקירת עיצוב AI וסיור קולי למנויי Pro.
+הדמיות AI זמינות עכשיו לכל החשבונות.
+מנויי Pro חודשי ושנתי.
+תצוגת תלת־ממד מציאותית יותר ותיקונים בטלפון.
+</iw-IL>
+<ja-JP>
+新しいキッチンプランナー：ビルトインのオーブン、コンロ、シンク、冷蔵庫、電子レンジ、レンジフード、引き出し、吊り戸棚を配置し、ワークトップも選べます。
+大理石、御影石、オーク、テラゾーなど13の新素材。
+AIプラン：家の希望を伝えると編集できる間取りを作成。
+AIデザインレビューと、Pro向けのナレーション付きツアー。
+AIレンダーがすべてのアカウントで利用可能に。
+Pro月額・年額プラン。
+よりリアルな3D表示とスマホ向けの改善。
+</ja-JP>
+<ko-KR>
+새 주방 플래너: 빌트인 오븐, 쿡탑, 싱크대, 냉장고, 전자레인지, 후드, 서랍장, 상부장을 배치하고 상판도 고를 수 있습니다.
+대리석, 화강암, 오크, 테라조 등 13가지 새 소재.
+AI 도면: 원하는 집을 설명하면 편집 가능한 도면을 만들어 드립니다.
+AI 디자인 리뷰와 Pro용 음성 투어.
+이제 모든 계정에서 AI 렌더 사용 가능.
+Pro 월간·연간 구독.
+더 사실적인 3D 화면과 휴대폰 개선.
+</ko-KR>
+<nl-NL>
+Nieuwe keukenplanner: inbouwovens, kookplaten, spoelbakken, koelkasten, magnetrons, afzuigkappen, laden en bovenkasten, met het werkblad naar keuze.
+13 nieuwe materialen, waaronder marmer, graniet, eiken en terrazzo.
+AI-ontwerp: beschrijf je huis en krijg een bewerkbare plattegrond.
+AI-ontwerpbeoordeling en een ingesproken rondleiding voor Pro.
+AI-renders zijn nu voor elk account beschikbaar.
+Pro als maand- en jaarabonnement.
+Realistischer 3D-beeld en verbeteringen op de telefoon.
+</nl-NL>
+<no-NO>
+Ny kjøkkenplanlegger: integrerte stekeovner, platetopper, oppvaskkummer, kjøleskap, mikrobølgeovner, ventilatorer, skuffer og overskap, og velg benkeplate.
+13 nye materialer, blant annet marmor, granitt, eik og terrazzo.
+AI-plan: beskriv hjemmet ditt og få en plantegning du kan redigere.
+AI-designvurdering og en innlest omvisning for Pro.
+AI-gjengivelser er nå åpne for alle kontoer.
+Pro månedlig og årlig abonnement.
+Mer realistisk 3D-visning og rettelser på telefon.
+</no-NO>
+<pl-PL>
+Nowy planer kuchni: piekarniki, płyty grzewcze, zlewy, lodówki, mikrofalówki, okapy, szuflady i szafki górne do zabudowy oraz wybór blatu.
+13 nowych materiałów, m.in. marmur, granit, dąb i lastryko.
+Plan AI: opisz swój dom i otrzymaj rzut, który możesz edytować.
+Ocena projektu AI i oprowadzanie głosowe dla Pro.
+Rendery AI są teraz dostępne dla każdego konta.
+Subskrypcje Pro miesięczna i roczna.
+Bardziej realistyczny widok 3D i poprawki na telefonie.
+</pl-PL>
+<pt-BR>
+Novo planejador de cozinha: fornos, cooktops, pias, geladeiras, micro-ondas, coifas, gavetas e armários aéreos embutidos, com a bancada que você escolher.
+13 novos materiais, como mármore, granito, carvalho e terrazzo.
+Planta com IA: descreva sua casa e receba uma planta editável.
+Avaliação de design com IA e tour narrado para Pro.
+Renders com IA agora para todas as contas.
+Assinaturas Pro mensal e anual.
+Visão 3D mais realista e melhorias no celular.
+</pt-BR>
+<ro>
+Planificator nou de bucătărie: cuptoare, plite, chiuvete, frigidere, microunde, hote, sertare și dulapuri suspendate încorporate, plus blatul ales de tine.
+13 materiale noi, printre care marmură, granit, stejar și terrazzo.
+Plan AI: descrie-ți casa și primești un plan pe care îl poți edita.
+Evaluare de design AI și tur narat pentru Pro.
+Randările AI sunt acum disponibile pentru toate conturile.
+Abonamente Pro lunar și anual.
+Vizualizare 3D mai realistă și remedieri pe telefon.
+</ro>
+<ru-RU>
+Новый планировщик кухни: встроенные духовки, варочные панели, мойки, холодильники, микроволновки, вытяжки, ящики и навесные шкафы, а также выбор столешницы.
+13 новых материалов, включая мрамор, гранит, дуб и терраццо.
+ИИ-план: опишите дом и получите план, который можно редактировать.
+ИИ-оценка дизайна и озвученная экскурсия для Pro.
+ИИ-рендеры теперь доступны всем аккаунтам.
+Подписки Pro на месяц и на год.
+Более реалистичный 3D-вид и исправления для телефона.
+</ru-RU>
+<sk>
+Nový plánovač kuchyne: vstavané rúry, varné dosky, drezy, chladničky, mikrovlnky, digestory, zásuvky a horné skrinky a výber pracovnej dosky.
+13 nových materiálov vrátane mramoru, žuly, duba a terazza.
+AI plán: opíšte svoj dom a získajte upraviteľný pôdorys.
+AI hodnotenie návrhu a namluvená prehliadka pre Pro.
+AI vizualizácie sú teraz dostupné pre každý účet.
+Predplatné Pro mesačné a ročné.
+Realistickejšie 3D zobrazenie a opravy pre telefóny.
+</sk>
+<sv-SE>
+Ny köksplanerare: inbyggda ugnar, hällar, diskhoar, kylskåp, mikrovågsugnar, köksfläktar, lådor och överskåp, och välj bänkskiva.
+13 nya material, bland annat marmor, granit, ek och terrazzo.
+AI-plan: beskriv ditt hem och få en planritning du kan redigera.
+AI-designgranskning och en inläst visning för Pro.
+AI-renderingar är nu öppna för alla konton.
+Pro som månads- och årsprenumeration.
+Mer realistisk 3D-vy och förbättringar i mobilen.
+</sv-SE>
+<th>
+ตัววางแผนห้องครัวใหม่: เตาอบ เตาฝัง ซิงก์ ตู้เย็น ไมโครเวฟ เครื่องดูดควัน ลิ้นชัก และตู้แขวนแบบบิวท์อิน พร้อมเลือกท็อปเคาน์เตอร์
+วัสดุใหม่ 13 แบบ เช่น หินอ่อน แกรนิต ไม้โอ๊ก และเทอร์ราซโซ
+แปลน AI: อธิบายบ้านของคุณแล้วรับแปลนที่แก้ไขได้
+รีวิวการออกแบบด้วย AI และทัวร์พร้อมเสียงบรรยายสำหรับ Pro
+ภาพเรนเดอร์ AI ใช้ได้กับทุกบัญชีแล้ว
+สมัครสมาชิก Pro รายเดือนและรายปี
+มุมมอง 3D สมจริงขึ้นและปรับปรุงบนโทรศัพท์
+</th>
+<tr-TR>
+Yeni mutfak planlayıcı: ankastre fırın, ocak, evye, buzdolabı, mikrodalga, davlumbaz, çekmece ve üst dolaplar; tezgâhı da siz seçin.
+Mermer, granit, meşe ve terrazzo dahil 13 yeni malzeme.
+Yapay zekâ planı: evinizi anlatın, düzenlenebilir bir kat planı alın.
+Yapay zekâ tasarım değerlendirmesi ve Pro için sesli tur.
+Yapay zekâ görselleri artık tüm hesaplara açık.
+Pro aylık ve yıllık abonelik.
+Daha gerçekçi 3D görünüm ve telefon düzeltmeleri.
+</tr-TR>
+<uk>
+Новий планувальник кухні: вбудовані духовки, варильні поверхні, мийки, холодильники, мікрохвильовки, витяжки, шухляди й навісні шафи, а також вибір стільниці.
+13 нових матеріалів, зокрема мармур, граніт, дуб і терацо.
+ШІ-план: опишіть дім і отримайте план, який можна редагувати.
+ШІ-оцінка дизайну та озвучена екскурсія для Pro.
+ШІ-рендери тепер доступні всім акаунтам.
+Підписки Pro на місяць і на рік.
+Реалістичніший 3D-вигляд і виправлення для телефона.
+</uk>
+<vi>
+Trình thiết kế bếp mới: lò nướng, bếp, bồn rửa, tủ lạnh, lò vi sóng, máy hút mùi, ngăn kéo và tủ treo âm tường, kèm lựa chọn mặt bàn bếp.
+13 vật liệu mới như đá cẩm thạch, đá granite, gỗ sồi và terrazzo.
+Bản vẽ AI: mô tả ngôi nhà và nhận mặt bằng có thể chỉnh sửa.
+Đánh giá thiết kế bằng AI và tour có thuyết minh cho Pro.
+Ảnh render AI nay mở cho mọi tài khoản.
+Gói Pro theo tháng và theo năm.
+Chế độ xem 3D chân thực hơn và cải thiện trên điện thoại.
+</vi>
+<zh-CN>
+全新厨房规划：嵌入式烤箱、灶台、水槽、冰箱、微波炉、油烟机、抽屉和吊柜，还可选择台面。
+新增 13 种材质，包括大理石、花岗岩、橡木和水磨石。
+AI 平面图：描述您的住宅，即可获得可编辑的平面图。
+AI 设计点评，以及 Pro 专享语音导览。
+AI 渲染现已向所有账户开放。
+Pro 月度和年度订阅。
+更逼真的 3D 视图和手机端改进。
+</zh-CN>

@@ -13,15 +13,48 @@ await cp(appDist, resolve(output, 'app'), { recursive: true });
 const studioDir = resolve(output, 'app', 'model-studio');
 await mkdir(studioDir, { recursive: true });
 const appHtml = await readFile(resolve(appDist, 'index.html'), 'utf8');
+
+// The same app shell is served at three URLs. Search engines read three
+// identical titles as duplicates and pick one at random, so each copy says
+// which page it is: its own title and canonical, or noindex for the tool that
+// is not meant to be found.
+const ORIGIN = 'https://homedesignerapp.com';
+const TITLE = /<title>[^<]*<\/title>/;
+if (!TITLE.test(appHtml) || !appHtml.includes('</head>')) {
+  throw new Error('App index.html has no <title> or </head> to specialise');
+}
+const forSearch = (html, { title, path, noindex }) =>
+  html
+    .replace(TITLE, `<title>${title}</title>`)
+    .replace(
+      '</head>',
+      noindex
+        ? '  <meta name="robots" content="noindex" />\n  </head>'
+        : `  <link rel="canonical" href="${ORIGIN}${path}" />\n  </head>`,
+    );
+const underApp = (html) => html.replace('<head>', '<head>\n    <base href="/app/" />');
+
+await writeFile(
+  resolve(output, 'app', 'index.html'),
+  forSearch(appHtml, {
+    title: 'HomeDesigner Web App — Draw Floor Plans Online in 2D &amp; 3D',
+    path: '/app/',
+  }),
+);
 await writeFile(
   resolve(studioDir, 'index.html'),
-  appHtml.replace('<head>', '<head>\n    <base href="/app/" />'),
+  underApp(forSearch(appHtml, { title: 'HomeDesigner Model Studio', noindex: true })),
 );
 const communityDir = resolve(output, 'community');
 await mkdir(communityDir, { recursive: true });
 await writeFile(
   resolve(communityDir, 'index.html'),
-  appHtml.replace('<head>', '<head>\n    <base href="/app/" />'),
+  underApp(
+    forSearch(appHtml, {
+      title: 'HomeDesigner Community — Home Designs Shared by Users',
+      path: '/community/',
+    }),
+  ),
 );
 await cp(resolve(appDist, 'privacy.html'), resolve(output, 'privacy.html'));
 await cp(resolve(appDist, 'CNAME'), resolve(output, 'CNAME'));
