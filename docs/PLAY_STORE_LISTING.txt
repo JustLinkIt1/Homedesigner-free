@@ -1,0 +1,1511 @@
+<en-GB>
+App name: Home Designer: Floor Plans 3D
+Short description: Draw house plans, design your kitchen, furnish rooms and walk through in 3D
+Full description:
+Design your home on your phone: draw a floor plan, furnish every room, plan the kitchen and walk through it all in 3D. No experience needed.
+
+HomeDesigner is a floor plan creator, room planner and 3D home design app in one. Use it to plan a renovation, try a furniture layout before you buy, design a kitchen, or sketch the house you dream of.
+
+DRAW FLOOR PLANS TO SCALE
+• Sketch walls with smart snapping and type exact lengths
+• Add doors, windows and openings in many styles
+• Rooms and their areas are worked out as you draw
+• Import a PDF, photo or DXF plan and trace over it
+• Metric and imperial units
+
+FURNISH AND DECORATE
+• A large furniture catalog for living room, bedroom, bathroom, office and garden
+• Resize, rotate and place every item to scale
+• Floors, wall colours and materials: wood, tile, marble, granite, concrete and more
+
+KITCHEN PLANNER
+• Base, wall and tall cabinets, drawers, corner units and islands
+• Built-in oven, hob, fridge, microwave, dishwasher, sink and extractor hood
+• Choose the worktop, front colour and handles
+
+SEE IT IN 3D
+• Switch from the 2D plan to 3D in one tap
+• Look at your home like a dollhouse or walk through it
+• Realistic lighting with adjustable time of day
+• Photo mode for still images
+
+AI TOOLS
+• AI floor plan: describe your home and get a plan you can edit
+• AI render: turn your 3D view into a photo-like image
+• AI designer review of your layout, and a narrated voice tour (Pro)
+AI tools need a free account and use points. New accounts get free points to try them.
+
+SAVE AND SHARE
+• Export plans as PNG images
+• Works offline: designs are saved on your device
+• Sign in with Google to sync projects across devices
+• No account needed to start
+
+HOMEDESIGNER PRO
+A one-time purchase, or a monthly or yearly subscription:
+• Several floors and basements
+• The complete furniture catalog
+• Watermark-free renders and photos
+• PDF plan export for builders and permits
+• Unlimited saved projects
+
+Start from a furnished sample home and make it your own.
+</en-GB>
+
+<ar>
+App name: Home Designer: مخططات منازل 3D
+Short description: ارسم مخطط منزلك، صمّم المطبخ، وزّع الأثاث وتجوّل في بيتك بتقنية 3D
+Full description:
+صمّم منزلك على هاتفك: ارسم المخطط، افرش كل غرفة، خطّط المطبخ وتجوّل في كل ذلك بتقنية ثلاثية الأبعاد. لا حاجة إلى أي خبرة.
+
+HomeDesigner يجمع بين أداة رسم المخططات ومخطِّط الغرف وتطبيق تصميم المنازل ثلاثي الأبعاد. استخدمه للتحضير للترميم، أو لتجربة توزيع الأثاث قبل الشراء، أو لتصميم مطبخ، أو لرسم بيت أحلامك.
+
+ارسم مخططات بمقياس دقيق
+• ارسم الجدران مع الالتقاط الذكي واكتب الأطوال بدقة
+• أضف أبوابًا ونوافذ وفتحات بأنماط متعددة
+• تُحسب الغرف ومساحاتها أثناء الرسم
+• استورد مخططًا من PDF أو صورة أو DXF وارسم فوقه
+• وحدات مترية وإمبراطورية
+
+افرش وزيّن
+• كتالوج أثاث واسع لغرفة المعيشة وغرفة النوم والحمّام والمكتب والحديقة
+• غيّر الحجم ودوّر وضع كل قطعة بالمقياس الصحيح
+• أرضيات وألوان جدران وخامات: خشب، بلاط، رخام، غرانيت، خرسانة وغيرها
+
+مخطِّط المطبخ
+• خزائن سفلية وعلوية وطويلة، أدراج، وحدات زاوية وجزر
+• فرن مدمج، موقد، ثلاجة، ميكروويف، غسالة صحون، حوض وشفّاط
+• اختر سطح العمل ولون الواجهات والمقابض
+
+شاهده بتقنية 3D
+• انتقل من المخطط ثنائي الأبعاد إلى 3D بلمسة واحدة
+• انظر إلى منزلك كمجسّم أو تجوّل داخله
+• إضاءة واقعية مع إمكانية ضبط وقت اليوم
+• وضع التصوير لحفظ الصور
+
+أدوات الذكاء الاصطناعي
+• مخطط بالذكاء الاصطناعي: صِف منزلك واحصل على مخطط قابل للتعديل
+• تصيير بالذكاء الاصطناعي: حوّل المشهد ثلاثي الأبعاد إلى صورة تشبه الصورة الفوتوغرافية
+• مراجعة من مصمّم بالذكاء الاصطناعي وجولة صوتية مع تعليق (Pro)
+تتطلب أدوات الذكاء الاصطناعي حسابًا مجانيًا وتستخدم نقاطًا. تحصل الحسابات الجديدة على نقاط مجانية للتجربة.
+
+احفظ وشارك
+• صدّر المخططات كصور PNG
+• يعمل دون اتصال: تُحفظ التصاميم على جهازك
+• سجّل الدخول عبر Google لمزامنة مشاريعك
+• لا حاجة إلى حساب للبدء
+
+HOMEDESIGNER PRO
+بشراء لمرة واحدة أو باشتراك شهري أو سنوي:
+• عدة طوابق وأقبية
+• كتالوج الأثاث الكامل
+• تصييرات وصور بلا علامة مائية
+• تصدير المخططات بصيغة PDF للمقاولين والتراخيص
+• عدد غير محدود من المشاريع المحفوظة
+
+ابدأ من منزل نموذجي مفروش واجعله منزلك.
+</ar>
+
+<cs-CZ>
+App name: Home Designer: Půdorys domu 3D
+Short description: Kreslete půdorysy, navrhněte kuchyň, zařiďte pokoje a projděte se domem ve 3D
+Full description:
+Navrhněte si domov v telefonu: nakreslete půdorys, zařiďte každý pokoj, naplánujte kuchyň a vše si projděte ve 3D. Bez jakýchkoli zkušeností.
+
+HomeDesigner je tvůrce půdorysů, plánovač místností a aplikace pro 3D návrh domu v jednom. Připravte si rekonstrukci, vyzkoušejte rozmístění nábytku před nákupem, navrhněte kuchyň nebo si načrtněte vysněný dům.
+
+KRESLETE PŮDORYSY V MĚŘÍTKU
+• Kreslete stěny s chytrým přichytáváním a zadávejte přesné délky
+• Přidávejte dveře, okna a otvory v mnoha stylech
+• Místnosti a jejich plochy se počítají už při kreslení
+• Importujte plán z PDF, fotky nebo DXF a obkreslete ho
+• Metrické i imperiální jednotky
+
+ZAŘIZUJTE A ZDOBTE
+• Velký katalog nábytku pro obývák, ložnici, koupelnu, kancelář i zahradu
+• Měňte velikost, otáčejte a umisťujte každý kus v měřítku
+• Podlahy, barvy stěn a materiály: dřevo, dlažba, mramor, žula, beton a další
+
+PLÁNOVAČ KUCHYNĚ
+• Spodní, horní a vysoké skříňky, zásuvky, rohové skříňky a ostrůvky
+• Vestavná trouba, varná deska, lednice, mikrovlnka, myčka, dřez a digestoř
+• Vyberte si pracovní desku, barvu dvířek a úchytky
+
+PROHLÉDNĚTE SI TO VE 3D
+• Přepněte z 2D plánu do 3D jedním klepnutím
+• Dívejte se na dům jako na model, nebo se jím projděte
+• Realistické světlo s nastavitelnou denní dobou
+• Fotorežim pro ukládání snímků
+
+NÁSTROJE AI
+• AI půdorys: popište svůj domov a získejte plán, který lze upravovat
+• AI render: proměňte 3D pohled v obrázek jako z fotografie
+• Posudek AI designéra a komentovaná prohlídka (Pro)
+Nástroje AI vyžadují bezplatný účet a spotřebovávají body. Nové účty dostanou body zdarma na vyzkoušení.
+
+UKLÁDEJTE A SDÍLEJTE
+• Exportujte plány jako obrázky PNG
+• Funguje offline: návrhy se ukládají do zařízení
+• Přihlaste se přes Google a synchronizujte projekty
+• Pro začátek nepotřebujete účet
+
+HOMEDESIGNER PRO
+Jednorázový nákup, nebo měsíční či roční předplatné:
+• Více podlaží a sklepy
+• Kompletní katalog nábytku
+• Rendery a fotky bez vodoznaku
+• Export plánů do PDF pro stavebníky a úřady
+• Neomezený počet uložených projektů
+
+Začněte se zařízeným ukázkovým domem a upravte si ho podle sebe.
+</cs-CZ>
+
+<da-DK>
+App name: Home Designer: Plantegning 3D
+Short description: Tegn plantegninger, design dit køkken, indret rum og gå rundt i huset i 3D
+Full description:
+Design dit hjem på telefonen: tegn en plantegning, indret hvert rum, planlæg køkkenet og gå rundt i det hele i 3D. Det kræver ingen erfaring.
+
+HomeDesigner er plantegningsværktøj, rumplanlægger og 3D-boligdesign i én app. Brug den til at planlægge en renovering, afprøve en møblering før du køber, designe et køkken eller skitsere dit drømmehus.
+
+TEGN PLANTEGNINGER I MÅLESTOK
+• Tegn vægge med smart fastgørelse, og indtast præcise længder
+• Tilføj døre, vinduer og åbninger i mange stilarter
+• Rum og arealer beregnes, mens du tegner
+• Importér en plan fra PDF, foto eller DXF, og tegn den over
+• Metriske og britiske enheder
+
+INDRET OG DEKORÉR
+• Et stort møbelkatalog til stue, soveværelse, badeværelse, kontor og have
+• Skalér, rotér og placér hver genstand i målestok
+• Gulve, vægfarver og materialer: træ, fliser, marmor, granit, beton og mere
+
+KØKKENPLANLÆGGER
+• Under-, over- og højskabe, skuffer, hjørneskabe og køkkenøer
+• Indbygningsovn, kogeplade, køleskab, mikroovn, opvaskemaskine, vask og emhætte
+• Vælg bordplade, frontfarve og greb
+
+SE DET I 3D
+• Skift fra 2D-plan til 3D med ét tryk
+• Se dit hjem som et dukkehus, eller gå rundt i det
+• Realistisk lys med justerbart tidspunkt på dagen
+• Fototilstand til stillbilleder
+
+AI-VÆRKTØJER
+• AI-plantegning: beskriv dit hjem, og få en plan, du kan redigere
+• AI-rendering: gør din 3D-visning til et fotolignende billede
+• AI-designerens vurdering af din indretning og en oplæst rundvisning (Pro)
+AI-værktøjerne kræver en gratis konto og bruger point. Nye konti får gratis point til at prøve dem.
+
+GEM OG DEL
+• Eksportér planer som PNG-billeder
+• Virker offline: dine design gemmes på enheden
+• Log ind med Google for at synkronisere projekter
+• Du behøver ingen konto for at komme i gang
+
+HOMEDESIGNER PRO
+Som engangskøb eller som måneds- eller årsabonnement:
+• Flere etager og kældre
+• Hele møbelkataloget
+• Renderinger og fotos uden vandmærke
+• PDF-eksport af planer til håndværkere og tilladelser
+• Ubegrænset antal gemte projekter
+
+Start med et møbleret eksempelhus, og gør det til dit eget.
+</da-DK>
+
+<de-DE>
+App name: Home Designer: Grundriss 3D
+Short description: Grundriss zeichnen, Küche planen, Räume einrichten und in 3D durchs Haus gehen
+Full description:
+Gestalte dein Zuhause auf dem Handy: Grundriss zeichnen, jeden Raum einrichten, die Küche planen und alles in 3D begehen. Ganz ohne Vorkenntnisse.
+
+HomeDesigner ist Grundriss-Planer, Raumplaner und 3D-Hausplaner in einer App. Plane damit eine Renovierung, teste die Möbelaufstellung vor dem Kauf, entwirf eine Küche oder skizziere dein Traumhaus.
+
+GRUNDRISSE MASSSTABSGETREU ZEICHNEN
+• Wände mit intelligentem Einrasten zeichnen und exakte Längen eintippen
+• Türen, Fenster und Durchgänge in vielen Stilen
+• Räume und Flächen werden beim Zeichnen automatisch berechnet
+• PDF, Foto oder DXF importieren und nachzeichnen
+• Metrische und imperiale Einheiten
+
+EINRICHTEN UND GESTALTEN
+• Großer Möbelkatalog für Wohnzimmer, Schlafzimmer, Bad, Büro und Garten
+• Jedes Möbelstück maßstabsgetreu skalieren, drehen und platzieren
+• Böden, Wandfarben und Materialien: Holz, Fliesen, Marmor, Granit, Beton und mehr
+
+KÜCHENPLANER
+• Unter-, Hänge- und Hochschränke, Schubladen, Eckschränke und Kücheninseln
+• Einbaubackofen, Kochfeld, Kühlschrank, Mikrowelle, Geschirrspüler, Spüle und Dunstabzugshaube
+• Arbeitsplatte, Frontfarbe und Griffe frei wählbar
+
+IN 3D ANSEHEN
+• Mit einem Tipp vom 2D-Plan in die 3D-Ansicht wechseln
+• Das Haus wie ein Puppenhaus betrachten oder hindurchgehen
+• Realistisches Licht mit einstellbarer Tageszeit
+• Fotomodus für Standbilder
+
+KI-WERKZEUGE
+• KI-Grundriss: Beschreibe dein Zuhause und erhalte einen bearbeitbaren Plan
+• KI-Rendering: Verwandle die 3D-Ansicht in ein fotoähnliches Bild
+• KI-Designberatung für deinen Grundriss und eine gesprochene Tour (Pro)
+Die KI-Werkzeuge benötigen ein kostenloses Konto und verbrauchen Punkte. Neue Konten erhalten Gratispunkte zum Ausprobieren.
+
+SPEICHERN UND TEILEN
+• Pläne als PNG-Bild exportieren
+• Funktioniert offline: Entwürfe werden auf dem Gerät gespeichert
+• Mit Google anmelden, um Projekte geräteübergreifend zu synchronisieren
+• Zum Start ist kein Konto nötig
+
+HOMEDESIGNER PRO
+Als Einmalkauf oder als Monats- oder Jahresabo:
+• Mehrere Etagen und Keller
+• Der komplette Möbelkatalog
+• Renderings und Fotos ohne Wasserzeichen
+• PDF-Planexport für Handwerker und Bauanträge
+• Unbegrenzt viele gespeicherte Projekte
+
+Starte mit einem eingerichteten Beispielhaus und mach es zu deinem eigenen.
+</de-DE>
+
+<es-ES>
+App name: Home Designer: Planos casa 3D
+Short description: Dibuja planos de casas, diseña tu cocina, amuebla y recorre tu hogar en 3D
+Full description:
+Diseña tu casa desde el móvil: dibuja un plano, amuebla cada estancia, planifica la cocina y recórrelo todo en 3D. Sin experiencia previa.
+
+HomeDesigner es un creador de planos, un planificador de habitaciones y una app de diseño de casas en 3D, todo en uno. Úsalo para preparar una reforma, probar la distribución de los muebles antes de comprar, diseñar una cocina o esbozar la casa de tus sueños.
+
+DIBUJA PLANOS A ESCALA
+• Traza paredes con ajuste inteligente y escribe medidas exactas
+• Añade puertas, ventanas y huecos en muchos estilos
+• Las habitaciones y sus superficies se calculan mientras dibujas
+• Importa un plano en PDF, foto o DXF y cálcalo
+• Unidades métricas e imperiales
+
+AMUEBLA Y DECORA
+• Un gran catálogo de muebles para salón, dormitorio, baño, oficina y jardín
+• Cambia el tamaño, gira y coloca cada objeto a escala
+• Suelos, colores de pared y materiales: madera, azulejo, mármol, granito, hormigón y más
+
+PLANIFICADOR DE COCINAS
+• Muebles bajos, altos y columnas, cajoneras, rinconeras e islas
+• Horno integrado, placa, frigorífico, microondas, lavavajillas, fregadero y campana
+• Elige la encimera, el color de los frentes y los tiradores
+
+VELO EN 3D
+• Pasa del plano 2D al 3D con un toque
+• Mira tu casa como una maqueta o paséate por ella
+• Iluminación realista con hora del día ajustable
+• Modo foto para imágenes fijas
+
+HERRAMIENTAS DE IA
+• Plano con IA: describe tu casa y obtén un plano editable
+• Render con IA: convierte la vista 3D en una imagen fotorrealista
+• Revisión de un diseñador IA y visita guiada con voz (Pro)
+Las herramientas de IA requieren una cuenta gratuita y usan puntos. Las cuentas nuevas reciben puntos gratis para probarlas.
+
+GUARDA Y COMPARTE
+• Exporta los planos como imagen PNG
+• Funciona sin conexión: los diseños se guardan en tu dispositivo
+• Inicia sesión con Google para sincronizar tus proyectos
+• No necesitas cuenta para empezar
+
+HOMEDESIGNER PRO
+Con un pago único o una suscripción mensual o anual:
+• Varias plantas y sótanos
+• El catálogo de muebles completo
+• Renders y fotos sin marca de agua
+• Exportación de planos en PDF para obras y permisos
+• Proyectos guardados ilimitados
+
+Empieza con una casa de ejemplo amueblada y hazla tuya.
+</es-ES>
+
+<fi-FI>
+App name: Home Designer: Pohjapiirros 3D
+Short description: Piirrä pohjapiirros, suunnittele keittiö, sisusta huoneet ja kulje talossa 3D:nä
+Full description:
+Suunnittele kotisi puhelimella: piirrä pohjapiirros, sisusta jokainen huone, suunnittele keittiö ja kulje kaiken läpi 3D:nä. Kokemusta ei tarvita.
+
+HomeDesigner on pohjapiirrostyökalu, huonesuunnittelija ja 3D-kodinsuunnittelusovellus samassa paketissa. Suunnittele sillä remontti, kokeile kalustusta ennen ostamista, suunnittele keittiö tai luonnostele unelmiesi talo.
+
+PIIRRÄ POHJAPIIRROKSIA MITTAKAAVASSA
+• Piirrä seinät älykkäällä kohdistuksella ja kirjoita tarkat pituudet
+• Lisää ovia, ikkunoita ja aukkoja monella tyylillä
+• Huoneet ja pinta-alat lasketaan piirtäessäsi
+• Tuo pohja PDF:stä, valokuvasta tai DXF:stä ja piirrä sen päälle
+• Metriset ja brittiläiset yksiköt
+
+KALUSTA JA SISUSTA
+• Laaja kalustevalikoima olohuoneeseen, makuuhuoneeseen, kylpyhuoneeseen, toimistoon ja pihalle
+• Muuta kokoa, kierrä ja sijoita jokainen esine mittakaavassa
+• Lattiat, seinävärit ja materiaalit: puu, laatta, marmori, graniitti, betoni ja muut
+
+KEITTIÖSUUNNITTELIJA
+• Ala-, ylä- ja korkeat kaapit, laatikostot, kulmakaapit ja saarekkeet
+• Kalusteuuni, liesitaso, jääkaappi, mikro, astianpesukone, allas ja liesituuletin
+• Valitse työtaso, ovien väri ja vetimet
+
+KATSO 3D:NÄ
+• Vaihda 2D-pohjasta 3D-näkymään yhdellä napautuksella
+• Katso kotia kuin nukkekotia tai kävele sen läpi
+• Realistinen valo ja säädettävä vuorokaudenaika
+• Kuvatila pysäytyskuville
+
+TEKOÄLYTYÖKALUT
+• Tekoälypohja: kuvaile kotisi ja saat muokattavan pohjapiirroksen
+• Tekoälyrenderöinti: muuta 3D-näkymä valokuvamaiseksi kuvaksi
+• Tekoälysuunnittelijan arvio pohjastasi ja selostettu äänikierros (Pro)
+Tekoälytyökalut vaativat ilmaisen tilin ja käyttävät pisteitä. Uudet tilit saavat ilmaisia pisteitä kokeilua varten.
+
+TALLENNA JA JAA
+• Vie pohjapiirrokset PNG-kuvina
+• Toimii offline-tilassa: suunnitelmat tallentuvat laitteellesi
+• Kirjaudu Googlella synkronoidaksesi projektit
+• Aloittamiseen ei tarvita tiliä
+
+HOMEDESIGNER PRO
+Kertaostoksena tai kuukausi- tai vuositilauksena:
+• Useita kerroksia ja kellareita
+• Koko kalustevalikoima
+• Renderöinnit ja kuvat ilman vesileimaa
+• Pohjien PDF-vienti rakentajille ja lupia varten
+• Rajaton määrä tallennettuja projekteja
+
+Aloita kalustetusta esimerkkitalosta ja tee siitä omasi.
+</fi-FI>
+
+<fr-FR>
+App name: Home Designer: Plan maison 3D
+Short description: Dessinez vos plans, concevez la cuisine, meublez et visitez la maison en 3D
+Full description:
+Concevez votre maison sur votre téléphone : dessinez un plan, meublez chaque pièce, aménagez la cuisine et visitez le tout en 3D. Aucune expérience requise.
+
+HomeDesigner réunit un créateur de plans de maison, un planificateur de pièces et une appli d'architecture 3D. Utilisez-le pour préparer une rénovation, tester un agencement avant d'acheter, concevoir une cuisine ou esquisser la maison de vos rêves.
+
+DESSINEZ DES PLANS À L'ÉCHELLE
+• Tracez les murs avec l'aimantation intelligente et saisissez les longueurs exactes
+• Ajoutez portes, fenêtres et ouvertures dans de nombreux styles
+• Les pièces et leurs surfaces sont calculées pendant le dessin
+• Importez un plan PDF, photo ou DXF et décalquez-le
+• Unités métriques et impériales
+
+MEUBLEZ ET DÉCOREZ
+• Un grand catalogue de meubles pour salon, chambre, salle de bain, bureau et jardin
+• Redimensionnez, pivotez et placez chaque objet à l'échelle
+• Sols, couleurs de murs et matériaux : bois, carrelage, marbre, granit, béton et plus
+
+PLANIFICATEUR DE CUISINE
+• Meubles bas, hauts et colonnes, tiroirs, meubles d'angle et îlots
+• Four encastré, plaque de cuisson, réfrigérateur, micro-ondes, lave-vaisselle, évier et hotte
+• Choisissez le plan de travail, la couleur des façades et les poignées
+
+VOYEZ-LE EN 3D
+• Passez du plan 2D à la 3D en un geste
+• Regardez la maison comme une maquette ou parcourez-la
+• Éclairage réaliste avec heure de la journée réglable
+• Mode photo pour des images fixes
+
+OUTILS IA
+• Plan IA : décrivez votre maison et obtenez un plan modifiable
+• Rendu IA : transformez la vue 3D en image photoréaliste
+• Avis d'un designer IA sur votre agencement et visite commentée (Pro)
+Les outils IA nécessitent un compte gratuit et utilisent des points. Les nouveaux comptes reçoivent des points offerts pour les essayer.
+
+ENREGISTREZ ET PARTAGEZ
+• Exportez vos plans en image PNG
+• Fonctionne hors ligne : les projets sont enregistrés sur l'appareil
+• Connectez-vous avec Google pour synchroniser vos projets
+• Aucun compte nécessaire pour commencer
+
+HOMEDESIGNER PRO
+En achat unique ou en abonnement mensuel ou annuel :
+• Plusieurs étages et sous-sols
+• Le catalogue de meubles complet
+• Rendus et photos sans filigrane
+• Export PDF des plans pour artisans et permis
+• Projets enregistrés illimités
+
+Partez d'une maison témoin meublée et faites-en la vôtre.
+</fr-FR>
+
+<hi-IN>
+App name: Home Designer: घर का नक्शा 3D
+Short description: घर का नक्शा बनाएं, किचन डिज़ाइन करें, फ़र्नीचर सजाएं और 3D में घर घूमें
+Full description:
+अपने फ़ोन पर घर डिज़ाइन करें: नक्शा बनाएं, हर कमरे में फ़र्नीचर लगाएं, किचन की योजना बनाएं और सब कुछ 3D में घूमकर देखें। किसी अनुभव की ज़रूरत नहीं।
+
+HomeDesigner एक ही ऐप में फ़्लोर प्लान मेकर, रूम प्लानर और 3D होम डिज़ाइन टूल है। इससे रेनोवेशन की योजना बनाएं, ख़रीदने से पहले फ़र्नीचर की जगह आज़माएं, किचन डिज़ाइन करें या अपने सपनों के घर का ख़ाका तैयार करें।
+
+स्केल के अनुसार नक्शा बनाएं
+• स्मार्ट स्नैपिंग से दीवारें बनाएं और सटीक लंबाई टाइप करें
+• कई स्टाइल के दरवाज़े, खिड़कियां और ओपनिंग जोड़ें
+• बनाते समय कमरे और उनका क्षेत्रफल अपने आप निकलता है
+• PDF, फ़ोटो या DXF प्लान इंपोर्ट करके उस पर ट्रेस करें
+• मेट्रिक और इंपीरियल इकाइयां
+
+सजाएं और संवारें
+• लिविंग रूम, बेडरूम, बाथरूम, ऑफ़िस और गार्डन के लिए फ़र्नीचर का बड़ा कैटलॉग
+• हर आइटम का आकार बदलें, घुमाएं और स्केल के अनुसार रखें
+• फ़र्श, दीवारों के रंग और मटीरियल: लकड़ी, टाइल, मार्बल, ग्रेनाइट, कंक्रीट और बहुत कुछ
+
+किचन प्लानर
+• बेस, वॉल और टॉल कैबिनेट, ड्रॉअर, कॉर्नर यूनिट और आइलैंड
+• बिल्ट-इन ओवन, हॉब, फ़्रिज, माइक्रोवेव, डिशवॉशर, सिंक और चिमनी
+• काउंटरटॉप, कैबिनेट का रंग और हैंडल चुनें
+
+3D में देखें
+• एक टैप में 2D प्लान से 3D पर जाएं
+• घर को मॉडल की तरह ऊपर से देखें या उसके अंदर घूमें
+• दिन के समय के अनुसार बदलने वाली असली जैसी रोशनी
+• तस्वीरें सेव करने के लिए फ़ोटो मोड
+
+AI टूल
+• AI फ़्लोर प्लान: अपने घर के बारे में बताएं और एडिट करने लायक नक्शा पाएं
+• AI रेंडर: अपने 3D व्यू को फ़ोटो जैसी तस्वीर में बदलें
+• AI डिज़ाइनर की सलाह और आवाज़ वाला टूर (Pro)
+AI टूल के लिए मुफ़्त खाता ज़रूरी है और इनमें पॉइंट लगते हैं। नए खातों को आज़माने के लिए मुफ़्त पॉइंट मिलते हैं।
+
+सेव करें और शेयर करें
+• नक्शे PNG इमेज के रूप में एक्सपोर्ट करें
+• ऑफ़लाइन काम करता है: डिज़ाइन आपके डिवाइस पर सेव होते हैं
+• प्रोजेक्ट सिंक करने के लिए Google से साइन इन करें
+• शुरू करने के लिए खाते की ज़रूरत नहीं
+
+HOMEDESIGNER PRO
+एक बार की ख़रीद, या मासिक या सालाना सब्सक्रिप्शन:
+• कई मंज़िलें और बेसमेंट
+• फ़र्नीचर का पूरा कैटलॉग
+• बिना वॉटरमार्क के रेंडर और फ़ोटो
+• ठेकेदारों और परमिट के लिए PDF प्लान एक्सपोर्ट
+• अनलिमिटेड सेव किए गए प्रोजेक्ट
+
+सजे हुए सैंपल घर से शुरुआत करें और उसे अपना बनाएं।
+</hi-IN>
+
+<hu-HU>
+App name: Home Designer: Alaprajz 3D
+Short description: Rajzolj alaprajzot, tervezz konyhát, rendezd be a szobákat és járd be 3D-ben
+Full description:
+Tervezd meg otthonod a telefonodon: rajzolj alaprajzot, rendezd be a szobákat, tervezd meg a konyhát, és járd be az egészet 3D-ben. Előképzettség nélkül.
+
+A HomeDesigner alaprajzkészítő, szobatervező és 3D lakástervező alkalmazás egyben. Készülj fel vele a felújításra, próbáld ki a bútorok elrendezését vásárlás előtt, tervezz konyhát, vagy vázold fel álmaid házát.
+
+RAJZOLJ MÉRETARÁNYOS ALAPRAJZOT
+• Húzz falakat intelligens illesztéssel, és írd be a pontos hosszakat
+• Adj hozzá ajtókat, ablakokat és nyílásokat sokféle stílusban
+• A helyiségeket és az alapterületet rajzolás közben számolja ki
+• Importálj tervet PDF-ből, fotóról vagy DXF-ből, és rajzold át
+• Metrikus és angolszász mértékegységek
+
+RENDEZD BE ÉS DÍSZÍTSD
+• Nagy bútorkatalógus nappalihoz, hálóhoz, fürdőhöz, irodához és kerthez
+• Méretezd, forgasd és helyezd el a tárgyakat méretarányosan
+• Padlók, falszínek és anyagok: fa, csempe, márvány, gránit, beton és más
+
+KONYHATERVEZŐ
+• Alsó-, felső- és magas szekrények, fiókok, sarokelemek és konyhaszigetek
+• Beépített sütő, főzőlap, hűtő, mikró, mosogatógép, mosogató és páraelszívó
+• Válaszd ki a munkalapot, a frontok színét és a fogantyúkat
+
+NÉZD MEG 3D-BEN
+• Válts egy koppintással a 2D alaprajzról 3D-re
+• Nézd a házat makettként, vagy sétálj végig rajta
+• Valósághű fények állítható napszakkal
+• Fotó mód állóképekhez
+
+MI-ESZKÖZÖK
+• MI-alaprajz: írd le az otthonod, és szerkeszthető tervet kapsz
+• MI-render: alakítsd a 3D nézetet fotószerű képpé
+• MI-tervezői értékelés és narrált hangos séta (Pro)
+Az MI-eszközökhöz ingyenes fiók kell, és pontokat használnak. Az új fiókok ingyenes pontokat kapnak a kipróbáláshoz.
+
+MENTSD ÉS OSZD MEG
+• Exportáld a terveket PNG képként
+• Offline is működik: a tervek az eszközön tárolódnak
+• Jelentkezz be Google-fiókkal a projektek szinkronizálásához
+• A kezdéshez nem kell fiók
+
+HOMEDESIGNER PRO
+Egyszeri vásárlással, illetve havi vagy éves előfizetéssel:
+• Több szint és pince
+• A teljes bútorkatalógus
+• Vízjel nélküli renderek és fotók
+• PDF tervexport kivitelezőknek és engedélyekhez
+• Korlátlan számú mentett projekt
+
+Indulj egy berendezett mintaházból, és alakítsd a sajátoddá.
+</hu-HU>
+
+<id>
+App name: Home Designer: Denah Rumah 3D
+Short description: Gambar denah rumah, rancang dapur, tata perabot, dan jelajahi rumah dalam 3D
+Full description:
+Rancang rumah Anda di ponsel: gambar denah, tata setiap ruangan, rencanakan dapur, lalu jelajahi semuanya dalam 3D. Tidak perlu pengalaman.
+
+HomeDesigner adalah pembuat denah, perencana ruangan, dan aplikasi desain rumah 3D dalam satu aplikasi. Gunakan untuk merencanakan renovasi, mencoba tata letak perabot sebelum membeli, merancang dapur, atau membuat sketsa rumah impian.
+
+GAMBAR DENAH SESUAI SKALA
+• Gambar dinding dengan snap pintar dan ketik panjang yang tepat
+• Tambahkan pintu, jendela, dan bukaan dalam banyak gaya
+• Ruangan dan luasnya dihitung saat Anda menggambar
+• Impor denah dari PDF, foto, atau DXF lalu jiplak
+• Satuan metrik dan imperial
+
+ISI DAN DEKORASI
+• Katalog perabot yang lengkap untuk ruang tamu, kamar tidur, kamar mandi, kantor, dan taman
+• Ubah ukuran, putar, dan letakkan setiap benda sesuai skala
+• Lantai, warna dinding, dan material: kayu, keramik, marmer, granit, beton, dan lainnya
+
+PERENCANA DAPUR
+• Kabinet bawah, atas, dan tinggi, laci, kabinet sudut, dan island
+• Oven tanam, kompor tanam, kulkas, microwave, mesin cuci piring, bak cuci, dan cooker hood
+• Pilih top table, warna pintu kabinet, dan gagang
+
+LIHAT DALAM 3D
+• Beralih dari denah 2D ke 3D dengan satu ketukan
+• Lihat rumah seperti maket atau berjalan di dalamnya
+• Pencahayaan realistis dengan waktu yang bisa diatur
+• Mode foto untuk menyimpan gambar
+
+FITUR AI
+• Denah AI: jelaskan rumah Anda dan dapatkan denah yang bisa diedit
+• Render AI: ubah tampilan 3D menjadi gambar seperti foto
+• Ulasan desainer AI untuk tata letak Anda dan tur bersuara (Pro)
+Fitur AI memerlukan akun gratis dan memakai poin. Akun baru mendapat poin gratis untuk mencobanya.
+
+SIMPAN DAN BAGIKAN
+• Ekspor denah sebagai gambar PNG
+• Bisa dipakai offline: desain disimpan di perangkat
+• Masuk dengan Google untuk menyinkronkan proyek
+• Tidak perlu akun untuk memulai
+
+HOMEDESIGNER PRO
+Sekali beli, atau berlangganan bulanan atau tahunan:
+• Beberapa lantai dan basement
+• Katalog perabot lengkap
+• Render dan foto tanpa watermark
+• Ekspor denah PDF untuk kontraktor dan perizinan
+• Proyek tersimpan tanpa batas
+
+Mulai dari rumah contoh yang sudah terisi dan sesuaikan dengan selera Anda.
+</id>
+
+<it-IT>
+App name: Home Designer: Planimetria 3D
+Short description: Disegna planimetrie, progetta la cucina, arreda e visita la casa in 3D
+Full description:
+Progetta la tua casa dal telefono: disegna la planimetria, arreda ogni stanza, progetta la cucina e visita tutto in 3D. Non serve esperienza.
+
+HomeDesigner è un creatore di planimetrie, un pianificatore di stanze e un'app di progettazione casa 3D, tutto in uno. Usalo per preparare una ristrutturazione, provare la disposizione dei mobili prima di comprarli, progettare una cucina o abbozzare la casa dei tuoi sogni.
+
+DISEGNA PLANIMETRIE IN SCALA
+• Traccia i muri con l'aggancio intelligente e digita le misure esatte
+• Aggiungi porte, finestre e aperture in molti stili
+• Stanze e superfici vengono calcolate mentre disegni
+• Importa una pianta in PDF, foto o DXF e ricalcala
+• Unità metriche e imperiali
+
+ARREDA E DECORA
+• Un ampio catalogo di mobili per soggiorno, camera, bagno, ufficio e giardino
+• Ridimensiona, ruota e posiziona ogni oggetto in scala
+• Pavimenti, colori delle pareti e materiali: legno, piastrelle, marmo, granito, cemento e altro
+
+PROGETTA LA CUCINA
+• Basi, pensili e colonne, cassettiere, mobili ad angolo e isole
+• Forno a incasso, piano cottura, frigorifero, microonde, lavastoviglie, lavello e cappa
+• Scegli il piano di lavoro, il colore delle ante e le maniglie
+
+GUARDALA IN 3D
+• Passa dalla pianta 2D al 3D con un tocco
+• Osserva la casa come un modellino o cammina al suo interno
+• Illuminazione realistica con ora del giorno regolabile
+• Modalità foto per immagini fisse
+
+STRUMENTI IA
+• Planimetria IA: descrivi la tua casa e ottieni una pianta modificabile
+• Render IA: trasforma la vista 3D in un'immagine fotorealistica
+• Consigli di un designer IA e tour con voce narrante (Pro)
+Gli strumenti IA richiedono un account gratuito e usano punti. I nuovi account ricevono punti gratuiti per provarli.
+
+SALVA E CONDIVIDI
+• Esporta le planimetrie come immagini PNG
+• Funziona offline: i progetti sono salvati sul dispositivo
+• Accedi con Google per sincronizzare i progetti
+• Nessun account necessario per iniziare
+
+HOMEDESIGNER PRO
+Con acquisto unico o abbonamento mensile o annuale:
+• Più piani e seminterrati
+• Il catalogo di mobili completo
+• Render e foto senza filigrana
+• Esportazione PDF per imprese e permessi
+• Progetti salvati illimitati
+
+Parti da una casa di esempio arredata e rendila tua.
+</it-IT>
+
+<iw-IL>
+App name: Home Designer: תוכנית בית 3D
+Short description: שרטטו תוכנית בית, תכננו מטבח, רהטו חדרים וטיילו בבית בתלת־ממד
+Full description:
+עצבו את הבית שלכם בטלפון: שרטטו תוכנית, רהטו כל חדר, תכננו את המטבח וטיילו בכל זה בתלת־ממד. בלי צורך בניסיון.
+
+HomeDesigner משלב כלי לשרטוט תוכניות, מתכנן חדרים ואפליקציית עיצוב בית בתלת־ממד. השתמשו בו כדי לתכנן שיפוץ, לנסות סידור רהיטים לפני קנייה, לעצב מטבח או לשרטט את בית החלומות.
+
+שרטטו תוכניות בקנה מידה
+• שרטטו קירות עם הצמדה חכמה והקלידו אורכים מדויקים
+• הוסיפו דלתות, חלונות ופתחים במגוון סגנונות
+• החדרים והשטחים מחושבים תוך כדי שרטוט
+• ייבאו תוכנית מ־PDF, מתמונה או מ־DXF ושרטטו מעליה
+• יחידות מטריות ואימפריאליות
+
+רהטו ועצבו
+• קטלוג רהיטים גדול לסלון, לחדר שינה, לחדר רחצה, למשרד ולגינה
+• שנו גודל, סובבו ומקמו כל פריט בקנה מידה
+• רצפות, צבעי קירות וחומרים: עץ, אריחים, שיש, גרניט, בטון ועוד
+
+מתכנן מטבחים
+• ארונות תחתונים, עליונים וגבוהים, מגירות, יחידות פינה ואיים
+• תנור בנוי, כיריים, מקרר, מיקרוגל, מדיח, כיור וקולט אדים
+• בחרו משטח עבודה, צבע חזיתות וידיות
+
+צפו בתלת־ממד
+• עברו מתוכנית דו־ממדית לתלת־ממד בהקשה אחת
+• הביטו בבית כמו בדגם או טיילו בתוכו
+• תאורה מציאותית עם שעת יום מתכווננת
+• מצב צילום לשמירת תמונות
+
+כלי בינה מלאכותית
+• תוכנית AI: תארו את הבית וקבלו תוכנית שאפשר לערוך
+• הדמיית AI: הפכו את תצוגת התלת־ממד לתמונה שנראית כמו צילום
+• חוות דעת של מעצב AI וסיור קולי מודרך (Pro)
+כלי ה־AI דורשים חשבון חינמי ומשתמשים בנקודות. חשבונות חדשים מקבלים נקודות חינם להתנסות.
+
+שמרו ושתפו
+• ייצאו תוכניות כתמונות PNG
+• עובד במצב לא מקוון: העיצובים נשמרים במכשיר
+• התחברו עם Google כדי לסנכרן פרויקטים
+• אין צורך בחשבון כדי להתחיל
+
+HOMEDESIGNER PRO
+ברכישה חד־פעמית או במינוי חודשי או שנתי:
+• כמה קומות ומרתפים
+• קטלוג הרהיטים המלא
+• הדמיות ותמונות ללא סימן מים
+• ייצוא תוכניות ל־PDF לקבלנים ולהיתרים
+• מספר בלתי מוגבל של פרויקטים שמורים
+
+התחילו מבית לדוגמה מרוהט והפכו אותו לשלכם.
+</iw-IL>
+
+<ja-JP>
+App name: Home Designer: 間取り図 3D
+Short description: 間取り図を描いて、キッチンを設計し、家具を配置。完成した家を3Dで歩いて確認できます
+Full description:
+スマホで家をデザインしましょう。間取り図を描き、各部屋に家具を置き、キッチンを計画して、すべてを3Dで歩いて確認できます。経験は不要です。
+
+HomeDesignerは、間取り図作成、部屋のレイアウト、3D住宅デザインがひとつになったアプリです。リフォームの計画、購入前の家具配置の確認、キッチンの設計、理想の家のスケッチにお使いください。
+
+縮尺どおりに間取り図を作成
+• スマートスナップで壁を描き、正確な長さを入力
+• さまざまなスタイルのドア、窓、開口部を追加
+• 描きながら部屋と面積を自動計算
+• PDF、写真、DXFの図面を取り込んでトレース
+• メートル法とヤード・ポンド法に対応
+
+家具の配置とインテリア
+• リビング、寝室、浴室、オフィス、庭向けの豊富な家具カタログ
+• すべてのアイテムを縮尺どおりにサイズ変更、回転、配置
+• 床、壁の色、素材：木、タイル、大理石、御影石、コンクリートなど
+
+キッチンプランナー
+• ベースキャビネット、吊り戸棚、トールキャビネット、引き出し、コーナーユニット、アイランド
+• ビルトインオーブン、コンロ、冷蔵庫、電子レンジ、食洗機、シンク、レンジフード
+• ワークトップ、扉の色、取っ手を選択
+
+3Dで確認
+• ワンタップで2Dの間取り図から3Dに切り替え
+• ドールハウスのように眺めたり、中を歩いたり
+• 時間帯を変えられるリアルなライティング
+• 静止画を保存できるフォトモード
+
+AIツール
+• AI間取り：家の希望を文章で伝えると、編集できる間取り図を作成
+• AIレンダー：3Dビューを写真のような画像に変換
+• AIデザイナーによるレイアウト診断と音声ガイドツアー（Pro）
+AIツールの利用には無料アカウントとポイントが必要です。新規アカウントにはお試し用の無料ポイントが付与されます。
+
+保存と共有
+• 間取り図をPNG画像として書き出し
+• オフラインで利用可能：デザインは端末に保存
+• Googleでログインするとプロジェクトを同期
+• アカウントなしですぐに始められます
+
+HOMEDESIGNER PRO
+買い切り、または月額・年額のサブスクリプション：
+• 複数階と地下室
+• すべての家具カタログ
+• 透かしなしのレンダーと写真
+• 施工業者や申請用のPDF図面書き出し
+• プロジェクトの保存数が無制限
+
+家具付きのサンプルの家から始めて、自分だけの家に仕上げましょう。
+</ja-JP>
+
+<ko-KR>
+App name: Home Designer: 집 평면도 3D
+Short description: 집 평면도를 그리고, 주방을 설계하고, 가구를 배치한 뒤 3D로 둘러보세요
+Full description:
+휴대폰으로 집을 디자인하세요. 평면도를 그리고, 방마다 가구를 배치하고, 주방을 계획한 뒤 3D로 직접 둘러볼 수 있습니다. 경험이 없어도 됩니다.
+
+HomeDesigner는 평면도 제작, 방 배치, 3D 주택 디자인을 하나로 합친 앱입니다. 리모델링 계획, 구매 전 가구 배치 확인, 주방 설계, 꿈꾸던 집 스케치에 활용해 보세요.
+
+축척에 맞춰 평면도 그리기
+• 스마트 스냅으로 벽을 그리고 정확한 길이 입력
+• 다양한 스타일의 문, 창문, 개구부 추가
+• 그리는 동안 방과 면적을 자동 계산
+• PDF, 사진, DXF 도면을 불러와 따라 그리기
+• 미터법과 야드파운드법 지원
+
+가구 배치와 인테리어
+• 거실, 침실, 욕실, 사무실, 정원을 위한 다양한 가구 카탈로그
+• 모든 항목을 축척에 맞게 크기 조절, 회전, 배치
+• 바닥, 벽 색상, 소재: 원목, 타일, 대리석, 화강암, 콘크리트 등
+
+주방 플래너
+• 하부장, 상부장, 키큰장, 서랍장, 코너장, 아일랜드
+• 빌트인 오븐, 쿡탑, 냉장고, 전자레인지, 식기세척기, 싱크대, 후드
+• 상판, 도어 색상, 손잡이 선택
+
+3D로 보기
+• 한 번의 탭으로 2D 평면도에서 3D로 전환
+• 인형의 집처럼 내려다보거나 안을 걸어 다니기
+• 시간대를 조절할 수 있는 사실적인 조명
+• 이미지를 저장하는 사진 모드
+
+AI 도구
+• AI 평면도: 원하는 집을 설명하면 편집 가능한 평면도 생성
+• AI 렌더: 3D 화면을 사진 같은 이미지로 변환
+• AI 디자이너의 배치 리뷰와 음성 해설 투어(Pro)
+AI 도구는 무료 계정이 필요하며 포인트를 사용합니다. 신규 계정에는 체험용 무료 포인트가 제공됩니다.
+
+저장 및 공유
+• 평면도를 PNG 이미지로 내보내기
+• 오프라인 사용 가능: 디자인은 기기에 저장
+• Google로 로그인하면 프로젝트 동기화
+• 계정 없이 바로 시작
+
+HOMEDESIGNER PRO
+일회성 구매 또는 월간·연간 구독:
+• 여러 층과 지하실
+• 전체 가구 카탈로그
+• 워터마크 없는 렌더와 사진
+• 시공업체와 인허가용 PDF 도면 내보내기
+• 프로젝트 무제한 저장
+
+가구가 배치된 샘플 주택으로 시작해 나만의 집으로 꾸며 보세요.
+</ko-KR>
+
+<nl-NL>
+App name: Home Designer: Plattegrond 3D
+Short description: Teken plattegronden, ontwerp je keuken, richt kamers in en loop rond in 3D
+Full description:
+Ontwerp je huis op je telefoon: teken een plattegrond, richt elke kamer in, plan de keuken en loop er in 3D doorheen. Ervaring is niet nodig.
+
+HomeDesigner is plattegrondmaker, kamerplanner en 3D-huisontwerper in één app. Gebruik hem om een verbouwing voor te bereiden, een meubelopstelling te testen voordat je koopt, een keuken te ontwerpen of je droomhuis te schetsen.
+
+TEKEN PLATTEGRONDEN OP SCHAAL
+• Teken muren met slim uitlijnen en typ exacte lengtes
+• Voeg deuren, ramen en openingen toe in veel stijlen
+• Kamers en oppervlaktes worden tijdens het tekenen berekend
+• Importeer een pdf, foto of DXF en trek hem over
+• Metrische en imperiale eenheden
+
+INRICHTEN EN STYLEN
+• Een grote meubelcatalogus voor woonkamer, slaapkamer, badkamer, kantoor en tuin
+• Schaal, draai en plaats elk item op maat
+• Vloeren, muurkleuren en materialen: hout, tegels, marmer, graniet, beton en meer
+
+KEUKENPLANNER
+• Onder-, boven- en hoge kasten, ladekasten, hoekkasten en eilanden
+• Inbouwoven, kookplaat, koelkast, magnetron, vaatwasser, spoelbak en afzuigkap
+• Kies het werkblad, de frontkleur en de grepen
+
+BEKIJK HET IN 3D
+• Schakel met één tik van de 2D-plattegrond naar 3D
+• Bekijk je huis als een poppenhuis of loop erdoorheen
+• Realistisch licht met instelbaar tijdstip
+• Fotomodus voor stilstaande beelden
+
+AI-TOOLS
+• AI-plattegrond: beschrijf je huis en krijg een plattegrond die je kunt bewerken
+• AI-render: maak van je 3D-weergave een fotorealistisch beeld
+• Advies van een AI-ontwerper en een gesproken rondleiding (Pro)
+AI-tools vereisen een gratis account en gebruiken punten. Nieuwe accounts krijgen gratis punten om ze te proberen.
+
+OPSLAAN EN DELEN
+• Exporteer plattegronden als PNG-afbeelding
+• Werkt offline: ontwerpen worden op je apparaat bewaard
+• Log in met Google om projecten te synchroniseren
+• Geen account nodig om te beginnen
+
+HOMEDESIGNER PRO
+Als eenmalige aankoop of als maand- of jaarabonnement:
+• Meerdere verdiepingen en kelders
+• De complete meubelcatalogus
+• Renders en foto's zonder watermerk
+• PDF-export van plattegronden voor aannemers en vergunningen
+• Onbeperkt projecten opslaan
+
+Begin met een ingericht voorbeeldhuis en maak het van jou.
+</nl-NL>
+
+<no-NO>
+App name: Home Designer: Plantegning 3D
+Short description: Tegn plantegninger, design kjøkkenet, innred rom og gå rundt i huset i 3D
+Full description:
+Design hjemmet ditt på mobilen: tegn en plantegning, innred hvert rom, planlegg kjøkkenet og gå rundt i alt i 3D. Du trenger ingen erfaring.
+
+HomeDesigner er plantegningsverktøy, romplanlegger og 3D-boligdesign i én app. Bruk den til å planlegge oppussing, teste en møblering før du kjøper, tegne et kjøkken eller skissere drømmehuset.
+
+TEGN PLANTEGNINGER I MÅLESTOKK
+• Tegn vegger med smart festing og skriv inn nøyaktige lengder
+• Legg til dører, vinduer og åpninger i mange stiler
+• Rom og arealer regnes ut mens du tegner
+• Importer en plan fra PDF, bilde eller DXF og tegn den av
+• Metriske og britiske enheter
+
+INNRED OG DEKORER
+• En stor møbelkatalog for stue, soverom, bad, kontor og hage
+• Skaler, roter og plasser hver gjenstand i målestokk
+• Gulv, veggfarger og materialer: tre, fliser, marmor, granitt, betong og mer
+
+KJØKKENPLANLEGGER
+• Under-, over- og høyskap, skuffer, hjørneskap og kjøkkenøyer
+• Innbygd stekeovn, platetopp, kjøleskap, mikrobølgeovn, oppvaskmaskin, vask og ventilator
+• Velg benkeplate, frontfarge og håndtak
+
+SE DET I 3D
+• Bytt fra 2D-plan til 3D med ett trykk
+• Se hjemmet som et dukkehus, eller gå rundt i det
+• Realistisk lys med justerbart tidspunkt på dagen
+• Fotomodus for stillbilder
+
+AI-VERKTØY
+• AI-plantegning: beskriv hjemmet ditt og få en plan du kan redigere
+• AI-rendering: gjør 3D-visningen om til et fotolignende bilde
+• AI-designerens vurdering av planløsningen og en opplest omvisning (Pro)
+AI-verktøyene krever en gratis konto og bruker poeng. Nye kontoer får gratis poeng til å prøve dem.
+
+LAGRE OG DEL
+• Eksporter planer som PNG-bilder
+• Fungerer uten nett: designene lagres på enheten
+• Logg inn med Google for å synkronisere prosjekter
+• Du trenger ingen konto for å komme i gang
+
+HOMEDESIGNER PRO
+Som engangskjøp eller som måneds- eller årsabonnement:
+• Flere etasjer og kjellere
+• Hele møbelkatalogen
+• Renderinger og bilder uten vannmerke
+• PDF-eksport av planer til håndverkere og søknader
+• Ubegrenset antall lagrede prosjekter
+
+Start med et møblert eksempelhus og gjør det til ditt eget.
+</no-NO>
+
+<pl-PL>
+App name: Home Designer: Projekt domu 3D
+Short description: Rysuj plany domu, zaprojektuj kuchnię, umebluj pokoje i zwiedzaj dom w 3D
+Full description:
+Zaprojektuj swój dom na telefonie: narysuj rzut, umebluj każdy pokój, zaplanuj kuchnię i przejdź się po wszystkim w 3D. Bez żadnego doświadczenia.
+
+HomeDesigner to kreator rzutów, planer pomieszczeń i aplikacja do projektowania domu w 3D w jednym. Zaplanuj remont, sprawdź ustawienie mebli przed zakupem, zaprojektuj kuchnię albo naszkicuj dom swoich marzeń.
+
+RYSUJ RZUTY W SKALI
+• Rysuj ściany z inteligentnym przyciąganiem i wpisuj dokładne długości
+• Dodawaj drzwi, okna i otwory w wielu stylach
+• Pomieszczenia i ich powierzchnie są obliczane podczas rysowania
+• Zaimportuj plan z PDF, zdjęcia lub DXF i odrysuj go
+• Jednostki metryczne i imperialne
+
+MEBLUJ I DEKORUJ
+• Duży katalog mebli do salonu, sypialni, łazienki, biura i ogrodu
+• Zmieniaj rozmiar, obracaj i ustawiaj każdy element w skali
+• Podłogi, kolory ścian i materiały: drewno, płytki, marmur, granit, beton i inne
+
+PLANER KUCHNI
+• Szafki dolne, górne i wysokie, szuflady, szafki narożne i wyspy
+• Piekarnik do zabudowy, płyta grzewcza, lodówka, mikrofalówka, zmywarka, zlew i okap
+• Wybierz blat, kolor frontów i uchwyty
+
+ZOBACZ W 3D
+• Przejdź z rzutu 2D do 3D jednym dotknięciem
+• Oglądaj dom jak makietę albo spaceruj po nim
+• Realistyczne światło z regulowaną porą dnia
+• Tryb zdjęć do zapisywania obrazów
+
+NARZĘDZIA AI
+• Plan AI: opisz swój dom i otrzymaj rzut, który można edytować
+• Render AI: zamień widok 3D w obraz przypominający zdjęcie
+• Ocena projektanta AI oraz spacer z lektorem (Pro)
+Narzędzia AI wymagają darmowego konta i zużywają punkty. Nowe konta dostają darmowe punkty na próbę.
+
+ZAPISUJ I UDOSTĘPNIAJ
+• Eksportuj plany jako obrazy PNG
+• Działa offline: projekty są zapisywane na urządzeniu
+• Zaloguj się przez Google, aby synchronizować projekty
+• Na start nie potrzebujesz konta
+
+HOMEDESIGNER PRO
+Jednorazowy zakup albo subskrypcja miesięczna lub roczna:
+• Wiele kondygnacji i piwnice
+• Pełny katalog mebli
+• Rendery i zdjęcia bez znaku wodnego
+• Eksport planów do PDF dla wykonawców i urzędów
+• Nieograniczona liczba zapisanych projektów
+
+Zacznij od umeblowanego domu przykładowego i urządź go po swojemu.
+</pl-PL>
+
+<pt-BR>
+App name: Home Designer: Planta Casa 3D
+Short description: Desenhe plantas de casas, planeje a cozinha, mobilie e passeie em 3D
+Full description:
+Projete sua casa no celular: desenhe a planta baixa, mobilie cada cômodo, planeje a cozinha e passeie por tudo em 3D. Não precisa de experiência.
+
+O HomeDesigner é um criador de plantas, um planejador de ambientes e um app de projeto de casas em 3D, tudo em um. Use para planejar uma reforma, testar a disposição dos móveis antes de comprar, projetar uma cozinha ou esboçar a casa dos seus sonhos.
+
+DESENHE PLANTAS EM ESCALA
+• Trace paredes com encaixe inteligente e digite medidas exatas
+• Adicione portas, janelas e vãos em vários estilos
+• Os cômodos e suas áreas são calculados enquanto você desenha
+• Importe uma planta em PDF, foto ou DXF e desenhe por cima
+• Unidades métricas e imperiais
+
+MOBILIE E DECORE
+• Um grande catálogo de móveis para sala, quarto, banheiro, escritório e jardim
+• Redimensione, gire e posicione cada item em escala
+• Pisos, cores de parede e materiais: madeira, cerâmica, mármore, granito, concreto e mais
+
+PLANEJADOR DE COZINHA
+• Armários inferiores, superiores e torres, gaveteiros, cantos e ilhas
+• Forno embutido, cooktop, geladeira, micro-ondas, lava-louças, pia e coifa
+• Escolha a bancada, a cor das frentes e os puxadores
+
+VEJA EM 3D
+• Passe da planta 2D para o 3D com um toque
+• Veja a casa como uma maquete ou caminhe por dentro
+• Iluminação realista com hora do dia ajustável
+• Modo foto para imagens
+
+FERRAMENTAS DE IA
+• Planta com IA: descreva sua casa e receba uma planta editável
+• Render com IA: transforme a vista 3D em uma imagem fotorrealista
+• Avaliação de um designer IA e tour narrado por voz (Pro)
+As ferramentas de IA exigem uma conta gratuita e usam pontos. Contas novas recebem pontos grátis para experimentar.
+
+SALVE E COMPARTILHE
+• Exporte as plantas como imagem PNG
+• Funciona offline: os projetos ficam salvos no aparelho
+• Entre com o Google para sincronizar seus projetos
+• Não precisa de conta para começar
+
+HOMEDESIGNER PRO
+Em compra única ou assinatura mensal ou anual:
+• Vários andares e subsolos
+• O catálogo de móveis completo
+• Renders e fotos sem marca d'água
+• Exportação de plantas em PDF para obras e licenças
+• Projetos salvos ilimitados
+
+Comece com uma casa de exemplo mobiliada e deixe do seu jeito.
+</pt-BR>
+
+<ro>
+App name: Home Designer: Plan casă 3D
+Short description: Desenează planuri de casă, proiectează bucătăria, mobilează și vizitează în 3D
+Full description:
+Proiectează-ți casa pe telefon: desenează planul, mobilează fiecare cameră, planifică bucătăria și plimbă-te prin toate în 3D. Fără nicio experiență.
+
+HomeDesigner este un creator de planuri, un planificator de camere și o aplicație de design 3D pentru casă, toate într-una. Folosește-l ca să pregătești o renovare, să testezi așezarea mobilei înainte să cumperi, să proiectezi o bucătărie sau să schițezi casa visurilor tale.
+
+DESENEAZĂ PLANURI LA SCARĂ
+• Trasează pereți cu aliniere inteligentă și introdu lungimi exacte
+• Adaugă uși, ferestre și goluri în multe stiluri
+• Camerele și suprafețele lor sunt calculate în timp ce desenezi
+• Importă un plan din PDF, fotografie sau DXF și desenează peste el
+• Unități metrice și imperiale
+
+MOBILEAZĂ ȘI DECOREAZĂ
+• Un catalog mare de mobilier pentru living, dormitor, baie, birou și grădină
+• Redimensionează, rotește și așază fiecare obiect la scară
+• Pardoseli, culori de pereți și materiale: lemn, gresie, marmură, granit, beton și altele
+
+PLANIFICATOR DE BUCĂTĂRIE
+• Corpuri de bază, suspendate și înalte, sertare, corpuri de colț și insule
+• Cuptor încorporabil, plită, frigider, cuptor cu microunde, mașină de spălat vase, chiuvetă și hotă
+• Alege blatul, culoarea fronturilor și mânerele
+
+VEZI TOTUL ÎN 3D
+• Treci de la planul 2D la 3D cu o singură atingere
+• Privește casa ca pe o machetă sau plimbă-te prin ea
+• Lumină realistă cu ora din zi reglabilă
+• Mod foto pentru imagini
+
+INSTRUMENTE AI
+• Plan AI: descrie-ți casa și primești un plan pe care îl poți edita
+• Randare AI: transformă vederea 3D într-o imagine ca o fotografie
+• Evaluare de la un designer AI și tur narat cu voce (Pro)
+Instrumentele AI necesită un cont gratuit și folosesc puncte. Conturile noi primesc puncte gratuite de probă.
+
+SALVEAZĂ ȘI DISTRIBUIE
+• Exportă planurile ca imagini PNG
+• Funcționează offline: proiectele sunt salvate pe dispozitiv
+• Conectează-te cu Google pentru a sincroniza proiectele
+• Nu ai nevoie de cont ca să începi
+
+HOMEDESIGNER PRO
+Cu o singură plată sau cu abonament lunar ori anual:
+• Mai multe etaje și subsoluri
+• Catalogul complet de mobilier
+• Randări și fotografii fără filigran
+• Export PDF al planurilor pentru constructori și autorizații
+• Proiecte salvate nelimitate
+
+Pornește de la o casă model mobilată și fă-o a ta.
+</ro>
+
+<ru-RU>
+App name: Home Designer: План дома 3D
+Short description: Рисуйте планы дома, проектируйте кухню, расставляйте мебель и гуляйте в 3D
+Full description:
+Спроектируйте дом на телефоне: нарисуйте планировку, обставьте каждую комнату, спланируйте кухню и пройдитесь по дому в 3D. Опыт не нужен.
+
+HomeDesigner — это редактор планировок, планировщик комнат и приложение для 3D-дизайна дома в одном. Подготовьте ремонт, проверьте расстановку мебели до покупки, спроектируйте кухню или набросайте дом своей мечты.
+
+РИСУЙТЕ ПЛАНЫ В МАСШТАБЕ
+• Чертите стены с умной привязкой и вводите точные размеры
+• Добавляйте двери, окна и проёмы разных стилей
+• Комнаты и их площади рассчитываются во время рисования
+• Импортируйте план из PDF, фото или DXF и обведите его
+• Метрические и имперские единицы
+
+ОБСТАВЛЯЙТЕ И ОФОРМЛЯЙТЕ
+• Большой каталог мебели для гостиной, спальни, ванной, кабинета и сада
+• Меняйте размер, поворачивайте и расставляйте предметы в масштабе
+• Полы, цвета стен и материалы: дерево, плитка, мрамор, гранит, бетон и другое
+
+ПЛАНИРОВЩИК КУХНИ
+• Нижние, навесные и высокие шкафы, ящики, угловые модули и острова
+• Встроенный духовой шкаф, варочная панель, холодильник, микроволновка, посудомойка, мойка и вытяжка
+• Выбирайте столешницу, цвет фасадов и ручки
+
+СМОТРИТЕ В 3D
+• Переключайтесь с 2D-плана на 3D одним касанием
+• Рассматривайте дом как макет или гуляйте внутри
+• Реалистичный свет с настройкой времени суток
+• Фоторежим для сохранения кадров
+
+ИНСТРУМЕНТЫ ИИ
+• План от ИИ: опишите дом и получите редактируемую планировку
+• Рендер ИИ: превратите 3D-вид в изображение как на фото
+• Советы ИИ-дизайнера и голосовая экскурсия (Pro)
+Инструменты ИИ требуют бесплатного аккаунта и расходуют баллы. Новые аккаунты получают бесплатные баллы для пробы.
+
+СОХРАНЯЙТЕ И ДЕЛИТЕСЬ
+• Экспорт планов в PNG
+• Работает офлайн: проекты хранятся на устройстве
+• Войдите через Google, чтобы синхронизировать проекты
+• Для начала аккаунт не нужен
+
+HOMEDESIGNER PRO
+Разовая покупка либо месячная или годовая подписка:
+• Несколько этажей и подвалы
+• Полный каталог мебели
+• Рендеры и фото без водяного знака
+• Экспорт планов в PDF для строителей и согласований
+• Неограниченное число проектов
+
+Начните с готового обставленного дома и сделайте его своим.
+</ru-RU>
+
+<sk>
+App name: Home Designer: Pôdorys domu 3D
+Short description: Kreslite pôdorysy, navrhnite kuchyňu, zariaďte izby a prejdite sa domom v 3D
+Full description:
+Navrhnite si domov v telefóne: nakreslite pôdorys, zariaďte každú izbu, naplánujte kuchyňu a všetko si prejdite v 3D. Bez akýchkoľvek skúseností.
+
+HomeDesigner je tvorca pôdorysov, plánovač miestností a aplikácia na 3D návrh domu v jednom. Pripravte si rekonštrukciu, vyskúšajte rozmiestnenie nábytku pred kúpou, navrhnite kuchyňu alebo si načrtnite vysnívaný dom.
+
+KRESLITE PÔDORYSY V MIERKE
+• Kreslite steny s inteligentným prichytávaním a zadávajte presné dĺžky
+• Pridávajte dvere, okná a otvory v mnohých štýloch
+• Miestnosti a ich plochy sa počítajú už pri kreslení
+• Importujte plán z PDF, fotky alebo DXF a obkreslite ho
+• Metrické aj imperiálne jednotky
+
+ZARIAĎUJTE A ZDOBTE
+• Veľký katalóg nábytku pre obývačku, spálňu, kúpeľňu, kanceláriu aj záhradu
+• Meňte veľkosť, otáčajte a umiestňujte každý kus v mierke
+• Podlahy, farby stien a materiály: drevo, dlažba, mramor, žula, betón a ďalšie
+
+PLÁNOVAČ KUCHYNE
+• Spodné, horné a vysoké skrinky, zásuvky, rohové skrinky a ostrovčeky
+• Vstavaná rúra, varná doska, chladnička, mikrovlnka, umývačka, drez a digestor
+• Vyberte si pracovnú dosku, farbu dvierok a úchytky
+
+POZRITE SI TO V 3D
+• Prepnite z 2D plánu do 3D jedným ťuknutím
+• Pozerajte sa na dom ako na model alebo sa ním prejdite
+• Realistické svetlo s nastaviteľným časom dňa
+• Fotorežim na ukladanie snímok
+
+NÁSTROJE AI
+• AI pôdorys: opíšte svoj domov a získajte plán, ktorý sa dá upravovať
+• AI render: premeňte 3D pohľad na obrázok ako z fotografie
+• Posudok AI dizajnéra a komentovaná prehliadka (Pro)
+Nástroje AI vyžadujú bezplatný účet a spotrebúvajú body. Nové účty dostanú body zadarmo na vyskúšanie.
+
+UKLADAJTE A ZDIEĽAJTE
+• Exportujte plány ako obrázky PNG
+• Funguje offline: návrhy sa ukladajú do zariadenia
+• Prihláste sa cez Google a synchronizujte projekty
+• Na začiatok nepotrebujete účet
+
+HOMEDESIGNER PRO
+Jednorazový nákup alebo mesačné či ročné predplatné:
+• Viac podlaží a pivnice
+• Kompletný katalóg nábytku
+• Rendery a fotky bez vodoznaku
+• Export plánov do PDF pre stavbárov a úrady
+• Neobmedzený počet uložených projektov
+
+Začnite so zariadeným ukážkovým domom a upravte si ho podľa seba.
+</sk>
+
+<sv-SE>
+App name: Home Designer: Planritning 3D
+Short description: Rita planritningar, designa köket, möblera rum och gå runt i huset i 3D
+Full description:
+Designa ditt hem i mobilen: rita en planritning, möblera varje rum, planera köket och gå runt i allt i 3D. Ingen erfarenhet behövs.
+
+HomeDesigner är planritningsverktyg, rumsplanerare och 3D-husdesign i en app. Använd den för att planera en renovering, testa en möblering innan du köper, rita ett kök eller skissa ditt drömhus.
+
+RITA SKALENLIGA PLANRITNINGAR
+• Rita väggar med smart fästning och skriv in exakta längder
+• Lägg till dörrar, fönster och öppningar i många stilar
+• Rum och ytor räknas ut medan du ritar
+• Importera en ritning från PDF, foto eller DXF och rita av den
+• Metriska och brittiska enheter
+
+MÖBLERA OCH INRED
+• En stor möbelkatalog för vardagsrum, sovrum, badrum, kontor och trädgård
+• Ändra storlek, rotera och placera varje föremål skalenligt
+• Golv, väggfärger och material: trä, kakel, marmor, granit, betong med mera
+
+KÖKSPLANERARE
+• Bänk-, vägg- och högskåp, lådor, hörnskåp och köksöar
+• Inbyggnadsugn, häll, kylskåp, mikrovågsugn, diskmaskin, diskho och köksfläkt
+• Välj bänkskiva, luckfärg och handtag
+
+SE DET I 3D
+• Växla från 2D-ritning till 3D med ett tryck
+• Titta på hemmet som ett dockhus eller gå runt i det
+• Realistiskt ljus med justerbar tid på dygnet
+• Fotoläge för stillbilder
+
+AI-VERKTYG
+• AI-planritning: beskriv ditt hem och få en ritning du kan redigera
+• AI-rendering: gör din 3D-vy till en fotoliknande bild
+• AI-designerns omdöme om din planlösning och en berättad rundtur (Pro)
+AI-verktygen kräver ett gratiskonto och använder poäng. Nya konton får gratis poäng att prova med.
+
+SPARA OCH DELA
+• Exportera ritningar som PNG-bilder
+• Fungerar offline: dina ritningar sparas på enheten
+• Logga in med Google för att synka projekt
+• Inget konto behövs för att börja
+
+HOMEDESIGNER PRO
+Som engångsköp eller som månads- eller årsprenumeration:
+• Flera våningar och källare
+• Hela möbelkatalogen
+• Renderingar och foton utan vattenstämpel
+• PDF-export av ritningar för hantverkare och bygglov
+• Obegränsat antal sparade projekt
+
+Börja med ett möblerat exempelhus och gör det till ditt eget.
+</sv-SE>
+
+<th>
+App name: Home Designer: แปลนบ้าน 3D
+Short description: วาดแปลนบ้าน ออกแบบครัว จัดวางเฟอร์นิเจอร์ และเดินชมบ้านแบบ 3D
+Full description:
+ออกแบบบ้านของคุณบนมือถือ วาดแปลน จัดเฟอร์นิเจอร์ทุกห้อง วางแผนห้องครัว แล้วเดินชมทั้งหมดแบบ 3D ไม่ต้องมีประสบการณ์
+
+HomeDesigner รวมเครื่องมือวาดแปลนบ้าน วางผังห้อง และแอปออกแบบบ้าน 3D ไว้ในแอปเดียว ใช้วางแผนรีโนเวต ลองจัดวางเฟอร์นิเจอร์ก่อนซื้อ ออกแบบห้องครัว หรือร่างบ้านในฝันของคุณ
+
+วาดแปลนตามมาตราส่วน
+• วาดผนังด้วยระบบจับตำแหน่งอัจฉริยะ และพิมพ์ความยาวที่ต้องการได้
+• เพิ่มประตู หน้าต่าง และช่องเปิดได้หลายแบบ
+• คำนวณห้องและพื้นที่ให้ระหว่างที่วาด
+• นำเข้าแปลนจาก PDF รูปถ่าย หรือ DXF แล้ววาดทับ
+• หน่วยเมตริกและอิมพีเรียล
+
+จัดวางและตกแต่ง
+• แคตตาล็อกเฟอร์นิเจอร์ขนาดใหญ่ สำหรับห้องนั่งเล่น ห้องนอน ห้องน้ำ ห้องทำงาน และสวน
+• ปรับขนาด หมุน และวางทุกชิ้นตามมาตราส่วน
+• พื้น สีผนัง และวัสดุ เช่น ไม้ กระเบื้อง หินอ่อน แกรนิต คอนกรีต และอื่น ๆ
+
+วางแผนห้องครัว
+• ตู้ล่าง ตู้แขวน ตู้สูง ลิ้นชัก ตู้เข้ามุม และไอส์แลนด์
+• เตาอบบิลท์อิน เตาประกอบอาหาร ตู้เย็น ไมโครเวฟ เครื่องล้างจาน อ่างล้างจาน และเครื่องดูดควัน
+• เลือกท็อปเคาน์เตอร์ สีหน้าบาน และมือจับ
+
+ดูแบบ 3D
+• สลับจากแปลน 2D เป็น 3D ได้ในแตะเดียว
+• มองบ้านเหมือนบ้านจำลอง หรือเดินชมภายใน
+• แสงสมจริง ปรับช่วงเวลาของวันได้
+• โหมดถ่ายภาพสำหรับบันทึกภาพนิ่ง
+
+เครื่องมือ AI
+• แปลน AI: บรรยายบ้านของคุณ แล้วรับแปลนที่แก้ไขได้
+• เรนเดอร์ AI: เปลี่ยนมุมมอง 3D ให้เป็นภาพเหมือนภาพถ่าย
+• คำแนะนำจากนักออกแบบ AI และทัวร์พร้อมเสียงบรรยาย (Pro)
+เครื่องมือ AI ต้องใช้บัญชีฟรีและใช้คะแนน บัญชีใหม่จะได้รับคะแนนฟรีสำหรับทดลองใช้
+
+บันทึกและแชร์
+• ส่งออกแปลนเป็นภาพ PNG
+• ใช้งานแบบออฟไลน์ได้ งานออกแบบถูกบันทึกไว้ในเครื่อง
+• ลงชื่อเข้าใช้ด้วย Google เพื่อซิงค์โปรเจกต์
+• เริ่มใช้งานได้โดยไม่ต้องมีบัญชี
+
+HOMEDESIGNER PRO
+ซื้อครั้งเดียว หรือสมัครสมาชิกรายเดือนหรือรายปี
+• หลายชั้นและชั้นใต้ดิน
+• แคตตาล็อกเฟอร์นิเจอร์ครบทั้งหมด
+• ภาพเรนเดอร์และภาพถ่ายไม่มีลายน้ำ
+• ส่งออกแปลนเป็น PDF สำหรับผู้รับเหมาและการขออนุญาต
+• บันทึกโปรเจกต์ได้ไม่จำกัด
+
+เริ่มจากบ้านตัวอย่างที่ตกแต่งแล้ว และปรับให้เป็นบ้านของคุณ
+</th>
+
+<tr-TR>
+App name: Home Designer: Ev Planı 3D
+Short description: Ev planı çizin, mutfağınızı tasarlayın, odaları döşeyin ve 3D olarak gezin
+Full description:
+Evinizi telefonunuzda tasarlayın: kat planı çizin, her odayı döşeyin, mutfağı planlayın ve hepsini 3D olarak gezin. Deneyim gerekmez.
+
+HomeDesigner; kat planı oluşturucu, oda planlayıcı ve 3D ev tasarım uygulamasını bir araya getirir. Tadilat planlamak, satın almadan önce mobilya yerleşimini denemek, mutfak tasarlamak veya hayalinizdeki evi çizmek için kullanın.
+
+ÖLÇEKLİ KAT PLANLARI ÇİZİN
+• Akıllı yakalama ile duvar çizin ve kesin uzunlukları yazın
+• Pek çok tarzda kapı, pencere ve açıklık ekleyin
+• Odalar ve alanları siz çizerken hesaplanır
+• PDF, fotoğraf veya DXF planını içe aktarıp üzerinden çizin
+• Metrik ve imperial birimler
+
+DÖŞEYİN VE DEKORE EDİN
+• Salon, yatak odası, banyo, ofis ve bahçe için geniş mobilya kataloğu
+• Her parçayı ölçekli olarak boyutlandırın, döndürün ve yerleştirin
+• Zeminler, duvar renkleri ve malzemeler: ahşap, seramik, mermer, granit, beton ve daha fazlası
+
+MUTFAK PLANLAYICI
+• Alt, üst ve boy dolaplar, çekmeceler, köşe modüller ve adalar
+• Ankastre fırın, ocak, buzdolabı, mikrodalga, bulaşık makinesi, evye ve davlumbaz
+• Tezgâhı, kapak rengini ve kulpları seçin
+
+3D OLARAK GÖRÜN
+• Tek dokunuşla 2D plandan 3D'ye geçin
+• Evinize maket gibi bakın veya içinde dolaşın
+• Günün saatine göre ayarlanabilen gerçekçi ışık
+• Görsel kaydetmek için fotoğraf modu
+
+YAPAY ZEKÂ ARAÇLARI
+• YZ kat planı: evinizi anlatın, düzenleyebileceğiniz bir plan alın
+• YZ render: 3D görünümü fotoğraf gibi bir görsele dönüştürün
+• YZ tasarımcı değerlendirmesi ve sesli anlatımlı tur (Pro)
+Yapay zekâ araçları ücretsiz bir hesap gerektirir ve puan kullanır. Yeni hesaplara denemek için ücretsiz puan verilir.
+
+KAYDEDİN VE PAYLAŞIN
+• Planları PNG görseli olarak dışa aktarın
+• Çevrimdışı çalışır: tasarımlar cihazınıza kaydedilir
+• Projeleri eşitlemek için Google ile giriş yapın
+• Başlamak için hesap gerekmez
+
+HOMEDESIGNER PRO
+Tek seferlik satın alma veya aylık ya da yıllık abonelik:
+• Birden fazla kat ve bodrum
+• Mobilya kataloğunun tamamı
+• Filigransız render ve fotoğraflar
+• Ustalar ve ruhsat için PDF plan dışa aktarma
+• Sınırsız kayıtlı proje
+
+Döşenmiş bir örnek evle başlayın ve onu kendinize göre düzenleyin.
+</tr-TR>
+
+<uk>
+App name: Home Designer: План будинку 3D
+Short description: Малюйте плани будинку, проєктуйте кухню, розставляйте меблі та гуляйте в 3D
+Full description:
+Спроєктуйте дім на телефоні: намалюйте планування, обставте кожну кімнату, сплануйте кухню та пройдіться домом у 3D. Досвід не потрібен.
+
+HomeDesigner — це редактор планувань, планувальник кімнат і застосунок для 3D-дизайну будинку в одному. Підготуйте ремонт, перевірте розстановку меблів до покупки, спроєктуйте кухню або накресліть дім своєї мрії.
+
+МАЛЮЙТЕ ПЛАНИ В МАСШТАБІ
+• Кресліть стіни з розумною прив'язкою та вводьте точні розміри
+• Додавайте двері, вікна й отвори різних стилів
+• Кімнати та їхні площі обчислюються під час малювання
+• Імпортуйте план із PDF, фото або DXF і обведіть його
+• Метричні та імперські одиниці
+
+ОБСТАВЛЯЙТЕ Й ОФОРМЛЮЙТЕ
+• Великий каталог меблів для вітальні, спальні, ванної, кабінету й саду
+• Змінюйте розмір, обертайте й розставляйте предмети в масштабі
+• Підлоги, кольори стін і матеріали: дерево, плитка, мармур, граніт, бетон та інше
+
+ПЛАНУВАЛЬНИК КУХНІ
+• Нижні, навісні та високі шафи, шухляди, кутові модулі й острови
+• Вбудована духовка, варильна поверхня, холодильник, мікрохвильовка, посудомийка, мийка й витяжка
+• Обирайте стільницю, колір фасадів і ручки
+
+ДИВІТЬСЯ В 3D
+• Перемикайтеся з 2D-плану на 3D одним дотиком
+• Розглядайте дім як макет або гуляйте всередині
+• Реалістичне світло з налаштуванням часу доби
+• Фоторежим для збереження кадрів
+
+ІНСТРУМЕНТИ ШІ
+• План від ШІ: опишіть дім і отримайте планування, яке можна редагувати
+• Рендер ШІ: перетворіть 3D-вид на зображення, схоже на фото
+• Поради ШІ-дизайнера та голосова екскурсія (Pro)
+Інструменти ШІ потребують безплатного облікового запису й витрачають бали. Нові облікові записи отримують безплатні бали для проби.
+
+ЗБЕРІГАЙТЕ Й ДІЛІТЬСЯ
+• Експорт планів у PNG
+• Працює офлайн: проєкти зберігаються на пристрої
+• Увійдіть через Google, щоб синхронізувати проєкти
+• Для початку обліковий запис не потрібен
+
+HOMEDESIGNER PRO
+Разова покупка або місячна чи річна підписка:
+• Кілька поверхів і підвали
+• Повний каталог меблів
+• Рендери й фото без водяного знака
+• Експорт планів у PDF для будівельників і дозволів
+• Необмежена кількість проєктів
+
+Почніть із готового обставленого будинку й зробіть його своїм.
+</uk>
+
+<vi>
+App name: Home Designer: Thiết kế nhà 3D
+Short description: Vẽ mặt bằng nhà, thiết kế bếp, bố trí nội thất và tham quan nhà bằng 3D
+Full description:
+Thiết kế ngôi nhà ngay trên điện thoại: vẽ mặt bằng, bố trí nội thất từng phòng, lên kế hoạch cho bếp và tham quan tất cả bằng 3D. Không cần kinh nghiệm.
+
+HomeDesigner là công cụ vẽ mặt bằng, lập kế hoạch phòng và ứng dụng thiết kế nhà 3D trong một. Dùng để chuẩn bị sửa nhà, thử cách bố trí nội thất trước khi mua, thiết kế bếp hoặc phác thảo ngôi nhà mơ ước.
+
+VẼ MẶT BẰNG ĐÚNG TỶ LỆ
+• Vẽ tường với tính năng bắt điểm thông minh và nhập chiều dài chính xác
+• Thêm cửa đi, cửa sổ và ô trống với nhiều kiểu dáng
+• Phòng và diện tích được tính ngay khi bạn vẽ
+• Nhập bản vẽ từ PDF, ảnh hoặc DXF rồi vẽ đè lên
+• Đơn vị mét và hệ Anh
+
+BỐ TRÍ VÀ TRANG TRÍ
+• Danh mục nội thất phong phú cho phòng khách, phòng ngủ, phòng tắm, văn phòng và sân vườn
+• Đổi kích thước, xoay và đặt từng món đúng tỷ lệ
+• Sàn, màu tường và vật liệu: gỗ, gạch, đá cẩm thạch, đá granite, bê tông và nhiều loại khác
+
+THIẾT KẾ BẾP
+• Tủ dưới, tủ treo và tủ cao, ngăn kéo, tủ góc và đảo bếp
+• Lò nướng âm tủ, bếp nấu, tủ lạnh, lò vi sóng, máy rửa bát, chậu rửa và máy hút mùi
+• Chọn mặt bàn bếp, màu cánh tủ và tay nắm
+
+XEM BẰNG 3D
+• Chuyển từ mặt bằng 2D sang 3D chỉ với một lần chạm
+• Nhìn ngôi nhà như mô hình hoặc đi dạo bên trong
+• Ánh sáng chân thực, chỉnh được thời điểm trong ngày
+• Chế độ chụp ảnh để lưu hình
+
+CÔNG CỤ AI
+• Mặt bằng AI: mô tả ngôi nhà và nhận bản vẽ có thể chỉnh sửa
+• Render AI: biến góc nhìn 3D thành hình ảnh như ảnh chụp
+• Nhận xét của nhà thiết kế AI và chuyến tham quan có thuyết minh (Pro)
+Công cụ AI cần tài khoản miễn phí và dùng điểm. Tài khoản mới được tặng điểm để dùng thử.
+
+LƯU VÀ CHIA SẺ
+• Xuất mặt bằng thành ảnh PNG
+• Dùng được khi không có mạng: thiết kế được lưu trên thiết bị
+• Đăng nhập bằng Google để đồng bộ dự án
+• Không cần tài khoản để bắt đầu
+
+HOMEDESIGNER PRO
+Mua một lần, hoặc đăng ký theo tháng hay theo năm:
+• Nhiều tầng và tầng hầm
+• Toàn bộ danh mục nội thất
+• Ảnh render và ảnh chụp không có watermark
+• Xuất mặt bằng PDF cho nhà thầu và xin phép xây dựng
+• Lưu dự án không giới hạn
+
+Bắt đầu từ một ngôi nhà mẫu đã bố trí sẵn và biến nó thành của bạn.
+</vi>
+
+<zh-CN>
+App name: Home Designer: 户型图 3D
+Short description: 绘制户型图，设计厨房，摆放家具，并以 3D 漫游你的家
+Full description:
+在手机上设计你的家：绘制户型图，为每个房间摆放家具，规划厨房，并以 3D 方式漫游其中。无需任何经验。
+
+HomeDesigner 集户型图绘制、房间规划和 3D 家居设计于一体。可用于规划装修、在购买前试摆家具、设计厨房，或勾勒你梦想中的房子。
+
+按比例绘制户型图
+• 借助智能吸附绘制墙体，并输入精确长度
+• 添加多种样式的门、窗和洞口
+• 绘制时自动计算房间及面积
+• 导入 PDF、照片或 DXF 图纸并描摹
+• 支持公制和英制单位
+
+摆放家具与装饰
+• 丰富的家具目录，涵盖客厅、卧室、浴室、办公室和花园
+• 按比例缩放、旋转和摆放每件物品
+• 地板、墙面颜色和材质：木材、瓷砖、大理石、花岗岩、混凝土等
+
+厨房规划
+• 地柜、吊柜、高柜、抽屉柜、转角柜和岛台
+• 嵌入式烤箱、灶具、冰箱、微波炉、洗碗机、水槽和抽油烟机
+• 选择台面、柜门颜色和拉手
+
+3D 查看
+• 一键从 2D 平面图切换到 3D
+• 像看模型屋一样俯瞰，或走进其中
+• 逼真的光照，可调节一天中的时间
+• 拍照模式，保存静态图片
+
+AI 工具
+• AI 户型图：描述你的家，即可获得可编辑的户型图
+• AI 渲染：将 3D 视图变成照片般的图像
+• AI 设计师点评你的布局，以及语音讲解导览（Pro）
+AI 工具需要免费账号并消耗积分。新账号可获得免费积分用于体验。
+
+保存与分享
+• 将户型图导出为 PNG 图片
+• 可离线使用：设计保存在你的设备上
+• 使用 Google 登录即可同步项目
+• 无需账号即可开始
+
+HOMEDESIGNER PRO
+一次性购买，或按月、按年订阅：
+• 多层楼和地下室
+• 完整的家具目录
+• 无水印的渲染图和照片
+• 导出 PDF 图纸，供施工和报批使用
+• 保存项目数量不限
+
+从一套已布置好的样板房开始，把它变成你自己的家。
+</zh-CN>
