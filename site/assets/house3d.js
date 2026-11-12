@@ -101,9 +101,7 @@ export async function start(film, canvas) {
 
   // The 2D drawing of the plan lies on the ground; the floors appear once it is drawn.
   const planData = byName('storey')?.userData.plan;
-  // On trial: only with ?plan2d in the address, until it has been checked on real phones.
-  const want2d = new URLSearchParams(location.search).has('plan2d');
-  let plan2d = planData && want2d ? createPlan2D(THREE, planData, getComputedStyle(document.body).fontFamily, small) : null;
+  let plan2d = planData ? createPlan2D(THREE, planData, getComputedStyle(document.body).fontFamily, small) : null;
   if (plan2d) house.add(plan2d.mesh);
   const floorMats = new Map(); // material -> its real colour
   const floors = byName('floors');
