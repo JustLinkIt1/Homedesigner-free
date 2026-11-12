@@ -162,6 +162,12 @@ function ContextLossGuard({
 }) {
   const gl = useThree((s) => s.gl);
   const invalidate = useThree((s) => s.invalidate);
+  const getState = useThree((s) => s.get);
+  // Dev-only test seam, like window.useDesign: tools/export-web-model.mjs reads
+  // the scene through it. R3F keeps no handle on the canvas element.
+  useEffect(() => {
+    if (import.meta.env.DEV) (window as unknown as { __r3f?: typeof getState }).__r3f = getState;
+  }, [getState]);
   useEffect(() => {
     const canvas = gl.domElement;
     const lost = (event: Event) => {

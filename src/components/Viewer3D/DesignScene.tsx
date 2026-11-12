@@ -1091,17 +1091,28 @@ function FloorContent({
   const onTap = interactive ? tapSurface : undefined;
 
   return (
-    <group position={[0, elevation * M, 0]}>
+    // The named groups are identity transforms. They only label each kind of
+    // part so a scene export (tools/export-web-model.mjs) can tell them apart.
+    <group name="storey" position={[0, elevation * M, 0]}>
+      <group name="slabs">
       {elevation > 0 && geom.rooms.filter((r) => !r.outdoor).map((r) => <SlabMesh key={`slab-${r.id}`} room={r} stairsBelow={stairsBelow} />)}
+      </group>
+      <group name="ceilings">
       {isTop && !dollhouse && geom.rooms.filter((r) => !r.outdoor).map((r) => (
         <CeilingMesh key={`ceil-${r.id}`} room={r} height={ceilingHeight} />
       ))}
+      </group>
+      <group name="roof">
       {roof && !dollhouse && (
         <RoofMesh walls={geom.walls} rooms={geom.rooms} roof={roof} eaveY={ceilingHeight} />
       )}
+      </group>
+      <group name="floors">
       {geom.rooms.map((r) => (
         <FloorMesh key={r.id} room={r} stairsBelow={stairsBelow} onTap={onTap} />
       ))}
+      </group>
+      <group name="walls">
       {geom.walls.map((w) => (
         isFence(w) ? (
           // Fences take no part in the dollhouse fade — they are already open,
@@ -1121,6 +1132,8 @@ function FloorContent({
           />
         )
       ))}
+      </group>
+      <group name="furniture">
       {geom.furniture.map((f) => (
         <Furniture3D
           key={f.id}
@@ -1133,6 +1146,7 @@ function FloorContent({
           preferRenderModel={useRenderModels}
         />
       ))}
+      </group>
     </group>
   );
 }

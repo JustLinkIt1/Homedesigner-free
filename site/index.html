@@ -142,9 +142,13 @@
         radial-gradient(60% 46% at 50% 42%, rgba(13, 99, 248, 0.12), transparent 72%),
         #06080d;
     }
-    .film video {
+    .film video, .film canvas {
       width: 100%; height: 100%; object-fit: contain; position: absolute; inset: 0;
     }
+    /* The 3D house (assets/house3d.js) replaces the video once it has loaded. */
+    .film canvas { opacity: 0; transition: opacity 0.6s ease; }
+    body.has-3d .film canvas { opacity: 1; }
+    body.has-3d .film video { display: none; }
     /* Legibility scrims — text always sits on a darkened gradient, never raw video. */
     .film .scrim {
       position: absolute; inset: 0; pointer-events: none;
@@ -189,6 +193,32 @@
     .film-fallback-steps .step { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-2); }
     .film-fallback-steps h3 { font-size: 18px; margin: 6px 0 4px; letter-spacing: -0.02em; }
     .film-fallback-steps p { color: var(--text-2); font-size: 14.5px; }
+
+    /* ---------- AI tools ---------- */
+    .ai-pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: center; margin-top: 40px; }
+    .ai-pair figure { margin: 0; position: relative; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); background: var(--surface); aspect-ratio: 3 / 2; }
+    .ai-pair img { width: 100%; height: 100%; object-fit: cover; }
+    .ai-pair figcaption {
+      position: absolute; left: 12px; top: 12px; padding: 6px 11px; border-radius: 999px;
+      font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+      background: rgba(10, 13, 20, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #fff;
+    }
+    .ai-pair figure.after figcaption { background: var(--grad); }
+    .ai-pair .arrow { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--grad); box-shadow: 0 8px 28px rgba(13, 99, 248, 0.45); }
+    .ai-pair .arrow svg { width: 26px; height: 26px; }
+    .ai-tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 28px; }
+    .ai-tool { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .ai-tool .ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(61, 139, 255, 0.14); margin-bottom: 12px; }
+    .ai-tool .ico svg { width: 22px; height: 22px; }
+    .ai-tool h3 { font-size: 18px; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .ai-tool h3 .pro { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 999px; background: #f5b83d; color: #1d1405; vertical-align: 2px; margin-left: 6px; }
+    .ai-tool p { color: var(--text-2); font-size: 14.5px; }
+    .ai-foot { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; margin-top: 26px; }
+    .ai-foot .note { color: var(--text-2); font-size: 14px; flex: 1 1 280px; }
+    @media (max-width: 760px) {
+      .ai-pair { grid-template-columns: 1fr; }
+      .ai-pair .arrow { margin: -34px auto; position: relative; z-index: 1; transform: rotate(90deg); }
+    }
 
     /* ---------- Sections ---------- */
     section.block { padding: 92px 0; }
@@ -269,6 +299,7 @@
       .access-step { min-height: 0; }
     }
   </style>
+  <script type="importmap">{"imports":{"three":"/assets/vendor/three/build/three.module.min.js"}}</script>
 </head>
 <body>
   <header>
@@ -296,8 +327,8 @@
     <!-- Hero -->
     <section class="hero">
       <div class="wrap">
-        <a class="hero-badge" href="https://play.google.com/store/apps/details?id=com.homedesigner.app" target="_blank" rel="noopener">
-          <span class="dot"></span> Now available worldwide on Google Play <span class="chev">→</span>
+        <a class="hero-badge" href="#ai">
+          <span class="dot"></span> New: AI floor plans and photo-like renders <span class="chev">→</span>
         </a>
         <h1>Design your dream home<br /><span class="accent">in 2D &amp; 3D</span></h1>
         <p class="sub">A free floor plan maker and 3D home design app. Draw a plan in minutes, furnish it, plan the kitchen and walk through the result — on your phone or right here in your browser.</p>
@@ -318,7 +349,8 @@
     <!-- Scroll-driven film -->
     <section class="film" id="see-it">
       <div class="stage">
-        <video id="promo" src="./assets/promo.mp4" muted playsinline preload="auto"></video>
+        <video id="promo" src="./assets/promo.mp4" muted playsinline preload="none"></video>
+        <canvas id="house3d" role="img" aria-label="A 3D HomeDesigner sample home: the walls rise from the floor plan, furniture drops in, then the roof lands."></canvas>
         <div class="scrim"></div>
         <div class="stage-head"><h2>From blank page to dream home</h2></div>
         <div class="caption">
@@ -344,6 +376,31 @@
         <div class="fcard"><span class="step">Step 1 — Sketch</span><h3>Draw your floor plan</h3><p>Walls snap to the grid and to each other. Type exact lengths or drag corners.</p></div>
         <div class="fcard"><span class="step">Step 2 — Furnish</span><h3>Fill it with real furniture</h3><p>Photoreal floors and a growing catalog of real 3D models.</p></div>
         <div class="fcard"><span class="step">Step 3 — Experience</span><h3>Walk through it in 3D</h3><p>Open doors, climb stairs, and see your home in changing daylight.</p></div>
+      </div>
+    </section>
+
+    <!-- AI tools -->
+    <section class="block" id="ai">
+      <div class="wrap">
+        <span class="kicker">New · AI tools</span>
+        <h2 class="title">Let AI do the heavy lifting</h2>
+        <p class="lead">Describe the home you want and get a floor plan you can edit. When it's furnished, turn the 3D view into a photo-like image to share.</p>
+        <div class="ai-pair">
+          <figure><img src="./assets/ai-before.webp" width="1230" height="768" alt="A furnished house in HomeDesigner's 3D view" loading="lazy" /><figcaption>Your 3D view</figcaption></figure>
+          <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <figure class="after"><img src="./assets/ai-after.webp" width="1264" height="848" alt="The same house as a photo-like AI render" loading="lazy" /><figcaption>AI render</figcaption></figure>
+        </div>
+        <div class="ai-tools">
+          <div class="ai-tool"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 12h8v9M11 3v5M15 12h6"/></svg></div><h3>AI floor plan</h3><p>Type something like "three bedrooms, open kitchen, 120 m²" and get a floor plan with walls, rooms and doors that you can change.</p></div>
+          <div class="ai-tool"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 16-5-5-8 8"/></svg></div><h3>AI render</h3><p>Turn any 3D view into a realistic image of your home, ready to send to family or a builder.</p></div>
+          <div class="ai-tool"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg></div><h3>Designer review</h3><p>An AI designer reads your plan, scores it and suggests the changes that would make the most difference.</p></div>
+          <div class="ai-tool"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></div><h3>Narrated tour<span class="pro">PRO</span></h3><p>A short spoken walkthrough of your home, written from your plan and read aloud.</p></div>
+        </div>
+        <div class="ai-foot">
+          <p class="note">AI tools need a free account and use points. New accounts get free points to try them.</p>
+          <a class="btn" href="./app/">Try AI in the web app →</a>
+          <a href="/ai-home-design/" style="color:#3d8bff;font-weight:700">More about AI home design →</a>
+        </div>
       </div>
     </section>
 
@@ -475,11 +532,12 @@
   <script>
     document.getElementById('yr').textContent = new Date().getFullYear();
 
-    // ---- Scroll-driven video ----
-    // Scroll progress through the tall .film section scrubs the promo video's
-    // currentTime, so the film plays exactly as fast as the visitor reads.
-    // Falls back to a plain looping player when the user prefers reduced
-    // motion or the video can't be scrubbed.
+    // ---- Scroll-driven 3D house (video fallback) ----
+    // Scroll progress through the tall .film section drives the captions and
+    // the progress bar. assets/house3d.js animates a real sample home exported
+    // from the app. Without WebGL, if the model fails, or when the visitor
+    // prefers reduced motion, the promo video plays instead: scrubbed by the
+    // scroll, or as a plain loop for reduced motion.
     (function () {
       const video = document.getElementById('promo');
       const film = document.querySelector('.film');
@@ -487,73 +545,84 @@
       const bar = document.getElementById('bar');
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      function fallback() {
-        document.body.classList.add('no-scrub');
-        video.controls = true;
-        video.loop = true;
-        if (!reduced) { video.play().catch(() => {}); }
-      }
-      if (reduced) { fallback(); return; }
-
-      let duration = 0;
-      let target = 0;    // seconds we want to be at
-      let current = 0;   // seconds we've rendered
-      let raf = 0;
-      let failedSeeks = 0;
-      let ticks = 0;
-      let silentStrikes = 0; // seeks that no-op (rare browsers) → loop fallback
-
       function progress() {
         const rect = film.getBoundingClientRect();
         const total = rect.height - innerHeight;
         if (total <= 0) return 0;
         return Math.min(1, Math.max(0, -rect.top / total));
       }
-
-      function update() {
+      function captions() {
         const p = progress();
-        if (duration) target = p * (duration - 0.05);
         if (bar) bar.style.width = (p * 100).toFixed(2) + '%';
         // Caption card per third of the scroll.
         const step = p < 1 / 3 ? 0 : p < 2 / 3 ? 1 : 2;
         cards.forEach((c, i) => c.classList.toggle('on', i === step));
+        return p;
       }
 
-      function tick() {
-        raf = requestAnimationFrame(tick);
-        if (!duration) return;
-        // Ease toward the target so fast scrolls stay smooth instead of jumpy.
-        current += (target - current) * 0.16;
-        // Only seek at frame granularity (48 fps ≈ 21 ms) and never while the
-        // previous seek is still in flight — piled-up seeks are what caused
-        // jank. The clip is motion-interpolated to 48 fps and encoded
-        // all-intra, so seeks are fine-grained and land instantly.
-        if (!video.seeking && Math.abs(video.currentTime - current) > 0.02) {
-          try {
-            if (typeof video.fastSeek === 'function') video.fastSeek(current);
-            else video.currentTime = current;
-          } catch { failedSeeks++; if (failedSeeks > 20) { cancelAnimationFrame(raf); fallback(); } }
-        }
-        // Some environments accept the seek but never move the playhead. If the
-        // visitor is deep into the section and the video is still stuck at the
-        // start, stop scrubbing and just play the film on a loop instead.
-        if (++ticks % 60 === 0) {
-          if (target > 1.5 && video.currentTime < 0.05) {
-            if (++silentStrikes >= 3) { cancelAnimationFrame(raf); document.querySelectorAll('.film .card, .film .bar').forEach((n) => n.remove()); video.loop = true; video.play().catch(() => {}); }
-          } else {
-            silentStrikes = 0;
+      function loopVideo() {
+        document.body.classList.add('no-scrub');
+        video.preload = 'auto';
+        video.controls = true;
+        video.loop = true;
+        if (!reduced) { video.play().catch(() => {}); }
+      }
+
+      function scrubVideo() {
+        let duration = 0;
+        let target = 0;    // seconds we want to be at
+        let current = 0;   // seconds we've rendered
+        let raf = 0;
+        let failedSeeks = 0;
+        let ticks = 0;
+        let silentStrikes = 0; // seeks that no-op (rare browsers) -> loop fallback
+        const update = () => { const p = captions(); if (duration) target = p * (duration - 0.05); };
+        function tick() {
+          raf = requestAnimationFrame(tick);
+          if (!duration) return;
+          // Ease toward the target so fast scrolls stay smooth instead of jumpy.
+          current += (target - current) * 0.16;
+          if (!video.seeking && Math.abs(video.currentTime - current) > 0.02) {
+            try {
+              if (typeof video.fastSeek === 'function') video.fastSeek(current);
+              else video.currentTime = current;
+            } catch { failedSeeks++; if (failedSeeks > 20) { cancelAnimationFrame(raf); loopVideo(); } }
+          }
+          // Some environments accept the seek but never move the playhead.
+          if (++ticks % 60 === 0) {
+            if (target > 1.5 && video.currentTime < 0.05) {
+              if (++silentStrikes >= 3) { cancelAnimationFrame(raf); document.querySelectorAll('.film .card, .film .bar').forEach((n) => n.remove()); video.loop = true; video.play().catch(() => {}); }
+            } else {
+              silentStrikes = 0;
+            }
           }
         }
+        video.addEventListener('loadedmetadata', () => { duration = video.duration || 0; video.pause(); update(); });
+        video.addEventListener('error', loopVideo);
+        addEventListener('scroll', update, { passive: true });
+        addEventListener('resize', update, { passive: true });
+        update();
+        tick();
+        video.preload = 'auto';
+        video.load();
       }
 
-      video.addEventListener('loadedmetadata', () => { duration = video.duration || 0; video.pause(); update(); });
-      video.addEventListener('error', fallback);
-      addEventListener('scroll', update, { passive: true });
-      addEventListener('resize', update, { passive: true });
-      update();
-      tick();
-      // Nudge the browser to buffer the whole clip so seeking is instant.
-      video.load();
+      if (reduced) { loopVideo(); return; }
+      addEventListener('scroll', captions, { passive: true });
+      captions();
+      // Start loading the 3D house when the section gets near the viewport.
+      let started = false;
+      const begin = () => {
+        if (started) return;
+        started = true;
+        import('./assets/house3d.js')
+          .then((m) => m.start(film, document.getElementById('house3d')))
+          .then(() => document.body.classList.add('has-3d'))
+          .catch((err) => { console.warn('3D house unavailable, using the video', err); scrubVideo(); });
+      };
+      new IntersectionObserver((entries, io) => {
+        if (entries.some((e) => e.isIntersecting)) { io.disconnect(); begin(); }
+      }, { rootMargin: '600px 0px' }).observe(film);
     })();
   </script>
 </body>

@@ -20,7 +20,18 @@ export default tseslint.config(
       'dist/**', 'site-dist/**', 'android/**', 'node_modules/**', '.claude/**',
       '**/.wrangler/**',
       'tools/**', 'scripts/**', 'tests/**', '*.config.*',
+      // Third-party three.js copied in for the landing page's 3D house.
+      'site/assets/vendor/**',
     ],
+  },
+  {
+    // Landing-page scripts run in the browser as plain ES modules.
+    files: ['site/**/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: Object.fromEntries(['window', 'document', 'console', 'matchMedia', 'devicePixelRatio', 'innerHeight',
+        'addEventListener', 'requestAnimationFrame', 'IntersectionObserver', 'URL'].map((g) => [g, 'readonly'])),
+    },
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
