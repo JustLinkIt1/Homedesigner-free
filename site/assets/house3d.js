@@ -4,13 +4,15 @@
 // exported from the app's own 3D view by tools/export-web-model.mjs. Its nodes
 // keep the app's grouping: walls / floors / roof / furniture. Scroll progress
 // through .film drives one timeline:
-//   0.00-0.36  Sketch     top-down plan; the walls grow up out of the floor
+//   0.00-0.36  Sketch     the plan is drawn wall by wall in the 2D editor's
+//                         style (plan2d.js), then the walls rise out of it
 //   0.36-0.68  Furnish    the real furniture drops in, the camera tilts
 //   0.68-1.00  Experience the roof lands, the camera circles, daylight goes gold
 // Exports start(film, canvas) -> Promise that rejects if WebGL or the model
 // fails, so the page can fall back to the video.
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/three/examples/jsm/loaders/GLTFLoader.js';
+import { createPlan2D } from './plan2d.js';
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const seg = (p, a, b) => clamp01((p - a) / (b - a));
@@ -97,6 +99,14 @@ export async function start(film, canvas) {
   const wBase = walls.map((w, i) => ({ node: w, s: w.scale.y, t0: (i / Math.max(1, walls.length - 1)) * 0.45 }));
   const roofY = roof ? roof.position.y : 0;
 
+  // The 2D drawing of the plan lies on the ground; the floors appear once it is drawn.
+  const planData = byName('storey')?.userData.plan;
+  const plan2d = planData ? createPlan2D(THREE, planData, getComputedStyle(document.body).fontFamily) : null;
+  if (plan2d) house.add(plan2d.mesh);
+  const floorMats = new Set();
+  const floors = byName('floors');
+  floors?.traverse((o) => { if (o.isMesh) [].concat(o.material).forEach((m) => floorMats.add(m)); });
+
   // Ground: a soft round pad that fades into the page, plus a blueprint grid for the sketch step.
   const groundMat = new THREE.MeshStandardMaterial({ color: 0x2a3550, map: groundTexture(), transparent: true, roughness: 1, depthWrite: false });
   const ground = new THREE.Mesh(new THREE.CircleGeometry(R * 3.2, 64), groundMat);
@@ -123,11 +133,30 @@ export async function start(film, canvas) {
   const noon = new THREE.Color(0xffffff);
   const gold = new THREE.Color(0xffc58a);
   const target = new THREE.Vector3();
+  let BAND = [0.17, 0.71]; // the part of the stage's height left free by the heading and the caption card
+  let viewOff = 0;
 
   function pose(p) {
-    // Walls rise during the sketch step.
-    const wallT = seg(p, 0.04, 0.34);
-    for (const w of wBase) w.node.scale.y = Math.max(0.015, w.s * easeInOut(seg(wallT, w.t0, w.t0 + 0.55)));
+    // Sketch step: the plan is drawn in 2D, the floors fade in, then the walls rise out of the drawing.
+    const rise = plan2d ? 0.215 : 0.04;
+    if (plan2d) {
+      const fade = 1 - seg(p, 0.25, 0.33);
+      plan2d.mesh.visible = fade > 0;
+      plan2d.material.opacity = fade;
+      if (fade > 0) plan2d.draw(seg(p, 0.012, rise));
+      const floorT = seg(p, 0.165, rise);
+      if (floors) floors.visible = floorT > 0;
+      for (const m of floorMats) {
+        m.opacity = floorT;
+        // Recompile on the switch: a double-sided material drawn transparent is left with a one-sided program.
+        if (m.transparent !== floorT < 1) { m.transparent = floorT < 1; m.needsUpdate = true; }
+      }
+    }
+    const wallT = seg(p, rise, 0.37);
+    for (const w of wBase) {
+      w.node.visible = !plan2d || p >= rise;
+      w.node.scale.y = Math.max(0.015, w.s * easeInOut(seg(wallT, w.t0, w.t0 + 0.55)));
+    }
     // Furniture drops in during the furnish step.
     const furnT = seg(p, 0.36, 0.66);
     for (const f of fBase) {
@@ -143,14 +172,24 @@ export async function start(film, canvas) {
       roof.position.y = roofY + (1 - easeOut(t)) * 3.5;
     }
     // Camera: straight down -> three-quarter -> low orbit.
-    const a = easeInOut(seg(p, 0.0, 0.66));
+    const a = easeInOut(seg(p, plan2d ? 0.2 : 0, 0.66));
     const b = easeInOut(seg(p, 0.66, 1));
-    const polar = lerp(lerp(0.06, 0.92, a), 1.16, b);         // from vertical
-    const az = lerp(lerp(-0.35, 0.45, a), 1.2, b);
+    // Square-on from above while the plan is drawn, so it reads like the 2D editor.
+    const polar = lerp(lerp(plan2d ? 0.015 : 0.06, 0.92, a), 1.16, b); // from vertical
+    const az = lerp(lerp(plan2d ? 0 : -0.35, 0.45, a), 1.2, b);
     // Wide screens are limited by height, tall ones by width.
     const fit = camera.aspect < 1 ? 1.55 / Math.max(0.55, camera.aspect) : 1.45;
-    const dist = R * lerp(lerp(3.5, 3.0, a), 3.2, b) * fit;
+    let dist = R * lerp(lerp(3.5, 3.0, a), 3.2, b) * fit;
     target.set(0, lerp(0, size.y * 0.25, a), 0);
+    if (plan2d && a < 1) {
+      // While it is a drawing, fit the plan between the heading and the caption card.
+      const f = plan2d.frame, tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 2;
+      const d2 = Math.max(f.h / (BAND[1] - BAND[0]) / tan, f.w / 0.92 / camera.aspect / tan);
+      const down = ((BAND[0] + BAND[1]) / 2 - 0.5 + viewOff) * d2 * tan;
+      dist = lerp(d2, dist, a);
+      target.x = lerp(f.cx + house.position.x, target.x, a);
+      target.z = lerp(f.cz + house.position.z - down, target.z, a);
+    }
     camera.position.set(
       target.x + dist * Math.sin(polar) * Math.sin(az),
       target.y + dist * Math.cos(polar),
@@ -179,7 +218,9 @@ export async function start(film, canvas) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     // Lift the house above the caption card at the bottom of the stage.
-    camera.setViewOffset(w, h, 0, h * (camera.aspect < 1 ? 0.1 : 0.06), w, h);
+    viewOff = camera.aspect < 1 ? 0.1 : 0.06;
+    BAND = camera.aspect < 1 ? [0.17, 0.71] : [0.2, 0.75];
+    camera.setViewOffset(w, h, 0, h * viewOff, w, h);
     camera.updateProjectionMatrix();
   }
 
