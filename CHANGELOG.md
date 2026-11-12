@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.22.35 — rating prompt after exports and AI renders
+
+- Google Play's in-app review card is now requested after a plan export (PNG
+  or PDF), a 3D render export, a photo-mode save or a fresh AI render, not
+  only after a photo-mode save. It waits until the app has been opened on 3
+  different days and 2 such moments have happened, asks at most once every 90
+  days and 3 times ever, and never while a paywall or dialog is open. Closing
+  the share sheet without choosing a destination no longer counts as a save.
+  The rules are in `src/lib/reviewPolicy.ts`, tested by
+  `tests/review-policy.mjs`.
+- No other app changes: the 3D scene only gained named groups used by the
+  website's model export.
+
 ## 1.22.34 — modular kitchens, AI render for everyone, photo-like 3D
 
 The 1.22.33 bundle was built but Play refused its upload; 1.22.34 is the same
