@@ -7,7 +7,8 @@ account whose JSON key stays OUTSIDE the repo (APP['key'], or set PLAY_SA_KEY).
 Needs: python -m pip install --user google-api-python-client google-auth
 
 Every command is a dry run unless you pass --commit: it builds a Play "edit",
-asks Google to validate it, then throws it away. With --commit the edit is
+asks Google to validate it, then throws it away. (A release dry run never
+uploads the bundle: a versionCode that reaches Play once can't be reused.) With --commit the edit is
 committed, which sends the changes for review (add --no-review to only stage
 them in Play Console, to send from Publishing overview later).
 
@@ -186,7 +187,7 @@ def cmd_listing(api, args):
 
 def cmd_images(api, args):
     from googleapiclient.http import MediaFileUpload
-    pattern = os.path.join(rel(args.screens), '*.png') if args.screens else rel(APP['screens'])
+    pattern = os.path.join(rel(args.screens), '*.png') if args.screens else (APP['screens'] and rel(APP['screens']))
     phones = sorted(glob.glob(pattern)) if pattern else []
     if not phones:
         sys.exit('No screenshots match %s (pass --screens DIR).' % pattern)
@@ -229,8 +230,27 @@ def cmd_release(api, args):
         sys.exit('Notes file not found: %s' % notes_path)
     ed = Edit(api)
     try:
-        print('Uploading %s (%.1f MB; build.gradle says versionCode %s, %s)...' % (
+        print('Bundle %s (%.1f MB; build.gradle says versionCode %s, %s)' % (
             os.path.relpath(aab, ROOT), os.path.getsize(aab) / 1e6, code, name))
+        tracks = ed.e.tracks().list(packageName=PACKAGE, editId=ed.id).execute().get('tracks', [])
+        names = [t['track'] for t in tracks]
+        if args.track not in names:
+            sys.exit('No track %r. Tracks: %s' % (args.track, ', '.join(repr(n) for n in names)))
+        used = max([int(v) for t in tracks for r in t.get('releases', []) for v in r.get('versionCodes', [])] or [0])
+        if code and int(code) <= used:
+            sys.exit('versionCode %s is not above %d, the highest on Play. Bump it in build.gradle and rebuild.'
+                     % (code, used))
+        if notes:
+            print('Release notes: %d languages from %s' % (len(notes), os.path.relpath(notes_path, ROOT)))
+        if not args.commit:
+            # A versionCode that reaches Play once can never be uploaded again, even from an edit
+            # that is later discarded, so the dry run checks everything except the upload itself.
+            ed.discard()
+            print('Dry run OK: track %r exists, versionCode %s is new, notes parse. Nothing was uploaded. '
+                  'Add --commit to upload and %s.' % (args.track, code,
+                                                       'stage it' if args.no_review else 'send it for review'))
+            return
+        print('Uploading...')
         bundle = ed.e.bundles().upload(
             packageName=PACKAGE, editId=ed.id,
             media_body=MediaFileUpload(aab, mimetype='application/octet-stream',
@@ -246,7 +266,6 @@ def cmd_release(api, args):
             release.update(status='inProgress', userFraction=args.rollout)
         if notes:
             release['releaseNotes'] = notes
-            print('Release notes: %d languages from %s' % (len(notes), os.path.relpath(notes_path, ROOT)))
         elif args.notes:
             release['releaseNotes'] = [{'language': ed.default_language(), 'text': args.notes}]
         else:
