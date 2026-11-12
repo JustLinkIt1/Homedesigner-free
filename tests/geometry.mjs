@@ -25,7 +25,6 @@ export { buildDxf, LAYERS } from '${sourceRoot}/src/lib/dxfExport.ts';
 export { flattenPath } from '${sourceRoot}/src/lib/svgPath.ts';
 export { importDxf } from '${sourceRoot}/src/lib/dxfImport.ts';
 export { isNewer } from '${sourceRoot}/src/lib/appUpdate.ts';
-export { reviewRequestDue, REVIEW_COOLDOWN_MS } from '${sourceRoot}/src/lib/appReview.ts';
 export { classifyLayer, storeyOf, isDemolished } from '${sourceRoot}/src/lib/dxfLayers.ts';
 export { normalizeRoofs, roofFloorId, DEFAULT_ROOF } from '${sourceRoot}/src/lib/roof.ts';
 export { fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT } from '${sourceRoot}/src/lib/fence.ts';
@@ -49,7 +48,7 @@ const {
   buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
-  buildDxf, LAYERS, flattenPath, importDxf, isNewer, reviewRequestDue, REVIEW_COOLDOWN_MS, rotatePoint, boundsOf,
+  buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
   fenceRunBoxes, fenceProfile, structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, HALF_WALL_HEIGHT,
   wallDistances, lockToAngle, ANGLE_LOCK_RAD, spriteBox, spriteReshaped,
   isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, roomRectangle, readoutOffsetCm, transformPlan,
@@ -78,16 +77,6 @@ const rect = (w, h) => [ {x:0,y:0}, {x:w,y:0}, {x:w,y:h}, {x:0,y:h} ];
     normalizeCatalogText('Réfrigérateur / Freezer') === 'refrigerateur freezer');
   check('catalog search: unrelated intent stays excluded',
     !catalogEntryMatches(CATALOG_BY_TYPE.sofa, 'washing machine', same));
-}
-
-// ---- review prompt cadence ----------------------------------------------
-{
-  const now = Date.UTC(2026, 6, 31);
-  check('review: first success is eligible', reviewRequestDue(null, now));
-  check('review: recent request is suppressed', !reviewRequestDue(now - 1000, now));
-  check('review: cooldown expiry is eligible', reviewRequestDue(now - REVIEW_COOLDOWN_MS, now));
-  check('review: future/corrupt timestamps do not loop',
-    !reviewRequestDue(now + 1000, now) && !reviewRequestDue('not-a-time', now));
 }
 
 // ---- offsetPolygon -------------------------------------------------------

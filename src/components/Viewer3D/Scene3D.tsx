@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { sceneCapture, sceneSnapshot, orbitZoom, orbitFocus } from '../../lib/renderBridge';
 import { captureRenderer } from '../../lib/renderCapture';
 import { saveImage } from '../../lib/native';
+import { notePositiveMoment } from '../../lib/appReview';
 import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
@@ -815,7 +816,7 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
       let dataUrl = capture(scale, IS_TOUCH);
       // Free tier ships a small corner ribbon; Pro exports clean.
       if (!useProStore.getState().isPro) dataUrl = await applyWatermark(dataUrl);
-      await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-render.png`);
+      if (await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-render.png`)) notePositiveMoment();
     };
     return () => {
       sceneCapture.current = null;

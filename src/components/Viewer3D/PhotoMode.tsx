@@ -17,7 +17,7 @@ import { GradientSky, skyPalette } from './GradientSky';
 import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
-import { requestReviewAfterPhotoSave } from '../../lib/appReview';
+import { notePositiveMoment } from '../../lib/appReview';
 import { captureRenderer } from '../../lib/renderCapture';
 import { toast } from '../../lib/ui';
 import { nudgeWatermarkedExport } from '../../lib/watermarkNudge';
@@ -101,7 +101,7 @@ function PathtracedContent({
     photoCapture.current = async () => {
       let dataUrl = gl.domElement.toDataURL('image/png');
       if (!useProStore.getState().isPro) dataUrl = await applyWatermark(dataUrl);
-      await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-photo.png`);
+      if (await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-photo.png`)) notePositiveMoment();
     };
     return () => {
       photoCapture.current = null;
@@ -139,7 +139,7 @@ function RasterCapture({ composerRef }: { composerRef: React.MutableRefObject<an
           window.matchMedia('(pointer: coarse)').matches);
       } finally { invalidate(); }
       if (!useProStore.getState().isPro) dataUrl = await applyWatermark(dataUrl);
-      await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-photo.png`);
+      if (await saveImage(dataUrl, `${slugify(useDesign.getState().projectName)}-photo.png`)) notePositiveMoment();
     };
     return () => {
       photoCapture.current = null;
@@ -252,7 +252,6 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
       await new Promise(resolve => setTimeout(resolve, 30));
       await capture();
       nudgeWatermarkedExport();
-      await requestReviewAfterPhotoSave();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save the photo.');
     } finally { savingRef.current = false; setSaving(false); }

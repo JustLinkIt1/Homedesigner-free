@@ -5,6 +5,7 @@
 // living area and a doors & windows schedule.
 import { planCapture, type PlanShot } from './renderBridge';
 import { saveImage, saveText } from './native';
+import { notePositiveMoment } from './appReview';
 import { slugify as slug, APP_NAME } from './appInfo';
 import { applyWatermark } from './watermark';
 import { useProStore } from '../store/proStore';
@@ -25,7 +26,7 @@ export async function exportPlanPNG(projectName: string): Promise<boolean> {
   let url = capturePlanDataUrl();
   if (!url) return false;
   if (!useProStore.getState().isPro) url = await applyWatermark(url);
-  await saveImage(url, `${slug(projectName)}-plan.png`);
+  if (await saveImage(url, `${slug(projectName)}-plan.png`)) notePositiveMoment();
   return true;
 }
 
@@ -301,7 +302,7 @@ export async function exportPlanPDF(projectName: string): Promise<number> {
 
   // Route through the same save path as images (web download / Android share).
   const dataUri = pdf.output('datauristring');
-  await saveImage(dataUri, `${slug(projectName)}-plan.pdf`);
+  if (await saveImage(dataUri, `${slug(projectName)}-plan.pdf`)) notePositiveMoment();
   return pages;
 }
 

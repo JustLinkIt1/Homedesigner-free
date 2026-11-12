@@ -57,6 +57,7 @@ import { sceneCapture } from './lib/renderBridge';
 import { capturePlanThumbnail } from './lib/thumb';
 import { useDraw, drawBridge, useConfirm, toast } from './lib/ui';
 import { initNative } from './lib/native';
+import { noteAppOpened } from './lib/appReview';
 import { loadAiCapabilities } from './lib/aiCapabilities';
 import { isWebGLAvailable } from './lib/webgl';
 import { orbitZoom } from './lib/renderBridge';
@@ -336,6 +337,7 @@ export default function App() {
       }
       return false;
     }, () => {
+      noteAppOpened();
       // Back in the foreground, which is the only moment two different things
       // become knowable.
       //
@@ -356,6 +358,7 @@ export default function App() {
         if (unlocked) toast.success(translate('Pro unlocked — thank you!'));
       });
     });
+    noteAppOpened();
     // Resolve the Pro entitlement (billing on Android, mock on web).
     void useProStore.getState().refresh().finally(() => {
       void useAuthStore.getState().restoreSession();

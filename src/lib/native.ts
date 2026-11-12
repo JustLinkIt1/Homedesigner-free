@@ -24,11 +24,14 @@ function webDownload(dataUrl: string, filename: string) {
 /**
  * Save an image data URL. On Android it writes to the app's share cache and
  * opens the share sheet (so the user can save to Photos / Drive / etc.).
+ *
+ * Resolves to whether the file went anywhere: false when the user closed the
+ * share sheet without choosing a destination.
  */
-export async function saveImage(dataUrl: string, filename: string): Promise<void> {
+export async function saveImage(dataUrl: string, filename: string): Promise<boolean> {
   if (!isNative()) {
     webDownload(dataUrl, filename);
-    return;
+    return true;
   }
   const { Filesystem, Directory } = await import('@capacitor/filesystem');
   const { Share } = await import('@capacitor/share');
@@ -58,7 +61,9 @@ export async function saveImage(dataUrl: string, filename: string): Promise<void
     // surfacing them prevents a silent "saved" result with no accessible file.
     const message = error instanceof Error ? error.message : String(error);
     if (!/cancel(?:led|ed)?/i.test(message)) throw error;
+    return false;
   }
+  return true;
 }
 
 /**

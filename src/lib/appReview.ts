@@ -1,44 +1,43 @@
-import { isNative } from './native';
+// Google Play's in-app review card, asked for after something went well.
+// The rules live in reviewPolicy.ts; this file only connects them to the
+// device. On the web build both functions do nothing.
+import { Capacitor } from '@capacitor/core';
+import { createReviewPrompt, legacyReviewState } from './reviewPolicy';
+import { useConfirm } from './ui';
+import { useProStore } from '../store/proStore';
+import { usePointsStore } from '../store/pointsStore';
 
-const LAST_REQUEST_KEY = 'homedesigner.review.lastRequestedAt.v1';
-export const REVIEW_COOLDOWN_MS = 180 * 24 * 60 * 60 * 1000;
+const STATE_KEY = 'homedesigner.review.v2';
+/** Written by earlier builds: the time of the last request and nothing else. */
+const LEGACY_KEY = 'homedesigner.review.lastRequestedAt.v1';
 
-let attemptedThisSession = false;
-
-/** Keep the app-owned request cadence conservative; Play applies its own
- * opaque quota on top of this. Future/corrupt timestamps are treated as a
- * recent request so bad storage can never turn into a prompt loop. */
-export function reviewRequestDue(lastRequestedAt: unknown, now = Date.now()): boolean {
-  if (lastRequestedAt === null || lastRequestedAt === undefined || lastRequestedAt === '') return true;
-  const last = Number(lastRequestedAt);
-  return Number.isFinite(last) && last >= 0 && now >= last && now - last >= REVIEW_COOLDOWN_MS;
-}
-
-/** Ask only after a real success moment (currently a saved photo), never at
- * startup. Best-effort: Play may decide not to display its native sheet. */
-export async function requestReviewAfterPhotoSave(): Promise<void> {
-  if (!isNative() || attemptedThisSession) return;
-
-  const now = Date.now();
-  try {
-    if (!reviewRequestDue(localStorage.getItem(LAST_REQUEST_KEY), now)) return;
-  } catch {
-    // Private/locked storage still gets at most one attempt this session.
-  }
-
-  attemptedThisSession = true;
-  try {
-    // Record the attempt before handing control to Play so failures or an
-    // activity restart cannot cause every subsequent photo to ask again.
-    localStorage.setItem(LAST_REQUEST_KEY, String(now));
-  } catch {
-    /* session guard above remains authoritative */
-  }
-
-  try {
+const prompt = createReviewPrompt({
+  android: () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android',
+  now: () => Date.now(),
+  read: () => localStorage.getItem(STATE_KEY) ?? legacyReviewState(localStorage.getItem(LEGACY_KEY)),
+  write: (value) => {
+    localStorage.setItem(STATE_KEY, value);
+    localStorage.removeItem(LEGACY_KEY);
+  },
+  dialogOpen: () =>
+    useProStore.getState().upsellOpen || usePointsStore.getState().walletOpen || useConfirm.getState().req !== null,
+  launch: async () => {
     const { AppReview } = await import('@capawesome/capacitor-app-review');
     await AppReview.requestReview();
-  } catch {
-    // Sideloads, unavailable Play services and store quota are normal.
-  }
+  },
+});
+
+/** The app was opened or came back to the foreground. */
+export function noteAppOpened(): void {
+  prompt.opened();
+}
+
+/**
+ * Something just went well for the user: a file they exported was saved, an
+ * AI render finished. Call it right there and nowhere else: not at launch,
+ * not after an error or a cancelled action. It returns at once and never
+ * throws; Play may or may not show its card, and the app shows nothing itself.
+ */
+export function notePositiveMoment(): void {
+  void prompt.moment();
 }

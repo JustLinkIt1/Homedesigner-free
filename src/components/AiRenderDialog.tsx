@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { aiJson, imageDataUrl, restorePlayPoints, type AiJob, type AiState, type PointsState } from '../lib/aiRender';
 import { sceneSnapshot } from '../lib/renderBridge';
 import { isNative, saveImage } from '../lib/native';
+import { notePositiveMoment } from '../lib/appReview';
 import { useI18n } from '../lib/i18n';
 import { withPointBalanceRefresh } from '../lib/pointPurchases';
 import { applyWatermark } from '../lib/watermark';
@@ -35,6 +36,9 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
   const inFlight = useRef(false);
   const alive = useRef(true);
   const restoredPurchases = useRef(false);
+  // The job seen generating while this dialog was open. Its picture arriving is
+  // a fresh result; reopening the dialog on last week's render is not.
+  const generating = useRef('');
   const native = isNative();
   const captureSource = useCallback(() => {
     const preview = sceneSnapshot.current?.();
@@ -65,6 +69,7 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
   }, [account, native, reload]);
   useEffect(() => {
     if (!job || !['reserved', 'queued'].includes(job.status)) return;
+    generating.current = job.id;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
@@ -87,8 +92,13 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
     if (job?.status !== 'complete') return;
     let stopped = false;
     const stamp = job.watermark === true;
+    const fresh = generating.current === job.id;
     void imageDataUrl(job.id).then(url => stamp ? applyWatermark(url) : url)
-      .then(url => { if (!stopped) { setResult(url); setShowSource(false); } })
+      .then(url => {
+        if (stopped) return;
+        setResult(url); setShowSource(false);
+        if (fresh) { generating.current = ''; notePositiveMoment(); }
+      })
       .catch(e => { if (!stopped) setError(e instanceof Error ? e.message : String(e)); });
     return () => { stopped = true; };
   }, [job?.id, job?.status, job?.watermark, imageRetry]);
@@ -155,7 +165,7 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
         {pending && <p role="status">{t('Generating your image… You can close this window and reopen AI render to resume.')}</p>}
         <button className="btn primary" disabled={busy || pending || !consent || !source || !allowed || !state?.enabled || cost === undefined || (points?.balance ?? 0) < cost}
           onClick={() => void generate()}>{cost === 0 ? t('Generate my free render') : `${t('Generate')} · ${cost ?? '—'} ${t('AI points')}`}</button>
-        {result && <button className="btn" disabled={busy} onClick={() => void run(() => saveImage(result, `homedesigner-ai-${job?.id}.${result.startsWith('data:image/png') ? 'png' : 'jpg'}`))}>{t('Save AI image')}</button>}
+        {result && <button className="btn" disabled={busy} onClick={() => void run(async () => { await saveImage(result, `homedesigner-ai-${job?.id}.${result.startsWith('data:image/png') ? 'png' : 'jpg'}`); })}>{t('Save AI image')}</button>}
         <AiPointPacks points={points} busy={busy} run={action => void run(action)} onRefresh={reload} />
         <button className="btn" disabled={busy} onClick={() => void run(async () => { await reload(); setImageRetry(n => n + 1); })}>{t('Refresh')}</button>
       </>}
