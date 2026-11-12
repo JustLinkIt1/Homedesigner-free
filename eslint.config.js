@@ -30,7 +30,7 @@ export default tseslint.config(
     languageOptions: {
       sourceType: 'module',
       globals: Object.fromEntries(['window', 'document', 'console', 'matchMedia', 'devicePixelRatio', 'innerHeight',
-        'addEventListener', 'getComputedStyle', 'requestAnimationFrame', 'IntersectionObserver', 'URL'].map((g) => [g, 'readonly'])),
+        'addEventListener', 'requestAnimationFrame', 'IntersectionObserver', 'URL'].map((g) => [g, 'readonly'])),
     },
   },
   js.configs.recommended,
