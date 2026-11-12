@@ -58,6 +58,22 @@ const b64 = await page.evaluate(async () => {
       for (const m of mats) if (m.opacity < 1 && m.userData?.fade !== false) { m.opacity = 1; m.transparent = false; }
     });
   }
+  // The ground floor's plan (metres) rides along as glTF extras, so the site
+  // can draw it in the 2D editor's style before the walls rise. Wall order
+  // matches the children of the "walls" group.
+  const st = window.useDesign.getState();
+  const m = (v) => Math.round(v * 10) / 1000;
+  storeys[0].userData.plan = {
+    walls: st.walls.map((w) => ({
+      a: [m(w.start.x), m(w.start.y)], b: [m(w.end.x), m(w.end.y)], t: m(w.thickness),
+      kind: w.kind === 'fence' ? 'fence' : w.halfWall ? 'half' : 'wall',
+    })),
+    openings: st.openings.map((o) => ({
+      wall: st.walls.findIndex((w) => w.id === o.wallId), at: o.offset, width: m(o.width),
+      type: o.type, style: o.style ?? null, flipHinge: !!o.flipHinge, flipSwing: !!o.flipSwing,
+    })).filter((o) => o.wall >= 0),
+    rooms: st.rooms.map((r) => ({ name: r.name, outdoor: !!r.outdoor, pts: r.points.map((p) => [m(p.x), m(p.y)]) })),
+  };
   const glb = await new GLTFExporter().parseAsync(storeys, { binary: true, onlyVisible: true, maxTextureSize: 1024 });
   let bin = '';
   const bytes = new Uint8Array(glb);
