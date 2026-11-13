@@ -138,9 +138,11 @@
     /* ---------- Scroll video section ---------- */
     /* A tall scroll runway; the stage stays stuck while scroll progress drives
        the film and the caption cards. */
-    .film { position: relative; height: 260vh; }
+    .film { position: relative; height: 560vh; }
     .film .stage {
-      position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; place-items: center;
+      /* dvh: the height you can actually see on a phone, so the caption is never
+         under the browser's own bars. */
+      position: sticky; top: 0; height: 100vh; height: 100dvh; overflow: hidden; display: grid; place-items: center;
       /* The film letterboxes (object-fit: contain shows the WHOLE frame), so the
          stage behind it carries a subtle brand glow instead of raw black bars. */
       background:
@@ -158,40 +160,80 @@
     .film .scrim {
       position: absolute; inset: 0; pointer-events: none;
       background:
-        linear-gradient(180deg, rgba(10,13,20,0.72) 0%, rgba(10,13,20,0.12) 26%, rgba(10,13,20,0.10) 55%, rgba(10,13,20,0.82) 100%);
+        linear-gradient(180deg, rgba(10,13,20,0.6) 0%, rgba(10,13,20,0.06) 22%, rgba(10,13,20,0.04) 58%, rgba(10,13,20,0.82) 100%);
     }
     .film .stage-head {
-      position: absolute; top: 88px; left: 0; right: 0; text-align: center; padding: 0 24px;
+      position: absolute; top: 88px; left: 0; right: 0; text-align: center; padding: 0 24px; z-index: 3;
     }
     .film .stage-head h2 { font-size: clamp(24px, 4vw, 38px); font-weight: 800; letter-spacing: -0.03em; text-shadow: 0 2px 18px rgba(0,0,0,0.55); }
+    /* The step text sits under the house: one card at a time, above a rail that
+       shows where in the five steps you are. */
     .film .caption {
-      position: absolute; left: 50%; transform: translateX(-50%); bottom: 56px;
+      position: absolute; left: 50%; transform: translateX(-50%);
+      bottom: max(18px, env(safe-area-inset-bottom)); z-index: 3;
       width: min(92vw, 560px);
     }
     .film .card {
-      position: absolute; inset: auto 0 0; margin: 0 auto;
-      background: rgba(13, 17, 27, 0.78);
+      position: absolute; inset: auto 0 46px; margin: 0 auto;
+      background: rgba(13, 17, 27, 0.8);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: var(--radius); padding: 20px 24px;
-      opacity: 0; transform: translateY(14px); transition: opacity 0.35s ease, transform 0.35s ease;
+      border-radius: var(--radius); padding: 16px 20px 18px;
+      opacity: 0; transform: translateY(-10px); transition: opacity 0.25s ease, transform 0.25s ease;
       pointer-events: none;
     }
-    .film .card.on { opacity: 1; transform: translateY(0); }
-    .film .card .step { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-2); }
-    .film .card h3 { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; margin: 6px 0 4px; }
-    .film .card p { color: #c6cedd; font-size: 15px; }
-    .film .bar {
-      position: absolute; left: 50%; transform: translateX(-50%); bottom: 30px;
-      width: min(92vw, 560px); height: 4px; border-radius: 999px; background: rgba(255,255,255,0.16); overflow: hidden;
+    .film .card.on { opacity: 1; transform: translateY(0); transition-duration: 0.4s; }
+    .film .card .step {
+      display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-2);
+      opacity: 0; transform: translateX(-12px); transition: opacity 0.35s ease, transform 0.35s ease;
     }
-    .film .bar i { display: block; height: 100%; width: 0; background: var(--grad); border-radius: inherit; }
+    .film .card h3 { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; margin: 6px 0 4px; }
+    /* The title arrives word by word (the page script wraps each word). */
+    .film .card h3 .w {
+      display: inline-block; opacity: 0; transform: translateY(0.7em);
+      transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .film .card p { color: #c6cedd; font-size: 15px; opacity: 0; transform: translateY(8px); transition: opacity 0.4s ease, transform 0.4s ease; }
+    .film .card.on .step { opacity: 1; transform: none; transition-delay: 0.05s; }
+    .film .card.on h3 .w { opacity: 1; transform: none; transition-delay: calc(0.12s + var(--i) * 0.055s); }
+    .film .card.on p { opacity: 1; transform: none; transition-delay: 0.38s; }
+    .film .rail {
+      display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px;
+      list-style: none; margin: 0; padding: 0;
+    }
+    .film .rail i { display: block; position: relative; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.18); overflow: hidden; }
+    .film .rail i::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--grad);
+      transform-origin: left; transform: scaleX(var(--f, 0));
+    }
+    .film .rail span {
+      display: block; margin-top: 7px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+      color: #7f8aa0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.3s ease;
+    }
+    .film .rail li.on span { color: #fff; }
+    /* The last step: a frame closes on the 3D view (everything outside it dims),
+       then the AI render of that same view fades in. Placed by house3d.js. */
+    .film .shot {
+      position: absolute; visibility: hidden; pointer-events: none; z-index: 2;
+      border-radius: 14px; opacity: var(--frame, 0);
+      box-shadow: 0 0 0 200vmax rgba(6, 8, 13, 0.8), 0 18px 60px rgba(0, 0, 0, 0.55);
+      outline: 2px solid rgba(255, 255, 255, 0.85); outline-offset: -1px;
+    }
+    .film .shot img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; opacity: var(--photo, 0); display: block; }
+    .film .shot img:not([src]) { visibility: hidden; }
+    .film .shot .tag {
+      position: absolute; left: 10px; top: 10px; padding: 5px 10px; border-radius: 999px;
+      font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      background: var(--grad); color: #fff; opacity: calc(var(--photo, 0) * 3 - 2);
+    }
+    /* One label hands over to the other; they never show through each other. */
+    .film .shot .tag.was { background: rgba(13, 17, 27, 0.8); opacity: calc(1 - var(--photo, 0) * 3); }
 
     /* Reduced motion / fallback: normal in-flow looping video, captions stacked below. */
     body.no-scrub .film { height: auto; }
     body.no-scrub .film .stage { position: relative; height: auto; aspect-ratio: 16 / 9; }
     body.no-scrub .film video { position: relative; }
-    body.no-scrub .film .caption, body.no-scrub .film .bar, body.no-scrub .film .scrim, body.no-scrub .film .stage-head { display: none; }
+    body.no-scrub .film .caption, body.no-scrub .film .shot, body.no-scrub .film .scrim, body.no-scrub .film .stage-head { display: none; }
     body.no-scrub .film-fallback-steps { display: grid; }
     .film-fallback-steps { display: none; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); padding: 28px 0 8px; }
     .film-fallback-steps .fcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
@@ -298,7 +340,8 @@
       .hero { padding-top: 120px; }
       .play-badge { width: 210px; }
       .get .play-badge { width: 224px; }
-      .film .stage-head { top: 76px; }
+      .film .stage-head { top: 72px; padding: 0 12px; }
+      .film .stage-head h2 { font-size: clamp(18px, 5.6vw, 24px); white-space: nowrap; }
       section.block { padding: 64px 0; }
       .access-steps { grid-template-columns: 1fr; }
       .access-step { min-height: 0; }
@@ -355,32 +398,55 @@
     <section class="film" id="see-it">
       <div class="stage">
         <video id="promo" src="./assets/promo.mp4" muted playsinline preload="none"></video>
-        <canvas id="house3d" role="img" aria-label="A 3D HomeDesigner sample home: the walls rise from the floor plan, furniture drops in, then the roof lands."></canvas>
+        <canvas id="house3d" role="img" aria-label="A 3D HomeDesigner sample home: the walls rise from the floor plan, furniture drops in, the camera walks through the rooms and out to the street, and the view becomes an AI render."></canvas>
         <div class="scrim"></div>
         <div class="stage-head"><h2>From blank page to dream home</h2></div>
+        <div class="shot" aria-hidden="true">
+          <img alt="" width="1200" height="800" decoding="async" />
+          <span class="tag was">3D view</span>
+          <span class="tag">AI render</span>
+        </div>
         <div class="caption">
           <div class="card" data-step="0">
-            <span class="step">Step 1 — Sketch</span>
+            <span class="step">Step 1 · Sketch</span>
             <h3>Draw your floor plan</h3>
-            <p>Walls snap to the grid and to each other. Type exact lengths or drag corners — beginner to architect.</p>
+            <p>Walls snap to the grid and to each other. Type exact lengths or drag the corners.</p>
           </div>
           <div class="card" data-step="1">
-            <span class="step">Step 2 — Furnish</span>
+            <span class="step">Step 2 · Furnish</span>
             <h3>Fill it with real furniture</h3>
-            <p>Photoreal floors and a growing catalog of real 3D models — sofas, kitchens, beds, plants and more.</p>
+            <p>Real 3D sofas, kitchens, beds and plants on photoreal floors. Drop them in and move them around.</p>
           </div>
           <div class="card" data-step="2">
-            <span class="step">Step 3 — Experience</span>
-            <h3>Walk through it in 3D</h3>
-            <p>Switch to 3D, open doors, climb the stairs, and see your home in changing daylight before you build it.</p>
+            <span class="step">Step 3 · Walk through</span>
+            <h3>Walk through every room</h3>
+            <p>Go inside at eye level and look around. You feel the space before anything is built.</p>
           </div>
+          <div class="card" data-step="3">
+            <span class="step">Step 4 · Step outside</span>
+            <h3>See it from the street</h3>
+            <p>The roof goes on, and your home gets a street, a front path and a garden fence.</p>
+          </div>
+          <div class="card" data-step="4">
+            <span class="step">Step 5 · AI render</span>
+            <h3>Turn that view into a photo</h3>
+            <p>One tap makes a photo-like picture of the exact view you are looking at.</p>
+          </div>
+          <ol class="rail" aria-hidden="true">
+            <li><i></i><span>Sketch</span></li>
+            <li><i></i><span>Furnish</span></li>
+            <li><i></i><span>Walk</span></li>
+            <li><i></i><span>Outside</span></li>
+            <li><i></i><span>AI render</span></li>
+          </ol>
         </div>
-        <div class="bar"><i id="bar"></i></div>
       </div>
       <div class="wrap film-fallback-steps">
-        <div class="fcard"><span class="step">Step 1 — Sketch</span><h3>Draw your floor plan</h3><p>Walls snap to the grid and to each other. Type exact lengths or drag corners.</p></div>
-        <div class="fcard"><span class="step">Step 2 — Furnish</span><h3>Fill it with real furniture</h3><p>Photoreal floors and a growing catalog of real 3D models.</p></div>
-        <div class="fcard"><span class="step">Step 3 — Experience</span><h3>Walk through it in 3D</h3><p>Open doors, climb stairs, and see your home in changing daylight.</p></div>
+        <div class="fcard"><span class="step">Step 1 · Sketch</span><h3>Draw your floor plan</h3><p>Walls snap to the grid and to each other. Type exact lengths or drag the corners.</p></div>
+        <div class="fcard"><span class="step">Step 2 · Furnish</span><h3>Fill it with real furniture</h3><p>Real 3D sofas, kitchens, beds and plants on photoreal floors.</p></div>
+        <div class="fcard"><span class="step">Step 3 · Walk through</span><h3>Walk through every room</h3><p>Go inside at eye level and feel the space before anything is built.</p></div>
+        <div class="fcard"><span class="step">Step 4 · Step outside</span><h3>See it from the street</h3><p>With its roof on, a street, a front path and a garden fence.</p></div>
+        <div class="fcard"><span class="step">Step 5 · AI render</span><h3>Turn that view into a photo</h3><p>One tap makes a photo-like picture of the view you are looking at.</p></div>
       </div>
     </section>
 
@@ -549,15 +615,30 @@
 
     // ---- Scroll-driven 3D house (video fallback) ----
     // Scroll progress through the tall .film section drives the captions and
-    // the progress bar. assets/house3d.js animates a real sample home exported
+    // their rail. assets/house3d.js animates a real sample home exported
     // from the app. Without WebGL, if the model fails, or when the visitor
     // prefers reduced motion, the promo video plays instead: scrubbed by the
     // scroll, or as a plain loop for reduced motion.
     (function () {
       const video = document.getElementById('promo');
       const film = document.querySelector('.film');
-      const cards = Array.from(document.querySelectorAll('.film .card'));
-      const bar = document.getElementById('bar');
+      let cards = Array.from(document.querySelectorAll('.film .card'));
+      let rail = Array.from(document.querySelectorAll('.film .rail li'));
+      // Where each step starts. The same numbers as STEPS in assets/house3d.js.
+      let steps = [0, 0.2, 0.38, 0.62, 0.82];
+      // Titles arrive word by word.
+      cards.forEach((card) => {
+        const title = card.querySelector('h3');
+        const words = title.textContent.trim().split(/\s+/);
+        title.textContent = '';
+        words.forEach((word, i) => {
+          const span = document.createElement('span');
+          span.className = 'w';
+          span.style.setProperty('--i', i);
+          span.textContent = word;
+          title.append(span, ' ');
+        });
+      });
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       function progress() {
@@ -568,10 +649,14 @@
       }
       function captions() {
         const p = progress();
-        if (bar) bar.style.width = (p * 100).toFixed(2) + '%';
-        // Caption card per third of the scroll.
-        const step = p < 1 / 3 ? 0 : p < 2 / 3 ? 1 : 2;
+        let step = 0;
+        while (step < steps.length - 1 && p >= steps[step + 1]) step++;
         cards.forEach((c, i) => c.classList.toggle('on', i === step));
+        rail.forEach((li, i) => {
+          const end = steps[i + 1] ?? 1;
+          li.classList.toggle('on', i === step);
+          li.firstElementChild.style.setProperty('--f', Math.min(1, Math.max(0, (p - steps[i]) / (end - steps[i]))).toFixed(3));
+        });
         return p;
       }
 
@@ -584,6 +669,11 @@
       }
 
       function scrubVideo() {
+        // The video is the older three-step film: sketch, furnish, walk.
+        cards.slice(3).forEach((n) => n.remove());
+        rail.slice(3).forEach((n) => n.remove());
+        document.querySelector('.film .shot')?.remove();
+        cards = cards.slice(0, 3); rail = rail.slice(0, 3); steps = [0, 1 / 3, 2 / 3];
         let duration = 0;
         let target = 0;    // seconds we want to be at
         let current = 0;   // seconds we've rendered
@@ -606,7 +696,7 @@
           // Some environments accept the seek but never move the playhead.
           if (++ticks % 60 === 0) {
             if (target > 1.5 && video.currentTime < 0.05) {
-              if (++silentStrikes >= 3) { cancelAnimationFrame(raf); document.querySelectorAll('.film .card, .film .bar').forEach((n) => n.remove()); video.loop = true; video.play().catch(() => {}); }
+              if (++silentStrikes >= 3) { cancelAnimationFrame(raf); document.querySelectorAll('.film .card, .film .rail').forEach((n) => n.remove()); video.loop = true; video.play().catch(() => {}); }
             } else {
               silentStrikes = 0;
             }
@@ -632,7 +722,7 @@
         started = true;
         import('./assets/house3d.js')
           .then((m) => m.start(film, document.getElementById('house3d')))
-          .then(() => document.body.classList.add('has-3d'))
+          .then((house) => { window.house3d = house; document.body.classList.add('has-3d'); })
           .catch((err) => { console.warn('3D house unavailable, using the video', err); scrubVideo(); });
       };
       new IntersectionObserver((entries, io) => {

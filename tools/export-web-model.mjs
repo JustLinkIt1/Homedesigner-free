@@ -1,14 +1,15 @@
 // Export a sample home from the real 3D view as a GLB for the website.
 //
 //   npx vite --port 4318          (dev server; window.useDesign is dev-only)
-//   node tools/export-web-model.mjs [sampleId] [out.glb]
+//   node tools/export-web-model.mjs [sampleId] [out.glb]      (PORT=5183 for another port)
 //
 // Loads the sample in the app, switches to 3D at the high quality tier (so
 // furniture uses its render models), then runs three's GLTFExporter over the
-// storeys DesignScene draws. Ceilings are left out so the house can be seen
-// into from above. Each node keeps its kind (walls / floors / roof / furniture
-// / slabs) as the name of its parent group, which site/assets/house3d.js uses
-// to build the scroll animation. Compress the result afterwards with
+// storeys DesignScene draws, plus the street in front (StreetScene). Each node
+// keeps its kind (walls / floors / ceilings / roof / furniture / slabs, and
+// street) as the name of its parent group, which site/assets/house3d.js uses
+// to build the scroll animation: it hides the ceilings while the house is
+// seen from above and shows them for the walk-through. Compress the result afterwards with
 // gltf-transform (see the comment at the end).
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
@@ -29,7 +30,7 @@ await page.addInitScript(() => {
   localStorage.setItem('hd-quality', 'high');
   localStorage.setItem('homedesigner.seen3d.v1', '1');
 });
-await page.goto('http://localhost:4318/?pro=1');
+await page.goto(`http://localhost:${process.env.PORT ?? 4318}/?pro=1`);
 await page.waitForSelector('.tpl-card');
 await page.evaluate(() => window.useProStore.setState({ isPro: true }));
 // Open it the way a user does: the template card whose preview is this sample.
@@ -50,7 +51,6 @@ const b64 = await page.evaluate(async () => {
   if (!storeys.length) throw new Error('no storey groups: is DesignScene up to date?');
   for (const s of storeys) {
     s.traverse((o) => {
-      if (o.name === 'ceilings') o.visible = false;
       // Tap targets hide via material.visible, which GLTFExporter ignores.
       if (o.isMesh && [].concat(o.material).every((m) => m.visible === false)) o.visible = false;
       // Undo the dollhouse fade so every wall exports solid.
@@ -74,7 +74,9 @@ const b64 = await page.evaluate(async () => {
     })).filter((o) => o.wall >= 0),
     rooms: st.rooms.map((r) => ({ name: r.name, outdoor: !!r.outdoor, pts: r.points.map((p) => [m(p.x), m(p.y)]) })),
   };
-  const glb = await new GLTFExporter().parseAsync(storeys, { binary: true, onlyVisible: true, maxTextureSize: 1024 });
+  const street = [];
+  state.scene.traverse((o) => { if (o.name === 'street') street.push(o); });
+  const glb = await new GLTFExporter().parseAsync([...storeys, ...street], { binary: true, onlyVisible: true, maxTextureSize: 1024 });
   let bin = '';
   const bytes = new Uint8Array(glb);
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));

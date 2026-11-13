@@ -108,7 +108,7 @@ function Street({ plan }: { plan: StreetPlan }) {
   // Local x runs along the street and local z out from the house towards it.
   const yaw = Math.atan2(-plan.right.y, plan.right.x);
   return (
-    <group position={[plan.origin.x * M, 0, plan.origin.y * M]} rotation={[0, yaw, 0]}>
+    <group name="street" position={[plan.origin.x * M, 0, plan.origin.y * M]} rotation={[0, yaw, 0]}>
       <Slab kind="asphalt" color="#45464a" patch={4} x={s.plotMid} z={s.road.mid} w={STREET_LENGTH} d={s.road.size} top={0.012} />
       <mesh geometry={s.dashes} raycast={noRay}>
         <meshStandardMaterial color="#e6e5df" roughness={0.8} />
