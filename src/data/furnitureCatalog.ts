@@ -298,6 +298,11 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
 
   // Openings (placed on walls)
   { type: 'door', name: 'Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#a9744f', shape: 'door', icon: '🚪', opening: { kind: 'door', style: 'single', sill: 0 } },
+  // Front doors are shown closed and are real models (public/models/doors,
+  // built by tools/blender/front_doors.py). Free: every house needs one.
+  { type: 'front_door', name: 'Front Door', category: 'Openings', width: 95, depth: 12, height: 210, color: '#ececea', shape: 'door', icon: '🚪', opening: { kind: 'door', style: 'front', sill: 0 } },
+  { type: 'front_door_glazed', name: 'Glazed Front Door', category: 'Openings', width: 95, depth: 12, height: 210, color: '#80502a', shape: 'door', icon: '🚪', opening: { kind: 'door', style: 'front_glazed', sill: 0 } },
+  { type: 'front_door_modern', name: 'Modern Front Door', category: 'Openings', width: 100, depth: 12, height: 215, color: '#2a2c2f', shape: 'door', icon: '🚪', opening: { kind: 'door', style: 'front_modern', sill: 0 } },
   { type: 'double_door', pro: true, name: 'Double Door', category: 'Openings', width: 160, depth: 12, height: 205, color: '#a9744f', shape: 'door_double', icon: '🚪', opening: { kind: 'door', style: 'double', sill: 0 } },
   { type: 'sliding_door', pro: true, name: 'Sliding Door', category: 'Openings', width: 180, depth: 12, height: 210, color: '#9db4c4', shape: 'door_sliding', icon: '🚪', opening: { kind: 'door', style: 'sliding', sill: 0 } },
   // The door onto a patio/deck. Free on purpose: the outdoor areas and the
@@ -308,6 +313,8 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'pocket_door', pro: true, name: 'Pocket Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#b9a58c', shape: 'door_pocket', icon: '🚪', opening: { kind: 'door', style: 'pocket', sill: 0 } },
   { type: 'bifold_door', pro: true, name: 'Bifold Door', category: 'Openings', width: 90, depth: 12, height: 205, color: '#a9744f', shape: 'door_bifold', icon: '🚪', opening: { kind: 'door', style: 'bifold', sill: 0 } },
   { type: 'window', name: 'Window', category: 'Openings', width: 120, depth: 12, height: 120, color: '#bfe3f2', shape: 'window', icon: '🪟', opening: { kind: 'window', style: 'standard', sill: 90 } },
+  // A bay projects from the outside wall; see src/lib/bayWindow.ts.
+  { type: 'bay_window', name: 'Bay Window', category: 'Openings', width: 220, depth: 12, height: 135, color: '#bfe3f2', shape: 'window', icon: '🪟', opening: { kind: 'window', style: 'bay', sill: 85 } },
   { type: 'french_window', pro: true, name: 'French Window', category: 'Openings', width: 180, depth: 12, height: 220, color: '#bfe3f2', shape: 'window_french', icon: '🪟', opening: { kind: 'window', style: 'french', sill: 0 } },
   { type: 'sliding_window', pro: true, name: 'Sliding Window', category: 'Openings', width: 150, depth: 12, height: 120, color: '#bfe3f2', shape: 'window_sliding', icon: '🪟', opening: { kind: 'window', style: 'sliding', sill: 90 } },
   { type: 'casement_window', pro: true, name: 'Casement Window', category: 'Openings', width: 60, depth: 12, height: 120, color: '#bfe3f2', shape: 'window_casement', icon: '🪟', opening: { kind: 'window', style: 'casement', sill: 90 } },

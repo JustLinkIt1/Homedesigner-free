@@ -229,7 +229,10 @@ export default function ProjectsScreen({
                 )}
                 <span className="tpl-title">{tpl.title}</span>
                 <span className="tpl-sub">{tpl.sub}</span>
-                {projectsGated && <ProTag />}
+                {/* The AI plan is not a second project for a free account: it asks,
+                    then replaces the plan they have. A Pro badge there would
+                    wrongly say the AI tool itself needs Pro. */}
+                {projectsGated && tpl.key !== '__ai' && <ProTag />}
               </button>
             ))}
           </div>

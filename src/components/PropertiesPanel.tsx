@@ -865,6 +865,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     }}
                   >
                     <option value="single">{t('Single')}</option>
+                    <option value="front">{t('Front door (panelled)')}</option>
+                    <option value="front_glazed">{t('Front door (glazed)')}</option>
+                    <option value="front_modern">{t('Front door (modern)')}</option>
                     <option value="double">{t('Double')}{proMark('door', 'double')}</option>
                     <option value="sliding">{t('Sliding')}{proMark('door', 'sliding')}</option>
                     <option value="pocket">{t('Pocket')}{proMark('door', 'pocket')}</option>
@@ -885,6 +888,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     }}
                   >
                     <option value="standard">{t('Standard')}</option>
+                    <option value="bay">{t('Bay')}</option>
                     <option value="french">{t('French (full height)')}{proMark('window', 'french')}</option>
                     <option value="casement">{t('Casement')}{proMark('window', 'casement')}</option>
                     <option value="sliding">{t('Sliding')}{proMark('window', 'sliding')}</option>

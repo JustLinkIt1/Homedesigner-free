@@ -6,7 +6,7 @@
 // geometry by the time it arrives; this file is a translation, plus a simple
 // rule-based furnisher for people who asked for a furnished plan.
 import type { MaybeFloored } from '../store/designStore';
-import type { FloorGeom, FloorInfo, FurnitureItem, Opening, Room, Wall } from '../types';
+import type { FloorGeom, FloorInfo, FurnitureItem, Opening, Roof, Room, Wall } from '../types';
 import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from '../data/furnitureCatalog';
 import { dressed, ROOFS } from '../data/samples';
 import { uid } from './geometry';
@@ -27,7 +27,7 @@ export interface PlanBrief {
 
 export interface BlueprintRoom { id: string; type: PlanRoomType; name: string; x: number; y: number; w: number; h: number }
 export interface BlueprintOpening {
-  kind: 'door' | 'open' | 'entrance' | 'garage' | 'window' | 'small_window';
+  kind: 'door' | 'open' | 'entrance' | 'garage' | 'window' | 'small_window' | 'bay';
   x: number;
   y: number;
   vertical: boolean;
@@ -137,6 +137,9 @@ function openingFor(spec: BlueprintOpening, walls: Wall[], allowPro: boolean): O
   switch (spec.kind) {
     case 'window': return { ...base, type: 'window', height: 130, sill: 100 };
     case 'small_window': return { ...base, type: 'window', height: 80, sill: 130 };
+    case 'bay': return { ...base, type: 'window', style: 'bay', height: 135, sill: 85 };
+    // The way in is a proper front door, shown closed.
+    case 'entrance': return { ...base, type: 'door', height: 210, sill: 0, style: 'front' };
     case 'open': return { ...base, type: 'door', height: 210, sill: 0, style: 'passage' };
     // There is no garage door in the catalogue. A pair of doors is the closest
     // thing; that style is Pro, so a free plan gets a plain wide opening.
@@ -441,7 +444,13 @@ const FLOOR_NAMES = ['Ground floor', 'Upper floor', 'Upper floor 2'];
  */
 export function blueprintToSnapshot(
   plan: Blueprint,
-  opts: { allowPro: boolean; floorName?: (english: string) => string },
+  opts: {
+    allowPro: boolean;
+    floorName?: (english: string) => string;
+    /** Outside wall finish and roof; a plain render and slate when not given. */
+    exterior?: { color: string; material?: string };
+    roof?: Roof;
+  },
 ): MaybeFloored {
   const floors: FloorInfo[] = [];
   const floorGeom: Record<string, FloorGeom> = {};
@@ -470,6 +479,6 @@ export function blueprintToSnapshot(
   const ground = floorGeom[floors[0].id];
   return dressed(
     { ...ground, projectName: plan.title, floors, floorGeom, activeFloorId: floors[0].id },
-    { roof: ROOFS.slateGable, exterior: { color: '#e9e3d6' } },
+    { roof: opts.roof ?? ROOFS.slateGable, exterior: opts.exterior ?? { color: '#e9e3d6' } },
   );
 }

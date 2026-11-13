@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.22.36 — bay windows, front doors, and a house that looks like one from outside
+
+- Bay windows. A window can now be a bay (Properties → style, or "Bay Window"
+  in the Openings catalogue): it projects from the outside wall with glazing on
+  three sides, and the room's floor runs out into it. In 2D it is drawn as its
+  three slim walls. The bay is derived from the one window record
+  (`src/lib/bayWindow.ts`), so saved projects need no migration.
+- Front doors. Three modelled front doors (panelled white, glazed oak, modern
+  anthracite), shown closed in their frames, as door styles and catalogue
+  items. Built in Blender by `tools/blender/front_doors.py` into
+  `public/models/doors`. AI floor plans now use one for the entrance. All free.
+- The outside of a multi-storey house is one skin. Walls of a lower storey run
+  up to the floor above (they stopped 7 cm short, showing the slab and a dark
+  band), outside finishes cover the corners and run down over the slab edge
+  where a storey oversails, and skirting boards are indoors only.
+- Cladding reaches every outdoor stretch of wall. "Clad every outside face"
+  and the sample homes tested only the middle of each wall, so a long wall that
+  is outdoors for part of its length stayed bare. A deck or patio against a
+  wall no longer counts as indoors.
+- A single-storey wing under a taller house gets a flat roof, and a bay gets a
+  cap; both were open to the sky.
+- The projects screen no longer puts a Pro badge on "Create a plan with AI"
+  for a free account that already has a project: the AI plan replaces their
+  plan after asking, it does not need Pro.
+- `tools/make-plan-sample.mjs` builds a furnished 3D sample from a room list.
+
 ## 1.22.35 — rating prompt after exports and AI renders
 
 - Google Play's in-app review card is now requested after a plan export (PNG

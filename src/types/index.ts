@@ -86,8 +86,13 @@ export interface Room {
 /** Visual/behavioural variant of an opening.
  *  Doors: single (default) / double / sliding / pocket / bifold.
  *  Doorless interior openings (kind 'door', no leaf): passage / arch.
- *  Windows: standard (default) / french / casement; 'sliding' is shared. */
+ *  Front doors (shown closed, modelled): front / front_glazed / front_modern.
+ *  Windows: standard (default) / french / casement / bay; 'sliding' is shared. */
 export type OpeningStyle =
+  | 'front'
+  | 'front_glazed'
+  | 'front_modern'
+  | 'bay'
   | 'single'
   | 'double'
   | 'sliding'
@@ -117,6 +122,8 @@ export interface Opening {
   height: number;
   /** Height of the sill above the floor (cm) — 0 for doors. */
   sill: number;
+  /** Bay windows only: how far the bay projects from the wall's centre line (cm). */
+  depth?: number;
   /** Mirror a hinged/pocket/sliding opening to the opposite jamb/side. */
   flipHinge?: boolean;
   /** Swing the leaf toward the opposite side of the wall. */

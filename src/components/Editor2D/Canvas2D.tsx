@@ -35,6 +35,8 @@ import {
 import { kitchenRunUnits, RUN_UNIT } from '../../lib/kitchenRun';
 import { computeWallPolygons } from '../../lib/wallGeometry';
 import { isFence, isHalfWall } from '../../lib/fence';
+import { exteriorSideAt } from '../../lib/exteriorFaces';
+import { BAY_DEPTH, isBay } from '../../lib/bayWindow';
 import { wallDistances } from '../../lib/distanceGuides';
 import { formatLength, formatArea, type Units } from '../../lib/units';
 import { measureTextPx } from '../../lib/textMeasure';
@@ -1877,16 +1879,33 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
                   </>
                 ) : (
                   <>
-                    <Rect
-                      x={-wd / 2}
-                      y={-t / 2}
-                      width={wd}
-                      height={t}
-                      fill="#dcebf5"
-                      stroke={sel ? C.selection : '#6aa6cc'}
-                      strokeWidth={2 / zoom}
-                    />
-                    <Line points={[-wd / 2, 0, wd / 2, 0]} stroke="#7fb8d8" strokeWidth={1.5 / zoom} />
+                    {isBay(o) ? (() => {
+                      // A bay projects from the outdoor face: its three slim
+                      // walls, with the glazing drawn along the front.
+                      const d = Math.max(30, o.depth ?? BAY_DEPTH) * (exteriorSideAt(wall, rooms, o.offset) ?? 1);
+                      const run = [-wd / 2, 0, -wd / 2, d, wd / 2, d, wd / 2, 0];
+                      return (
+                        <>
+                          <Line points={run} stroke={sel ? C.selection : C.wallEdge} strokeWidth={12} lineJoin="miter" />
+                          <Line points={run} stroke={sel ? C.selection : C.wallBody} strokeWidth={10} lineJoin="miter" />
+                          <Line points={[-wd / 2 + 16, d, wd / 2 - 16, d]} stroke="#dcebf5" strokeWidth={8} />
+                          <Line points={[-wd / 2 + 16, d, wd / 2 - 16, d]} stroke="#7fb8d8" strokeWidth={1.5 / zoom} />
+                        </>
+                      );
+                    })() : (
+                      <>
+                        <Rect
+                          x={-wd / 2}
+                          y={-t / 2}
+                          width={wd}
+                          height={t}
+                          fill="#dcebf5"
+                          stroke={sel ? C.selection : '#6aa6cc'}
+                          strokeWidth={2 / zoom}
+                        />
+                        <Line points={[-wd / 2, 0, wd / 2, 0]} stroke="#7fb8d8" strokeWidth={1.5 / zoom} />
+                      </>
+                    )}
                     {o.style === 'french' && (
                       <Line
                         points={[-wd / 6, -t / 2, -wd / 6, t / 2, 0, t / 2, 0, -t / 2, wd / 6, -t / 2, wd / 6, t / 2]}

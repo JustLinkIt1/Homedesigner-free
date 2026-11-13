@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Component, Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { useDesign } from '../../store/designStore';
@@ -10,7 +11,8 @@ import { activeTier, tierCaps } from '../../lib/perfTier';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
 import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
-import { exteriorFaces } from '../../lib/exteriorFaces';
+import { exteriorFaces, exteriorRanges, exteriorSideAt } from '../../lib/exteriorFaces';
+import { bayParts, isBay } from '../../lib/bayWindow';
 import { isFence, isHalfWall, structuralWalls, fenceRunBoxes } from '../../lib/fence';
 import { buildRoofGeometry, roofOutlines } from '../../lib/roofGeometry';
 import { roofOf } from '../../lib/roof';
@@ -36,10 +38,10 @@ interface Span {
 }
 
 /** Solid wall pieces (full height between openings, sills, and headers). */
-function wallSpans(wall: Wall, openings: Opening[]): Span[] {
+function wallSpans(wall: Wall, openings: Opening[], height = wall.height): Span[] {
   const len = dist(wall.start, wall.end);
   const t = wall.thickness;
-  const H = wall.height;
+  const H = height;
   const ops = openings
     .map((o) => ({ ...o, s: Math.max(0, o.offset * len - o.width / 2), e: Math.min(len, o.offset * len + o.width / 2) }))
     .filter((o) => o.e > o.s)
@@ -49,7 +51,8 @@ function wallSpans(wall: Wall, openings: Opening[]): Span[] {
   let cursor = 0;
   for (const o of ops) {
     if (o.s > cursor) spans.push({ a: cursor, b: o.s, y0: 0, y1: H });
-    if (o.sill > 0) spans.push({ a: o.s, b: o.e, y0: 0, y1: o.sill }); // under window
+    // A bay is open to the floor: the room runs out into it.
+    if (o.sill > 0 && !isBay(o)) spans.push({ a: o.s, b: o.e, y0: 0, y1: o.sill }); // under window
     const headerBottom = o.sill + o.height;
     if (headerBottom < H) spans.push({ a: o.s, b: o.e, y0: headerBottom, y1: H }); // lintel
     cursor = Math.max(cursor, o.e);
@@ -181,11 +184,21 @@ function WallMesh({
   register,
   unregister,
   fadeable = true,
+  fillTo,
+  skirt = 0,
   onTap,
 }: {
   wall: Wall;
   rooms: Room[];
   openings: Opening[];
+  /** Height (cm) of the storey above, when one is drawn. The wall then runs
+   * up to it with no dark cap, so from outside the storeys read as one skin
+   * instead of showing the slab and a gap between them. */
+  fillTo?: number;
+  /** Depth (m) by which outdoor finishes run down past the floor. On an upper
+   * storey that covers the edge of its own slab, which is bare wherever the
+   * storey oversails the one below. */
+  skirt?: number;
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
   unregister: (id: string) => void;
@@ -201,7 +214,19 @@ function WallMesh({
   const mx = ((wall.start.x + wall.end.x) / 2) * M;
   const mz = ((wall.start.y + wall.end.y) / 2) * M;
 
-  const spans = useMemo(() => wallSpans(wall, openings), [wall, openings]);
+  const height = fillTo != null && fillTo > wall.height ? fillTo : wall.height;
+  const spans = useMemo(() => wallSpans(wall, openings, height), [wall, openings, height]);
+  // The outdoor stretches of each face (cm along the wall). A stretch that
+  // reaches a wall end runs on over the half-thickness corner overlap.
+  const outdoors = useMemo(() => {
+    const len = dist(wall.start, wall.end);
+    const cm = (side: 1 | -1): [number, number][] =>
+      exteriorRanges(wall, rooms, side).map(([from, to]) => [
+        from <= 1e-4 ? -wall.thickness : from * len,
+        to >= 1 - 1e-4 ? len + wall.thickness : to * len,
+      ]);
+    return { 1: cm(1), [-1]: cm(-1) } as Record<1 | -1, [number, number][]>;
+  }, [wall, rooms]);
 
   // One material shared by every span of this wall (no per-span clones). When
   // the wall has a custom paint image, the material carries the map + the
@@ -301,8 +326,11 @@ function WallMesh({
         />
       ))}
       {faceFinishes.flatMap((finish: WallFaceFinish, finishIndex) => {
-        const from = Math.max(0, Math.min(1, finish.start)) * dist(wall.start, wall.end);
-        const to = Math.max(0, Math.min(1, finish.end)) * dist(wall.start, wall.end);
+        // A finish that reaches the wall's end also covers the half-thickness
+        // the wall runs on into the corner; otherwise every outside corner
+        // shows a strip of bare wall.
+        const from = finish.start <= 1e-4 ? -wall.thickness : Math.min(1, finish.start) * dist(wall.start, wall.end);
+        const to = finish.end >= 1 - 1e-4 ? dist(wall.start, wall.end) + wall.thickness : Math.max(0, finish.end) * dist(wall.start, wall.end);
         return spans.flatMap((span, spanIndex) => {
           const a = Math.max(span.a, from);
           const b = Math.min(span.b, to);
@@ -323,25 +351,63 @@ function WallMesh({
           ];
         });
       })}
-      {/* Dark top cap along the full wall (fades with the wall body). */}
-      <mesh
-        position={[(dist(wall.start, wall.end) / 2) * M, wall.height * M + 0.015, 0]}
-        material={capMat}
-        castShadow
-      >
-        <boxGeometry args={[dist(wall.start, wall.end) * M, 0.03, t + 0.016]} />
-      </mesh>
-      {/* Baseboards on floor-level spans (skip headers; breaks at doors). */}
-      {spans
-        .filter((s) => s.y0 <= 0.01 && s.b - s.a > 1)
-        .map((s, i) => (
-          <mesh key={`bb${i}`} position={[((s.a + s.b) / 2) * M, 0.045, 0]} castShadow receiveShadow>
-            <boxGeometry args={[(s.b - s.a) * M, 0.09, t + 0.02]} />
-            <meshStandardMaterial color="#efeae0" roughness={0.7} metalness={0} />
-          </mesh>
-        ))}
+      {skirt > 0 && faceFinishes.flatMap((finish: WallFaceFinish, finishIndex) => {
+        const len = dist(wall.start, wall.end);
+        return outdoors[finish.side]
+          .map(([from, to]): [number, number] => [
+            Math.max(from, finish.start <= 1e-4 ? -wall.thickness : finish.start * len),
+            Math.min(to, finish.end >= 1 - 1e-4 ? len + wall.thickness : finish.end * len),
+          ])
+          .filter(([a, b]) => b - a > 0.5)
+          .map(([a, b], i) => (
+            <WallFaceSpan
+              key={`skirt-${finishIndex}-${i}`}
+              position={[((a + b) / 2) * M, -skirt / 2, finish.side * (t / 2 + 0.0025)]}
+              material={faceMats[finishIndex]}
+              spanW={(b - a) * M}
+              spanH={skirt}
+              side={finish.side}
+            />
+          ));
+      })}
+      {/* Dark top cap along the full wall (fades with the wall body). Left off
+          where the storey above sits on this wall. */}
+      {fillTo == null && (
+        <mesh
+          position={[(dist(wall.start, wall.end) / 2) * M, wall.height * M + 0.015, 0]}
+          material={capMat}
+          castShadow
+        >
+          <boxGeometry args={[dist(wall.start, wall.end) * M, 0.03, t + 0.016]} />
+        </mesh>
+      )}
+      {/* Skirting boards on floor-level spans (skip headers; breaks at doors),
+          one per face, and only where that face is indoors: a house has no
+          skirting on its outside walls. */}
+      {([1, -1] as const).flatMap((side) =>
+        spans
+          .filter((s) => s.y0 <= 0.01 && s.b - s.a > 1)
+          .flatMap((s, i) => {
+            let pieces: [number, number][] = [[s.a, s.b]];
+            for (const [from, to] of outdoors[side]) {
+              pieces = pieces.flatMap(([a, b]): [number, number][] => {
+                if (to <= a || from >= b) return [[a, b]];
+                const kept: [number, number][] = [];
+                if (from - a > 1) kept.push([a, from]);
+                if (b - to > 1) kept.push([to, b]);
+                return kept;
+              });
+            }
+            return pieces.map(([a, b], j) => (
+              <mesh key={`bb${side}-${i}-${j}`} position={[((a + b) / 2) * M, 0.045, side * (t / 2 + 0.004)]} castShadow receiveShadow>
+                <boxGeometry args={[(b - a) * M, 0.09, 0.012]} />
+                <meshStandardMaterial color="#efeae0" roughness={0.7} metalness={0} />
+              </mesh>
+            ));
+          }),
+      )}
       {openings.map((o) => (
-        <OpeningMesh key={o.id} opening={o} thickness={t} len={dist(wall.start, wall.end)} />
+        <OpeningMesh key={o.id} opening={o} thickness={t} len={dist(wall.start, wall.end)} outSide={exteriorSideAt(wall, rooms, o.offset) ?? 1} />
       ))}
     </group>
   );
@@ -467,12 +533,77 @@ const ARCH_FILLET_GEO = (() => {
 })();
 
 /** Door leaf or window glass + frame, in wall-local coordinates. */
-function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickness: number; len: number }) {
+const FRONT_DOOR_MODELS: Partial<Record<NonNullable<Opening['style']>, string>> = {
+  front: 'front_panel',
+  front_glazed: 'front_glazed',
+  front_modern: 'front_modern',
+};
+/** The opening the door models were built for (m): tools/blender/front_doors.py. */
+const DOOR_MODEL_W = 0.9;
+const DOOR_MODEL_H = 2.1;
+
+/** Keeps a model that fails to load (offline, blocked) from taking the scene down. */
+class DoorModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+function FrontDoorModel({ file, w, h, outSide }: { file: string; w: number; h: number; outSide: 1 | -1 }) {
+  const { scene } = useGLTF(`${import.meta.env.BASE_URL}models/doors/${file}.glb`);
+  const model = useMemo(() => {
+    const copy = scene.clone(true);
+    copy.traverse((node) => {
+      if ((node as THREE.Mesh).isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+      }
+    });
+    return copy;
+  }, [scene]);
+  // The models face +Z outdoors; turn the door round when outdoors is -Z.
+  return (
+    <group rotation={[0, outSide === 1 ? 0 : Math.PI, 0]} scale={[w / DOOR_MODEL_W, h / DOOR_MODEL_H, 1]}>
+      <primitive object={model} />
+    </group>
+  );
+}
+
+/** A front door: closed, in its frame. A plain closed leaf stands in while the model loads. */
+function FrontDoor({ file, cx, w, h, outSide }: { file: string; cx: number; w: number; h: number; outSide: 1 | -1 }) {
+  const plain = (
+    <mesh position={[0, h / 2, 0]} castShadow>
+      <boxGeometry args={[w * 0.96, h * 0.98, 0.045]} />
+      <meshStandardMaterial color="#e8e8e4" roughness={0.5} />
+    </mesh>
+  );
+  return (
+    <group position={[cx, 0, 0]}>
+      <DoorModelBoundary fallback={plain}>
+        <Suspense fallback={plain}>
+          <FrontDoorModel file={file} w={w} h={h} outSide={outSide} />
+        </Suspense>
+      </DoorModelBoundary>
+    </group>
+  );
+}
+
+function OpeningMesh({ opening: o, thickness, len, outSide }: { opening: Opening; thickness: number; len: number; outSide: 1 | -1 }) {
   const centreCm = o.offset * len; // offset is a 0..1 fraction along the wall
   const cx = centreCm * M;
   const w = o.width * M;
   const h = o.height * M;
   const sill = o.sill * M;
+
+  // A bay's glazing lives in its own three walls (lib/bayWindow.ts); the host
+  // wall only has the gap.
+  if (isBay(o)) return null;
+  const frontDoor = o.type === 'door' && o.style ? FRONT_DOOR_MODELS[o.style] : undefined;
+  if (frontDoor) return <FrontDoor file={frontDoor} cx={cx} w={w} h={h} outSide={outSide} />;
 
   if (o.type === 'door') {
     const leftX = (centreCm - o.width / 2) * M;
@@ -727,6 +858,49 @@ function OpeningMesh({ opening: o, thickness, len }: { opening: Opening; thickne
           </mesh>
         ))}
     </group>
+  );
+}
+
+/** The flat lead-grey roof over a bay window. `top` is its upper face (m). */
+function BayCap({ points, top }: { points: Point[]; top: number }) {
+  const geometry = useMemo(() => {
+    // Oversail the bay walls a little, as a real cap does.
+    const [a0, a1, b1, b0] = points;
+    const al = Math.hypot(b0.x - a0.x, b0.y - a0.y) || 1;
+    const ol = Math.hypot(a1.x - a0.x, a1.y - a0.y) || 1;
+    const u = { x: ((b0.x - a0.x) / al) * 9, y: ((b0.y - a0.y) / al) * 9 };
+    const n = { x: ((a1.x - a0.x) / ol) * 9, y: ((a1.y - a0.y) / ol) * 9 };
+    const wide: Point[] = [
+      { x: a0.x - u.x, y: a0.y - u.y },
+      { x: a1.x - u.x + n.x, y: a1.y - u.y + n.y },
+      { x: b1.x + u.x + n.x, y: b1.y + u.y + n.y },
+      { x: b0.x + u.x, y: b0.y + u.y },
+    ];
+    return new THREE.ExtrudeGeometry(roomShape({ points: wide } as Room), { depth: 0.07, bevelEnabled: false });
+  }, [points]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, top, 0]} castShadow receiveShadow>
+      <meshStandardMaterial color="#5b6067" roughness={0.55} metalness={0.25} />
+    </mesh>
+  );
+}
+
+/** A flat roof over a room of a lower storey that has no room above it (a
+ * single-storey wing): without one the wing stands open to the sky. */
+function WingRoof({ room, top }: { room: Room; top: number }) {
+  const geometry = useMemo(() => {
+    // Oversail the walls by pushing each corner out from the room's centre.
+    const cx = room.points.reduce((sum, p) => sum + p.x, 0) / room.points.length;
+    const cy = room.points.reduce((sum, p) => sum + p.y, 0) / room.points.length;
+    const wide = room.points.map((p) => ({ x: p.x + Math.sign(p.x - cx) * 22, y: p.y + Math.sign(p.y - cy) * 22 }));
+    return new THREE.ExtrudeGeometry(roomShape({ points: wide } as Room), { depth: 0.12, bevelEnabled: false });
+  }, [room.points]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, top, 0]} castShadow receiveShadow>
+      <meshStandardMaterial color="#5b6067" roughness={0.6} metalness={0.15} />
+    </mesh>
   );
 }
 
@@ -1039,6 +1213,8 @@ function FloorContent({
   elevation,
   interactive,
   isTop,
+  riseTo,
+  above,
   roof,
   dollhouse,
   center,
@@ -1052,6 +1228,10 @@ function FloorContent({
   elevation: number;
   interactive: boolean;
   isTop: boolean;
+  /** Height (cm) from this storey's floor to the next drawn storey's, if any. */
+  riseTo?: number;
+  /** That storey's geometry: what it covers needs no roof of its own here. */
+  above?: FloorGeom;
   /** Set only on the storey that carries the roof (the highest one overall —
    *  `isTop` is relative to the currently VISIBLE storeys, which in the
    *  active-floor cutaway would put the roof on the wrong level). */
@@ -1065,15 +1245,44 @@ function FloorContent({
 }) {
   const selection = useDesign((s) => s.selection);
   const select = useDesign((s) => s.select);
+  // Bay windows add three short walls, their glazing and a floor patch each.
+  const bays = useMemo(() => bayParts(geom.walls, geom.openings, geom.rooms), [geom.walls, geom.openings, geom.rooms]);
   const openingsByWall = useMemo(() => {
     const m = new Map<string, Opening[]>();
-    for (const o of geom.openings) {
+    for (const o of [...geom.openings, ...bays.openings]) {
       const arr = m.get(o.wallId) ?? [];
       arr.push(o);
       m.set(o.wallId, arr);
     }
     return m;
-  }, [geom.openings]);
+  }, [geom.openings, bays.openings]);
+  // What the storey above leaves uncovered: single-storey wings, and bays with
+  // no bay over them.
+  const { openWings, coveredBays } = useMemo(() => {
+    if (!above) return { openWings: [] as Room[], coveredBays: new Set<string>() };
+    const upper = above.rooms.filter((r) => !r.outdoor && r.points.length >= 3);
+    const upperBays = bayParts(above.walls, above.openings, above.rooms).floors;
+    const centre = (pts: Point[]): Point => ({
+      x: pts.reduce((sum, p) => sum + p.x, 0) / pts.length,
+      y: pts.reduce((sum, p) => sum + p.y, 0) / pts.length,
+    });
+    return {
+      openWings: geom.rooms.filter((r) => !r.outdoor && r.points.length >= 3
+        && !upper.some((u) => pointInPolygon(centre(r.points), u.points))),
+      coveredBays: new Set(bays.floors
+        .filter((f) => upperBays.some((u) => pointInPolygon(centre(f.points), u.points)))
+        .map((f) => f.id)),
+    };
+  }, [above, geom.rooms, bays.floors]);
+  const bayFloors = useMemo(
+    () => bays.floors.map((f) => ({
+      ...(f.room ?? { name: '', floorMaterial: 'oak', color: '#d9c7a6' }),
+      id: f.id,
+      points: f.points,
+      outdoor: false,
+    }) as Room),
+    [bays.floors],
+  );
 
   // Ceiling only matters for the top storey (lower storeys get the slab of
   // the storey above); hidden in dollhouse so you can look inside from above.
@@ -1096,6 +1305,7 @@ function FloorContent({
     <group name="storey" position={[0, elevation * M, 0]}>
       <group name="slabs">
       {elevation > 0 && geom.rooms.filter((r) => !r.outdoor).map((r) => <SlabMesh key={`slab-${r.id}`} room={r} stairsBelow={stairsBelow} />)}
+      {elevation > 0 && bayFloors.map((r) => <SlabMesh key={`slab-${r.id}`} room={r} stairsBelow={NO_STAIRS} />)}
       </group>
       <group name="ceilings">
       {isTop && !dollhouse && geom.rooms.filter((r) => !r.outdoor).map((r) => (
@@ -1106,10 +1316,16 @@ function FloorContent({
       {roof && !dollhouse && (
         <RoofMesh walls={geom.walls} rooms={geom.rooms} roof={roof} eaveY={ceilingHeight} />
       )}
+      {riseTo != null && openWings.map((r) => (
+        <WingRoof key={`wing-${r.id}`} room={r} top={riseTo * M + 0.1} />
+      ))}
       </group>
       <group name="floors">
       {geom.rooms.map((r) => (
         <FloorMesh key={r.id} room={r} stairsBelow={stairsBelow} onTap={onTap} />
+      ))}
+      {bayFloors.map((r) => (
+        <FloorMesh key={r.id} room={r} stairsBelow={NO_STAIRS} />
       ))}
       </group>
       <group name="walls">
@@ -1128,9 +1344,29 @@ function FloorContent({
             register={register}
             unregister={unregister}
             fadeable={!isHalfWall(w)}
+            fillTo={isHalfWall(w) ? undefined : riseTo}
+            skirt={elevation > 0 ? SLAB_T : 0}
             onTap={onTap}
           />
         )
+      ))}
+      {bays.walls.map((w) => (
+        <WallMesh
+          key={w.id}
+          wall={w}
+          rooms={geom.rooms}
+          openings={openingsByWall.get(w.id) ?? []}
+          center={center}
+          register={register}
+          unregister={unregister}
+          fillTo={riseTo}
+          skirt={elevation > 0 ? SLAB_T : 0}
+        />
+      ))}
+      {/* A bay keeps its cap unless this is the storey cut open to look into,
+          or another bay stands on it. */}
+      {(riseTo != null || !dollhouse) && bays.floors.filter((f) => !coveredBays.has(f.id)).map((f) => (
+        <BayCap key={`cap-${f.id}`} points={f.points} top={riseTo != null ? riseTo * M - 0.012 : ceilingHeight + 0.07} />
       ))}
       </group>
       <group name="furniture">
@@ -1237,6 +1473,15 @@ export default function DesignScene({
     return result;
   }, [orderedFloors, floorGeom]);
   const topElevation = Math.max(...visible.map((x) => x.elevation));
+  // How far each drawn storey's walls must run to meet the storey drawn above it.
+  const riseByFloor = new Map<string, number>();
+  const aboveByFloor = new Map<string, FloorGeom>();
+  for (const f of visible) {
+    const next = visible.filter((x) => x.elevation > f.elevation).sort((a, b) => a.elevation - b.elevation)[0];
+    if (!next) continue;
+    riseByFloor.set(f.id, next.elevation - f.elevation);
+    if (floorGeom[next.id]) aboveByFloor.set(f.id, floorGeom[next.id]);
+  }
   return (
     <>
       {visible.map((f) => {
@@ -1251,6 +1496,8 @@ export default function DesignScene({
             elevation={f.elevation}
             interactive={interactive && f.id === activeFloorId}
             isTop={f.elevation >= topElevation}
+            riseTo={riseByFloor.get(f.id)}
+            above={aboveByFloor.get(f.id)}
             roof={f.roof}
             // Dollhouse fade cuts open only the storey being edited; the
             // storeys below stay solid (context, not subject).

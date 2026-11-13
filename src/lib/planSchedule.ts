@@ -34,6 +34,9 @@ export interface OpeningRow {
 export function openingLabel(o: Opening): string {
   if (o.type === 'door') {
     switch (o.style) {
+      case 'front':
+      case 'front_glazed':
+      case 'front_modern': return 'Front door';
       case 'double': return 'Double door';
       case 'sliding': return 'Sliding door';
       case 'pocket': return 'Pocket door';
@@ -44,6 +47,7 @@ export function openingLabel(o: Opening): string {
     }
   }
   switch (o.style) {
+    case 'bay': return 'Bay window';
     case 'french': return 'French window';
     case 'casement': return 'Casement window';
     case 'sliding': return 'Sliding window';
