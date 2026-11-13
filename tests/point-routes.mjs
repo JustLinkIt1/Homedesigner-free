@@ -11,7 +11,7 @@ const originalFetch = globalThis.fetch;
 let checks = 0;
 const check = (value, label) => { assert.ok(value, label); checks++; };
 try {
-  for (const name of ['index', 'community', 'points', 'ai-features', 'ai-advisor', 'ai-providers', 'ai-plan', 'stripe', 'ai-render', 'entitlements']) {
+  for (const name of ['index', 'community', 'points', 'ai-features', 'ai-advisor', 'ai-providers', 'ai-plan', 'stripe', 'ai-render', 'entitlements', 'shared-plans']) {
     let source = readFileSync(`workers/design-sync/src/${name}.ts`, 'utf8');
     if (name === 'index') source += '\nexport { stripeWebhook, claimPlayPoints, reviewDesign, narrateTour, designPlan };\nexport function primeTestToken() { playAccessToken = { value: "test-only", expiresAt: Date.now() + 3600000 }; }';
     const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText;

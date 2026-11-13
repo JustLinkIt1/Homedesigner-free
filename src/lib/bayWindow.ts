@@ -55,11 +55,14 @@ export interface BayParts {
   walls: Wall[];
   /** Windows in those walls. */
   openings: Opening[];
+  /** Which side of each bay wall faces outdoors, by wall id. The rooms cannot
+   *  say: a bay's floor belongs to no room, so both its faces look outdoor. */
+  outward: Record<string, 1 | -1>;
   /** One floor patch per bay, finished like the room it opens off. */
   floors: { id: string; points: Point[]; room: Room | null }[];
 }
 
-const EMPTY: BayParts = { walls: [], openings: [], floors: [] };
+const EMPTY: BayParts = { walls: [], openings: [], floors: [], outward: {} };
 
 /** A finish covering one whole face of a derived wall, copied from the host's outside face. */
 function outerFinish(host: Wall, hostSide: 1 | -1, at: number, side: 1 | -1): WallFaceFinish[] {
@@ -77,7 +80,7 @@ function sideFacing(a: Point, b: Point, nx: number, ny: number): 1 | -1 {
 /** Everything the bays of one storey add to it. */
 export function bayParts(walls: Wall[], openings: Opening[], rooms: Room[]): BayParts {
   if (!openings.some(isBay)) return EMPTY;
-  const out: BayParts = { walls: [], openings: [], floors: [] };
+  const out: BayParts = { walls: [], openings: [], floors: [], outward: {} };
   const byId = new Map(walls.map((w) => [w.id, w]));
   for (const o of openings) {
     if (!isBay(o)) continue;
@@ -101,6 +104,9 @@ export function bayParts(walls: Wall[], openings: Opening[], rooms: Room[]): Bay
     const front = mk('f', a1, b1, nx, ny);
     const right = mk('b', b1, b0, ux, uy);
     out.walls.push(left, front, right);
+    out.outward[left.id] = sideFacing(a0, a1, -ux, -uy);
+    out.outward[front.id] = sideFacing(a1, b1, nx, ny);
+    out.outward[right.id] = sideFacing(b1, b0, ux, uy);
 
     const win = (wall: Wall, offset: number, width: number): Opening => ({
       id: `${wall.id}:w`, wallId: wall.id, type: 'window', style: 'standard', offset, width, height: o.height, sill: o.sill,

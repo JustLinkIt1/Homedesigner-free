@@ -14,7 +14,7 @@ import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
 import { exteriorFaces, exteriorRanges, exteriorSideAt } from '../../lib/exteriorFaces';
 import { bayParts, isBay } from '../../lib/bayWindow';
 import { isFence, isHalfWall, structuralWalls, fenceRunBoxes } from '../../lib/fence';
-import { buildRoofGeometry, roofOutlines } from '../../lib/roofGeometry';
+import { buildRoofGeometry, roofOutlines, type RoofLight } from '../../lib/roofGeometry';
 import { roofOf } from '../../lib/roof';
 import { useRemoteCatalog } from '../../lib/remoteCatalog';
 import Furniture3D from './Furniture3D';
@@ -186,6 +186,8 @@ function WallMesh({
   fadeable = true,
   fillTo,
   skirt = 0,
+  outward,
+  roofed = false,
   onTap,
 }: {
   wall: Wall;
@@ -199,6 +201,10 @@ function WallMesh({
    * storey that covers the edge of its own slab, which is bare wherever the
    * storey oversails the one below. */
   skirt?: number;
+  /** The outdoor side, when the caller knows it and the rooms cannot tell (a bay). */
+  outward?: 1 | -1;
+  /** A roof sits on this wall, so its top is not a cut edge and takes no cap. */
+  roofed?: boolean;
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
   unregister: (id: string) => void;
@@ -372,7 +378,7 @@ function WallMesh({
       })}
       {/* Dark top cap along the full wall (fades with the wall body). Left off
           where the storey above sits on this wall. */}
-      {fillTo == null && (
+      {fillTo == null && !roofed && (
         <mesh
           position={[(dist(wall.start, wall.end) / 2) * M, wall.height * M + 0.015, 0]}
           material={capMat}
@@ -406,9 +412,10 @@ function WallMesh({
             ));
           }),
       )}
-      {openings.map((o) => (
-        <OpeningMesh key={o.id} opening={o} thickness={t} len={dist(wall.start, wall.end)} outSide={exteriorSideAt(wall, rooms, o.offset) ?? 1} />
-      ))}
+      {openings.map((o) => {
+        const out = outward ?? exteriorSideAt(wall, rooms, o.offset);
+        return <OpeningMesh key={o.id} opening={o} thickness={t} len={dist(wall.start, wall.end)} outSide={out ?? 1} exterior={out != null} />;
+      })}
     </group>
   );
 }
@@ -592,7 +599,71 @@ function FrontDoor({ file, cx, w, h, outSide }: { file: string; cx: number; w: n
   );
 }
 
-function OpeningMesh({ opening: o, thickness, len, outSide }: { opening: Opening; thickness: number; len: number; outSide: 1 | -1 }) {
+const TRIM = '#eef0f2';
+const STONE = '#d8d4cb';
+
+/** Glass as it reads from outdoors in daylight: darker than the room behind it
+ *  and mirror-like. The plain pane alone lets the lit room show through, and
+ *  from the garden every window read as a pale blank board. One-sided, so the
+ *  view out from indoors is unchanged. */
+function OutsideGlass({ x, y, z, w, h, outSide }: { x: number; y: number; z: number; w: number; h: number; outSide: 1 | -1 }) {
+  return (
+    <mesh position={[x, y, z]} rotation={[0, outSide === 1 ? 0 : Math.PI, 0]}>
+      <planeGeometry args={[w, h]} />
+      <meshStandardMaterial color="#27333d" transparent opacity={0.66} roughness={0.08} metalness={0.55} envMapIntensity={1.5} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/** What masonry does around a window: a sill that throws water clear of the
+ *  wall below, and a head over the top. Without them a window is a hole
+ *  punched in a texture. */
+function WindowDressing({ cx, sill, w, h, thickness, outSide }: { cx: number; sill: number; w: number; h: number; thickness: number; outSide: 1 | -1 }) {
+  const face = outSide * (thickness / 2);
+  return (
+    <>
+      <mesh position={[cx, sill - 0.03, face + outSide * 0.02]} castShadow receiveShadow>
+        <boxGeometry args={[w + 0.14, 0.055, 0.1]} />
+        <meshStandardMaterial color={STONE} roughness={0.85} />
+      </mesh>
+      <mesh position={[cx, sill + h + 0.06, face + outSide * 0.008]} castShadow receiveShadow>
+        <boxGeometry args={[w + 0.2, 0.12, 0.03]} />
+        <meshStandardMaterial color={STONE} roughness={0.85} />
+      </mesh>
+    </>
+  );
+}
+
+/** One closed, glazed door leaf (a French door or a back door), centred on `x`. */
+function GlazedLeaf({ x, w, h, outSide }: { x: number; w: number; h: number; outSide: 1 | -1 }) {
+  const stile = 0.075;
+  const top = 0.09;
+  const bottom = 0.2;
+  const d = 0.045;
+  const glassH = h - top - bottom;
+  const glassY = bottom + glassH / 2;
+  const bar = (key: string, px: number, py: number, bw: number, bh: number) => (
+    <mesh key={key} position={[px, py, 0]} castShadow>
+      <boxGeometry args={[bw, bh, d]} />
+      <meshStandardMaterial color={TRIM} roughness={0.55} />
+    </mesh>
+  );
+  return (
+    <group position={[x, 0, 0]}>
+      {bar('l', -w / 2 + stile / 2, h / 2, stile, h * 0.995)}
+      {bar('r', w / 2 - stile / 2, h / 2, stile, h * 0.995)}
+      {bar('t', 0, h - top / 2, w - stile * 2, top)}
+      {bar('b', 0, bottom / 2, w - stile * 2, bottom)}
+      <mesh position={[0, glassY, 0]}>
+        <boxGeometry args={[w - stile * 2, glassH, 0.012]} />
+        <meshStandardMaterial color="#bfe3f2" transparent opacity={0.3} roughness={0.05} metalness={0.1} />
+      </mesh>
+      <OutsideGlass x={0} y={glassY} z={outSide * 0.009} w={w - stile * 2} h={glassH} outSide={outSide} />
+    </group>
+  );
+}
+
+function OpeningMesh({ opening: o, thickness, len, outSide, exterior = false }: { opening: Opening; thickness: number; len: number; outSide: 1 | -1; exterior?: boolean }) {
   const centreCm = o.offset * len; // offset is a 0..1 fraction along the wall
   const cx = centreCm * M;
   const w = o.width * M;
@@ -604,6 +675,11 @@ function OpeningMesh({ opening: o, thickness, len, outSide }: { opening: Opening
   if (isBay(o)) return null;
   const frontDoor = o.type === 'door' && o.style ? FRONT_DOOR_MODELS[o.style] : undefined;
   if (frontDoor) return <FrontDoor file={frontDoor} cx={cx} w={w} h={h} outSide={outSide} />;
+  // A door in an outside wall is a back door: shut, and half glazed. Drawn the
+  // indoor way it was a bare slab standing open to the garden.
+  if (o.type === 'door' && exterior && (!o.style || o.style === 'single')) {
+    return <FrontDoor file="front_glazed" cx={cx} w={w} h={h} outSide={outSide} />;
+  }
 
   if (o.type === 'door') {
     const leftX = (centreCm - o.width / 2) * M;
@@ -755,6 +831,22 @@ function OpeningMesh({ opening: o, thickness, len, outSide }: { opening: Opening
       );
     }
 
+    if (o.style === 'double' && exterior) {
+      // French doors to the garden: two glazed leaves, shut.
+      const leaf = (w - 0.05) / 2;
+      return (
+        <group>
+          {jambs}
+          <mesh position={[cx, h + 0.02, 0]} castShadow>
+            <boxGeometry args={[w + 0.04, 0.04, thickness * 1.05]} />
+            <meshStandardMaterial color="#e6e8ea" roughness={0.8} />
+          </mesh>
+          <GlazedLeaf x={cx - leaf / 2 - 0.003} w={leaf} h={h} outSide={outSide} />
+          <GlazedLeaf x={cx + leaf / 2 + 0.003} w={leaf} h={h} outSide={outSide} />
+        </group>
+      );
+    }
+
     if (o.style === 'double') {
       // Two half-width leaves, hinged at each jamb, both swung open.
       const leafLen = (w / 2) * 0.94;
@@ -802,8 +894,28 @@ function OpeningMesh({ opening: o, thickness, len, outSide }: { opening: Opening
   // window: frame ring + glazing (flat pane, sliding sashes, or open casement)
   const fr = 0.05; // frame section (m)
   const td = thickness * 0.6;
+  const plain = o.style !== 'sliding' && o.style !== 'casement' && o.style !== 'french';
+  // Lights no wider than a real casement, and a transom on a tall window.
+  const lights = exterior && plain ? Math.max(1, Math.round(w / 0.68)) : 1;
+  const transom = exterior && plain && h >= 1.15;
   return (
     <group>
+      {exterior && o.style !== 'casement' && (
+        <OutsideGlass x={cx} y={sill + h / 2} z={outSide * (td * 0.25 + 0.004)} w={w} h={h} outSide={outSide} />
+      )}
+      {exterior && <WindowDressing cx={cx} sill={sill} w={w} h={h} thickness={thickness} outSide={outSide} />}
+      {Array.from({ length: lights - 1 }, (_, i) => (
+        <mesh key={`mullion-${i}`} position={[cx - w / 2 + ((i + 1) * w) / lights, sill + h / 2, 0]} castShadow>
+          <boxGeometry args={[0.04, h, td * 0.9]} />
+          <meshStandardMaterial color={TRIM} roughness={0.7} />
+        </mesh>
+      ))}
+      {transom && (
+        <mesh position={[cx, sill + h * 0.72, 0]} castShadow>
+          <boxGeometry args={[w, 0.04, td * 0.9]} />
+          <meshStandardMaterial color={TRIM} roughness={0.7} />
+        </mesh>
+      )}
       {o.style !== 'sliding' && o.style !== 'casement' && (
         <mesh position={[cx, sill + h / 2, 0]}>
           <boxGeometry args={[w, h, td * 0.5]} />
@@ -963,6 +1075,101 @@ function CeilingMesh({ room, height }: { room: Room; height: number }) {
  * Lives on the top storey and is hidden in dollhouse mode for the same reason
  * the ceiling is: you have to be able to look in from above.
  */
+/**
+ * The roof slab, split into what is roofing and what is joinery. Only the faces
+ * that look at the sky carry the covering; the edges of the slab are fascia and
+ * bargeboards and its underside is the soffit, and on a real house those are
+ * painted boards. Drawn all in tiles, the roof read as one thick slab of clay.
+ */
+function splitRoof(source: THREE.BufferGeometry): { top: THREE.BufferGeometry; trim: THREE.BufferGeometry } {
+  const geo = source.index ? source.toNonIndexed() : source;
+  const pos = geo.getAttribute('position');
+  const uv = geo.getAttribute('uv');
+  const out = { top: { p: [] as number[], u: [] as number[] }, trim: { p: [] as number[], u: [] as number[] } };
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+  // The slab is drawn double-sided, so its triangles wind whichever way they
+  // were written and a face normal cannot say "up". Position can: of the faces
+  // that are not edges, the covering is whichever has no other face above it.
+  type Flat = { ax: number; ay: number; az: number; bx: number; by: number; bz: number; cx: number; cy: number; cz: number; mx: number; my: number; mz: number };
+  const flats = new Map<number, Flat>();
+  for (let i = 0; i + 2 < pos.count; i += 3) {
+    a.fromBufferAttribute(pos, i);
+    b.fromBufferAttribute(pos, i + 1);
+    c.fromBufferAttribute(pos, i + 2);
+    n.subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a)).normalize();
+    if (Math.abs(n.y) <= 0.25) continue; // an edge: fascia or bargeboard
+    flats.set(i, {
+      ax: a.x, ay: a.y, az: a.z, bx: b.x, by: b.y, bz: b.z, cx: c.x, cy: c.y, cz: c.z,
+      mx: (a.x + b.x + c.x) / 3, my: (a.y + b.y + c.y) / 3, mz: (a.z + b.z + c.z) / 3,
+    });
+  }
+  /** Height of triangle `f` over plan point (x, z), or null when it is not over it. */
+  const heightAt = (f: Flat, x: number, z: number): number | null => {
+    const det = (f.bz - f.cz) * (f.ax - f.cx) + (f.cx - f.bx) * (f.az - f.cz);
+    if (Math.abs(det) < 1e-9) return null;
+    const l1 = ((f.bz - f.cz) * (x - f.cx) + (f.cx - f.bx) * (z - f.cz)) / det;
+    const l2 = ((f.cz - f.az) * (x - f.cx) + (f.ax - f.cx) * (z - f.cz)) / det;
+    const l3 = 1 - l1 - l2;
+    if (l1 < -1e-6 || l2 < -1e-6 || l3 < -1e-6) return null;
+    return l1 * f.ay + l2 * f.by + l3 * f.cy;
+  };
+  const all = [...flats.values()];
+  for (let i = 0; i + 2 < pos.count; i += 3) {
+    const f = flats.get(i);
+    const covered = !f || all.some((g) => {
+      if (g === f) return false;
+      const y = heightAt(g, f.mx, f.mz);
+      return y !== null && y > f.my + 1e-4;
+    });
+    const into = covered ? out.trim : out.top;
+    for (let k = 0; k < 3; k++) {
+      into.p.push(pos.getX(i + k), pos.getY(i + k), pos.getZ(i + k));
+      if (uv) into.u.push(uv.getX(i + k), uv.getY(i + k));
+    }
+  }
+  if (geo !== source) geo.dispose();
+  const make = (part: { p: number[]; u: number[] }) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(part.p, 3));
+    if (part.u.length) g.setAttribute('uv', new THREE.Float32BufferAttribute(part.u, 2));
+    g.computeVertexNormals();
+    return g;
+  };
+  return { top: make(out.top), trim: make(out.trim) };
+}
+
+/** A roof window: a frame set into the covering with dark glass in it. */
+function RoofWindow({ light }: { light: RoofLight }) {
+  const quaternion = useMemo(() => {
+    const x = light.along.clone();
+    const y = light.up.clone();
+    let z = new THREE.Vector3().crossVectors(x, y).normalize();
+    // The glass looks at the sky whichever way round the slope was described.
+    if (z.y < 0) {
+      x.negate();
+      z = new THREE.Vector3().crossVectors(x, y).normalize();
+    }
+    return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  }, [light]);
+  return (
+    <group position={light.position} quaternion={quaternion}>
+      {/* flashing, frame, glass: each a little prouder of the tiles than the last */}
+      <mesh position={[0, 0, 0.012]} receiveShadow>
+        <boxGeometry args={[0.94, 1.34, 0.024]} />
+        <meshStandardMaterial color="#5b6067" roughness={0.6} metalness={0.3} />
+      </mesh>
+      <mesh position={[0, 0, 0.04]} castShadow>
+        <boxGeometry args={[0.78, 1.18, 0.07]} />
+        <meshStandardMaterial color="#3a3f45" roughness={0.5} metalness={0.2} />
+      </mesh>
+      <mesh position={[0, 0, 0.077]}>
+        <planeGeometry args={[0.62, 1.02]} />
+        <meshStandardMaterial color="#1f2a33" roughness={0.07} metalness={0.6} envMapIntensity={1.6} />
+      </mesh>
+    </group>
+  );
+}
+
 function RoofMesh({ walls, rooms, roof, eaveY }: { walls: Wall[]; rooms: Room[]; roof: Roof; eaveY: number }) {
   const built = useMemo(() => {
     // Fences carry no roof, and a fence running off the plot would otherwise
@@ -1025,14 +1232,26 @@ function RoofMesh({ walls, rooms, roof, eaveY }: { walls: Wall[]; rooms: Room[];
     return n;
   }, [customSrc, patternM]);
 
+  const parts = useMemo(() => {
+    if (!built) return null;
+    return built.parts ? { top: built.parts.covering, trim: built.parts.trim } : splitRoof(built.geometry);
+  }, [built]);
   useEffect(() => () => {
     built?.geometry.dispose();
     built?.infill?.dispose();
   }, [built]);
-  if (!built) return null;
+  useEffect(() => () => {
+    parts?.top.dispose();
+    parts?.trim.dispose();
+  }, [parts]);
+  if (!built || !parts) return null;
   return (
     <>
-      <mesh geometry={built.geometry} castShadow receiveShadow>
+      <mesh geometry={parts.trim} castShadow receiveShadow>
+        <meshStandardMaterial color="#f1efea" roughness={0.6} side={THREE.DoubleSide} />
+      </mesh>
+      {built.lights?.map((light, i) => <RoofWindow key={i} light={light} />)}
+      <mesh geometry={parts.top} castShadow receiveShadow>
         <meshStandardMaterial
           map={map}
           normalMap={normal}
@@ -1346,6 +1565,7 @@ function FloorContent({
             fadeable={!isHalfWall(w)}
             fillTo={isHalfWall(w) ? undefined : riseTo}
             skirt={elevation > 0 ? SLAB_T : 0}
+            roofed={!!roof && !dollhouse && !isHalfWall(w)}
             onTap={onTap}
           />
         )
@@ -1361,6 +1581,7 @@ function FloorContent({
           unregister={unregister}
           fillTo={riseTo}
           skirt={elevation > 0 ? SLAB_T : 0}
+          outward={bays.outward[w.id]}
         />
       ))}
       {/* A bay keeps its cap unless this is the storey cut open to look into,

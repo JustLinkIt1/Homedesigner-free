@@ -25,6 +25,26 @@
   for a free account that already has a project: the AI plan replaces their
   plan after asking, it does not need Pro.
 - `tools/make-plan-sample.mjs` builds a furnished 3D sample from a room list.
+- The outside view looks like a house. Outside windows have dark reflective
+  glass, sills, heads and glazing bars; outside doors are shown shut; roof
+  boards are white and only the slopes are tiled; three drawn brick finishes
+  (red, buff, grey stock); outdoor lighting no longer washes the walls out.
+- Gable roofs follow L-shaped, T-shaped and stepped houses: each block gets its
+  own gable (`src/lib/roofRects.ts`). One gable over the whole outline hung
+  over every recess, and you looked up into an open roof. Gable roofs can have
+  roof windows (Roof panel, 0 to 4 a side).
+- A street in front of the house: road, pavements, a path to the front door, a
+  drive, a picket fence and hedges, laid out from the front door
+  (`src/lib/streetPlan.ts`). Scenery only; View menu, Street, turns it off.
+- AI render knows when the camera is outside. The app sends `view`, and the
+  Worker words the request as an exterior photograph; asked for an interior
+  photograph of a street view, the model furnished the garden. Needs the
+  Worker deployed; older Workers ignore the field.
+- Shared plan links: `/app/?plan=<id>` opens a plan stored in the Worker
+  (`shared_plans`, migration 0009, public read route) in 3D. Rows are written
+  by `tools/share-plan.mjs` and applied by hand. Not live until the migration
+  is applied and the Worker deployed.
+- `tools/check-plan.mjs` checks a room-list plan before it is rendered.
 
 ## 1.22.35 — rating prompt after exports and AI renders
 

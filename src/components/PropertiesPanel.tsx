@@ -19,7 +19,7 @@ import { formatLength, formatArea } from '../lib/units';
 import { finishForFace, withFaceFinish } from '../lib/wallFaces';
 import { useI18n } from '../lib/i18n';
 import { roofOf } from '../lib/roof';
-import { roofFootprint, roofNeedsFallback } from '../lib/roofGeometry';
+import { effectiveRoofType, roofFootprint } from '../lib/roofGeometry';
 import {
   structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE, HALF_WALL_HEIGHT,
 } from '../lib/fence';
@@ -329,8 +329,9 @@ function RoofCard() {
   // non-rectangular plan can only take a flat roof in this version.
   const nonRect = useMemo(() => {
     const outline = roofFootprint(structuralWalls(walls), roof?.overhang ?? 0);
-    return !!outline && roofNeedsFallback(outline);
-  }, [walls, roof?.overhang]);
+    return !!outline && !!roof && effectiveRoofType(roof, outline) !== roof.type;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walls, roof?.overhang, roof?.type]);
 
   if (!walls.length) return null;
 
@@ -381,6 +382,20 @@ function RoofCard() {
               onChange={(e) => setRoof({ pitch: Number(e.target.value) })}
             />
             <span className="field-val">{roof.pitch}°</span>
+          </div>
+        )}
+        {roof.type === 'gable' && (
+          <div className="prop-row">
+            <label>{t('Roof windows')}</label>
+            <input
+              type="range"
+              min={0}
+              max={4}
+              step={1}
+              value={roof.windows ?? 0}
+              onChange={(e) => setRoof({ windows: Number(e.target.value) })}
+            />
+            <span className="field-val">{roof.windows ?? 0}</span>
           </div>
         )}
         <div className="prop-row">

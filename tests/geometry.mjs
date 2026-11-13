@@ -212,8 +212,13 @@ const allFinite = (built) =>
   // A markedly non-rectangular plan must fall back to flat, not emit a floating
   // pitched roof over an L-shaped house.
   const L = [ {x:0,y:0},{x:600,y:0},{x:600,y:300},{x:300,y:300},{x:300,y:600},{x:0,y:600} ];
-  check('roof: L-plan needs fallback', roofNeedsFallback(L));
-  check('roof: L-plan gable becomes flat', effectiveRoofType(roofDef({ type: 'gable' }), L) === 'flat');
+  check('roof: L-plan is not one rectangle', roofNeedsFallback(L));
+  // An L is square-cornered, so a gable follows it in blocks (roofRects.ts). A
+  // hip cannot yet, and neither can an outline with a slanted wall.
+  check('roof: L-plan keeps its gable', effectiveRoofType(roofDef({ type: 'gable' }), L) === 'gable');
+  check('roof: L-plan hip becomes flat', effectiveRoofType(roofDef({ type: 'hip' }), L) === 'flat');
+  const wedge = [ {x:0,y:0},{x:600,y:0},{x:600,y:120},{x:120,y:600},{x:0,y:600} ];
+  check('roof: slant-walled plan gable becomes flat', roofNeedsFallback(wedge) && effectiveRoofType(roofDef({ type: 'gable' }), wedge) === 'flat');
   check('roof: rectangle keeps its gable', effectiveRoofType(roofDef({ type: 'gable' }), rect(800, 600)) === 'gable');
   check('roof: shed never falls back', effectiveRoofType(roofDef({ type: 'shed' }), L) === 'shed');
 }

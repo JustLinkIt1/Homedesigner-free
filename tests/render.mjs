@@ -25,7 +25,7 @@ try {
   }
   writeFileSync(out, "export * from './renderCapture.mjs'; export * from './ai-render.mjs';");
   const { captureDimensions, captureRenderer, reserveRender, readRender, failRender, freeRenderAvailable,
-    validRenderImage, validRenderId, validResultUrl, validRenderStyle, renderPrompt, dispatchRender, refreshRender } = await import(pathToFileURL(out).href);
+    validRenderImage, validRenderId, validResultUrl, validRenderStyle, validRenderView, renderPrompt, dispatchRender, refreshRender } = await import(pathToFileURL(out).href);
   for (const [w, h] of [[390, 844], [844, 390], [1440, 3200], [4096, 2160]]) {
     for (const scale of [2, 3, 4]) {
       const d = captureDimensions(w, h, scale, true);
@@ -125,6 +125,13 @@ try {
   check(validRenderId(id()) && !validRenderId('../../account'), 'Validate job identifiers');
   check(validRenderStyle('modern') && !validRenderStyle('custom prompt'), 'Only server-owned render styles are accepted');
   check(renderPrompt('scandinavian').includes('Scandinavian') && renderPrompt('scandinavian').includes('exact same room layout'), 'Style prompt preserves geometry');
+  // A street view is worded as a house, never as a room.
+  const outside = renderPrompt('coastal', 'exterior');
+  check(outside.includes('exterior photograph') && !outside.includes('interior') && !outside.includes('furniture positions')
+    && outside.includes('every window and door') && outside.includes('coastal'), 'Exterior prompt keeps the building and names no room');
+  check(renderPrompt('modern', 'interior') === renderPrompt('modern') && renderPrompt('modern', 'exterior') !== renderPrompt('modern'),
+    'Interior stays the default wording');
+  check(validRenderView('exterior') && validRenderView('interior') && !validRenderView('aerial') && !validRenderView(undefined), 'Only known views');
   for (const url of ['https://evil.test/a', 'http://fal.media/a', 'https://fal.media.evil.test/a', 'https://user:pass@fal.media/a']) check(!validResultUrl(url), 'Reject unsafe generated asset URL');
   check(validResultUrl('https://v3b.fal.media/files/a.jpg'), 'Allow fal result host');
 
@@ -190,6 +197,9 @@ try {
     check(elBody.images[0].type === 'inline_base64' && elBody.images[0].content_base64 === portrait.split(',')[1], 'The capture is sent inline, never as a URL');
     check(elCalls[0].init.headers['xi-api-key'] === 'el-test' && !('subject' in elBody), 'Key in the header, no account identity sent');
     check(elBody.prompt === renderPrompt('photorealistic'), 'Same server-owned prompt as fal');
+    const outsideJob = (await reserveRender(db, 'pro-outside', id(), 0)).job;
+    await dispatchRender(db, keys, outsideJob, portrait, 'exterior');
+    check(JSON.parse(elCalls[1].init.body).prompt === renderPrompt('photorealistic', 'exterior'), 'A capture from outside is sent with the exterior prompt');
     const elDone = await refreshRender(db, keys, elQueued);
     check(elDone.status === 'complete', 'Completed ElevenLabs generation completes the job');
     elStatus = { status: 'completed', content_url: 'https://storage.googleapis.com/bucket/fresh.png' };

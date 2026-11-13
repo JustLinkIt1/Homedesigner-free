@@ -44,6 +44,7 @@ function sanitize(roof: Roof): Roof {
     thickness: Math.max(2, Math.min(60, Number(roof.thickness) || DEFAULT_ROOF.thickness)),
     covering: roof.covering ?? DEFAULT_ROOF.covering,
     coveringScaleCm: Math.max(10, Math.min(400, Number(roof.coveringScaleCm) || DEFAULT_ROOF.coveringScaleCm)),
+    windows: Math.max(0, Math.min(6, Math.round(Number(roof.windows) || 0))),
   };
 }
 

@@ -247,13 +247,21 @@ function LampLight({
 }: { position: [number, number, number]; intensity: number; distance: number; color?: string; castShadow?: boolean }) {
   const on = useDesign((s) => s.lightsOn);
   const sunTime = useDesign((s) => s.sunTime);
+  const outdoors = useDesign((s) => !s.dollhouse && !s.walkMode);
   if (!on) return null;
   // Lamps left on in full daylight barely register next to the sun. At full
   // strength they filled every sun shadow in the room back in and flattened
   // it; they come up to full again as the daylight goes (unchanged by dusk).
   const day = sunModel(sunTime).day;
-  const t = Math.max(0, Math.min(1, (day - 0.3) / 0.5));
-  const daylight = 1 - 0.75 * t * t * (3 - 2 * t);
+  // A lamp's light takes no notice of walls, so one standing near an outside
+  // wall also lights that wall's garden side. Looking into the rooms nobody
+  // sees it. Looking at the house by day it was an orange glow on the
+  // brickwork, so from outside the lamps all but go out until dusk.
+  // From outside they are also gone earlier: by mid-afternoon the old curve
+  // still left them at a third, which was the glow.
+  const dim = outdoors ? 0.97 : 0.75;
+  const t = Math.max(0, Math.min(1, outdoors ? (day - 0.08) / 0.25 : (day - 0.3) / 0.5));
+  const daylight = 1 - dim * t * t * (3 - 2 * t);
   return <pointLight position={position} intensity={intensity * daylight} distance={distance} color={color} castShadow={castShadow} />;
 }
 

@@ -240,6 +240,8 @@ export interface Roof {
   /** Real-world size of one covering tile, cm. */
   coveringScaleCm: number;
   color: string;
+  /** Roof windows on each slope of the main roof (a gable only). */
+  windows?: number;
   /** A user-supplied image, which wins over `covering` when present. */
   texture?: CustomTexture;
 }

@@ -481,19 +481,29 @@ function courses(
   const h = SIZE / opts.rows;
   const w = SIZE / opts.cols;
   // Draw bottom-up so each course overlaps the one below, as real roofing does.
-  for (let r = opts.rows - 1; r >= 0; r--) {
-    const offset = r % 2 ? w / 2 : 0;
+  // One course past each end, so the patch tiles without a seam: the top of
+  // the first course is covered by the last course of the patch above it.
+  for (let r = opts.rows; r >= -1; r--) {
+    // Parity from the wrapped row, so the half-bond carries across the seam.
+    const offset = ((r % opts.rows) + opts.rows) % 2 ? w / 2 : 0;
     for (let c = -1; c <= opts.cols; c++) {
       const x = c * w + offset;
       const y = r * h;
-      ctx.fillStyle = shade(color, (rand() - 0.5) * opts.jitter);
+      // Each tile runs from lit at the top to shaded at its leading edge. A
+      // flat fill left nothing but the per-tile colour scatter to see, which
+      // from the garden read as blotches, not courses.
+      const tone = (rand() - 0.5) * opts.jitter;
+      const fill = ctx.createLinearGradient(0, y + h * 0.45, 0, y + h * 1.45);
+      fill.addColorStop(0, shade(color, tone + 9));
+      fill.addColorStop(1, shade(color, tone - 11));
+      ctx.fillStyle = fill;
       ctx.beginPath();
       // roundRect is available everywhere this app runs (Chromium/WebView 99+).
       ctx.roundRect(x + 0.7, y + 0.7, w - 1.4, h * 1.45, opts.radius);
       ctx.fill();
-      // Shadow line under the leading edge gives the course visible depth.
-      ctx.fillStyle = 'rgba(0,0,0,0.22)';
-      ctx.fillRect(x + 0.7, y + h * 1.45 - 2.2, w - 1.4, 2.2);
+      // Shadow under the leading edge: the line a course is recognised by.
+      ctx.fillStyle = 'rgba(0,0,0,0.38)';
+      ctx.fillRect(x + 0.7, y + h * 1.45 - 5, w - 1.4, 5);
     }
   }
 }
@@ -516,9 +526,9 @@ function metalRoofTexture(ctx: CanvasRenderingContext2D, color: string) {
 }
 
 const ROOF_GENERATORS: Record<RoofKind, (c: CanvasRenderingContext2D, col: string) => void> = {
-  tile: (c, col) => courses(c, col, { rows: 4, cols: 6, radius: 7, jitter: 26, seed: 21 }),
+  tile: (c, col) => courses(c, col, { rows: 4, cols: 4, radius: 5, jitter: 15, seed: 21 }),
   shingle: (c, col) => courses(c, col, { rows: 6, cols: 4, radius: 1, jitter: 34, seed: 44 }),
-  slate: (c, col) => courses(c, col, { rows: 5, cols: 5, radius: 2, jitter: 18, seed: 12 }),
+  slate: (c, col) => courses(c, col, { rows: 4, cols: 4, radius: 1, jitter: 13, seed: 12 }),
   metal: metalRoofTexture,
   plain: (c, col) => {
     c.fillStyle = col;

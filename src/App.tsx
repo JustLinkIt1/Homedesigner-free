@@ -14,6 +14,7 @@ import {
   Sofa,
   SlidersHorizontal,
   Lightbulb,
+  Fence,
   Sun,
   Moon,
   PenTool,
@@ -55,7 +56,8 @@ import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
 import { TOOLS } from './data/tools';
 import { sceneCapture } from './lib/renderBridge';
 import { capturePlanThumbnail } from './lib/thumb';
-import { useDraw, drawBridge, useConfirm, toast } from './lib/ui';
+import { useDraw, drawBridge, useConfirm, confirmDialog, toast } from './lib/ui';
+import * as projects from './lib/projects';
 import { initNative } from './lib/native';
 import { noteAppOpened } from './lib/appReview';
 import { loadAiCapabilities } from './lib/aiCapabilities';
@@ -81,7 +83,7 @@ export default function App() {
     showDimensions, setShowDimensions, dollhouse, setDollhouse,
     walkMode, setWalkMode, pendingFurnitureType, setPendingFurniture, selection,
     units, setUnits,
-    sunTime, setSunTime, lightsOn, setLightsOn,
+    sunTime, setSunTime, lightsOn, setLightsOn, street, setStreet,
     kitchenUppers, setKitchenUppers,
     moveLock, setMoveLock,
     background, updateBackground,
@@ -111,6 +113,8 @@ export default function App() {
     setSunTime: s.setSunTime,
     lightsOn: s.lightsOn,
     setLightsOn: s.setLightsOn,
+    street: s.street,
+    setStreet: s.setStreet,
     kitchenUppers: s.kitchenUppers,
     setKitchenUppers: s.setKitchenUppers,
     moveLock: s.moveLock,
@@ -257,6 +261,69 @@ export default function App() {
   useEffect(() => {
     if (view !== '3d' && walkMode) setWalkMode(false);
   }, [view, walkMode, setWalkMode]);
+
+  // A plan handed over by link (`/app/?plan=<id>`): fetch it, build and furnish
+  // it the way an AI plan is built, and open it in 3D, which is what the
+  // person was shown. The parameter is dropped once the link has an answer so a
+  // refresh does not ask again; after a network failure it stays, so a refresh
+  // retries. The plan code is loaded on demand: most visits carry no link.
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has('plan')) return;
+    let cancelled = false;
+    void (async () => {
+      const [{ sharedPlanId, fetchSharedPlan }, { blueprintToSnapshot }] = await Promise.all([
+        import('./lib/sharedPlan'),
+        import('./lib/aiPlan'),
+      ]);
+      const id = sharedPlanId(window.location.search);
+      const result = id ? await fetchSharedPlan(id) : ({ ok: false, reason: 'gone' } as const);
+      if (cancelled) return;
+      if (!result.ok && result.reason === 'failed') {
+        toast.error(translate('Could not load the shared plan. Check your connection and open the link again.'));
+        return;
+      }
+      const params = new URLSearchParams(window.location.search);
+      params.delete('plan');
+      const query = params.toString();
+      window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+      if (!result.ok) {
+        toast.error(translate('This plan link has expired or was removed.'));
+        return;
+      }
+      const { blueprint, exterior, roof } = result.plan;
+      const pro = useProStore.getState().isPro;
+      const design = useDesign.getState();
+      const hasWork = Object.values(design.floorGeom).some((geom) => geom.walls.length || geom.rooms.length || geom.furniture.length);
+      if (projects.listProjects().length === 0 || !projects.getActiveId()) {
+        projects.createProject(blueprint.title);
+      } else if (hasWork) {
+        if (pro) {
+          projects.createProject(blueprint.title);
+        } else {
+          // A free account has one project. Never overwrite it without asking.
+          const ok = await confirmDialog(
+            translate('Replace the current design?'),
+            translate('The shared plan will replace the plan you have now. With Pro it opens as a new project and you keep both.'),
+            { confirmLabel: translate('Replace'), danger: true },
+          );
+          if (!ok || cancelled) return;
+        }
+      }
+      useDesign.getState().loadSnapshot(blueprintToSnapshot(blueprint, {
+        allowPro: pro,
+        floorName: (name) => (name === 'Upper floor 2' ? `${translate('Upper floor')} 2` : translate(name)),
+        exterior,
+        roof,
+      }));
+      useDesign.getState().setDollhouse(false);
+      useDesign.getState().setView('3d');
+      setScreen('editor');
+      toast.success(translate('Your plan is ready to edit'));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // `/buy` on the marketing site sends buyers to `/app/?buy=pro`. Open the Pro
   // sheet on arrival so the checkout they were promised is the first thing they
@@ -813,6 +880,12 @@ export default function App() {
                       >
                         <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> {t('Lights')}
                       </button>
+                      <button
+                        className={`toggle ${street ? 'on' : ''}`}
+                        onClick={() => setStreet(!street)}
+                      >
+                        <Fence className="icon" style={{ width: 15, height: 15 }} /> {t('Street')}
+                      </button>
                       <label className="sun-slider" data-tip={t('Time of day')} aria-label={t('Time of day')}>
                         {sunTime < 6 || sunTime >= 20 ? (
                           <Moon className="icon" style={{ width: 15, height: 15 }} />
@@ -895,6 +968,12 @@ export default function App() {
                         onClick={() => setLightsOn(!lightsOn)}
                       >
                         <Lightbulb className="icon" style={{ width: 15, height: 15 }} /> {t('Lights')}
+                      </button>
+                      <button
+                        className={`toggle ${street ? 'on' : ''}`}
+                        onClick={() => setStreet(!street)}
+                      >
+                        <Fence className="icon" style={{ width: 15, height: 15 }} /> {t('Street')}
                       </button>
                       <label className="sun-slider" data-tip={t('Time of day')} aria-label={t('Time of day')}>
                         {sunTime < 6 || sunTime >= 20 ? (

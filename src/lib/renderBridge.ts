@@ -8,6 +8,8 @@ export const sceneCapture: { current: CaptureFn | null } = { current: null };
 export const photoCapture: { current: CaptureFn | null } = { current: null };
 // AI starts from the current camera, without saving a file or adding a watermark.
 export const sceneSnapshot: { current: (() => string) | null } = { current: null };
+// Whether that camera is inside the rooms or looking at the house from outside.
+export const sceneView: { current: (() => 'interior' | 'exterior') | null } = { current: null };
 
 // 2D plan export: Canvas2D registers a function returning a framed PNG data URL
 // of the whole design (grid hidden) plus its raster scale (image px per plan

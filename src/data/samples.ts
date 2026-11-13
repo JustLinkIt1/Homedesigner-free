@@ -1027,7 +1027,7 @@ export const SAMPLES: SampleDef[] = [
     blurb: 'Two storeys — living below, three rooms above',
     build: () => dressed(familyHouse(), {
       roof: ROOFS.slateGable,
-      exterior: { color: '#63493b', material: 'brick_wall_001' },
+      exterior: { color: '#a65840', material: 'brick_red_stock' },
     }),
     hasPreview: true,
   },

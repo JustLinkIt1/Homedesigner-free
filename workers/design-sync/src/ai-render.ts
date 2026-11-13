@@ -35,7 +35,29 @@ const STYLE_PROMPTS: Record<RenderStyleId, string> = {
 const CAMERA_PROMPT = ' Preserve the apparent time of day and direction of light. Use physically plausible lighting, natural contact shadows and realistic material detail. Keep all architecture in focus; do not introduce lens blur or change the camera lens. High-end architectural photography. No text or watermark.';
 export const validRenderStyle = (style: unknown): style is RenderStyleId =>
   typeof style === 'string' && RENDER_STYLES.some(item => item.id === style);
-export const renderPrompt = (style: RenderStyleId) => BASE_RENDER_PROMPT + STYLE_PROMPTS[style] + CAMERA_PROMPT;
+/** What the capture shows. The app says which; anything else is read as a room. */
+export type RenderView = 'interior' | 'exterior';
+export const validRenderView = (view: unknown): view is RenderView => view === 'interior' || view === 'exterior';
+// A house seen from the street is not a room: told to make "an interior
+// photograph", the model lays a floor over the lawn and furnishes the garden.
+const EXTERIOR_RENDER_PROMPT = 'Turn this 3D architectural preview into a photorealistic exterior photograph of the same house. '
+  + 'Keep the exact same building: its shape, number of storeys, roof form and pitch, and the position, size and number of every window and door. '
+  + 'Do not add, remove, resize or move walls, extensions, windows, doors, chimneys, dormers, cars or people. '
+  + 'Preserve the input framing, camera angle, perspective and aspect ratio. '
+  + 'Keep the site as drawn: any road, pavement, path, driveway, fence, hedge, lawn, patio and garden furniture stays where it is, each in the material shown. '
+  + 'Add no new fences, hedges, planting, paths or objects inside the plot. Show lawns as mown grass and hedges as leafy clipped hedging. '
+  + 'Beyond the plot, replace empty flat ground with a quiet backdrop of trees under a natural sky; add no other buildings. ';
+const EXTERIOR_STYLE_PROMPTS: Record<RenderStyleId, string> = {
+  photorealistic: 'Preserve the existing wall and roof colours and materials. Use real brickwork with mortar joints or fine render, weathered roof tiles, painted window frames, glass with soft sky reflections, worn asphalt and paving.',
+  modern: 'Change only surface colours and materials toward contemporary modern design: smooth pale render or light brick, slim dark window frames and a slate-grey roof.',
+  scandinavian: 'Change only surface colours and materials toward Scandinavian design: pale timber cladding, soft off-white walls, light window frames and a plain dark roof.',
+  industrial: 'Change only surface colours and materials toward industrial design: dark brick, charcoal metal window frames, and standing-seam metal roofing.',
+  coastal: 'Change only surface colours and materials toward coastal design: white or pale weatherboard, sandy neutrals, soft blue-grey window frames and bleached timber.',
+  luxury: 'Change only surface colours and materials toward understated luxury: fine stone or handmade brick, dark bronze window frames, and natural slate roofing.',
+};
+export const renderPrompt = (style: RenderStyleId, view: RenderView = 'interior') => view === 'exterior'
+  ? EXTERIOR_RENDER_PROMPT + EXTERIOR_STYLE_PROMPTS[style] + CAMERA_PROMPT
+  : BASE_RENDER_PROMPT + STYLE_PROMPTS[style] + CAMERA_PROMPT;
 /** Kept for older tests and integrations that expect the original preset. */
 export const RENDER_PROMPT = renderPrompt('photorealistic');
 
@@ -120,7 +142,7 @@ function base64Bytes(base64: string, limit: number) {
   return Uint8Array.from(binary, c => c.charCodeAt(0));
 }
 /** One POST to ElevenLabs. Returns the generation id, or null if it refused or failed to answer. */
-async function submitElevenLabs(key: string, job: RenderJob, image: string) {
+async function submitElevenLabs(key: string, job: RenderJob, image: string, view: RenderView) {
   const base64 = image.slice(image.indexOf(',') + 1);
   const size = jpegDimensions(base64Bytes(base64, 64 * 1024));
   try {
@@ -128,7 +150,7 @@ async function submitElevenLabs(key: string, job: RenderJob, image: string) {
       method: 'POST', signal: AbortSignal.timeout(20_000),
       headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model_id: ELEVENLABS_IMAGE_MODEL, prompt: renderPrompt(job.style), resolution: '1K',
+        model_id: ELEVENLABS_IMAGE_MODEL, prompt: renderPrompt(job.style, view), resolution: '1K',
         aspect_ratio: size ? renderAspect(size.width, size.height) : '16:9',
         images: [{ type: 'inline_base64', content_base64: base64, mime_type: 'image/jpeg' }],
       }),
@@ -205,10 +227,11 @@ export async function reserveRender(db: D1Database, subject: string, id: string,
     throw error;
   }
 }
-export async function dispatchRender(db: D1Database, keys: string | RenderKeys, job: RenderJob, image: string) {
+export async function dispatchRender(db: D1Database, keys: string | RenderKeys, job: RenderJob, image: string,
+  view: RenderView = 'interior') {
   const { fal: falKey, elevenlabs } = keysOf(keys);
   if (elevenlabs?.trim()) {
-    const generation = await submitElevenLabs(elevenlabs, job, image);
+    const generation = await submitElevenLabs(elevenlabs, job, image, view);
     if (generation) {
       await db.prepare("UPDATE ai_render_jobs SET status = 'queued', request_id = ? WHERE subject = ? AND id = ? AND status = 'reserved'")
         .bind(ELEVENLABS_PREFIX + generation, job.subject, job.id).run();
@@ -232,7 +255,7 @@ export async function dispatchRender(db: D1Database, keys: string | RenderKeys, 
   try {
     const submitted = await client.queue.submit(ENDPOINT, {
       abortSignal: AbortSignal.timeout(20_000), startTimeout: 120,
-      input: { image_url: image, prompt: renderPrompt(job.style), guidance_scale: 3.5, num_images: 1,
+      input: { image_url: image, prompt: renderPrompt(job.style, view), guidance_scale: 3.5, num_images: 1,
         output_format: 'jpeg', safety_tolerance: '2', enhance_prompt: false },
     });
     await db.prepare("UPDATE ai_render_jobs SET status = 'queued', request_id = ? WHERE subject = ? AND id = ? AND status = 'reserved'")

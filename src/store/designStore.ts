@@ -103,6 +103,7 @@ interface DesignState extends DesignSnapshot {
   moveLock: boolean;
   sunTime: number; // 3D: time of day 0..24 driving sun angle/colour (renders)
   lightsOn: boolean; // 3D: artificial (lamp/LED) fixtures emit light
+  street: boolean; // 3D: road, pavement, path, drive and fence in front of the house
   defaultWallHeight: number;
   defaultWallThickness: number;
   pendingFurnitureType: string | null;
@@ -130,6 +131,7 @@ interface DesignState extends DesignSnapshot {
   setMoveLock: (b: boolean) => void;
   setSunTime: (t: number) => void;
   setLightsOn: (b: boolean) => void;
+  setStreet: (b: boolean) => void;
   requestFit: () => void;
   select: (sel: Selection) => void;
   clearSelection: () => void;
@@ -224,8 +226,8 @@ const SETTINGS_KEY = 'homedesigner.settings.v1';
 
 /** Load persisted display settings (units, lighting) from their own key — kept
  *  out of the undo snapshot so changing them never pollutes history. */
-const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean; wallAngleLock: WallAngleLock } => {
-  const def = { units: 'metric' as Units, sunTime: 13, lightsOn: true, wallAngleLock: '45' as WallAngleLock };
+const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean; street: boolean; wallAngleLock: WallAngleLock } => {
+  const def = { units: 'metric' as Units, sunTime: 13, lightsOn: true, street: true, wallAngleLock: '45' as WallAngleLock };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
@@ -234,6 +236,7 @@ const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean; wal
         units: s.units === 'imperial' ? 'imperial' : 'metric',
         sunTime: typeof s.sunTime === 'number' ? Math.min(24, Math.max(0, s.sunTime)) : def.sunTime,
         lightsOn: typeof s.lightsOn === 'boolean' ? s.lightsOn : def.lightsOn,
+        street: typeof s.street === 'boolean' ? s.street : def.street,
         // Anything unrecognised falls back to the historical 45° assist, so a
         // corrupt or older settings blob never leaves drawing unassisted.
         wallAngleLock: s.wallAngleLock === 'off' || s.wallAngleLock === '90' ? s.wallAngleLock : def.wallAngleLock,
@@ -246,7 +249,7 @@ const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean; wal
 };
 
 /** Merge-write a settings patch so each setter keeps the others' values. */
-const persistSettings = (patch: Partial<{ units: Units; sunTime: number; lightsOn: boolean; wallAngleLock: WallAngleLock }>) => {
+const persistSettings = (patch: Partial<{ units: Units; sunTime: number; lightsOn: boolean; street: boolean; wallAngleLock: WallAngleLock }>) => {
   try {
     const cur = loadSettings();
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...cur, ...patch }));
@@ -484,6 +487,7 @@ export const useDesign = create<DesignState>((set, get) => {
     units: loadSettings().units,
     sunTime: loadSettings().sunTime,
     lightsOn: loadSettings().lightsOn,
+    street: loadSettings().street,
     _past: [],
     _future: [],
 
@@ -514,6 +518,10 @@ export const useDesign = create<DesignState>((set, get) => {
     setLightsOn: (b) => {
       persistSettings({ lightsOn: b });
       set({ lightsOn: b });
+    },
+    setStreet: (b) => {
+      persistSettings({ street: b });
+      set({ street: b });
     },
     requestFit: () => set((st) => ({ fitRequest: st.fitRequest + 1 })),
     select: (sel) =>

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { orientedBox, boxFillRatio, offsetPolygon } from './polygonOffset';
 import { detectBuildingOutline } from './roomDetection';
+import { coverAt, decompose, kinkLines, planPrisms, rectilinear } from './roofRects';
 import type { Point, Roof, Wall } from '../types';
 
 const M = 0.01; // cm -> m, matching DesignScene
@@ -13,6 +14,8 @@ const M = 0.01; // cm -> m, matching DesignScene
  *    so it doubles as the safe fallback.
  *  - `shed` tilts a single plane; also exact for any polygon.
  *  - `gable` / `hip` are built over the footprint's oriented bounding box.
+ *  - a `gable` over an outline whose walls all run square to each other (an L,
+ *    a T, a stepped front) is several gables, one per block: see roofRects.ts.
  *
  * A true gable/hip over an arbitrary concave outline needs a straight skeleton.
  * That is 800+ lines, notoriously fragile at degenerate events, and on
@@ -50,10 +53,30 @@ export function roofNeedsFallback(outline: Point[]): boolean {
   return boxFillRatio(outline) < 0.82;
 }
 
+/** The outline in the frame of its own bounding box: u along it, v across. */
+function localOutline(outline: Point[]): Point[] {
+  const { theta, center } = orientedBox(outline);
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  return outline.map((p) => ({
+    x: (p.x - center.x) * cos + (p.y - center.y) * sin,
+    y: -(p.x - center.x) * sin + (p.y - center.y) * cos,
+  }));
+}
+
+/** True when a gable roof can follow this outline block by block. */
+export function roofFollowsOutline(outline: Point[]): boolean {
+  const local = localOutline(outline);
+  return rectilinear(local) && !!decompose(local);
+}
+
 /** The roof type actually used, after the rectangularity check. */
 export function effectiveRoofType(roof: Roof, outline: Point[]): Roof['type'] {
   if (roof.type === 'flat' || roof.type === 'shed') return roof.type;
-  return roofNeedsFallback(outline) ? 'flat' : roof.type;
+  if (!roofNeedsFallback(outline)) return roof.type;
+  // A square-cornered outline takes a gable however far it is from a plain
+  // rectangle: the roof is built in blocks. A hip still needs a compact plan.
+  return roof.type === 'gable' && roofFollowsOutline(outline) ? 'gable' : 'flat';
 }
 
 function shapeOf(poly: Point[]): THREE.Shape {
@@ -114,6 +137,8 @@ function planarUVs(geo: THREE.BufferGeometry) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
+export interface RoofLight { position: THREE.Vector3; along: THREE.Vector3; up: THREE.Vector3 }
+
 /**
  * Build the roof mesh geometry in WORLD space (metres), relative to the storey
  * group. `eaveY` is the eave plane height in metres above that group's origin.
@@ -125,7 +150,17 @@ export function buildRoofGeometry(
   wallOutline: Point[] | null,
   roof: Roof,
   eaveY: number,
-): { geometry: THREE.BufferGeometry; infill: THREE.BufferGeometry | null; ridgeHeight: number } | null {
+): {
+  geometry: THREE.BufferGeometry;
+  infill: THREE.BufferGeometry | null;
+  ridgeHeight: number;
+  /** The same roof in two pieces, when the builder knows which faces are roofing
+   *  and which are boards. Without it the caller has to work that out. */
+  parts?: { covering: THREE.BufferGeometry; trim: THREE.BufferGeometry };
+  /** Where the roof windows sit: a point on the covering, the direction along
+   *  the ridge and the direction up the slope (unit vectors). */
+  lights?: RoofLight[];
+} | null {
   if (outline.length < 3) return null;
   const type = effectiveRoofType(roof, outline);
   const t = roof.thickness * M;
@@ -178,6 +213,9 @@ export function buildRoofGeometry(
     /** Extra split points along an edge where the roof underside changes slope
      *  — without them a gable end would be capped flat instead of peaked. */
     creases: (a: Point, b: Point) => number[],
+    /** Lines inside the outline that also need filling: where a lower roof
+     *  butts a taller one's gable wall. */
+    seams: [Point, Point][] = [],
   ): THREE.BufferGeometry | null => {
     if (!wallOutline || wallOutline.length < 3) return null;
     const W = wallOutline;
@@ -185,9 +223,8 @@ export function buildRoofGeometry(
     // Start marginally below the wall top so the two surfaces can't z-fight.
     const base = eaveY - 0.01;
     const lerp = (a: Point, b: Point, s: number): Point => ({ x: a.x + (b.x - a.x) * s, y: a.y + (b.y - a.y) * s });
-    for (let i = 0; i < W.length; i++) {
-      const a = W[i];
-      const b = W[(i + 1) % W.length];
+    const edges: [Point, Point][] = [...W.map((p, i): [Point, Point] => [p, W[(i + 1) % W.length]]), ...seams];
+    for (const [a, b] of edges) {
       const cuts = [0, ...creases(a, b).filter((s) => s > 1e-6 && s < 1 - 1e-6), 1].sort((p, q) => p - q);
       for (let k = 0; k + 1 < cuts.length; k++) {
         const p0 = lerp(a, b, cuts[k]);
@@ -246,6 +283,112 @@ export function buildRoofGeometry(
     return { geometry: geo, infill: buildInfill(yOf, () => []), ridgeHeight: rise + t };
   }
 
+  /**
+   * Roof windows on the two slopes of one gable: `roof.windows` a side, spaced
+   * evenly along the ridge and half way up. `clear` says whether a spot is free
+   * of any other roof running into this one.
+   */
+  const lightsOn = (
+    axis: 'u' | 'v', a0: number, a1: number, mid: number, half: number,
+    clear: (u: number, v: number) => boolean = () => true,
+  ): RoofLight[] => {
+    const count = Math.max(0, Math.min(6, Math.round(roof.windows ?? 0)));
+    const usable = a1 - a0 - 240;
+    if (!count || usable < 80 || half < 150) return [];
+    const at = (a: number, c: number, y: number) => (axis === 'u' ? toWorld(a, c, y) : toWorld(c, a, y));
+    const grade = Math.tan(pitch);
+    const run = half * 0.5; // in from the eave, cm
+    const out: RoofLight[] = [];
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < count; i++) {
+        const a = a0 + 120 + (usable * (i + 0.5)) / count;
+        const c = mid + side * (half - run);
+        const free = [[0, 0], [-55, 0], [55, 0], [0, -75], [0, 75]].every(([da, dc]) =>
+          (axis === 'u' ? clear(a + da, c + dc) : clear(c + dc, a + da)));
+        if (!free) continue;
+        const p = at(a, c, eaveY + run * grade * M);
+        out.push({
+          position: p,
+          along: at(a + 100, c, eaveY + run * grade * M).sub(p).normalize(),
+          up: at(a, c - side * 100, eaveY + (run + 100) * grade * M).sub(p).normalize(),
+        });
+      }
+    }
+    return out;
+  };
+
+  // ---- gable over an L, T or stepped outline ----------------------------
+  if (type === 'gable') {
+    // Planned on the walls, so each roof ends where its walls do; the eaves are
+    // added per roof. Without a wall outline the eave outline stands in.
+    const basis = wallOutline && wallOutline.length >= 3 ? wallOutline : outline;
+    const ov = basis === outline ? 0 : Math.max(0, roof.overhang);
+    const local = basis.map((p) => ({ x: uOf(p), y: vOf(p) }));
+    const rects = rectilinear(local) ? decompose(local) : null;
+    if (rects && rects.length > 1) {
+      const plan = planPrisms(rects, ov);
+      const slope = Math.tan(pitch);
+      const cover: number[] = [];
+      const trim: number[] = [];
+      let top = 0;
+      for (const P of plan.prisms) {
+        const at = (a: number, c: number, y: number) => (P.axis === 'u' ? toWorld(a, c, y) : toWorld(c, a, y));
+        const up = P.half * slope * M;
+        top = Math.max(top, up);
+        const lo = P.mid - P.half;
+        const hi = P.mid + P.half;
+        const eave = (a: number, c: number) => at(a, c, eaveY);
+        const ridge = (a: number) => at(a, P.mid, eaveY + up);
+        const eaveU = (a: number, c: number) => at(a, c, eaveY - t);
+        const ridgeU = (a: number) => at(a, P.mid, eaveY + up - t);
+        quad(cover, eave(P.a0, lo), eave(P.a1, lo), ridge(P.a1), ridge(P.a0));
+        quad(cover, eave(P.a1, hi), eave(P.a0, hi), ridge(P.a0), ridge(P.a1));
+        quad(trim, ridgeU(P.a0), ridgeU(P.a1), eaveU(P.a1, lo), eaveU(P.a0, lo));
+        quad(trim, ridgeU(P.a1), ridgeU(P.a0), eaveU(P.a0, hi), eaveU(P.a1, hi));
+        quad(trim, eaveU(P.a0, lo), eaveU(P.a1, lo), eave(P.a1, lo), eave(P.a0, lo));
+        quad(trim, eaveU(P.a1, hi), eaveU(P.a0, hi), eave(P.a0, hi), eave(P.a1, hi));
+        for (const [a, gable] of [[P.a0, P.gableStart], [P.a1, P.gableEnd]] as const) {
+          if (!gable) continue;
+          quad(trim, eave(a, lo), ridge(a), ridgeU(a), eaveU(a, lo));
+          quad(trim, ridge(a), eave(a, hi), eaveU(a, hi), ridgeU(a));
+        }
+      }
+      const make = (positions: number[]) => {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        g.computeVertexNormals();
+        planarUVs(g);
+        return g;
+      };
+      const underAt = (p: Point) => eaveY - t + (coverAt(plan.prisms, uOf(p), vOf(p)) ?? 0) * slope * M;
+      const kinks = kinkLines(plan.prisms);
+      const creases = (a: Point, b: Point): number[] => {
+        const ua = uOf(a), ub = uOf(b), va = vOf(a), vb = vOf(b);
+        const cuts: number[] = [];
+        // Either side of each line as well: where one roof stops and another
+        // takes over, the wall top steps rather than slopes.
+        const add = (s: number) => cuts.push(s - 1e-4, s, s + 1e-4);
+        if (Math.abs(ub - ua) > 1e-6) for (const k of kinks.u) add((k - ua) / (ub - ua));
+        if (Math.abs(vb - va) > 1e-6) for (const k of kinks.v) add((k - va) / (vb - va));
+        // And evenly, for the valleys where two roofs cross over a wall.
+        const steps = Math.ceil(Math.hypot(ub - ua, vb - va) / 30);
+        for (let i = 1; i < steps; i++) cuts.push(i / steps);
+        return cuts;
+      };
+      const toPlan = (p: Point): Point => ({ x: center.x + p.x * cos - p.y * sin, y: center.y + p.x * sin + p.y * cos });
+      const seams = plan.seams.map(([a, b]): [Point, Point] => [toPlan(a), toPlan(b)]);
+      return {
+        geometry: make([...cover, ...trim]),
+        infill: buildInfill(underAt, creases, seams),
+        ridgeHeight: top + t,
+        parts: { covering: make(cover), trim: make(trim) },
+        // On the main roof only, and not where a cross gable runs into it.
+        lights: lightsOn(plan.prisms[0].axis, plan.prisms[0].a0, plan.prisms[0].a1, plan.prisms[0].mid, plan.prisms[0].half,
+          (u, v) => coverAt(plan.prisms.slice(1), u, v) === null),
+      };
+    }
+  }
+
   // ---- gable / hip ------------------------------------------------------
   const rise = halfB * Math.tan(pitch) * M;
   const A = halfA;
@@ -290,12 +433,25 @@ export function buildRoofGeometry(
     quad(pos, Ru(-ridgeA), Ru(ridgeA), Eu(ridgeA, -B), Eu(-ridgeA, -B));
     quad(pos, Ru(ridgeA), Ru(-ridgeA), Eu(-ridgeA, B), Eu(ridgeA, B));
   }
-  // Fascia around the eave rectangle.
+  // Fascia along the eaves. A hip has an eave on all four sides. A gable has
+  // one only under each slope: across a gable end the wall runs straight up
+  // into the triangle, and a board there read as a beam nailed across the
+  // brickwork.
   const corners: [number, number][] = [[-A, -B], [A, -B], [A, B], [-A, B]];
   for (let i = 0; i < 4; i++) {
     const [u0, v0] = corners[i];
     const [u1, v1] = corners[(i + 1) % 4];
+    if (type === 'gable' && v0 !== v1) continue;
     quad(pos, Eu(u0, v0), Eu(u1, v1), E(u1, v1), E(u0, v0));
+  }
+  // What a gable end has instead is a bargeboard up each verge: the end of the
+  // roof slab, closed. Left open it showed the gap between the covering and
+  // the soffit.
+  if (type === 'gable') {
+    for (const u of [-A, A]) {
+      quad(pos, E(u, -B), R(u), Ru(u), Eu(u, -B));
+      quad(pos, R(u), E(u, B), Eu(u, B), Ru(u));
+    }
   }
 
   const geo = new THREE.BufferGeometry();
@@ -333,5 +489,10 @@ export function buildRoofGeometry(
     }
     return roots;
   };
-  return { geometry: geo, infill: buildInfill(underAt, creases), ridgeHeight: rise + t };
+  return {
+    geometry: geo,
+    infill: buildInfill(underAt, creases),
+    ridgeHeight: rise + t,
+    lights: type === 'gable' ? lightsOn('u', -A, A, 0, B) : [],
+  };
 }

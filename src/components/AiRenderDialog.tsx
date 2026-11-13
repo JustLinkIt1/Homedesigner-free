@@ -4,7 +4,7 @@ import Modal from './Modal';
 import AiPointPacks from './AiPointPacks';
 import { useAuthStore } from '../store/authStore';
 import { aiJson, imageDataUrl, restorePlayPoints, type AiJob, type AiState, type PointsState } from '../lib/aiRender';
-import { sceneSnapshot } from '../lib/renderBridge';
+import { sceneSnapshot, sceneView } from '../lib/renderBridge';
 import { isNative, saveImage } from '../lib/native';
 import { notePositiveMoment } from '../lib/appReview';
 import { useI18n } from '../lib/i18n';
@@ -24,6 +24,8 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
   const [points, setPoints] = useState<PointsState | null>(null);
   const [job, setJob] = useState<AiJob | null>(null);
   const [source, setSource] = useState('');
+  // What the preview shows, taken with it: the server words the render to match.
+  const view = useRef<'interior' | 'exterior'>('interior');
   const [showSource, setShowSource] = useState(false);
   const [result, setResult] = useState('');
   const [imageRetry, setImageRetry] = useState(0);
@@ -43,6 +45,7 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
   const captureSource = useCallback(() => {
     const preview = sceneSnapshot.current?.();
     if (!preview) throw new Error(t('The 3D view is not ready. Try again in a moment.'));
+    view.current = sceneView.current?.() ?? 'interior';
     setSource(preview);
     setConsent(false);
     setShowSource(true);
@@ -123,7 +126,7 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
     const id = crypto.randomUUID();
     setJob({ id, status: 'reserved', style, charged: cost, error: null, watermark: wantsMark }); setResult('');
     try {
-      const next = await aiJson<AiJob>('/v1/ai/renders', { id, image: source, style, expectedCharge: cost,
+      const next = await aiJson<AiJob>('/v1/ai/renders', { id, image: source, style, expectedCharge: cost, view: view.current,
         ...(openToAll ? { watermark: wantsMark } : {}) });
       if (alive.current) setJob(next);
       await reload();

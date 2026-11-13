@@ -14,7 +14,8 @@ import { drawBridge, useDraw } from '../../lib/ui';
 import type { Point } from '../../types';
 import WalkControls, { WalkTouchControls } from './WalkControls';
 import * as THREE from 'three';
-import { sceneCapture, sceneSnapshot, orbitZoom, orbitFocus } from '../../lib/renderBridge';
+import { sceneCapture, sceneSnapshot, sceneView, orbitZoom, orbitFocus } from '../../lib/renderBridge';
+import { renderViewOf } from '../../lib/renderView';
 import { captureRenderer } from '../../lib/renderCapture';
 import { saveImage } from '../../lib/native';
 import { notePositiveMoment } from '../../lib/appReview';
@@ -25,6 +26,7 @@ import { slugify } from '../../lib/appInfo';
 import { sunModel } from '../../lib/sun';
 import { GradientSky, skyPalette } from './GradientSky';
 import { SunShade, shadeStrength } from './FakeShadows';
+import StreetScene from './StreetScene';
 import { finishForFace, withFaceFinish } from '../../lib/wallFaces';
 import { CATALOG_BY_TYPE, FLOOR_MATERIALS } from '../../data/furnitureCatalog';
 import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl } from '../../data/materials';
@@ -812,6 +814,9 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
       finally { invalidate(); }
     };
     sceneSnapshot.current = () => capture(Math.min(1, 1280 / Math.max(size.width, size.height)), true, 'image/jpeg');
+    // The scene is in metres with y up; the plan is in centimetres.
+    sceneView.current = () => renderViewOf(useDesign.getState(),
+      { x: camera.position.x * 100, y: camera.position.z * 100, height: camera.position.y * 100 });
     sceneCapture.current = async (scale = 3) => {
       let dataUrl = capture(scale, IS_TOUCH);
       // Free tier ships a small corner ribbon; Pro exports clean.
@@ -821,6 +826,7 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
     return () => {
       sceneCapture.current = null;
       sceneSnapshot.current = null;
+      sceneView.current = null;
     };
   }, [gl, size, scene, camera, composerRef, invalidate]);
   return null;
@@ -915,10 +921,18 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
   // follows the sun on the ground (squared, so dusk and night keep the old
   // dark ground colour). Colour values above 1 are intentional.
   const hemiIntensity = (0.3 + sun.light * 0.46) * (1 - 0.45 * keyed);
+  // That bounce is tuned for looking INTO rooms, where it stands in for all the
+  // light a real interior gets second-hand. Looking AT the house with its roof
+  // on it is far too much: it lit the shaded walls as brightly as the sunlit
+  // ones, so the house threw a shadow across the lawn while showing no shaded
+  // side itself, and the soffits glowed. Outdoors the bounce is what a lawn
+  // really returns, and the sun does the modelling.
+  const outdoors = !dollhouse && !walkMode;
+  const bounceGain = outdoors ? 0.6 : 2;
   const hemiGround = useMemo(() => {
-    const bounce = new THREE.Color('#fff1dc').multiplyScalar(2 / hemiIntensity);
+    const bounce = new THREE.Color('#fff1dc').multiplyScalar(bounceGain / hemiIntensity);
     return new THREE.Color('#4d4840').lerp(bounce, keyed * keyed);
-  }, [hemiIntensity, keyed]);
+  }, [hemiIntensity, keyed, bounceGain]);
   // The lawn's albedo is now a deeper green, chosen for full daylight. Under
   // the dimmer dusk and night rigs that would sink it well below where those
   // were tuned, so the tint lifts it back as the daylight contrast fades.
@@ -1168,7 +1182,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
 
       {/* Airier interiors: lifted ambient/hemisphere + softened shadows so
           rooms behind walls read bright and clean instead of murky. */}
-      <ambientLight intensity={(sun.ambient * 1.2 + 0.06) * (1 - 0.4 * keyed)} color={ambientColor} />
+      <ambientLight intensity={(sun.ambient * 1.2 + 0.06) * (1 - (outdoors ? 0.55 : 0.4) * keyed)} color={ambientColor} />
       <hemisphereLight intensity={hemiIntensity} groundColor={hemiGround} color={sky.hemi} />
       {/* Sun key light — position, colour and intensity track time of day, so
           shadows and the light spilling through windows match the sky. */}
@@ -1183,7 +1197,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
           light.target.updateMatrixWorld();
         }}
         position={sunPos}
-        intensity={sun.sunIntensity * (1 + 0.38 * keyed)}
+        intensity={sun.sunIntensity * (1 + (outdoors ? 0.6 : 0.38) * keyed)}
         color={sun.sunColor}
         castShadow={caps.shadows}
         shadow-intensity={0.8 + 0.12 * keyed}
@@ -1269,6 +1283,8 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       )}
 
       {/* Force solid walls while walking so the real interior is visible. */}
+      {/* Not in walk mode: indoors it is out of sight, and it is not walkable ground. */}
+      {!walkMode && <StreetScene />}
       <DesignScene
         interactive
         dollhouse={walkMode ? false : dollhouse}

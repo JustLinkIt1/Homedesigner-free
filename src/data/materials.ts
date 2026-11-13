@@ -70,6 +70,12 @@ export const MATERIALS: Material[] = [
   { id: 'brick_wall_001', name: 'Red Brick', group: 'Brick', target: 'wall', scaleCm: 120, roughness: 0.9, metalness: 0, color: '#9c5a44' },
   { id: 'brick_wall_10', name: 'Rustic Brick', group: 'Brick', target: 'wall', scaleCm: 120, roughness: 0.9, metalness: 0, color: '#a86a4e' },
   { id: 'brown_brick_02', name: 'Brown Brick', group: 'Brick', target: 'wall', scaleCm: 120, roughness: 0.9, metalness: 0, color: '#7c5240' },
+  // Drawn, not photographed (tools/make-brick-textures.py): a real brick and
+  // joint size in stretcher bond, 4 bricks by 12 courses to the image, so 90 cm.
+  // Even-toned, for cladding a whole elevation without it turning to noise.
+  { id: 'brick_red_stock', name: 'Red Stock Brick', group: 'Brick', target: 'wall', scaleCm: 90, roughness: 0.9, metalness: 0, color: '#a65840' },
+  { id: 'brick_buff_stock', name: 'Buff Stock Brick', group: 'Brick', target: 'wall', scaleCm: 90, roughness: 0.9, metalness: 0, color: '#c9aa7a' },
+  { id: 'brick_grey_stock', name: 'Grey Stock Brick', group: 'Brick', target: 'wall', scaleCm: 90, roughness: 0.9, metalness: 0, color: '#847f7a' },
   // Measured from the image: this one is BLUE-painted brick. The swatch shows
   // the photo so users always saw that, but `color` (the untextured fallback)
   // claimed a warm off-white, which is a different hue entirely.

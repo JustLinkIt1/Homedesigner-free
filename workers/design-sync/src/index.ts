@@ -25,10 +25,11 @@ import {
   sanitizePlan, type PlanSource,
 } from './ai-plan';
 import { stripeSignatureValid } from './stripe';
+import { SHARED_PLAN_PATH, countSharedPlanOpen, readSharedPlan } from './shared-plans';
 import {
   RenderError, validRenderId, validRenderImage, readRender,
   reserveRender, dispatchRender, refreshRender, publicRender, freeRenderAvailable,
-  validRenderStyle, RENDER_STYLES, renderAvailable, renderImageUrl,
+  validRenderStyle, validRenderView, RENDER_STYLES, renderAvailable, renderImageUrl,
 } from './ai-render';
 import {
   PRO_ENTITLEMENT_ID, liveEntitlements, matchesProEntitlement, proIdsFromCatalogue,
@@ -1959,6 +1960,25 @@ export default {
       }, 200, { 'Cache-Control': 'public, max-age=300' });
     }
 
+    // A shared plan is opened by whoever holds its link, signed in or not: the
+    // point of the link is that a newcomer sees their plan before being asked
+    // for anything. The id in the path is the only credential.
+    const sharedPlan = request.method === 'GET' ? url.pathname.match(SHARED_PLAN_PATH) : null;
+    if (sharedPlan) {
+      const ip = request.headers.get('CF-Connecting-IP') ?? 'anon';
+      const { success } = await env.USER_READ_LIMITER.limit({ key: `ip:${ip}:shared-plan` });
+      if (!success) return json(request, { error: 'Too many requests' }, 429, { 'Retry-After': '60' });
+      try {
+        const now = Date.now();
+        const plan = await readSharedPlan(env.COMMUNITY, sharedPlan[1], now);
+        if (!plan) return json(request, { error: 'This plan link has expired or was removed.' }, 404);
+        ctx.waitUntil(countSharedPlanOpen(env.COMMUNITY, sharedPlan[1], now).catch(() => undefined));
+        return json(request, { plan });
+      } catch {
+        return json(request, { error: 'Shared plans are unavailable right now.' }, 503);
+      }
+    }
+
     // Community reads are PUBLIC and are therefore matched before
     // authenticate(). A support forum only signed-in people can read is not a
     // support forum, and Google cannot index what it cannot fetch. Writes fall
@@ -2039,7 +2059,9 @@ export default {
             const isPro = await isProSubject(env, identity.subject);
             const { job, created } = await reserveRender(env.COMMUNITY, identity.subject, body.id, Number(body.expectedCharge), body.style,
               { isPro, watermark: body.watermark === true });
-            if (created) ctx.waitUntil(dispatchRender(env.COMMUNITY, renderKeys, job, body.image));
+            // Older apps never say what the capture shows: a room, as it always was.
+            if (created) ctx.waitUntil(dispatchRender(env.COMMUNITY, renderKeys, job, body.image,
+              validRenderView(body.view) ? body.view : 'interior'));
             return json(request, publicRender(job), 202);
           }
           const match = url.pathname.match(/^\/v1\/ai\/renders\/([a-f0-9-]{36})(\/image)?$/);
