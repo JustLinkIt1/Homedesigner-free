@@ -1,0 +1,140 @@
+<en-GB>
+New stairs: straight, L-shaped, U-shaped and spiral, in the build tools. Walk up any of them in 3D.
+Floors can be renamed, and hidden or shown in 3D.
+A magnifier shows the exact point while you draw with your finger.
+</en-GB>
+<ar>
+سلالم جديدة: مستقيمة وعلى شكل L وعلى شكل U وحلزونية، ضمن أدوات البناء. اصعد أيًا منها في العرض ثلاثي الأبعاد.
+يمكن إعادة تسمية الطوابق وإخفاؤها أو إظهارها في العرض ثلاثي الأبعاد.
+عدسة مكبرة تُظهر النقطة الدقيقة أثناء الرسم بإصبعك.
+</ar>
+<cs-CZ>
+Nová schodiště: rovná, do L, do U a točitá, v nástrojích stavby. Po každém z nich můžete ve 3D vyjít nahoru.
+Podlaží lze přejmenovat a ve 3D skrýt nebo zobrazit.
+Lupa ukazuje přesný bod, když kreslíte prstem.
+</cs-CZ>
+<da-DK>
+Nye trapper: lige, L-formede, U-formede og spindeltrapper i byggeværktøjerne. Gå op ad dem alle i 3D.
+Etager kan omdøbes og skjules eller vises i 3D.
+Et forstørrelsesglas viser det præcise punkt, mens du tegner med fingeren.
+</da-DK>
+<de-DE>
+Neue Treppen: gerade, L-förmig, U-förmig und Wendeltreppe, in den Bauwerkzeugen. Geh in 3D jede davon hinauf.
+Geschosse lassen sich umbenennen und in 3D aus- oder einblenden.
+Eine Lupe zeigt den genauen Punkt, während du mit dem Finger zeichnest.
+</de-DE>
+<es-ES>
+Nuevas escaleras: rectas, en L, en U y de caracol, en las herramientas de construcción. Sube por cualquiera de ellas en 3D.
+Las plantas se pueden renombrar y ocultar o mostrar en 3D.
+Una lupa muestra el punto exacto mientras dibujas con el dedo.
+</es-ES>
+<fi-FI>
+Uudet portaat: suorat, L-, U- ja kierreportaat rakennustyökaluissa. Kävele mitä tahansa niistä ylös 3D:ssä.
+Kerrokset voi nimetä uudelleen ja piilottaa tai näyttää 3D:ssä.
+Suurennuslasi näyttää tarkan kohdan, kun piirrät sormella.
+</fi-FI>
+<fr-FR>
+Nouveaux escaliers : droit, en L, en U et en colimaçon, dans les outils de construction. Montez-les tous en 3D.
+Les étages peuvent être renommés, et masqués ou affichés en 3D.
+Une loupe montre le point exact quand vous dessinez au doigt.
+</fr-FR>
+<hi-IN>
+नई सीढ़ियाँ: सीधी, L-आकार, U-आकार और घुमावदार, बिल्ड टूल्स में। 3D में इनमें से किसी पर भी ऊपर चढ़ें।
+मंज़िलों का नाम बदला जा सकता है और 3D में उन्हें छिपाया या दिखाया जा सकता है।
+उंगली से ड्रॉ करते समय एक आवर्धक लेंस सटीक बिंदु दिखाता है।
+</hi-IN>
+<hu-HU>
+Új lépcsők: egyenes, L alakú, U alakú és csigalépcső az építőeszközök között. Bármelyiken felmehetsz 3D-ben.
+A szintek átnevezhetők, és 3D-ben elrejthetők vagy megjeleníthetők.
+Ujjal rajzoláskor nagyító mutatja a pontos helyet.
+</hu-HU>
+<id>
+Tangga baru: lurus, bentuk L, bentuk U, dan spiral, di alat bangun. Naiki salah satunya dalam 3D.
+Lantai dapat diganti namanya, serta disembunyikan atau ditampilkan dalam 3D.
+Kaca pembesar menunjukkan titik yang tepat saat Anda menggambar dengan jari.
+</id>
+<it-IT>
+Nuove scale: dritte, a L, a U e a chiocciola, negli strumenti di costruzione. Salile tutte in 3D.
+I piani si possono rinominare e nascondere o mostrare in 3D.
+Una lente d'ingrandimento mostra il punto esatto mentre disegni con il dito.
+</it-IT>
+<iw-IL>
+מדרגות חדשות: ישרות, בצורת L, בצורת U ולוליניות, בכלי הבנייה. אפשר לעלות בכל אחת מהן בתלת־ממד.
+אפשר לשנות שם של קומות ולהסתיר או להציג אותן בתלת־ממד.
+זכוכית מגדלת מראה את הנקודה המדויקת בזמן ציור באצבע.
+</iw-IL>
+<ja-JP>
+新しい階段：直階段、L字、U字、らせん階段を作成ツールに追加。3Dでどれでも上れます。
+階の名前を変更し、3Dで表示・非表示を切り替えられます。
+指で描くとき、ルーペが正確な位置を表示します。
+</ja-JP>
+<ko-KR>
+새 계단: 일자, L자, U자, 나선형 계단을 만들기 도구에 추가했습니다. 3D에서 어느 계단이든 올라갈 수 있습니다.
+층 이름을 바꾸고 3D에서 숨기거나 표시할 수 있습니다.
+손가락으로 그릴 때 돋보기가 정확한 위치를 보여줍니다.
+</ko-KR>
+<nl-NL>
+Nieuwe trappen: recht, L-vormig, U-vormig en wenteltrap, bij de bouwtools. Loop ze allemaal op in 3D.
+Verdiepingen kun je hernoemen en in 3D verbergen of tonen.
+Een vergrootglas toont het precieze punt terwijl je met je vinger tekent.
+</nl-NL>
+<no-NO>
+Nye trapper: rette, L-formede, U-formede og vindeltrapper i byggeverktøyene. Gå opp hvilken som helst av dem i 3D.
+Etasjer kan få nytt navn og skjules eller vises i 3D.
+Et forstørrelsesglass viser det nøyaktige punktet mens du tegner med fingeren.
+</no-NO>
+<pl-PL>
+Nowe schody: proste, w kształcie L, w kształcie U i kręcone, w narzędziach budowy. Wejdź po każdych z nich w 3D.
+Piętra można zmieniać nazwy oraz ukrywać lub pokazywać w 3D.
+Lupa pokazuje dokładny punkt podczas rysowania palcem.
+</pl-PL>
+<pt-BR>
+Novas escadas: reta, em L, em U e caracol, nas ferramentas de construção. Suba qualquer uma delas em 3D.
+Os andares podem ser renomeados e ocultados ou mostrados em 3D.
+Uma lupa mostra o ponto exato enquanto você desenha com o dedo.
+</pt-BR>
+<ro>
+Scări noi: drepte, în L, în U și în spirală, în instrumentele de construcție. Urcă pe oricare dintre ele în 3D.
+Etajele pot fi redenumite și ascunse sau afișate în 3D.
+O lupă arată punctul exact când desenezi cu degetul.
+</ro>
+<ru-RU>
+Новые лестницы: прямая, Г-образная, П-образная и винтовая, в инструментах строительства. По любой можно подняться в 3D.
+Этажи можно переименовывать, а также скрывать или показывать в 3D.
+Лупа показывает точную точку, когда вы рисуете пальцем.
+</ru-RU>
+<sk>
+Nové schodiská: rovné, do L, do U a točité, v nástrojoch stavby. Po každom z nich môžete v 3D vyjsť hore.
+Podlažia možno premenovať a v 3D skryť alebo zobraziť.
+Lupa ukazuje presný bod, keď kreslíte prstom.
+</sk>
+<sv-SE>
+Nya trappor: raka, L-formade, U-formade och spiraltrappor i byggverktygen. Gå upp för vilken som helst av dem i 3D.
+Våningar kan döpas om och döljas eller visas i 3D.
+Ett förstoringsglas visar exakt punkt när du ritar med fingret.
+</sv-SE>
+<th>
+บันไดใหม่: ทางตรง รูปตัว L รูปตัว U และบันไดวน ในเครื่องมือสร้าง เดินขึ้นบันไดแบบใดก็ได้ในโหมด 3D
+เปลี่ยนชื่อชั้น และซ่อนหรือแสดงชั้นใน 3D ได้
+แว่นขยายแสดงจุดที่แม่นยำขณะวาดด้วยนิ้ว
+</th>
+<tr-TR>
+Yeni merdivenler: düz, L, U ve döner merdiven, yapı araçlarında. Hepsini 3D'de çıkabilirsiniz.
+Katlar yeniden adlandırılabilir ve 3D'de gizlenip gösterilebilir.
+Parmağınızla çizerken bir büyüteç tam noktayı gösterir.
+</tr-TR>
+<uk>
+Нові сходи: прямі, Г-подібні, П-подібні та гвинтові, в інструментах будівництва. Піднімайтеся будь-якими з них у 3D.
+Поверхи можна перейменовувати, а також приховувати чи показувати в 3D.
+Лупа показує точну точку, коли ви малюєте пальцем.
+</uk>
+<vi>
+Cầu thang mới: thẳng, chữ L, chữ U và xoắn ốc, trong công cụ xây dựng. Đi lên bất kỳ cầu thang nào trong 3D.
+Có thể đổi tên tầng và ẩn hoặc hiện tầng trong 3D.
+Kính lúp hiển thị điểm chính xác khi bạn vẽ bằng ngón tay.
+</vi>
+<zh-CN>
+新增楼梯：直跑、L形、U形和旋转楼梯，位于建造工具中。可在3D中走上任意一种。
+楼层可以重命名，并可在3D中隐藏或显示。
+用手指绘制时，放大镜会显示精确的位置。
+</zh-CN>
