@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
-import { TOOLS, visibleTools, OPENINGS } from '../data/tools';
+import { TOOLS, visibleTools, OPENINGS, STAIRS } from '../data/tools';
 import { tapLight } from '../lib/haptics';
 import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
@@ -44,7 +44,7 @@ export default function BuildSheet({ open, onClose, limited = false }: { open: b
     onClose();
   };
 
-  const openingActive = OPENINGS.some((e) => e.type === pendingFurnitureType);
+  const openingActive = [...OPENINGS, ...STAIRS].some((e) => e.type === pendingFurnitureType);
 
   return (
     <div
@@ -94,6 +94,23 @@ export default function BuildSheet({ open, onClose, limited = false }: { open: b
               <SymbolIcon shape={e.shape} className="icon" />
               <span>{tr(e.name)}</span>
               {locked && <span className="bs-lock">PRO</span>}
+            </button>
+          );
+        })}
+      </div>
+      <div className="bs-section-title">{tr('Stairs')}</div>
+      <div className="bs-grid">
+        {STAIRS.map((e) => {
+          const active = pendingFurnitureType === e.type;
+          return (
+            <button
+              key={e.type}
+              className={`bs-tool ${active ? 'active' : ''}`}
+              aria-pressed={active}
+              onClick={() => pickOpening(e.type, false)}
+            >
+              <SymbolIcon shape={e.shape} className="icon" />
+              <span>{tr(e.name)}</span>
             </button>
           );
         })}

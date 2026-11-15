@@ -10,6 +10,7 @@ import { getFloorTexture, FLOOR_ROUGHNESS, customTexture, paintedBoxGeometry, de
 import { activeTier, tierCaps } from '../../lib/perfTier';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
+import { isStairs } from '../../lib/stairs';
 import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
 import { exteriorFaces, exteriorRanges, exteriorSideAt } from '../../lib/exteriorFaces';
 import { bayParts, isBay } from '../../lib/bayWindow';
@@ -1682,14 +1683,17 @@ export default function DesignScene({
   // bungalow: the roof sat on the ground floor and the first floor was missing
   // entirely. Walk mode has always kept the whole building for the same reason.
   const cutaway = dollhouse && !walkMode;
-  const visible = cutaway ? floors.filter((f) => f.elevation <= activeElevation) : floors;
+  // Floors the user hid from the floor menu stay hidden, except the one being
+  // edited: hiding what you are working on would only look like a bug.
+  const shown = floors.filter((f) => !f.hidden || f.id === activeFloorId);
+  const visible = cutaway ? shown.filter((f) => f.elevation <= activeElevation) : shown;
   const orderedFloors = useMemo(() => [...floors].sort((a, b) => a.elevation - b.elevation), [floors]);
   const stairsBelowByFloor = useMemo(() => {
     const result = new Map<string, FurnitureItem[]>();
     orderedFloors.forEach((floor, index) => {
       if (index === 0) return;
       const below = floorGeom[orderedFloors[index - 1].id];
-      result.set(floor.id, below?.furniture.filter((item) => item.type === 'stairs') ?? NO_STAIRS);
+      result.set(floor.id, below?.furniture.filter(isStairs) ?? NO_STAIRS);
     });
     return result;
   }, [orderedFloors, floorGeom]);

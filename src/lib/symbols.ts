@@ -5,6 +5,7 @@
 // the emoji icons that made the 2D editor read as a toy.
 
 import type { Shape3D } from '../data/furnitureCatalog';
+import { stairIconPaths } from './stairs';
 
 export interface SymbolPath {
   d: string;
@@ -228,11 +229,12 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: rect(4, 24, 92, 44, 4) },
     { d: 'M35,80 H65', sw: 2.5 },
   ],
-  stairs: [
-    { d: rect(4, 4, 92, 92) },
-    { d: 'M4,22 H96 M4,40 H96 M4,58 H96 M4,76 H96', sw: 2 },
-    { d: 'M50,90 V14 M50,14 L42,26 M50,14 L58,26', sw: 2.5 },
-  ],
+  // Stairs are generated from the same geometry as the 3D model (lib/stairs.ts)
+  // at their catalog sizes; the plan itself draws them at their real size.
+  stairs: stairIconPaths('stairs', 100, 250, 280),
+  stairs_l: stairIconPaths('stairs_l', 240, 320, 280),
+  stairs_u: stairIconPaths('stairs_u', 220, 290, 280),
+  stairs_spiral: stairIconPaths('stairs_spiral', 160, 160, 280),
   // Kitchen worktop / base cabinet: outline + front-edge line (the worktop
   // overhang) + a centred pull. Backs sit at y=0 like the 3D meshes.
   counter: [

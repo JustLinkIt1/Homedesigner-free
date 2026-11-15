@@ -11,6 +11,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { tapLight } from '../lib/haptics';
 import { useI18n } from '../lib/i18n';
 import { useDesign } from '../store/designStore';
+import { isStairs, stairTurns } from '../lib/stairs';
 
 function DockAction({
   icon: Icon,
@@ -71,12 +72,19 @@ export default function MobileSelectionDock({ onMore }: { onMore: () => void }) 
       ) : item ? (
         <>
           <DockAction
-            icon={item.type === 'stairs' ? ArrowUpDown : RotateCw}
-            label={item.type === 'stairs' ? t('Reverse') : t('Rotate')}
+            icon={isStairs(item) ? ArrowUpDown : RotateCw}
+            label={isStairs(item) ? t('Reverse') : t('Rotate')}
             onClick={act(() => s.updateFurniture(item.id, {
-              rotation: (item.rotation + (item.type === 'stairs' ? 180 : 90)) % 360,
+              rotation: (item.rotation + (isStairs(item) ? 180 : 90)) % 360,
             }))}
           />
+          {stairTurns(item.type) && (
+            <DockAction
+              icon={ArrowLeftRight}
+              label={t('Flip turn')}
+              onClick={act(() => s.updateFurniture(item.id, { mirrored: !item.mirrored }))}
+            />
+          )}
           <DockAction icon={Copy} label={t('Duplicate')} onClick={act(s.duplicateSelection)} />
         </>
       ) : flippableDoor ? (

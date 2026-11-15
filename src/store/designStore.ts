@@ -201,6 +201,8 @@ interface DesignState extends DesignSnapshot {
   cloneFloor: (direction: 'above' | 'below') => void;
   removeFloor: (id: string) => void;
   renameFloor: (id: string, name: string) => void;
+  /** Show or hide a storey in 3D. The floor being edited always shows. */
+  setFloorHidden: (id: string, hidden: boolean) => void;
   /** Add/adjust the roof (patch merges onto the current or default roof), or
    *  pass null to remove it. Always applies to the top storey. */
   setRoof: (patch: Partial<Roof> | null) => void;
@@ -1233,7 +1235,17 @@ export const useDesign = create<DesignState>((set, get) => {
 
     renameFloor: (id, name) =>
       commit((d) => {
-        d.floors = d.floors.map((f) => (f.id === id ? { ...f, name: name || f.name } : f));
+        d.floors = d.floors.map((f) => (f.id === id ? { ...f, name: name.slice(0, 40) || f.name } : f));
+      }),
+
+    setFloorHidden: (id, hidden) =>
+      commit((d) => {
+        d.floors = d.floors.map((f) => {
+          if (f.id !== id) return f;
+          const { hidden: _was, ...rest } = f;
+          void _was;
+          return hidden ? { ...rest, hidden: true } : rest;
+        });
       }),
 
     setRoof: (patch) =>

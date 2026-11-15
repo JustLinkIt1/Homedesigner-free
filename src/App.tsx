@@ -54,6 +54,7 @@ import TooltipHost from './components/TooltipHost';
 import { useDesign } from './store/designStore';
 import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
 import { TOOLS } from './data/tools';
+import { isStairShape } from './lib/stairs';
 import { sceneCapture } from './lib/renderBridge';
 import { capturePlanThumbnail } from './lib/thumb';
 import { useDraw, drawBridge, useConfirm, confirmDialog, toast } from './lib/ui';
@@ -186,7 +187,7 @@ export default function App() {
   // reserved for stairs/openings/structure, where contextual actions such as
   // reverse, hinge and swing cannot be expressed by the generic ring.
   const contextualDockSelection =
-    selection.kind !== 'furniture' || selectedFurnitureType === 'stairs';
+    selection.kind !== 'furniture' || isStairShape(selectedFurnitureType ?? undefined);
 
   // First-run tour: only on entering the editor with a truly blank project
   // (the sample home loads walls before onOpenEditor, so it never shows).

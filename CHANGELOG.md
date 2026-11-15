@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.22.37 — stairs, floor names, and a magnifier for drawing
+
+From a tester's annotated screenshot.
+
+- Stairs in four shapes: straight, L-shaped (quarter landing), U-shaped (half
+  landing) and spiral. They have their own button in the build tools and the
+  phone Build sheet, and a Stairs category in the catalogue (the one straight
+  stair used to sit under Outdoor). L, U and spiral stairs can turn either way
+  ("Flip turn"). Width, depth and height stay editable, and the step count
+  follows the height. One geometry (`src/lib/stairs.ts`) drives the plan
+  symbol, the 3D model, the DXF export and walk mode, so walking onto the
+  bottom step of any shape takes you upstairs. The plan arrow now points up
+  the stair; it used to point down.
+- Floors can be renamed from the floor menu (pencil; double-click still works)
+  and hidden or shown in 3D (eye). The floor being edited always shows.
+- The floor menu showed no floor names: the list sat in a 48 px grid cell. It
+  now spans the menu.
+- Drawing with a finger shows a magnifier above the finger, with a crosshair
+  on the exact point being placed, so snaps can be seen under the fingertip.
+
 ## 1.22.36 — bay windows, front doors, and a house that looks like one from outside
 
 - Bay windows. A window can now be a bay (Properties → style, or "Bay Window"

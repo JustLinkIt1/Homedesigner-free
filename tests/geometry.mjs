@@ -35,6 +35,8 @@ export { wallDistances } from '${sourceRoot}/src/lib/distanceGuides.ts';
 export { isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, roomRectangle, readoutOffsetCm, transformPlan } from '${sourceRoot}/src/lib/drawGesture.ts';
 export { catalogEntryMatches, normalizeCatalogText } from '${sourceRoot}/src/lib/catalogSearch.ts';
 export { CATALOG_BY_TYPE } from '${sourceRoot}/src/data/furnitureCatalog.ts';
+export { stairPlan, stairSymbolPaths, isStairs } from '${sourceRoot}/src/lib/stairs.ts';
+export { isAtStairEnd, stairLanding } from '${sourceRoot}/src/lib/walkNavigation.ts';
 `);
 const out = join(dir, 'bundle.mjs');
 // platform=node so CommonJS-only deps (dxf-parser) resolve via "main";
@@ -54,6 +56,7 @@ const {
   isDragDrawTool, claimsOneFinger, shouldPanOnTouch, stripDegenerateTail, roomRectangle, readoutOffsetCm, transformPlan,
   scaleBox, resizeBox, snapAngleTo, norm360, cornerSign,
   catalogEntryMatches, normalizeCatalogText, CATALOG_BY_TYPE,
+  stairPlan, stairSymbolPaths, isStairs, isAtStairEnd, stairLanding,
 } = await import(pathToFileURL(out).href);
 
 let fails = 0;
@@ -1273,6 +1276,47 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
     real.length === 1 && Math.abs(real[0].thickness - 17) < 0.5, JSON.stringify(real.map((c) => c.thickness)));
   check('centreline: bridged stubs are not kept as a wall',
     !cl.some((c) => !c.paired && Math.min(c.a.x, c.b.x) < 200), JSON.stringify(cl.filter((c) => !c.paired)));
+}
+
+// ---- stairs: one geometry for plan, 3D and walking --------------------------
+{
+  for (const type of ['stairs', 'stairs_l', 'stairs_u', 'stairs_spiral']) {
+    const e = CATALOG_BY_TYPE[type];
+    check(`stairs: ${type} is in the catalog as stairs`, !!e && e.category === 'Stairs' && isStairs({ type }));
+    const plan = stairPlan(type, e.width, e.depth, e.height);
+    const levels = plan.treads.map((t) => t.level).sort((a, b) => a - b);
+    check(`stairs: ${type} climbs one level per tread, to the full height`,
+      levels.every((l, i) => l === i + 1) && Math.abs(levels.length * plan.rise - e.height) < 0.01,
+      JSON.stringify({ levels, rise: plan.rise }));
+    const pts = plan.treads.flatMap((t) => t.poly);
+    check(`stairs: ${type} stays inside its footprint`,
+      pts.every((p) => Math.abs(p.x) <= e.width / 2 + 0.01 && Math.abs(p.y) <= e.depth / 2 + 0.01));
+    const flipped = stairPlan(type, e.width, e.depth, e.height, true);
+    check(`stairs: ${type} flipped is the mirror image`,
+      Math.abs(flipped.high.at.x + plan.high.at.x) < 0.01 && Math.abs(flipped.high.at.y - plan.high.at.y) < 0.01);
+    check(`stairs: ${type} has a plan symbol`, stairSymbolPaths(plan).length > plan.treads.length);
+  }
+  // The straight stair keeps the behaviour it shipped with: it starts at the
+  // back edge (y = -depth/2) and arrives at the front.
+  const straight = stairPlan('stairs', 100, 250, 280);
+  check('stairs: straight starts at the back, ends at the front',
+    straight.low.at.y === -125 && straight.high.at.y === 125 && straight.steps === 16);
+  // L-shaped: up the side, then across, so the top is on a side edge.
+  const l = stairPlan('stairs_l', 240, 320, 280);
+  check('stairs: L-shaped arrives on the side edge', l.high.at.x === 120 && l.high.out.x === 1, JSON.stringify(l.high));
+  // U-shaped: both ends on the same edge, side by side.
+  const u = stairPlan('stairs_u', 220, 290, 280);
+  check('stairs: U-shaped starts and ends on the same edge',
+    u.low.at.y === -145 && u.high.at.y === -145 && u.low.at.x < 0 && u.high.at.x > 0);
+  // Walking: standing on the bottom step of an L stair at (5 m, 5 m) counts,
+  // its far corner does not, and the top landing is past its side exit.
+  const item = { id: 's', type: 'stairs_l', name: '', position: { x: 500, y: 500 }, rotation: 0, width: 240, depth: 320, height: 280, color: '#999' };
+  check('stairs: walking onto the bottom of an L stair is detected',
+    isAtStairEnd(item, (500 + l.low.at.x) / 100, (500 + l.low.at.y + 20) / 100, 'low'));
+  check('stairs: the far corner of an L stair is not its bottom', !isAtStairEnd(item, 6.1, 6.5, 'low'));
+  const top = stairLanding(item, 'high');
+  check('stairs: the top landing of an L stair is past its side exit',
+    top.x > 6.2 && Math.abs(top.z - (500 + l.high.at.y) / 100) < 0.01, JSON.stringify(top));
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { Stage, Layer, Line, Rect, Group, Text, Circle, Arc, Image as KImage } from 'react-konva';
 import Konva from 'konva';
@@ -47,6 +47,8 @@ import { selectionTick, tapMedium } from '../../lib/haptics';
 import { useTheme, canvasColors } from '../../lib/theme';
 import { isSurfacePlaceable, isWallPlaceable, supportElevationAt } from '../../lib/furniturePlacement';
 import { notifyPlacementComplete } from '../../lib/placementFeedback';
+import { isStairs } from '../../lib/stairs';
+import Loupe from './Loupe';
 import type { Point, Selection, Wall } from '../../types';
 import {
   resizeBox,
@@ -167,6 +169,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   // Draft state for in-progress drawing.
   const [draft, setDraft] = useState<Point[]>([]);
   const [cursor, setCursor] = useState<Point | null>(null);
+  // A finger is drawing (drag-draw tools on touch): shows the magnifier.
+  const [fingerDrawing, setFingerDrawing] = useState(false);
   const roomDragStartRef = useRef<Point | null>(null);
   // Tape-measure tool: first click sets A, second click freezes the A–B span.
   const [measureA, setMeasureA] = useState<Point | null>(null);
@@ -898,6 +902,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
    *  just placed to itself, reading "0.00 m · 0°" under a finger that has gone. */
   const endDrawDrag = () => {
     drawDragRef.current = false;
+    setFingerDrawing(false);
     cancelPreview();
     setCursor(null);
     setSnapKind('free');
@@ -950,6 +955,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
       });
       if (isDragDrawTool(tool)) {
         drawDragRef.current = true;
+        setFingerDrawing(true);
         const wp = worldPointer();
         // Publish synchronously, not through the rAF: the rubber band and snap
         // marker have to appear the instant the finger lands, which is most of
@@ -1501,6 +1507,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     return m;
   }, [rooms]);
 
+  const loupeSource = useCallback(() => layerRef.current?.getNativeCanvasElement() ?? null, []);
+
   // Keep the live pan ref in sync with committed state whenever we're not
   // mid-gesture (during a pan, applyPan owns panRef and we skip this).
   if (!lastPan.current && !pinch.current) {
@@ -1510,6 +1518,11 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
 
   return (
     <div ref={wrapRef} style={{ position: 'absolute', inset: 0 }}>
+      <Loupe
+        source={loupeSource}
+        at={fingerDrawing && cursor ? { x: cursor.x * zoom + pan.x, y: cursor.y * zoom + pan.y } : null}
+        bounds={size}
+      />
       <Stage
         ref={stageRef}
         width={size.w}
@@ -2061,6 +2074,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
                     selectionColor={C.selection}
                     zoom={zoom}
                     dashed={(entry?.mountY ?? 0) > 0}
+                    height={f.height}
+                    mirrored={!!f.mirrored}
                   />
                 </Group>
                 {editing && !multi && draggingFurnId !== f.id && showDimensions && (
@@ -2324,7 +2339,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
           multi-selection has no one anchor, and walls/rooms/openings are edited
           through Properties where their own controls live. */}
       {IS_COARSE && tool === 'select' && !multi && draft.length === 0 && ringAnchor &&
-        s.furniture.find((item) => item.id === ringAnchor.id)?.type !== 'stairs' && (
+        !isStairs(s.furniture.find((item) => item.id === ringAnchor.id)) && (
         <SelectionRing
           x={ringAnchor.x}
           y={ringAnchor.y}
@@ -2621,7 +2636,7 @@ function FurnitureGhost({
   at,
   zoom,
 }: {
-  entry: { width: number; depth: number; shape: import('../../data/furnitureCatalog').Shape3D };
+  entry: { width: number; depth: number; height?: number; shape: import('../../data/furnitureCatalog').Shape3D };
   at: Point;
   zoom: number;
 }) {
@@ -2639,7 +2654,7 @@ function FurnitureGhost({
         dash={[8 / zoom, 5 / zoom]}
         cornerRadius={Math.min(entry.width, entry.depth) * 0.08}
       />
-      <FurnitureSymbol shape={entry.shape} width={entry.width} depth={entry.depth} color={C.selection} />
+      <FurnitureSymbol shape={entry.shape} width={entry.width} depth={entry.depth} height={entry.height} color={C.selection} />
     </Group>
   );
 }
@@ -2915,6 +2930,7 @@ function hexLuma(hex: string): number {
 // lights…) and any still-loading sprite fall back to the clean line symbol.
 function FurnitureItemGraphic({
   type, shape, width, depth, color, worktopColor, symbolColor, outlineColor, selected, selectionColor, zoom, dashed,
+  height, mirrored = false,
 }: {
   type: string;
   shape: Shape3D;
@@ -2929,6 +2945,9 @@ function FurnitureItemGraphic({
   selectionColor: string;
   zoom: number;
   dashed: boolean;
+  /** Stairs: their step count follows the height. */
+  height?: number;
+  mirrored?: boolean;
 }) {
   // Modular kitchen units are drawn, not photographed: the old sprites were
   // renders of models they no longer use, and could not show the worktop.
@@ -2997,7 +3016,7 @@ function FurnitureItemGraphic({
         strokeWidth={(selected ? 3 : overhead ? 1.4 : 1) / zoom}
         dash={overhead ? [6 / zoom, 4 / zoom] : undefined}
       />
-      <FurnitureSymbol shape={shape} width={width} depth={depth} color={ink} opacity={overhead ? 0.5 : 0.85} dashed={dashed} />
+      <FurnitureSymbol shape={shape} width={width} depth={depth} height={height} mirrored={mirrored} color={ink} opacity={overhead ? 0.5 : 0.85} dashed={dashed} />
     </>
   );
 }

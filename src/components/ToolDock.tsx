@@ -4,7 +4,7 @@ import { DoorOpen, Sofa } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
-import { visibleTools, OPENINGS } from '../data/tools';
+import { visibleTools, OPENINGS, STAIRS } from '../data/tools';
 import { tapLight } from '../lib/haptics';
 import { useI18n } from '../lib/i18n';
 import SymbolIcon from './SymbolIcon';
@@ -20,24 +20,29 @@ export default function ToolDock() {
   const isPro = useProStore((s) => s.isPro);
   const tr = useI18n();
   const [openingsOpen, setOpeningsOpen] = useState(false);
+  const [stairsOpen, setStairsOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const stairsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!openingsOpen) return;
+    if (!openingsOpen && !stairsOpen) return;
     const onDoc = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpeningsOpen(false);
+      if (stairsRef.current && !stairsRef.current.contains(e.target as Node)) setStairsOpen(false);
     };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
-  }, [openingsOpen]);
+  }, [openingsOpen, stairsOpen]);
 
   const pickOpening = (type: string, locked: boolean) => {
     if (locked && !requirePro('catalog')) return;
     setPendingFurniture(pendingFurnitureType === type ? null : type);
     setOpeningsOpen(false);
+    setStairsOpen(false);
   };
 
   const openingActive = OPENINGS.some((e) => e.type === pendingFurnitureType);
+  const stairsActive = STAIRS.some((e) => e.type === pendingFurnitureType);
 
   return (
     <div className="tool-dock">
@@ -101,13 +106,46 @@ export default function ToolDock() {
         )}
       </div>
 
+      {/* Stairs flyout: straight, L, U and spiral. */}
+      <div className="dock-openings" ref={stairsRef} style={{ display: 'contents' }}>
+        <button
+          className={`dock-btn ${stairsActive ? 'active' : ''}`}
+          data-tip={tr('Stairs')}
+          aria-label={tr('Stairs')}
+          aria-haspopup="menu"
+          aria-expanded={stairsOpen}
+          onClick={() => setStairsOpen((o) => !o)}
+        >
+          <SymbolIcon shape="stairs_l" className="icon dock-symbol" />
+        </button>
+        {stairsOpen && (
+          <div className="openings-flyout" role="menu">
+            <div className="of-title">{tr('Stairs')}</div>
+            <div className="of-grid">
+              {STAIRS.map((e) => (
+                <button
+                  key={e.type}
+                  className={`of-item ${pendingFurnitureType === e.type ? 'active' : ''}`}
+                  role="menuitem"
+                  data-tip={tr(e.name)} aria-label={tr(e.name)}
+                  onClick={() => pickOpening(e.type, false)}
+                >
+                  <SymbolIcon shape={e.shape} className="of-symbol" />
+                  <span>{tr(e.name)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Furniture mode: docks the catalog panel in; any build tool tucks it
           away again. Hidden on phones — the Objects tab plays this role. */}
       <button
-        className={`dock-btn furniture-toggle ${tool === 'furniture' && !openingActive ? 'active' : ''}`}
+        className={`dock-btn furniture-toggle ${tool === 'furniture' && !openingActive && !stairsActive ? 'active' : ''}`}
         data-tip={tr('Furnish (open catalog)')}
         aria-label={tr('Furnish — open the furniture catalog')}
-        aria-pressed={tool === 'furniture' && !openingActive}
+        aria-pressed={tool === 'furniture' && !openingActive && !stairsActive}
         onClick={() => {
           if (tool === 'furniture') {
             setPendingFurniture(null);

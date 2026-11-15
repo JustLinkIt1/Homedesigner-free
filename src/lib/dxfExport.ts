@@ -2,6 +2,7 @@ import type { FloorInfo, FurnitureItem, Opening, Point, Room, Wall } from '../ty
 import { computeWallPolygons } from './wallGeometry';
 import { CATALOG_BY_TYPE } from '../data/furnitureCatalog';
 import { SYMBOLS, FALLBACK_SYMBOL } from './symbols';
+import { isStairs, stairPlanFor, stairSymbolPaths } from './stairs';
 import { flattenPath } from './svgPath';
 import { polygonArea, dist } from './geometry';
 
@@ -285,15 +286,17 @@ export function buildDxf(input: DxfExportInput): string {
     // ---- furniture, as wireframe plan symbols ------------------------------
     for (const item of g.furniture) {
       const entry = CATALOG_BY_TYPE[item.type];
-      const symbol = (entry?.shape && SYMBOLS[entry.shape]) || FALLBACK_SYMBOL;
+      // Stairs are drawn at their real size from the same geometry as 3D.
+      const stair = isStairs(item) ? stairSymbolPaths(stairPlanFor(item)) : null;
+      const symbol = stair ?? ((entry?.shape && SYMBOLS[entry.shape]) || FALLBACK_SYMBOL);
       const rot = (item.rotation * Math.PI) / 180;
       const cos = Math.cos(rot);
       const sin = Math.sin(rot);
       // Symbols are authored in a 100x100 box; map to the item's footprint,
       // rotate about its centre and drop it at its plan position.
       const place = (p: Point): Point => {
-        const lx = (p.x / 100 - 0.5) * item.width;
-        const ly = (p.y / 100 - 0.5) * item.depth;
+        const lx = stair ? p.x : (p.x / 100 - 0.5) * item.width;
+        const ly = stair ? p.y : (p.y / 100 - 0.5) * item.depth;
         return { x: item.position.x + lx * cos - ly * sin, y: item.position.y + lx * sin + ly * cos };
       };
       for (const part of symbol) {

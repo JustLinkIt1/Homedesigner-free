@@ -30,3 +30,7 @@ export { DoorOpen };
 // Doors, windows and openings are placed like furniture but belong to the build
 // flow — so they live in a dedicated build control, not the catalog panel.
 export const OPENINGS = FURNITURE_CATALOG.filter((e) => e.category === 'Openings');
+
+// Stairs get the same treatment: they connect floors, so they belong with the
+// building tools rather than buried among the furniture.
+export const STAIRS = FURNITURE_CATALOG.filter((e) => e.category === 'Stairs');

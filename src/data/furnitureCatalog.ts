@@ -40,6 +40,9 @@ export type Shape3D =
   | 'shower'
   | 'vanity'
   | 'stairs'
+  | 'stairs_l'
+  | 'stairs_u'
+  | 'stairs_spiral'
   | 'ottoman'
   | 'side_table'
   | 'crib'
@@ -252,11 +255,17 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'large_plant', name: 'Large Plant', category: 'Decor', width: 55, depth: 55, height: 170, color: '#346b41', shape: 'plant', icon: '🪴' },
   { type: 'round_rug', pro: true, name: 'Round Rug', category: 'Decor', width: 160, depth: 160, height: 1, color: '#c0738f', shape: 'rug', icon: '🟣' },
 
+  // Stairs. Their geometry lives in src/lib/stairs.ts; the type doubles as the
+  // shape so `isStairs(item)` can tell from the type alone.
+  { type: 'stairs', name: 'Straight Stairs', category: 'Stairs', width: 100, depth: 250, height: 280, color: '#9aa0a6', shape: 'stairs', icon: '🪜' },
+  { type: 'stairs_l', name: 'L-shaped Stairs', category: 'Stairs', width: 240, depth: 320, height: 280, color: '#9aa0a6', shape: 'stairs_l', icon: '🪜' },
+  { type: 'stairs_u', name: 'U-shaped Stairs', category: 'Stairs', width: 220, depth: 290, height: 280, color: '#9aa0a6', shape: 'stairs_u', icon: '🪜' },
+  { type: 'stairs_spiral', name: 'Spiral Stairs', category: 'Stairs', width: 160, depth: 160, height: 280, color: '#7d848c', shape: 'stairs_spiral', icon: '🌀' },
+
   // Outdoor
   { type: 'patio_table', pro: true, name: 'Bistro Set', category: 'Outdoor', width: 110, depth: 180, height: 90, color: '#8a6f4f', shape: 'table', icon: '🪑' },
   { type: 'patio_chair', name: 'Garden Chair', category: 'Outdoor', width: 55, depth: 55, height: 85, color: '#d8d4c8', shape: 'chair', icon: '🪑' },
   { type: 'bench', name: 'Garden Bench', category: 'Outdoor', width: 150, depth: 50, height: 80, color: '#6e5236', shape: 'sofa', icon: '🪑' },
-  { type: 'stairs', name: 'Stairs', category: 'Outdoor', width: 100, depth: 250, height: 280, color: '#9aa0a6', shape: 'stairs', icon: '🪜' },
   // --- Garden set. Procedural shapes (tree/hedge/parasol/lounger/bbq) cost no
   // APK bytes; the rest are CC0 Poly Haven models fetched by fetch-models.mjs.
   { type: 'tree', name: 'Tree', category: 'Outdoor', width: 320, depth: 320, height: 480, color: '#4a7c46', shape: 'tree', icon: '🌳' },

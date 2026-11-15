@@ -154,6 +154,8 @@ export interface FurnitureItem {
   /** Kitchen-unit fronts: bar handles (default) or handleless, which draws a
    *  dark shadow gap along the top of each front instead. */
   handles?: 'bar' | 'none';
+  /** Turning stairs (L, U, spiral): true turns the other way. */
+  mirrored?: boolean;
 }
 
 /** A raster plan (from PDF or image) shown beneath the editor for tracing. */
@@ -201,6 +203,8 @@ export interface FloorInfo {
   elevation: number;
   /** Roof sitting on this storey. Absent = no roof (all existing saves). */
   roof?: Roof;
+  /** Hidden in 3D. The floor being edited always shows. */
+  hidden?: boolean;
 }
 
 /** The editable geometry that belongs to a single storey. */

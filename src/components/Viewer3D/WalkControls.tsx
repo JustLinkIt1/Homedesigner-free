@@ -10,6 +10,7 @@ import {
   stairLanding,
   type WalkWallSegment,
 } from '../../lib/walkNavigation';
+import { isStairs } from '../../lib/stairs';
 import { useDesignBounds, M } from './DesignScene';
 
 /**
@@ -345,11 +346,11 @@ export default function WalkControls({
       const above = orderedFloors[activeIndex + 1];
       const below = orderedFloors[activeIndex - 1];
       const upwardStair = floorGeom[activeFloorId]?.furniture.find(
-        (item) => item.type === 'stairs' && isAtStairEnd(item, camera.position.x, camera.position.z, 'low'),
+        (item) => isStairs(item) && isAtStairEnd(item, camera.position.x, camera.position.z, 'low'),
       );
       const downwardStair = below
         ? floorGeom[below.id]?.furniture.find(
-            (item) => item.type === 'stairs' && isAtStairEnd(item, camera.position.x, camera.position.z, 'high'),
+            (item) => isStairs(item) && isAtStairEnd(item, camera.position.x, camera.position.z, 'high'),
           )
         : undefined;
       const stair = above && upwardStair ? upwardStair : downwardStair;

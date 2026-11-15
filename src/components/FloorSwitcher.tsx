@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Layers, X, Crown, Copy, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Layers, X, Crown, Copy, ChevronUp, ChevronDown, Eye, EyeOff, Pencil } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useProStore } from '../store/proStore';
 import { requirePro } from '../lib/pro';
@@ -8,8 +8,9 @@ import { useI18n } from '../lib/i18n';
 
 /**
  * Storey switcher: stacked top→bottom like a building. Click a floor to edit
- * it, "+" to add one above, double-click to rename, × to remove. Shown in both
- * the 2D and 3D views so you can move between levels anywhere.
+ * it, "+" to add one above, the pencil (or a double-click) to rename, the eye
+ * to hide it in 3D, × to remove. Shown in both the 2D and 3D views so you can
+ * move between levels anywhere.
  */
 export default function FloorSwitcher({ variant = 'floating' }: { variant?: 'floating' | 'toolbar' }) {
   const floors = useDesign((s) => s.floors);
@@ -19,6 +20,7 @@ export default function FloorSwitcher({ variant = 'floating' }: { variant?: 'flo
   const cloneFloor = useDesign((s) => s.cloneFloor);
   const removeFloor = useDesign((s) => s.removeFloor);
   const renameFloor = useDesign((s) => s.renameFloor);
+  const setFloorHidden = useDesign((s) => s.setFloorHidden);
   const activeFloor = useDesign((s) => s.floors.find((f) => f.id === s.activeFloorId));
   const isPro = useProStore((s) => s.isPro);
   const t = useI18n();
@@ -125,10 +127,34 @@ export default function FloorSwitcher({ variant = 'floating' }: { variant?: 'flo
                     setMobileOpen(false);
                   }}
                   onDoubleClick={() => setEditing(f.id)}
-                  data-tip={`${f.name} — double-click to rename`} aria-label={`${f.name} — double-click to rename`}
+                  data-tip={t(f.name)} aria-label={t(f.name)}
                 >
                   <Layers className="icon" style={{ width: 14, height: 14 }} />
-                  <span>{t(f.name)}</span>
+                  <span className={f.hidden && !active ? 'floor-name-hidden' : undefined}>{t(f.name)}</span>
+                </button>
+              )}
+              {editing !== f.id && (
+                <button
+                  className="floor-icon-btn"
+                  aria-label={`${t('Rename floor')}: ${t(f.name)}`}
+                  data-tip={t('Rename floor')}
+                  onClick={() => setEditing(f.id)}
+                >
+                  <Pencil className="icon" style={{ width: 13, height: 13 }} />
+                </button>
+              )}
+              {floors.length > 1 && editing !== f.id && (
+                <button
+                  className={`floor-icon-btn ${f.hidden && !active ? 'off' : ''}`}
+                  aria-pressed={!f.hidden}
+                  disabled={active}
+                  aria-label={`${f.hidden ? t('Show in 3D') : t('Hide in 3D')}: ${t(f.name)}`}
+                  data-tip={active ? t('The floor you are editing always shows') : f.hidden ? t('Show in 3D') : t('Hide in 3D')}
+                  onClick={() => setFloorHidden(f.id, !f.hidden)}
+                >
+                  {f.hidden && !active
+                    ? <EyeOff className="icon" style={{ width: 13, height: 13 }} />
+                    : <Eye className="icon" style={{ width: 13, height: 13 }} />}
                 </button>
               )}
               {active && floors.length > 1 && (

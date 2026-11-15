@@ -27,6 +27,7 @@ import type { CustomTexture, FenceStyle, OpeningStyle, RoofType, Room, Wall } fr
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, worktopMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 import { hasFronts, hasWorktop, swapTargets, worktopId } from '../lib/kitchenUnits';
+import { isStairs, stairTurns } from '../lib/stairs';
 
 // Opening styles whose catalog entry is Pro — derived from the catalog's
 // `pro` flags so the Style dropdown gate can never drift from it.
@@ -747,7 +748,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 >
                   <RotateCcw className="icon" /> <span>90°</span>
                 </button>
-                {item.type === 'stairs' && (
+                {isStairs(item) && (
                   <button
                     className="wide"
                     onClick={() => s.updateFurniture(item.id, { rotation: (item.rotation + 180) % 360 })}
@@ -755,6 +756,16 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     data-tip={t('Reverse stairs')}
                   >
                     <ArrowUpDown className="icon" /> <span>{t('Reverse')}</span>
+                  </button>
+                )}
+                {stairTurns(item.type) && (
+                  <button
+                    className="wide"
+                    onClick={() => s.updateFurniture(item.id, { mirrored: !item.mirrored })}
+                    aria-label={t('Turn the other way')}
+                    data-tip={t('Turn the other way')}
+                  >
+                    <ArrowLeftRight className="icon" /> <span>{t('Flip turn')}</span>
                   </button>
                 )}
                 <button

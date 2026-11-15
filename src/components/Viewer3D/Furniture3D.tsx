@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { CATALOG_BY_TYPE, type Shape3D } from '../../data/furnitureCatalog';
@@ -14,6 +14,7 @@ import { ItemShade } from './FakeShadows';
 import type { FurnitureItem } from '../../types';
 import { isSurfacePlaceable, supportElevationAt } from '../../lib/furniturePlacement';
 import { notifyPlacementComplete } from '../../lib/placementFeedback';
+import { stairPlan, type StairShape } from '../../lib/stairs';
 
 const M = 0.01; // cm -> m
 /** Battery saver tier has no shadow maps: floor-standing items carry a soft
@@ -221,7 +222,7 @@ export default function Furniture3D({
         <ResilientGltfFurniture
           item={item}
           preferRender={preferRenderModel}
-          fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} seed={item.position.x * 0.013 + item.position.y * 0.029} />}
+          fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={!!item.mirrored} seed={item.position.x * 0.013 + item.position.y * 0.029} />}
         />
       )}
     </group>
@@ -293,11 +294,13 @@ function FourLegs({
 }
 
 export function ShapeMesh({
-  shape, w, d, h, color, seed = 0,
+  shape, w, d, h, color, seed = 0, mirrored = false,
 }: {
   shape: Shape3D; w: number; d: number; h: number; color: string;
   /** Turns otherwise identical garden shapes so two trees never match. */
   seed?: number;
+  /** Turning stairs: the other hand. */
+  mirrored?: boolean;
 }) {
   switch (shape) {
     case 'sofa': {
@@ -984,25 +987,73 @@ export function ShapeMesh({
           <Box w={w * 0.4} d={d} h={h * 0.04} y={h * 0.02} color={'#2a2a30'} />
         </group>
       );
-    case 'stairs': {
-      const steps = Math.max(6, Math.round(h / 0.18));
-      const stepH = h / steps;
-      const stepD = d / steps;
-      return (
-        <group>
-          {Array.from({ length: steps }).map((_, i) => (
-            <Box key={i} w={w} d={stepD} h={stepH}
-              y={stepH * (i + 0.5)}
-              dz={-d * 0.5 + stepD * (i + 0.5)}
-              color={i % 2 === 0 ? color : shade(color, -14)}
-              roughness={0.7} />
-          ))}
-        </group>
-      );
-    }
+    case 'stairs':
+    case 'stairs_l':
+    case 'stairs_u':
+    case 'stairs_spiral':
+      return <StairMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={mirrored} />;
     default:
       return <Box w={w} d={d} h={h} y={h * 0.5} color={color} />;
   }
+}
+
+/**
+ * Every stair shape, from the same geometry as its plan symbol (lib/stairs.ts).
+ * Treads are solid blocks one rise tall, like the original straight stair; a
+ * spiral's are thin wedges on a central post. Merged into two meshes (the
+ * alternating tread colours) whatever the step count.
+ */
+function StairMesh({ shape, w, d, h, color, mirrored }: {
+  shape: StairShape; w: number; d: number; h: number; color: string; mirrored: boolean;
+}) {
+  const { even, odd, post, postH } = useMemo(() => {
+    const plan = stairPlan(shape, w / M, d / M, h / M, mirrored);
+    const rise = plan.rise * M;
+    const spiral = !!plan.post;
+    const parts: [THREE.BufferGeometry[], THREE.BufferGeometry[]] = [[], []];
+    for (const tread of plan.treads) {
+      const outline = new THREE.Shape(tread.poly.map((p) => new THREE.Vector2(p.x * M, -p.y * M)));
+      const thick = spiral ? Math.min(0.05, rise * 0.4) : rise;
+      const geo = new THREE.ExtrudeGeometry(outline, { depth: thick, bevelEnabled: false });
+      // Shape XY -> plan XZ, extruded upward, top at this tread's level.
+      geo.rotateX(-Math.PI / 2);
+      geo.translate(0, tread.level * rise - thick, 0);
+      parts[tread.level % 2].push(geo);
+    }
+    const merge = (list: THREE.BufferGeometry[]) => {
+      if (list.length === 0) return null;
+      const merged = mergeGeometries(list, false);
+      list.forEach((g) => g.dispose());
+      return merged;
+    };
+    return {
+      even: merge(parts[0]),
+      odd: merge(parts[1]),
+      post: plan.post ? plan.post.radius * M : 0,
+      postH: plan.steps * rise + 0.9,
+    };
+  }, [shape, w, d, h, mirrored]);
+  useEffect(() => () => { even?.dispose(); odd?.dispose(); }, [even, odd]);
+  return (
+    <group>
+      {even && (
+        <mesh geometry={even} castShadow receiveShadow>
+          <meshStandardMaterial color={color} roughness={0.7} metalness={0.05} />
+        </mesh>
+      )}
+      {odd && (
+        <mesh geometry={odd} castShadow receiveShadow>
+          <meshStandardMaterial color={shade(color, -14)} roughness={0.7} metalness={0.05} />
+        </mesh>
+      )}
+      {post > 0 && (
+        <mesh position={[0, postH / 2, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[post * 0.55, post * 0.55, postH, 20]} />
+          <meshStandardMaterial color={shade(color, -30)} roughness={0.4} metalness={0.5} />
+        </mesh>
+      )}
+    </group>
+  );
 }
 
 const smooth01 = (a: number, b: number, v: number) => {

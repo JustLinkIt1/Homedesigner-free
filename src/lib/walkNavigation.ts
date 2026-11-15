@@ -1,5 +1,6 @@
 import { pointInPolygon, polygonVisualCenter } from './geometry';
 import type { FurnitureItem, Opening, Point, Room, Wall } from '../types';
+import { stairPlanFor, stairToPlan } from './stairs';
 
 const M = 0.01;
 
@@ -94,15 +95,21 @@ export function stairOpeningPoints(item: FurnitureItem): Point[] {
   }));
 }
 
+/** Is the walker standing on (or just before) this stair's bottom or top
+ *  step? Works for every stair shape: each has an entry edge, and the zone is
+ *  the strip across that edge, reaching a little way onto the stair. */
 export function isAtStairEnd(item: FurnitureItem, x: number, z: number, end: 'low' | 'high') {
   const local = stairLocalPosition(item, x, z);
-  const halfWidth = item.width * M / 2 + 0.22;
-  const halfDepth = item.depth * M / 2;
-  const landingDepth = Math.min(0.9, Math.max(0.55, item.depth * M * 0.38));
-  if (Math.abs(local.x) > halfWidth) return false;
-  return end === 'low'
-    ? local.z >= -halfDepth - 0.3 && local.z <= -halfDepth + landingDepth
-    : local.z <= halfDepth + 0.3 && local.z >= halfDepth - landingDepth;
+  const plan = stairPlanFor(item);
+  const edge = end === 'low' ? plan.low : plan.high;
+  const rx = local.x - edge.at.x * M;
+  const rz = local.z - edge.at.y * M;
+  // Distance onto the stair (against `out`) and across the edge.
+  const along = -(rx * edge.out.x + rz * edge.out.y);
+  const across = Math.abs(rx * edge.out.y - rz * edge.out.x);
+  const run = plan.post ? item.depth * M * 0.35 : item.depth * M;
+  const landingDepth = Math.min(0.9, Math.max(0.55, run * 0.38));
+  return across <= plan.flightWidth * M / 2 + 0.22 && along >= -0.3 && along <= landingDepth;
 }
 
 /** Landing just beyond the stair's selected end, clear of its trigger zone.
@@ -110,13 +117,11 @@ export function isAtStairEnd(item: FurnitureItem, x: number, z: number, end: 'lo
  * badly oriented stairs fall back to the nearest room centre instead of
  * placing the walker outside the building. */
 export function stairLanding(item: FurnitureItem, end: 'low' | 'high', rooms: Room[] = []) {
-  const angle = (item.rotation * Math.PI) / 180;
-  const distance = item.depth * M / 2 + 1.05;
-  const direction = end === 'high' ? 1 : -1;
-  const ideal = {
-    x: item.position.x * M - Math.sin(angle) * distance * direction,
-    z: item.position.y * M + Math.cos(angle) * distance * direction,
-  };
+  const plan = stairPlanFor(item);
+  const edge = end === 'low' ? plan.low : plan.high;
+  const local = { x: edge.at.x + edge.out.x * 105, y: edge.at.y + edge.out.y * 105 };
+  const world = stairToPlan(item, local);
+  const ideal = { x: world.x * M, z: world.y * M };
   if (rooms.length === 0 || rooms.some((room) => pointInPolygon({ x: ideal.x / M, y: ideal.z / M }, room.points))) {
     return ideal;
   }
