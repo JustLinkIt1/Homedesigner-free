@@ -5,6 +5,7 @@ import { useDesign } from '../store/designStore';
 import { useI18n } from '../lib/i18n';
 import { renderPlanFile, type RenderedPlan } from '../lib/pdfImport';
 import { importDxf } from '../lib/dxfImport';
+import { pointInPolygon } from '../lib/geometry';
 import { autoThreshold, type PixelSegment } from '../lib/autoTrace';
 import { traceWallsV2, traceWallsAuto } from '../lib/wallTrace';
 import { segmentsToWalls } from '../lib/wallBuilder';
@@ -192,8 +193,21 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     const storeys = res.storeys.filter((st) => st.walls.length > 0);
     storeys.forEach((st, i) => {
       if (i > 0) s.addFloor();
-      s.importWalls(st.walls, true, st.openings);
+      // A CAD file is a whole plan, so it replaces what was on the floor
+      // rather than leaving the old rooms and furniture standing beside it.
+      s.importWalls(st.walls, true, st.openings, true);
       s.detectRoomsFromWalls(); // auto-create rooms from the imported walls
+      // Carry the plan's own room names across: a label sitting inside a room
+      // names it. "Living" and "Room" on two lines read top to bottom. A room
+      // holding more than a few words is carrying notes, not a name.
+      for (const room of useDesign.getState().rooms) {
+        if (!room.auto) continue;
+        const inside = st.labels
+          .filter((l) => pointInPolygon(l.at, room.points))
+          .sort((p, q) => p.at.y - q.at.y || p.at.x - q.at.x);
+        if (inside.length === 0 || inside.length > 3) continue;
+        useDesign.getState().updateRoom(room.id, { name: inside.map((l) => l.text).join(' ').slice(0, 40) });
+      }
     });
     if (storeys.length > 1) {
       toast.success(`${t('Imported')} ${storeys.length} ${t('floors')}`);
@@ -244,7 +258,10 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
               <input
                 ref={fileRef}
                 type="file"
-                accept=".pdf,.dxf,.dwg,image/*"
+                // Android's file picker greys out anything whose type it cannot
+                // match, and it has no type for .dxf or .dwg, so a CAD file
+                // could be seen there but not chosen. No filter on Android.
+                accept={/android/i.test(navigator.userAgent) ? undefined : '.pdf,.dxf,.dwg,image/*'}
                 style={{ display: 'none' }}
                 onChange={onPick}
               />

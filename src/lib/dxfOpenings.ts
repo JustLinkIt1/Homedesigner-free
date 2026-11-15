@@ -24,6 +24,9 @@ import type { Seg } from './wallCentrelines';
 
 export interface KindedSeg extends Seg {
   kind: 'door' | 'window';
+  /** The block this stroke belongs to, when the drawing places each door and
+   *  window as its own block. */
+  group?: number;
 }
 
 /** Plan-model defaults for the dimensions a 2D drawing does not carry. */
@@ -44,13 +47,18 @@ export function classifyOpening(
   reach: number,
   symbols: KindedSeg[],
 ): 'door' | 'window' | null {
-  let best: { kind: 'door' | 'window'; d: number } | null = null;
+  return nearestSymbol(centre, reach, symbols)?.kind ?? null;
+}
+
+/** The symbol stroke nearest `centre`, within `reach`. */
+export function nearestSymbol(centre: Point, reach: number, symbols: KindedSeg[]): KindedSeg | null {
+  let best: { seg: KindedSeg; d: number } | null = null;
   for (const s of symbols) {
     const d = pointToSegment(centre, s.a, s.b).dist;
     if (d > reach) continue;
-    if (!best || d < best.d) best = { kind: s.kind, d };
+    if (!best || d < best.d) best = { seg: s, d };
   }
-  return best ? best.kind : null;
+  return best ? best.seg : null;
 }
 
 /**

@@ -45,6 +45,24 @@
   by `tools/share-plan.mjs` and applied by hand. Not live until the migration
   is applied and the Worker deployed.
 - `tools/check-plan.mjs` checks a room-list plan before it is rendered.
+- DXF / DWG import no longer bends the walls of a small plan. Reported with a
+  file exported from an Android floor-plan app, which imported with nearly
+  every wall slanted and three of zero length. Four causes, all fixed:
+  corners were closed with the raster tracer's 90 cm snap, which averages
+  together corners that really are that close (now `src/lib/wallJoin.ts`: an
+  end only moves along its own wall, to where it crosses its neighbour); a
+  layer called `wallitems` was read as walls (it and `roomitems` are
+  furniture); wall faces were paired by how far their lines overlapped,
+  including across doorways, so stubs sharing a line stole a face from the
+  real wall (now judged on what is drawn); and a door's swing arc planted a
+  second door on the wall round the corner (each door or window block is now
+  one opening, in the wall its threshold lies in).
+- Import also handles a door at the very end of a wall and a window filling
+  the whole stretch between two corners, and carries the plan's room names
+  across ("Kitchen", "Living Room").
+- Android: the import file picker could not select a .dxf or .dwg. Android
+  has no file type for either, so the picker's filter greyed them out; the
+  filter is dropped on Android. Reaches the Play app with the next build.
 
 ## 1.22.35 — rating prompt after exports and AI renders
 

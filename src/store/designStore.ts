@@ -205,7 +205,9 @@ interface DesignState extends DesignSnapshot {
    *  pass null to remove it. Always applies to the top storey. */
   setRoof: (patch: Partial<Roof> | null) => void;
 
-  importWalls: (walls: Wall[], replace?: boolean, openings?: Opening[]) => void;
+  /** `clearFloor` also empties this floor of rooms and furniture: a whole new
+   *  plan has arrived, and the old one's sofa does not belong in it. */
+  importWalls: (walls: Wall[], replace?: boolean, openings?: Opening[], clearFloor?: boolean) => void;
   detectRoomsFromWalls: () => number;
   /** Square room of `sizeCm` per side, walls + detected room, as one undo step. */
   addStarterRoom: (sizeCm?: number) => void;
@@ -1249,11 +1251,15 @@ export const useDesign = create<DesignState>((set, get) => {
         });
       }),
 
-    importWalls: (walls, replace = false, openings) =>
+    importWalls: (walls, replace = false, openings, clearFloor = false) =>
       commit((d) => {
         if (replace) {
           d.walls = [];
           d.openings = [];
+        }
+        if (clearFloor) {
+          d.rooms = [];
+          d.furniture = [];
         }
         d.walls.push(...walls);
         // Openings reference wall ids, so they can only be imported alongside

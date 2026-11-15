@@ -96,6 +96,9 @@ interface Run {
   offset: number; // perpendicular position of the line
   t0: number; // start along the line
   t1: number; // end
+  /** The stretches actually drawn. A run bridges opening-sized breaks, so its
+   *  t0..t1 can be mostly air; pairing has to be judged on the ink. */
+  parts: [number, number][];
   /** Breaks bridged while building this run — candidate openings. */
   gaps: [number, number][];
   /** Portions already consumed by a pairing, so a face can serve two walls. */
@@ -126,6 +129,31 @@ function freeOverlap(run: Run, t0: number, t1: number): [number, number] | null 
     if (!best || piece[1] - piece[0] > best[1] - best[0]) best = piece;
   }
   return best;
+}
+
+/** Length of [t0,t1] that the run actually draws. */
+function inkWithin(run: Run, t0: number, t1: number): number {
+  let sum = 0;
+  for (const [a, b] of run.parts) sum += Math.max(0, Math.min(b, t1) - Math.max(a, t0));
+  return sum;
+}
+
+/** Where two runs are both drawn: total length, and first-to-last extent. */
+function sharedInk(A: Run, B: Run): { length: number; lo: number; hi: number } | null {
+  let length = 0;
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const [a0, a1] of A.parts) {
+    for (const [b0, b1] of B.parts) {
+      const s0 = Math.max(a0, b0);
+      const s1 = Math.min(a1, b1);
+      if (s1 <= s0) continue;
+      length += s1 - s0;
+      lo = Math.min(lo, s0);
+      hi = Math.max(hi, s1);
+    }
+  }
+  return length > 0 ? { length, lo, hi } : null;
 }
 
 function consume(run: Run, t0: number, t1: number) {
@@ -204,19 +232,27 @@ export function wallCentrelines(segs: Seg[], options: Partial<CentrelineOptions>
       line.parts.sort((p, q) => p.t0 - q.t0);
       let cur = { ...line.parts[0] };
       let gaps: [number, number][] = [];
+      let parts: [number, number][] = [[cur.t0, cur.t1]];
       for (let i = 1; i < line.parts.length; i++) {
         const p = line.parts[i];
         if (p.t0 - cur.t1 <= o.gapTol) {
           // Bridged: remember where the face was interrupted.
-          if (p.t0 > cur.t1) gaps.push([cur.t1, p.t0]);
+          if (p.t0 > cur.t1) {
+            gaps.push([cur.t1, p.t0]);
+            parts.push([p.t0, p.t1]);
+          } else {
+            const last = parts[parts.length - 1];
+            last[1] = Math.max(last[1], p.t1);
+          }
           cur.t1 = Math.max(cur.t1, p.t1);
         } else {
-          runs.push({ offset: line.off, t0: cur.t0, t1: cur.t1, gaps, used: [] });
+          runs.push({ offset: line.off, t0: cur.t0, t1: cur.t1, parts, gaps, used: [] });
           cur = { ...p };
           gaps = [];
+          parts = [[cur.t0, cur.t1]];
         }
       }
-      runs.push({ offset: line.off, t0: cur.t0, t1: cur.t1, gaps, used: [] });
+      runs.push({ offset: line.off, t0: cur.t0, t1: cur.t1, parts, gaps, used: [] });
     }
 
     // Candidate face pairs: parallel, a wall-thickness apart, overlapping.
@@ -226,10 +262,14 @@ export function wallCentrelines(segs: Seg[], options: Partial<CentrelineOptions>
       for (let j = i + 1; j < runs.length; j++) {
         const gap = Math.abs(runs[j].offset - runs[i].offset);
         if (gap < o.minThickness || gap > o.maxThickness) continue;
-        const lo = Math.max(runs[i].t0, runs[j].t0);
-        const hi = Math.min(runs[i].t1, runs[j].t1);
-        if (hi - lo < o.minLength) continue;
-        cands.push({ i, j, overlap: hi - lo });
+        // Judge the pair on what is DRAWN on both lines. A run bridges door
+        // gaps, so two unrelated faces can "overlap" for metres across thin
+        // air: on one plan the stubs of three separate walls happened to share
+        // a line, bridged into one long run, and stole a face from the real
+        // wall 17 cm away to make a 51 cm one.
+        const shared = sharedInk(runs[i], runs[j]);
+        if (!shared || shared.length < o.minLength) continue;
+        cands.push({ i, j, overlap: shared.length });
       }
     }
     // Longest overlaps first: the most confident pairings claim their faces
@@ -239,14 +279,18 @@ export function wallCentrelines(segs: Seg[], options: Partial<CentrelineOptions>
     for (const c of cands) {
       const A = runs[c.i];
       const B = runs[c.j];
-      const lo = Math.max(A.t0, B.t0);
-      const hi = Math.min(A.t1, B.t1);
+      const shared = sharedInk(A, B);
+      if (!shared) continue;
+      const lo = shared.lo;
+      const hi = shared.hi;
       const fa = freeOverlap(A, lo, hi);
       if (!fa) continue;
       const fb = freeOverlap(B, fa[0], fa[1]);
       if (!fb) continue;
       const [t0, t1] = fb;
       if (t1 - t0 < o.minLength) continue;
+      // What is left after earlier pairings must still be drawn on both.
+      if (Math.min(inkWithin(A, t0, t1), inkWithin(B, t0, t1)) < o.minLength) continue;
       consume(A, t0, t1);
       consume(B, t0, t1);
       const thick = Math.abs(B.offset - A.offset);
@@ -301,10 +345,20 @@ export function wallCentrelines(segs: Seg[], options: Partial<CentrelineOptions>
     for (const run of runs) {
       const free = freeOverlap(run, run.t0, run.t1);
       if (!free) continue;
-      if (free[1] - free[0] < o.keepUnpairedOver) continue;
+      // Ink, not span: two 15 cm stubs bridged across a doorway are not a wall.
+      if (inkWithin(run, free[0], free[1]) < o.keepUnpairedOver) continue;
+      // And it runs between its first and last real stretch, so a stray stub
+      // on the same line does not drag the wall out to meet it.
+      const solid = run.parts
+        .map(([a, b]): [number, number] => [Math.max(a, free[0]), Math.min(b, free[1])])
+        .filter(([a, b]) => b - a >= o.minLength);
+      if (solid.length === 0) continue;
+      const from = solid[0][0];
+      const to = solid[solid.length - 1][1];
+      if (to - from < o.keepUnpairedOver) continue;
       out.push({
-        a: toWorld(free[0], run.offset),
-        b: toWorld(free[1], run.offset),
+        a: toWorld(from, run.offset),
+        b: toWorld(to, run.offset),
         thickness: 0,
         paired: false,
         gaps: [],

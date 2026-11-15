@@ -47,6 +47,11 @@ const RULES: { kind: LayerKind; words: string[] }[] = [
   // the storey or the word "mur", and they must never become walls.
   { kind: 'dimension', words: ['cotation', 'dimension', 'bemassung', 'masse', 'quote', 'acotacion', 'dim-', 'a-dim', 'dims'] },
   { kind: 'annotation', words: ['texte', 'text', 'label', 'legende', 'legend', 'titre', 'title', 'marque', 'coupe', 'section', 'image', 'scan', 'nord', 'north', 'repere', 'anno'] },
+  // Floor-plan apps name their object layers after where the object sits:
+  // "wallitems" (radiators, mirrors) and "roomitems" (furniture). Those must be
+  // claimed before the bare words "wall" and "room" get to them, or a radiator
+  // arrives as five hundred wall faces.
+  { kind: 'furniture', words: ['wallitem', 'wall item', 'wall-item', 'wall_item', 'roomitem', 'room item', 'room-item', 'room_item'] },
   { kind: 'door', words: ['porte', 'door', 'tuer', 'puerta', 'porta'] },
   // 'glaz' is the AIA standard term (A-GLAZ), used across UK/US practice.
   { kind: 'window', words: ['fenetre', 'window', 'fenster', 'ventana', 'finestra', 'baie', 'glaz'] },

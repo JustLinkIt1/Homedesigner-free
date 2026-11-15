@@ -1187,5 +1187,93 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   check('rotate: norm360 brings that back in range', norm360(snapAngleTo(358, 15, 5)) === 0);
 }
 
+// ---- plans exported by floor-plan apps ------------------------------------
+// A made-up plan in the shape those apps write: metres, walls as outlines on a
+// "walls" layer, every door and window a block scaled from millimetres, object
+// layers called "wallitems" and "roomitems", and each letter of a room name
+// written as \U+XXXX. A real one imported with every wall bent: corners 90 cm
+// apart were being averaged together, a radiator on "wallitems" was read as
+// wall, and a door's swing planted a second door on the wall round the corner.
+{
+  const g = (code, v) => `${code}\n${v}\n`;
+  const rect = (x0, y0, x1, y1) =>
+    g(0, 'LWPOLYLINE') + g(8, 'walls') + g(90, 4) + g(70, 1) +
+    [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => g(10, x) + g(20, y)).join('');
+  const line = (pts) =>
+    g(0, 'LWPOLYLINE') + g(8, '0') + g(90, pts.length) + g(70, 0) + pts.map(([x, y]) => g(10, x) + g(20, y)).join('');
+  const block = (name, body) =>
+    g(0, 'BLOCK') + g(8, '0') + g(2, name) + g(70, 0) + g(10, 0) + g(20, 0) + g(30, 0) + g(3, name) + body + g(0, 'ENDBLK') + g(8, '0');
+  const insert = (layer, name, x, y, rot) =>
+    g(0, 'INSERT') + g(8, layer) + g(2, name) + g(10, x) + g(20, y) + g(30, 0) + g(41, 0.001) + g(42, 0.001) + g(50, rot);
+  const word = (s) => [...s].map((c) => '\\U+' + c.charCodeAt(0).toString(16).padStart(4, '0')).join('');
+
+  // A 3 x 3 m room. The right-hand wall stops at 2.0 m and a door fills the
+  // rest of it, up to the corner; its leaf lies flat along the top wall.
+  const door = line([[-425, 0], [425, 0]]) + line([[425, 0], [425, 850]]) +
+    line([[425, 850], [130, 790], [-130, 620], [-320, 350], [-425, 0]]);
+  // A radiator: plenty of long parallel strokes, exactly what a wall looks like.
+  const radiator = Array.from({ length: 12 }, (_, i) => line([[-500, i * 10], [500, i * 10]])).join('');
+  const dxf =
+    g(0, 'SECTION') + g(2, 'HEADER') + g(9, '$INSUNITS') + g(70, 6) + g(0, 'ENDSEC') +
+    g(0, 'SECTION') + g(2, 'BLOCKS') + block('D1', door) + block('R1', radiator) + g(0, 'ENDSEC') +
+    g(0, 'SECTION') + g(2, 'ENTITIES') +
+    rect(0, 0, 3, 0.15) + rect(0, 2.85, 3, 3) + rect(0, 0, 0.15, 3) + rect(2.85, 0, 3, 2.0) +
+    rect(1.0, 0.15, 1.15, 0.45) + // a 30 cm stub off the bottom wall
+    insert('doors', 'D1', 2.925, 2.425, 90) +
+    insert('wallitems', 'R1', 1.5, 2.7, 0) +
+    g(0, 'TEXT') + g(8, 'texts') + g(10, 1.2) + g(20, 1.5) + g(30, 0) + g(40, 0.2) + g(1, word('Kitchen')) +
+    g(0, 'ENDSEC') + g(0, 'EOF');
+
+  check('layers: "wallitems" is furniture, not wall', classifyLayer('wallitems') === 'furniture', classifyLayer('wallitems'));
+  check('layers: "roomitems" is furniture, not a zone', classifyLayer('roomitems') === 'furniture', classifyLayer('roomitems'));
+  check('layers: "walls" is still wall', classifyLayer('walls') === 'wall');
+
+  const r = importDxf(dxf, { wallHeight: 270, wallThickness: 10 });
+  const len = (w) => Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
+  const square = (w) => Math.abs(w.end.x - w.start.x) < 0.5 || Math.abs(w.end.y - w.start.y) < 0.5;
+  check('app plan: read in metres', r.unitScale === 100, `${r.unitScale}`);
+  check('app plan: four walls and the stub, nothing from the radiator', r.walls.length === 5,
+    JSON.stringify(r.walls.map((w) => [w.start, w.end].map((p) => [Math.round(p.x), Math.round(p.y)]))));
+  check('app plan: no wall is bent', r.walls.every(square),
+    JSON.stringify(r.walls.filter((w) => !square(w)).map((w) => [w.start, w.end])));
+  check('app plan: no wall is crushed to nothing', r.walls.every((w) => len(w) >= 20),
+    JSON.stringify(r.walls.map((w) => Math.round(len(w)))));
+  check('app plan: the 30 cm stub survives as a stub', r.walls.some((w) => len(w) > 25 && len(w) < 50));
+  check('app plan: the room closes', detectRooms(r.walls).length === 1, `${detectRooms(r.walls).length}`);
+
+  check('app plan: one door block is one door', r.openings.length === 1 && r.openings[0].type === 'door',
+    JSON.stringify(r.openings.map((o) => [o.type, o.width])));
+  const host = r.walls.find((w) => w.id === r.openings[0]?.wallId);
+  check('app plan: the door is in the wall it was drawn in, not the one round the corner',
+    !!host && Math.abs(host.start.x - host.end.x) < 0.5 && Math.abs(host.start.x - 292.5) < 2,
+    JSON.stringify(host && [host.start, host.end]));
+  check('app plan: that wall now runs across the doorway to the corner', !!host && len(host) > 280, `${host && len(host)}`);
+  check('app plan: the door keeps its width', Math.abs((r.openings[0]?.width ?? 0) - 85) <= 1, `${r.openings[0]?.width}`);
+  if (host && r.openings[0]) {
+    const o = r.openings[0];
+    const cy = host.start.y + (host.end.y - host.start.y) * o.offset;
+    // Drawn at y = 2.425 m; plan Y runs downward from the drawing's lowest point.
+    check('app plan: the door sits where it was drawn', Math.abs(cy - -242.5) < 2, `${cy}`);
+  }
+  check('app plan: room name decoded and placed', r.storeys[0].labels.length === 1 && r.storeys[0].labels[0].text === 'Kitchen',
+    JSON.stringify(r.storeys[0].labels));
+}
+
+// A wall face must pair with the face beside it, not with a longer line of
+// unrelated stubs that only "overlaps" it across empty doorways.
+{
+  const seg = (x1, y1, x2, y2) => ({ a: { x: x1, y: y1 }, b: { x: x2, y: y2 } });
+  const cl = wallCentrelines([
+    seg(300, 0, 550, 0), seg(300, 17, 550, 17), // the real wall, 17 thick
+    // 51 away: two stubs and a long face further along, bridged into one run.
+    seg(130, 68, 147, 68), seg(300, 68, 316, 68), seg(550, 68, 940, 68),
+  ]);
+  const real = cl.filter((c) => c.paired);
+  check('centreline: pairs with the neighbouring face, not across thin air',
+    real.length === 1 && Math.abs(real[0].thickness - 17) < 0.5, JSON.stringify(real.map((c) => c.thickness)));
+  check('centreline: bridged stubs are not kept as a wall',
+    !cl.some((c) => !c.paired && Math.min(c.a.x, c.b.x) < 200), JSON.stringify(cl.filter((c) => !c.paired)));
+}
+
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');
 process.exit(fails ? 1 : 0);
