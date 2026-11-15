@@ -171,10 +171,10 @@
     .film .caption {
       position: absolute; left: 50%; transform: translateX(-50%);
       bottom: max(18px, env(safe-area-inset-bottom)); z-index: 3;
-      width: min(92vw, 560px);
+      width: min(94vw, 640px);
     }
     .film .card {
-      position: absolute; inset: auto 0 46px; margin: 0 auto;
+      position: absolute; inset: auto 0 50px; margin: 0 auto;
       background: rgba(13, 17, 27, 0.8);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -184,16 +184,16 @@
     }
     .film .card.on { opacity: 1; transform: translateY(0); transition-duration: 0.4s; }
     .film .card .step {
-      display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-2);
+      display: inline-block; font-size: 13.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-2);
       opacity: 0; transform: translateX(-12px); transition: opacity 0.35s ease, transform 0.35s ease;
     }
-    .film .card h3 { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; margin: 6px 0 4px; }
+    .film .card h3 { font-size: clamp(23px, 6.2vw, 27px); font-weight: 800; letter-spacing: -0.02em; margin: 6px 0 5px; }
     /* The title arrives word by word (the page script wraps each word). */
     .film .card h3 .w {
       display: inline-block; opacity: 0; transform: translateY(0.7em);
       transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    .film .card p { color: #c6cedd; font-size: 15px; opacity: 0; transform: translateY(8px); transition: opacity 0.4s ease, transform 0.4s ease; }
+    .film .card p { color: #d0d7e4; font-size: 17px; line-height: 1.45; opacity: 0; transform: translateY(8px); transition: opacity 0.4s ease, transform 0.4s ease; }
     .film .card.on .step { opacity: 1; transform: none; transition-delay: 0.05s; }
     .film .card.on h3 .w { opacity: 1; transform: none; transition-delay: calc(0.12s + var(--i) * 0.055s); }
     .film .card.on p { opacity: 1; transform: none; transition-delay: 0.38s; }
@@ -207,7 +207,7 @@
       transform-origin: left; transform: scaleX(var(--f, 0));
     }
     .film .rail span {
-      display: block; margin-top: 7px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+      display: block; margin-top: 7px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em;
       color: #7f8aa0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.3s ease;
     }
     .film .rail li.on span { color: #fff; }

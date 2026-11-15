@@ -225,7 +225,7 @@ export async function start(film, canvas) {
   const sunDir = new THREE.Vector3();
   const afternoon = new THREE.Vector3(-0.5, 0.66, 0.56).normalize(); // lights the front, which faces the street
   let W = 1, H = 1, aspect = 1;
-  let BAND = [0.15, 0.68]; // the part of the stage's height left free by the heading and the caption
+  let BAND = [0.15, 0.65]; // the part of the stage's height left free by the heading and the caption
   let viewOff = 0;
   let shot = { x: 0, y: 0, w: 1, h: 1, ar: 1.5 }; // where the final photo sits on the stage, in CSS px
   let path = null;
@@ -386,7 +386,7 @@ export async function start(film, canvas) {
     renderer.setSize(w, h, false);
     // Lift the house above the caption at the bottom of the stage.
     viewOff = aspect < 1 ? 0.1 : 0.06;
-    BAND = aspect < 1 ? [0.15, 0.68] : [0.2, 0.74];
+    BAND = aspect < 1 ? [0.15, 0.65] : [0.2, 0.72];
     // The photo: square on a tall screen, 3:2 on a wide one, as large as the free band allows.
     const ar = aspect < 0.9 ? 1 : 1.5;
     const room = H * (BAND[1] - BAND[0]);
@@ -410,21 +410,24 @@ export async function start(film, canvas) {
   // How far the section has scrolled into view before it pins: 0 = just entering, 1 = pinned.
   const approach = () => clamp01(1 - film.getBoundingClientRect().top / innerHeight);
 
-  let shown = 0, shownPre = 0, wanted = progress(), visible = true, raf = 0, dirty = true, held = null;
-  const loop = () => {
+  let shown = 0, shownPre = 0, wanted = progress(), visible = true, raf = 0, dirty = true, held = null, last = 0;
+  const loop = (now = 0) => {
     raf = 0;
+    // Ease by elapsed time, so a phone drawing fewer frames keeps up with the captions.
+    const k = 1 - Math.pow(0.88, Math.min(12, last ? (now - last) / 16.7 : 1));
+    last = now;
     if (!visible) return;
     wanted = held ?? progress();
     const wantedPre = held == null ? approach() : 1;
     const before = shown, beforePre = shownPre;
-    shown += (wanted - shown) * 0.12;
+    shown += (wanted - shown) * k;
     if (Math.abs(wanted - shown) < 0.0005) shown = wanted;
-    shownPre += (wantedPre - shownPre) * 0.12;
+    shownPre += (wantedPre - shownPre) * k;
     if (Math.abs(wantedPre - shownPre) < 0.0005) shownPre = wantedPre;
     if (dirty || shown !== before || shownPre !== beforePre) { pose(shown, shownPre); renderer.render(scene, camera); dirty = false; }
     raf = requestAnimationFrame(loop);
   };
-  const kick = () => { if (!raf && visible) raf = requestAnimationFrame(loop); };
+  const kick = () => { if (!raf && visible) { last = 0; raf = requestAnimationFrame(loop); } };
   new IntersectionObserver(([e]) => { visible = e.isIntersecting; kick(); }, { rootMargin: '100px' }).observe(film);
   // The stage follows the visible height, which changes as a phone's address bar comes and goes.
   new ResizeObserver(() => { resize(); dirty = true; kick(); }).observe(canvas);
