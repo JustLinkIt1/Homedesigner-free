@@ -1,0 +1,203 @@
+<en-GB>
+Bay windows: a window can now project from the wall with glass on three sides.
+Three new front doors.
+A more realistic outside view, with roofs for L-shaped houses and a street.
+DXF and DWG import fixed: walls come in straight, with doors, windows and room names.
+You can now choose DXF and DWG files on Android.
+</en-GB>
+<ar>
+نوافذ بارزة: يمكن للنافذة الآن أن تبرز من الجدار بزجاج من ثلاث جهات.
+ثلاثة أبواب أمامية جديدة.
+منظر خارجي أكثر واقعية، مع أسقف للمنازل على شكل L وشارع.
+إصلاح استيراد DXF و DWG: الجدران مستقيمة مع الأبواب والنوافذ وأسماء الغرف.
+يمكنك الآن اختيار ملفات DXF و DWG على أندرويد.
+</ar>
+<cs-CZ>
+Arkýřová okna: okno může nově vystupovat ze zdi a mít sklo ze tří stran.
+Tři nové vchodové dveře.
+Realističtější pohled zvenku, se střechami pro domy ve tvaru L a s ulicí.
+Opravený import DXF a DWG: zdi jsou rovné, s dveřmi, okny a názvy místností.
+Na Androidu lze nyní vybrat soubory DXF a DWG.
+</cs-CZ>
+<da-DK>
+Karnapvinduer: et vindue kan nu stikke ud fra væggen med glas på tre sider.
+Tre nye hoveddøre.
+Et mere realistisk udvendigt billede med tage til L-formede huse og en gade.
+DXF- og DWG-import rettet: væggene er lige, med døre, vinduer og rumnavne.
+Du kan nu vælge DXF- og DWG-filer på Android.
+</da-DK>
+<de-DE>
+Erkerfenster: Ein Fenster kann jetzt aus der Wand ragen, mit Glas auf drei Seiten.
+Drei neue Haustüren.
+Eine realistischere Außenansicht mit Dächern für L-förmige Häuser und einer Straße.
+DXF- und DWG-Import behoben: gerade Wände, mit Türen, Fenstern und Raumnamen.
+DXF- und DWG-Dateien lassen sich jetzt auf Android auswählen.
+</de-DE>
+<es-419>
+Ventanas en saliente: una ventana ahora puede sobresalir del muro con vidrio en tres lados.
+Tres puertas de entrada nuevas.
+Una vista exterior más realista, con techos para casas en L y una calle.
+Importación de DXF y DWG corregida: muros rectos, con puertas, ventanas y nombres de las habitaciones.
+Ahora puedes elegir archivos DXF y DWG en Android.
+</es-419>
+<es-ES>
+Ventanas en saliente: una ventana ahora puede sobresalir del muro con cristal en tres lados.
+Tres puertas de entrada nuevas.
+Una vista exterior más realista, con tejados para casas en L y una calle.
+Importación de DXF y DWG corregida: muros rectos, con puertas, ventanas y nombres de las estancias.
+Ahora puedes elegir archivos DXF y DWG en Android.
+</es-ES>
+<fi-FI>
+Erkkeri-ikkunat: ikkuna voi nyt työntyä seinästä ulos, lasia kolmella sivulla.
+Kolme uutta ulko-ovea.
+Realistisempi ulkonäkymä: katot L-muotoisille taloille ja katu.
+DXF- ja DWG-tuonti korjattu: seinät tulevat suorina, ovineen, ikkunoineen ja huoneiden nimineen.
+DXF- ja DWG-tiedostot voi nyt valita Androidissa.
+</fi-FI>
+<fr-FR>
+Bow-windows : une fenêtre peut désormais dépasser du mur, vitrée sur trois côtés.
+Trois nouvelles portes d'entrée.
+Une vue extérieure plus réaliste, avec des toits pour les maisons en L et une rue.
+Import DXF et DWG corrigé : des murs droits, avec portes, fenêtres et noms des pièces.
+Vous pouvez maintenant choisir des fichiers DXF et DWG sur Android.
+</fr-FR>
+<hi-IN>
+बे विंडो: अब खिड़की दीवार से बाहर निकल सकती है, तीन तरफ़ शीशे के साथ।
+तीन नए मुख्य दरवाज़े।
+ज़्यादा असली दिखने वाला बाहरी दृश्य, L आकार के घरों की छत और सड़क के साथ।
+DXF और DWG इंपोर्ट ठीक किया गया: दीवारें सीधी आती हैं, दरवाज़ों, खिड़कियों और कमरों के नामों के साथ।
+अब Android पर DXF और DWG फ़ाइलें चुनी जा सकती हैं।
+</hi-IN>
+<hu-HU>
+Zárterkélyes ablakok: az ablak mostantól kiugorhat a falból, három oldalán üveggel.
+Három új bejárati ajtó.
+Élethűbb külső nézet, tetővel az L alakú házakhoz és utcával.
+Javított DXF- és DWG-importálás: egyenes falak, ajtókkal, ablakokkal és helyiségnevekkel.
+Androidon mostantól kiválaszthatók a DXF- és DWG-fájlok.
+</hu-HU>
+<id>
+Jendela bay: jendela kini bisa menonjol dari dinding dengan kaca di tiga sisi.
+Tiga pintu depan baru.
+Tampilan luar yang lebih realistis, dengan atap untuk rumah berbentuk L dan jalan.
+Impor DXF dan DWG diperbaiki: dinding lurus, lengkap dengan pintu, jendela, dan nama ruangan.
+Kini Anda bisa memilih file DXF dan DWG di Android.
+</id>
+<it-IT>
+Bovindi: una finestra ora può sporgere dal muro con vetro su tre lati.
+Tre nuove porte d'ingresso.
+Una vista esterna più realistica, con tetti per le case a L e una strada.
+Importazione DXF e DWG corretta: muri dritti, con porte, finestre e nomi delle stanze.
+Ora puoi scegliere file DXF e DWG su Android.
+</it-IT>
+<iw-IL>
+חלונות בולטים: חלון יכול כעת לבלוט מהקיר עם זכוכית משלושה צדדים.
+שלוש דלתות כניסה חדשות.
+מראה חיצוני מציאותי יותר, עם גגות לבתים בצורת L ורחוב.
+ייבוא DXF ו-DWG תוקן: קירות ישרים, עם דלתות, חלונות ושמות החדרים.
+כעת אפשר לבחור קובצי DXF ו-DWG באנדרואיד.
+</iw-IL>
+<ja-JP>
+出窓：窓を壁から張り出させ、三面をガラスにできるようになりました。
+新しい玄関ドア3種類。
+よりリアルな外観。L字型の家の屋根と道路に対応しました。
+DXF・DWGの読み込みを修正：壁がまっすぐに、ドア・窓・部屋名つきで取り込まれます。
+AndroidでDXF・DWGファイルを選べるようになりました。
+</ja-JP>
+<ko-KR>
+돌출창: 이제 창문이 벽에서 돌출되어 세 면이 유리로 됩니다.
+새 현관문 3종.
+더 사실적인 외부 모습: L자형 집의 지붕과 도로.
+DXF 및 DWG 가져오기 수정: 벽이 반듯하게, 문과 창문, 방 이름과 함께 들어옵니다.
+이제 Android에서 DXF 및 DWG 파일을 선택할 수 있습니다.
+</ko-KR>
+<nl-NL>
+Erkers: een raam kan nu uit de muur steken, met glas aan drie kanten.
+Drie nieuwe voordeuren.
+Een realistischer buitenaanzicht, met daken voor L-vormige huizen en een straat.
+DXF- en DWG-import verbeterd: rechte muren, met deuren, ramen en kamernamen.
+Je kunt nu DXF- en DWG-bestanden kiezen op Android.
+</nl-NL>
+<no-NO>
+Karnappvinduer: et vindu kan nå stikke ut fra veggen med glass på tre sider.
+Tre nye inngangsdører.
+Et mer realistisk utvendig bilde, med tak for L-formede hus og en gate.
+DXF- og DWG-import rettet: veggene er rette, med dører, vinduer og romnavn.
+Du kan nå velge DXF- og DWG-filer på Android.
+</no-NO>
+<pl-PL>
+Okna wykuszowe: okno może teraz wystawać ze ściany, ze szkłem z trzech stron.
+Troje nowych drzwi wejściowych.
+Bardziej realistyczny widok z zewnątrz, z dachami dla domów w kształcie litery L i ulicą.
+Poprawiony import DXF i DWG: proste ściany, z drzwiami, oknami i nazwami pomieszczeń.
+Na Androidzie można teraz wybierać pliki DXF i DWG.
+</pl-PL>
+<pt-BR>
+Janelas bay window: a janela agora pode se projetar da parede, com vidro em três lados.
+Três novas portas de entrada.
+Uma vista externa mais realista, com telhados para casas em L e uma rua.
+Importação de DXF e DWG corrigida: paredes retas, com portas, janelas e nomes dos cômodos.
+Agora você pode escolher arquivos DXF e DWG no Android.
+</pt-BR>
+<ro>
+Ferestre tip bovindou: o fereastră poate ieși acum din perete, cu sticlă pe trei laturi.
+Trei uși de intrare noi.
+O vedere exterioară mai realistă, cu acoperișuri pentru case în formă de L și o stradă.
+Import DXF și DWG reparat: pereți drepți, cu uși, ferestre și numele camerelor.
+Acum poți alege fișiere DXF și DWG pe Android.
+</ro>
+<ru-RU>
+Эркерные окна: окно теперь может выступать из стены, со стеклом с трёх сторон.
+Три новые входные двери.
+Более реалистичный вид снаружи: крыши для Г-образных домов и улица.
+Исправлен импорт DXF и DWG: ровные стены, с дверями, окнами и названиями комнат.
+На Android теперь можно выбирать файлы DXF и DWG.
+</ru-RU>
+<sk>
+Arkierové okná: okno môže teraz vystupovať zo steny a mať sklo z troch strán.
+Tri nové vchodové dvere.
+Realistickejší pohľad zvonka, so strechami pre domy v tvare L a s ulicou.
+Opravený import DXF a DWG: steny sú rovné, s dverami, oknami a názvami miestností.
+Na Androide možno teraz vybrať súbory DXF a DWG.
+</sk>
+<sv-SE>
+Burspråk: ett fönster kan nu sticka ut från väggen med glas på tre sidor.
+Tre nya ytterdörrar.
+En mer realistisk utsida, med tak för L-formade hus och en gata.
+DXF- och DWG-import rättad: väggarna blir raka, med dörrar, fönster och rumsnamn.
+Du kan nu välja DXF- och DWG-filer på Android.
+</sv-SE>
+<th>
+หน้าต่างเบย์: หน้าต่างยื่นออกจากผนังได้แล้ว โดยมีกระจกสามด้าน
+ประตูหน้าบ้านใหม่ 3 แบบ
+มุมมองภายนอกที่สมจริงขึ้น พร้อมหลังคาสำหรับบ้านรูปตัว L และถนน
+แก้ไขการนำเข้า DXF และ DWG: ผนังตรง พร้อมประตู หน้าต่าง และชื่อห้อง
+ตอนนี้เลือกไฟล์ DXF และ DWG บน Android ได้แล้ว
+</th>
+<tr-TR>
+Cumbalı pencereler: pencere artık duvardan dışarı taşabilir, üç yanı cam olur.
+Üç yeni giriş kapısı.
+Daha gerçekçi bir dış görünüm: L biçimli evler için çatılar ve bir sokak.
+DXF ve DWG içe aktarma düzeltildi: duvarlar düz gelir; kapılar, pencereler ve oda adlarıyla birlikte.
+Artık Android'de DXF ve DWG dosyalarını seçebilirsiniz.
+</tr-TR>
+<uk>
+Еркерні вікна: вікно тепер може виступати зі стіни, зі склом із трьох боків.
+Троє нових вхідних дверей.
+Реалістичніший вигляд ззовні: дахи для Г-подібних будинків і вулиця.
+Виправлено імпорт DXF і DWG: рівні стіни, з дверима, вікнами та назвами кімнат.
+На Android тепер можна вибирати файли DXF і DWG.
+</uk>
+<vi>
+Cửa sổ lồi: cửa sổ giờ có thể nhô ra khỏi tường với kính ở ba mặt.
+Ba mẫu cửa chính mới.
+Hình ảnh bên ngoài chân thực hơn, có mái cho nhà hình chữ L và đường phố.
+Đã sửa lỗi nhập DXF và DWG: tường thẳng, kèm cửa đi, cửa sổ và tên phòng.
+Giờ bạn có thể chọn tệp DXF và DWG trên Android.
+</vi>
+<zh-CN>
+飘窗：窗户现在可以从墙面凸出，三面都是玻璃。
+三款新的入户门。
+更逼真的外观：支持 L 形房屋的屋顶和街道。
+修复了 DXF 和 DWG 导入：墙体笔直，并带有门、窗和房间名称。
+现在可以在 Android 上选择 DXF 和 DWG 文件。
+</zh-CN>
