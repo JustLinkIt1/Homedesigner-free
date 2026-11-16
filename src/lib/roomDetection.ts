@@ -166,6 +166,13 @@ function wallFaces(
 export function detectRooms(walls: Wall[], mergeTol = 12): Point[][] {
   const polys = wallFaces(walls, mergeTol, false);
   if (polys.length === 0) return [];
+  // The half-edge walk winds every enclosed face one way (positive area) and
+  // the outside of each separate group of walls the other way. Keeping only
+  // the positive ones drops every outside, not just the biggest: with a house
+  // and a separate annex, the annex's outline used to come back as a "room"
+  // laid over all of its real rooms.
+  const inner = polys.filter((r) => polygonArea(r.poly) > 0);
+  if (inner.length) return inner.map((r) => r.poly);
   // The biggest face is the outer hull only when there is more than one face.
   const rooms = polys.length > 1 ? polys.slice(1) : polys;
   return rooms.map((r) => r.poly);

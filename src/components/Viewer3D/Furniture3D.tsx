@@ -792,6 +792,38 @@ export function ShapeMesh({
           </mesh>
         </group>
       );
+    case 'exhaust_fan': {
+      // Wall exhaust fan: a square housing, a dark round opening, three
+      // blades on a hub and a ring of grille bars across the front.
+      const r = Math.min(w, h) * 0.38;
+      const zf = d / 2;
+      return (
+        <group>
+          <Box w={w} d={d * 0.7} h={h} y={h / 2} dz={-d * 0.15} color={color} roughness={0.5} />
+          <mesh position={[0, h / 2, zf - d * 0.3 + 0.002]}>
+            <circleGeometry args={[r, 28]} />
+            <meshStandardMaterial color="#1e2024" roughness={0.8} />
+          </mesh>
+          {[0, 1, 2].map((i) => (
+            <mesh key={i} position={[0, h / 2, zf - d * 0.3 + 0.008]} rotation={[0, 0, (i * Math.PI * 2) / 3 + 0.3]}>
+              <boxGeometry args={[r * 0.36, r * 1.7, 0.004]} />
+              <meshStandardMaterial color={shade(color, -25)} roughness={0.5} />
+            </mesh>
+          ))}
+          <mesh position={[0, h / 2, zf - d * 0.3 + 0.012]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[r * 0.18, r * 0.18, 0.012, 16]} />
+            <meshStandardMaterial color={shade(color, -10)} roughness={0.4} />
+          </mesh>
+          {/* Grille: concentric rings standing proud of the opening. */}
+          {[0.45, 0.75, 1].map((k) => (
+            <mesh key={k} position={[0, h / 2, zf - d * 0.3 + 0.016]}>
+              <torusGeometry args={[r * k, 0.0025, 4, 32]} />
+              <meshStandardMaterial color={color} roughness={0.4} metalness={0.2} />
+            </mesh>
+          ))}
+        </group>
+      );
+    }
     case 'curtains':
       return (
         <group>

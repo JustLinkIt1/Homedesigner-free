@@ -125,6 +125,14 @@ const door = { id: 'd', wallId: 's', type: 'door', style: 'front', offset: 0.5, 
   const pushed = streetPlan({ walls, rooms: [room, patio], openings: [door], furniture: [] });
   check('street: something drawn out front pushes the street away', pushed.pavement[0] >= 400 + 250 && pushed.pavement[0] > plan.pavement[0] - 1e-6);
 
+  // A door on an inside wall, with no floor drawn behind it, reads as the
+  // front: the path must start past the house, not run through it.
+  const north = { ...room, points: [P(0, 0), P(800, 0), P(800, 300), P(0, 300)] };
+  const inner = streetPlan({ walls: [...walls, wall('m', P(0, 300), P(800, 300))], rooms: [north], openings: [{ ...door, wallId: 'm' }], furniture: [] });
+  check('street: a path never runs through the house', !!inner && inner.path.from >= 300, `${inner?.path.from}`);
+  const mat = streetPlan({ walls, rooms: [room], openings: [door], furniture: [{ id: 'mat', type: 'rug', position: P(400, 640), rotation: 0, width: 80, depth: 50, height: 1, color: '#000' }] });
+  check('street: a doormat does not move the path', mat.path.from < 50, `${mat.path.from}`);
+
   const garage = { id: 'g', wallId: 's', type: 'door', style: 'double', offset: 0.2, width: 240, height: 210, sill: 0 };
   const withGarage = streetPlan({ walls, rooms: [room], openings: [door, garage], furniture: [] });
   // The south wall runs from x=800 to x=0, so offset 0.2 is at x=640: 240 cm to the door's left as you face the street.

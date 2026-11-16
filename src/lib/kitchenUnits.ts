@@ -479,7 +479,107 @@ export function unitLayout(kind: UnitKind, w: number, d: number, h: number, hand
 }
 
 /** Cache key for a layout (millimetre resolution). */
-export function layoutKey(kind: UnitKind, w: number, d: number, h: number, handles: HandleStyle): string {
+export function layoutKey(kind: UnitKind, w: number, d: number, h: number, handles: HandleStyle, mirrored = false): string {
   const mm = (v: number) => Math.round(v * 1000);
-  return `${kind}|${mm(w)}|${mm(d)}|${mm(h)}|${handles}`;
+  return `${kind}|${mm(w)}|${mm(d)}|${mm(h)}|${handles}${mirrored ? '|m' : ''}`;
+}
+
+// ---- L-shaped corner unit ---------------------------------------------------
+//
+// The corner unit fills the corner where two runs meet. Seen from above it is
+// an L: one arm along the back wall (y = -d/2), one along the side wall
+// (x = -w/2, or +w/2 when mirrored), each as deep as a base run. The square
+// in front of the inside corner stays open floor, and the two short fronts
+// face into it, the way a real L corner cabinet with bi-fold doors does.
+
+/** Arm depth of the L for a w x d unit (same units in and out): the base run
+ *  depth, kept clear of the unit's own edges when it is resized small. */
+export function cornerArm(w: number, d: number, runDepth: number): number {
+  return Math.max(Math.min(runDepth, w - runDepth * 0.25, d - runDepth * 0.25), Math.min(w, d) * 0.5);
+}
+
+/** Plan outline of the corner unit, centred, y = -d/2 the back. Clockwise from
+ *  the back corner on the side wall. */
+export function cornerFootprint(w: number, d: number, runDepth: number, mirrored = false): { x: number; y: number }[] {
+  const a = cornerArm(w, d, runDepth);
+  const sx = mirrored ? -1 : 1;
+  const pts = [
+    { x: -w / 2, y: -d / 2 },
+    { x: w / 2, y: -d / 2 },
+    { x: w / 2, y: -d / 2 + a },
+    { x: -w / 2 + a, y: -d / 2 + a },
+    { x: -w / 2 + a, y: d / 2 },
+    { x: -w / 2, y: d / 2 },
+  ];
+  return pts.map((p) => ({ x: p.x * sx, y: p.y }));
+}
+
+/** Base-run depth in metres, from the catalog's base cabinet. */
+const RUN_D = (CATALOG_BY_TYPE['kitchen_base_cabinet']?.depth ?? 60) / 100;
+
+/** Corner unit layout in unit space (metres): side wall at x = -w/2. */
+function cornerLayout(w: number, d: number, h: number, handles: HandleStyle): UnitLayout {
+  const out: UnitLayout = { body: [], handles: [], worktop: [], fittings: [] };
+  const a = cornerArm(w, d, RUN_D);
+  const xl = -w / 2, xr = w / 2, zb = -d / 2, zf = d / 2;
+  const xi = xl + a; // the side arm's front face
+  const zi = zb + a; // the back arm's front face
+  const top = h - WORKTOP_T;
+  const pl = Math.min(PLINTH_H, top * 0.4);
+  const r = PLINTH_RECESS;
+  // Plinth, recessed under both fronts.
+  out.body.push(box(xl, xr, 0, pl, zb, zi - FRONT_T - r, TONE.plinth));
+  out.body.push(box(xl, xi - FRONT_T - r, 0, pl, zi - FRONT_T - r, zf, TONE.plinth));
+  // Carcass: the back arm full width, the side arm in front of it.
+  out.body.push(box(xl, xr, pl, top, zb, zi - FRONT_T, TONE.carcass));
+  out.body.push(box(xl, xi - FRONT_T, pl, top, zi - FRONT_T, zf, TONE.carcass));
+  // Two doors meeting at the inside corner (bi-fold): one on each arm.
+  const fw = xr - xi;
+  if (fw > 0.02) {
+    addFront(out, { x0: xi, x1: xr, y0: pl, y1: top, handle: 'v', side: -1 }, zi, handles);
+  }
+  const fd = zf - zi;
+  if (fd > 0.02) {
+    // The side arm's door faces +x. Built in place: its reveal, the door, and
+    // an upright bar near the corner it folds from.
+    out.body.push(box(xi - FRONT_T, xi - REVEAL_DEPTH, pl, top, zi, zf, TONE.reveal));
+    out.body.push(box(xi - FRONT_T, xi, pl + GAP / 2, top - GAP / 2, zi + GAP / 2, zf - GAP / 2, TONE.front));
+    if (handles === 'none') {
+      const g = Math.min(0.022, (top - pl) * 0.3);
+      out.body.push(box(xi - FRONT_T, xi - REVEAL_DEPTH / 2, top - g, top - GAP / 2, zi + GAP / 2, zf - GAP / 2, TONE.shadow));
+    } else {
+      const bar = 0.012, off = 0.03, len = Math.min(0.16, top - pl - 0.1);
+      const cz = zi + Math.min(0.045, fd / 2);
+      const ya = top - 0.05 - len;
+      out.handles.push(box(xi + off - bar, xi + off, ya, ya + len, cz - bar / 2, cz + bar / 2, 1));
+      for (const yy of [ya + 0.02, ya + len - 0.02]) {
+        out.handles.push(box(xi, xi + off - bar / 2, yy - 0.005, yy + 0.005, cz - 0.005, cz + 0.005, 1));
+      }
+    }
+  }
+  // Worktop: an L, proud of both fronts, flush where the runs carry on.
+  const o = WORKTOP_OVERHANG;
+  out.worktop.push(box(xl, xr, top, h, zb, Math.min(zf, zi + o), 1));
+  if (zf > zi + o) out.worktop.push(box(xl, Math.min(xr, xi + o), top, h, zi + o, zf, 1));
+  return out;
+}
+
+/** Mirror a layout across x = 0 (the corner unit's other hand). */
+function mirrorLayout(l: UnitLayout): UnitLayout {
+  const flip = (p: BoxPart): BoxPart => ({ ...p, x: -p.x });
+  return {
+    body: l.body.map(flip),
+    handles: l.handles.map(flip),
+    worktop: l.worktop.map(flip),
+    fittings: l.fittings.map((f) => ({ ...f, x: -f.x })),
+  };
+}
+
+/** Layout for any unit, including the corner unit's handedness. */
+export function unitLayoutFor(
+  kind: UnitKind, w: number, d: number, h: number, handles: HandleStyle = 'bar', mirrored = false,
+): UnitLayout {
+  if (kind !== 'corner') return unitLayout(kind, w, d, h, handles);
+  const l = cornerLayout(w, d, h, handles);
+  return mirrored ? mirrorLayout(l) : l;
 }

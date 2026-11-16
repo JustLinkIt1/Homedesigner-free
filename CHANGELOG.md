@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.22.38 — corner kitchen units, an exhaust fan, and floors that stay put
+
+From a tester's suggestions and bug report.
+
+- L-shaped corner kitchen unit (Pro). It is generated like the other kitchen
+  units, so it resizes, flips left or right ("Flip corner"), and takes the
+  kitchen's colour, handles and worktop; the worktop wraps round the corner as
+  one L. It draws as an L in the plan.
+- When a kitchen run is drawn to meet another at a right angle, the app offers
+  "Add corner unit". It fills the corner, replaces a cabinet standing there,
+  and slides runs that stopped short (up to 1.2 m) up to it with their wall
+  cabinets.
+- Exhaust fan (wall-mounted, free). The cooker hood is now also found by
+  searching "chimney", "blower" or "range hood".
+- Floors could go missing or lose their finish. Drawing any wall threw away
+  every automatic floor and detected them afresh: a picked floor reset, and an
+  area the fresh pass missed lost its floor, so the lawn showed through the
+  house (it looked as if the Street layer had done it). Automatic floors now
+  keep their id, name and finish when walls change, pass their finish to both
+  halves of a split room, and stay when their walls no longer close
+  (`src/lib/autoRooms.ts`). "Auto-detect rooms" is now always offered with
+  nothing selected, to fill in floors that are missing.
+- Room detection laid a stray room over a whole building when a plan had two
+  separate groups of walls; it now keeps only enclosed faces.
+- The street's path to the front door starts past whatever is built in its
+  way, so it can no longer run through the house.
+- "Save a copy" says where the file went (the Downloads folder, by name, and
+  how to open it again). On Android it opens the share sheet to save it to
+  Files or Drive; it used to be written to a folder nobody could find.
+
 ## 1.22.37 — stairs, floor names, and a magnifier for drawing
 
 From a tester's annotated screenshot.

@@ -1,0 +1,168 @@
+<en-GB>
+New L-shaped corner unit for kitchens. Draw two kitchen runs into a corner and the app offers to join them.
+New exhaust fan. Search "chimney" for the cooker hood.
+Fixed: floors could go missing or reset after drawing walls.
+Save a copy now opens the share sheet, so you choose where the file goes.
+</en-GB>
+<ar>
+وحدة زاوية جديدة على شكل L للمطابخ. ارسم صفّين من خزائن المطبخ يلتقيان في زاوية وسيعرض التطبيق وصلهما.
+مروحة شفط جديدة.
+إصلاح: كانت الأرضيات تختفي أو تعود لوضعها الأصلي بعد رسم الجدران.
+حفظ نسخة يفتح الآن قائمة المشاركة لتختار مكان حفظ الملف.
+</ar>
+<cs-CZ>
+Nová rohová kuchyňská skříňka do L. Nakreslete dvě kuchyňské linky do rohu a aplikace nabídne jejich spojení.
+Nový odsávací ventilátor.
+Opraveno: podlahy mohly po kreslení stěn zmizet nebo se vrátit do původního stavu.
+Uložit kopii nyní otevře nabídku sdílení, takže si vyberete, kam soubor uložit.
+</cs-CZ>
+<da-DK>
+Nyt L-formet hjørneskab til køkkener. Tegn to køkkenrækker ind i et hjørne, og appen tilbyder at samle dem.
+Ny udsugningsventilator.
+Rettet: gulve kunne forsvinde eller blive nulstillet, når der blev tegnet vægge.
+Gem en kopi åbner nu delingsmenuen, så du selv vælger, hvor filen havner.
+</da-DK>
+<de-DE>
+Neuer L-förmiger Eckschrank für Küchen. Zeichne zwei Küchenzeilen in eine Ecke, und die App bietet an, sie zu verbinden.
+Neuer Abluftventilator.
+Behoben: Böden konnten nach dem Zeichnen von Wänden verschwinden oder zurückgesetzt werden.
+„Kopie speichern“ öffnet jetzt das Teilen-Menü, damit du wählst, wo die Datei landet.
+</de-DE>
+<es-ES>
+Nuevo módulo de esquina en L para cocinas. Dibuja dos filas de cocina hasta una esquina y la app te ofrece unirlas.
+Nuevo extractor de aire.
+Corregido: los suelos podían desaparecer o restablecerse al dibujar paredes.
+Guardar una copia ahora abre el menú de compartir para que elijas dónde va el archivo.
+</es-ES>
+<fi-FI>
+Uusi L-mallinen keittiön kulmakaappi. Piirrä kaksi keittiörivistöä nurkkaan, niin sovellus tarjoaa niiden yhdistämistä.
+Uusi poistotuuletin.
+Korjattu: lattiat saattoivat kadota tai palautua oletukseksi seiniä piirrettäessä.
+Tallenna kopio avaa nyt jakovalikon, joten valitset itse, minne tiedosto menee.
+</fi-FI>
+<fr-FR>
+Nouveau meuble d'angle en L pour la cuisine. Tracez deux linéaires de cuisine jusqu'à un angle et l'app propose de les relier.
+Nouvel extracteur d'air.
+Corrigé : les sols pouvaient disparaître ou être réinitialisés après le tracé de murs.
+Enregistrer une copie ouvre maintenant le menu de partage pour choisir où va le fichier.
+</fr-FR>
+<hi-IN>
+रसोई के लिए नई L-आकार की कॉर्नर यूनिट। रसोई की दो कतारें किसी कोने तक बनाएँ और ऐप उन्हें जोड़ने का सुझाव देगा।
+नया एग्ज़ॉस्ट फ़ैन।
+ठीक किया गया: दीवारें बनाने के बाद फ़र्श गायब हो सकते थे या रीसेट हो सकते थे।
+कॉपी सेव करें अब शेयर मेनू खोलता है, ताकि आप चुनें कि फ़ाइल कहाँ जाए।
+</hi-IN>
+<hu-HU>
+Új L alakú konyhai sarokszekrény. Rajzolj két konyhai sort egy sarokba, és az app felajánlja az összekötésüket.
+Új elszívó ventilátor.
+Javítva: a padlók falak rajzolása után eltűnhettek vagy visszaállhattak.
+A Másolat mentése most a megosztási menüt nyitja meg, így te választod ki, hová kerül a fájl.
+</hu-HU>
+<id>
+Unit sudut berbentuk L baru untuk dapur. Gambar dua deret kabinet dapur ke sebuah sudut dan aplikasi menawarkan untuk menyambungkannya.
+Kipas exhaust baru.
+Diperbaiki: lantai bisa hilang atau kembali ke awal setelah menggambar dinding.
+Simpan salinan kini membuka menu berbagi, jadi Anda memilih ke mana file disimpan.
+</id>
+<it-IT>
+Nuovo modulo ad angolo a L per la cucina. Disegna due composizioni di cucina fino a un angolo e l'app propone di unirle.
+Nuovo aspiratore.
+Corretto: i pavimenti potevano sparire o reimpostarsi dopo aver disegnato dei muri.
+Salva una copia ora apre il menu di condivisione, così scegli tu dove va il file.
+</it-IT>
+<iw-IL>
+יחידת פינה חדשה בצורת L למטבחים. ציירו שתי שורות ארונות מטבח לתוך פינה והאפליקציה תציע לחבר ביניהן.
+מאוורר יניקה חדש.
+תוקן: רצפות יכלו להיעלם או להתאפס אחרי ציור קירות.
+שמירת עותק פותחת עכשיו את תפריט השיתוף, כך שאתם בוחרים לאן הקובץ יישמר.
+</iw-IL>
+<ja-JP>
+キッチン用のL字型コーナーユニットを追加。2列のキッチンを角まで描くと、つなげるか提案します。
+換気扇を追加。
+修正：壁を描いた後に床が消えたりリセットされたりする問題を修正しました。
+コピーを保存すると共有メニューが開き、保存先を選べるようになりました。
+</ja-JP>
+<ko-KR>
+주방용 L자형 코너 유닛을 추가했습니다. 주방 라인 두 개를 모서리까지 그리면 연결하도록 제안합니다.
+환풍기를 추가했습니다.
+수정: 벽을 그린 뒤 바닥이 사라지거나 초기화되던 문제를 고쳤습니다.
+사본 저장 시 공유 메뉴가 열려 파일을 저장할 위치를 직접 고를 수 있습니다.
+</ko-KR>
+<nl-NL>
+Nieuwe L-vormige hoekkast voor keukens. Teken twee keukenblokken tot in een hoek en de app biedt aan ze te verbinden.
+Nieuwe afzuigventilator.
+Opgelost: vloeren konden verdwijnen of terugspringen na het tekenen van muren.
+Kopie opslaan opent nu het deelmenu, zodat je zelf kiest waar het bestand komt.
+</nl-NL>
+<no-NO>
+Nytt L-formet hjørneskap til kjøkken. Tegn to kjøkkenrekker inn i et hjørne, så tilbyr appen å koble dem sammen.
+Ny avtrekksvifte.
+Rettet: gulv kunne forsvinne eller tilbakestilles etter at du tegnet vegger.
+Lagre en kopi åpner nå delingsmenyen, så du velger hvor filen havner.
+</no-NO>
+<pl-PL>
+Nowa narożna szafka kuchenna w kształcie L. Narysuj dwa ciągi kuchenne do narożnika, a aplikacja zaproponuje ich połączenie.
+Nowy wentylator wyciągowy.
+Naprawiono: podłogi mogły znikać lub resetować się po narysowaniu ścian.
+Zapisz kopię otwiera teraz menu udostępniania, więc sam wybierasz, gdzie trafi plik.
+</pl-PL>
+<pt-BR>
+Novo módulo de canto em L para cozinhas. Desenhe duas fileiras de armários até um canto e o app oferece uni-las.
+Novo exaustor.
+Corrigido: os pisos podiam sumir ou ser redefinidos depois de desenhar paredes.
+Salvar uma cópia agora abre o menu de compartilhamento, para você escolher onde o arquivo vai.
+</pt-BR>
+<ro>
+Corp nou de colț în formă de L pentru bucătării. Desenează două șiruri de bucătărie până într-un colț și aplicația îți propune să le unești.
+Ventilator de evacuare nou.
+Remediat: podelele puteau dispărea sau se puteau reseta după desenarea pereților.
+Salvează o copie deschide acum meniul de partajare, ca să alegi unde ajunge fișierul.
+</ro>
+<ru-RU>
+Новый угловой кухонный модуль в форме буквы Г. Проведите два кухонных ряда в угол, и приложение предложит их соединить.
+Новый вытяжной вентилятор.
+Исправлено: полы могли пропадать или сбрасываться после рисования стен.
+«Сохранить копию» теперь открывает меню «Поделиться», чтобы вы сами выбрали, куда сохранить файл.
+</ru-RU>
+<sk>
+Nová rohová kuchynská skrinka do L. Nakreslite dve kuchynské linky do rohu a aplikácia ponúkne ich spojenie.
+Nový odsávací ventilátor.
+Opravené: podlahy mohli po kreslení stien zmiznúť alebo sa vrátiť do pôvodného stavu.
+Uložiť kópiu teraz otvorí ponuku zdieľania, takže si vyberiete, kam sa súbor uloží.
+</sk>
+<sv-SE>
+Nytt L-format hörnskåp för kök. Rita två köksrader in i ett hörn så erbjuder appen att koppla ihop dem.
+Ny frånluftsfläkt.
+Åtgärdat: golv kunde försvinna eller återställas efter att du ritat väggar.
+Spara en kopia öppnar nu delningsmenyn, så att du väljer var filen hamnar.
+</sv-SE>
+<th>
+ตู้มุมรูปตัว L ใหม่สำหรับห้องครัว วาดแนวตู้ครัวสองแนวมาชนกันที่มุม แล้วแอปจะเสนอให้เชื่อมต่อกัน
+พัดลมดูดอากาศใหม่
+แก้ไขแล้ว: พื้นอาจหายไปหรือถูกรีเซ็ตหลังจากวาดผนัง
+บันทึกสำเนาจะเปิดเมนูแชร์ เพื่อให้คุณเลือกได้ว่าจะเก็บไฟล์ไว้ที่ไหน
+</th>
+<tr-TR>
+Mutfaklar için yeni L şeklinde köşe dolabı. İki mutfak sırasını bir köşeye çizin, uygulama onları birleştirmeyi önersin.
+Yeni aspiratör.
+Düzeltildi: duvar çizdikten sonra zeminler kaybolabiliyor veya sıfırlanabiliyordu.
+Kopya kaydet artık paylaşım menüsünü açıyor, böylece dosyanın nereye gideceğini siz seçiyorsunuz.
+</tr-TR>
+<uk>
+Новий кутовий кухонний модуль у формі літери Г. Проведіть два кухонні ряди в кут, і застосунок запропонує їх з'єднати.
+Новий витяжний вентилятор.
+Виправлено: підлоги могли зникати або скидатися після малювання стін.
+«Зберегти копію» тепер відкриває меню «Поділитися», щоб ви самі обрали, куди зберегти файл.
+</uk>
+<vi>
+Tủ góc chữ L mới cho nhà bếp. Vẽ hai dãy tủ bếp gặp nhau ở góc và ứng dụng sẽ đề nghị nối chúng lại.
+Quạt hút mới.
+Đã sửa: sàn có thể biến mất hoặc bị đặt lại sau khi vẽ tường.
+Lưu bản sao giờ mở menu chia sẻ để bạn chọn nơi lưu tệp.
+</vi>
+<zh-CN>
+新增厨房L形转角柜。把两排橱柜画到墙角，应用会提示将它们连接起来。
+新增排气扇。
+修复：画墙后地面可能消失或被重置的问题。
+“保存副本”现在会打开分享菜单，由你选择文件保存位置。
+</zh-CN>

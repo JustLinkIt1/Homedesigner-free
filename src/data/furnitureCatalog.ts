@@ -35,6 +35,8 @@ export type Shape3D =
   | 'oven'
   | 'microwave'
   | 'hood'
+  | 'kitchen_corner'
+  | 'exhaust_fan'
   | 'shelf'
   | 'washer'
   | 'shower'
@@ -205,7 +207,7 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   // is a single cabinet whose worktop joins its neighbours').
   { type: 'kitchen_base_cabinet', name: 'Base Cabinet', category: 'Kitchen', width: 55, depth: 60, height: 90, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
   { type: 'kitchen_drawer_cabinet', pro: true, name: 'Drawer Unit', category: 'Kitchen', width: 55, depth: 60, height: 90, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
-  { type: 'kitchen_corner_cabinet', pro: true, name: 'Corner Cabinet', category: 'Kitchen', width: 90, depth: 90, height: 90, color: '#cfd2d6', shape: 'counter', icon: '🗄️' },
+  { type: 'kitchen_corner_cabinet', pro: true, name: 'Corner Cabinet', category: 'Kitchen', width: 90, depth: 90, height: 90, color: '#cfd2d6', shape: 'kitchen_corner', icon: '🗄️', searchTerms: ['L corner unit', 'L-shaped corner', 'corner unit', 'blind corner', 'carousel corner'] },
   { type: 'wall_cabinet', pro: true, name: 'Wall Cabinet', category: 'Kitchen', width: 80, depth: 35, height: 60, color: '#cfd2d6', shape: 'cabinets', icon: '🗄️', mountY: 120 },
   { type: 'dishwasher', pro: true, name: 'Dishwasher', category: 'Kitchen', width: 60, depth: 60, height: 90, color: '#cfd2d6', shape: 'dishwasher', icon: '🧼' },
   // Modular kitchen units. Every type listed in lib/kitchenUnits.ts renders
@@ -219,7 +221,8 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'kitchen_oven_tower', pro: true, name: 'Oven Tower', category: 'Kitchen', width: 60, depth: 60, height: 210, color: '#cfd2d6', shape: 'oven', icon: '♨️' },
   { type: 'kitchen_larder', pro: true, name: 'Larder Unit', category: 'Kitchen', width: 60, depth: 60, height: 210, color: '#cfd2d6', shape: 'cabinets', icon: '🗄️' },
   { type: 'kitchen_wall_microwave', pro: true, name: 'Microwave Wall Cabinet', category: 'Kitchen', width: 60, depth: 35, height: 60, color: '#cfd2d6', shape: 'microwave', icon: '📟', mountY: 120 },
-  { type: 'kitchen_hood', pro: true, name: 'Extractor Hood', category: 'Kitchen', width: 60, depth: 50, height: 75, color: '#b9bcc0', shape: 'hood', icon: '💨', mountY: 155 },
+  { type: 'kitchen_hood', pro: true, name: 'Extractor Hood', category: 'Kitchen', width: 60, depth: 50, height: 75, color: '#b9bcc0', shape: 'hood', icon: '💨', mountY: 155, searchTerms: ['chimney', 'kitchen chimney', 'blower', 'range hood', 'cooker hood', 'cooker extractor'] },
+  { type: 'exhaust_fan', name: 'Exhaust Fan', category: 'Kitchen', width: 30, depth: 14, height: 30, color: '#e8e9eb', shape: 'exhaust_fan', icon: '🌀', mountY: 190, placement: 'wall', searchTerms: ['extractor fan', 'ventilation fan', 'vent fan', 'bathroom fan', 'exhaust'] },
   { type: 'kitchen_open_shelf', name: 'Open Shelf', category: 'Kitchen', width: 90, depth: 25, height: 45, color: '#b98a56', shape: 'shelf', icon: '🪵', mountY: 120 },
   { type: 'kitchen_open_niche', name: 'Open Niche', category: 'Kitchen', width: 60, depth: 35, height: 45, color: '#b98a56', shape: 'shelf', icon: '🪵', mountY: 120 },
   { type: 'bar_stool', pro: true, name: 'Bar Stool', category: 'Kitchen', width: 38, depth: 38, height: 75, color: '#4a3a28', shape: 'stool', icon: '🪑' },

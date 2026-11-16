@@ -21,7 +21,8 @@ import { MATERIAL_BY_ID, materialUrl } from '../../data/materials';
 import { FURNITURE_SPRITES, spriteUrl } from '../../data/furnitureSprites';
 import { SPRITE_FILL } from '../../data/furnitureModels';
 import { spriteBox } from '../../lib/spriteFit';
-import { hasWorktop, isKitchenUnit, worktopMaterial } from '../../lib/kitchenUnits';
+import { cornerFootprint, hasWorktop, isKitchenUnit, worktopMaterial } from '../../lib/kitchenUnits';
+import { CORNER_RUN_DEPTH } from '../../lib/symbols';
 import DimensionsLayer, { DimensionPlate } from './DimensionsLayer';
 import SelectionRing from '../SelectionRing';
 import { drawBridge, useDraw, toast } from '../../lib/ui';
@@ -2999,6 +3000,24 @@ function FurnitureItemGraphic({
   // Wall units hang over the base run: a dashed outline with only a wash of
   // colour, so the worktop and the sink or hob beneath stay readable.
   const overhead = kitchenUnit && dashed;
+  if (shape === 'kitchen_corner') {
+    // L-shaped corner unit: fill only the L, so the open square in front of
+    // the inside corner reads as floor.
+    const pts = cornerFootprint(width, depth, CORNER_RUN_DEPTH, mirrored).flatMap((p) => [p.x, p.y]);
+    return (
+      <>
+        <Line
+          points={pts}
+          closed
+          fill={worktopColor ?? color}
+          opacity={worktopColor ? 0.96 : 0.55}
+          stroke={selected ? selectionColor : outlineColor}
+          strokeWidth={(selected ? 3 : 1) / zoom}
+        />
+        <FurnitureSymbol shape={shape} width={width} depth={depth} mirrored={mirrored} color={ink} opacity={0.85} />
+      </>
+    );
+  }
   return (
     <>
       {overhead && (

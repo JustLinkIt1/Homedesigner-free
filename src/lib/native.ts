@@ -88,20 +88,31 @@ export async function saveAudio(dataUrl: string, filename: string): Promise<void
   }
 }
 
-/** Save a text file (e.g. exported project JSON). */
-export async function saveText(text: string, filename: string, mime = 'application/json'): Promise<void> {
+/**
+ * Save a text file (an exported project, a DXF, a shopping list). On the web it
+ * downloads to the browser's Downloads folder. On Android it goes through the
+ * share sheet, like a render, so the user picks where it lands (Files, Drive,
+ * email). It used to be written quietly into a Documents folder, where nobody
+ * could find it again. Resolves to false when the share sheet was closed.
+ */
+export async function saveText(text: string, filename: string, mime = 'application/json'): Promise<boolean> {
   if (!isNative()) {
     webDownload(`data:${mime};charset=utf-8,${encodeURIComponent(text)}`, filename);
-    return;
+    return true;
   }
   const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
-  await Filesystem.writeFile({
-    path: `projects/${filename}`,
-    data: text,
-    directory: Directory.Documents,
-    encoding: Encoding.UTF8,
-    recursive: true,
-  });
+  const { Share } = await import('@capacitor/share');
+  const path = `exports/${filename}`;
+  await Filesystem.writeFile({ path, data: text, directory: Directory.Cache, encoding: Encoding.UTF8, recursive: true });
+  const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
+  try {
+    await Share.share({ title: filename, files: [uri] });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/cancel(?:led|ed)?/i.test(message)) throw error;
+    return false;
+  }
+  return true;
 }
 
 /**

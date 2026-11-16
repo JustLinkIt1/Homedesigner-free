@@ -93,9 +93,9 @@ export function streetPlan(geom: Pick<FloorGeom, 'walls' | 'rooms' | 'openings' 
     ...geom.furniture.map((item): [Point, Point] => [item.position, item.position]),
   ];
   /** The front-most drawn thing within a strip along `right`: where a drive has to stop. */
-  const wallFront = (lo: number, hi: number): number => {
+  const wallFront = (lo: number, hi: number, among = edges): number => {
     let reach = -Infinity;
-    for (const [start, end] of edges) {
+    for (const [start, end] of among) {
       let a = { r: r(start), f: f(start) }, b = { r: r(end), f: f(end) };
       if (a.r > b.r) [a, b] = [b, a];
       if (b.r < lo || a.r > hi) continue;
@@ -141,7 +141,12 @@ export function streetPlan(geom: Pick<FloorGeom, 'walls' | 'rooms' | 'openings' 
     farPavement: [start + PAVEMENT + ROAD, start + PAVEMENT * 2 + ROAD],
     plot,
     back: Math.min(0, ...fs) - 450,
-    path: { at: 0, width: PATH, from: 8 },
+    // The path starts past whatever is built in its way. It used to start at
+    // the door whatever stood beyond it, and was laid on top of the floors, so
+    // a door taken for the front (an inner one, when the rooms behind it had
+    // no floor) sent it straight through the house. Walls and room edges only:
+    // a doormat or a plant by the door must not move it.
+    path: { at: 0, width: PATH, from: Math.max(8, wallFront(-PATH / 2, PATH / 2, edges.slice(0, edges.length - geom.furniture.length)) + 8) },
     drive,
   };
 }

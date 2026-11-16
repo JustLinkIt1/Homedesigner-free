@@ -17,6 +17,7 @@ const entry = join(process.cwd(), '.geometry-entry.tmp.ts');
 writeFileSync(entry, `
 export { offsetPolygon, orientedBox, boxFillRatio } from '${sourceRoot}/src/lib/polygonOffset.ts';
 export { detectBuildingOutline, detectRooms } from '${sourceRoot}/src/lib/roomDetection.ts';
+export { syncAutoRooms } from '${sourceRoot}/src/lib/autoRooms.ts';
 export { polygonArea, rotatePoint, boundsOf } from '${sourceRoot}/src/lib/geometry.ts';
 export { buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines } from '${sourceRoot}/src/lib/roofGeometry.ts';
 export { wallCentrelines } from '${sourceRoot}/src/lib/wallCentrelines.ts';
@@ -46,7 +47,7 @@ await build({ entryPoints: [entry], bundle: true, format: 'esm', platform: 'node
 rmSync(entry, { force: true });
 
 const {
-  offsetPolygon, orientedBox, boxFillRatio, detectBuildingOutline, detectRooms, polygonArea,
+  offsetPolygon, orientedBox, boxFillRatio, detectBuildingOutline, detectRooms, syncAutoRooms, polygonArea,
   buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
@@ -1317,6 +1318,45 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   const top = stairLanding(item, 'high');
   check('stairs: the top landing of an L stair is past its side exit',
     top.x > 6.2 && Math.abs(top.z - (500 + l.high.at.y) / 100) < 0.01, JSON.stringify(top));
+}
+
+// ---- automatic rooms -----------------------------------------------------
+{
+  let n = 0;
+  const W = (ax, ay, bx, by) => ({ id: 'aw' + n++, start: { x: ax, y: ay }, end: { x: bx, y: by }, thickness: 15, height: 270 });
+  const box = (x, y, w, h) => [W(x, y, x + w, y), W(x + w, y, x + w, y + h), W(x + w, y + h, x, y + h), W(x, y + h, x, y)];
+  const sizes = (polys) => polys.map((p) => Math.round(Math.abs(polygonArea(p)) / 1e4)).sort((a, b) => a - b).join(',');
+  // A house of two rooms and a separate annex of two: four rooms, and never an
+  // outline of either building laid over its rooms as a fifth.
+  const twoBuildings = [...box(0, 0, 800, 400), W(400, 0, 400, 400), ...box(1000, 0, 600, 300), W(1300, 0, 1300, 300)];
+  check('rooms: two separate buildings give only their real rooms', sizes(detectRooms(twoBuildings)) === '9,9,16,16', sizes(detectRooms(twoBuildings)));
+  check('rooms: a lone box is one room', detectRooms(box(0, 0, 500, 400)).length === 1);
+
+  // Drawing a wall keeps every floor the user picked.
+  const walls = [...box(0, 0, 800, 400), W(400, 0, 400, 400)];
+  const first = syncAutoRooms([], walls).rooms;
+  check('rooms: two rooms found in a divided box', first.length === 2, `${first.length}`);
+  const picked = first.map((r, i) => ({ ...r, floorMaterial: i ? 'marble_white' : 'tile_black', name: i ? 'Kitchen' : 'Living' }));
+  const again = syncAutoRooms(picked, [...walls, W(900, 0, 1200, 0)]).rooms; // an unrelated wall
+  check('rooms: drawing another wall keeps each floor and name',
+    again.length === 2 && picked.every((p) => again.some((r) => r.id === p.id && r.floorMaterial === p.floorMaterial && r.name === p.name)),
+    JSON.stringify(again.map((r) => [r.name, r.floorMaterial])));
+  // Split the kitchen: both halves keep its floor.
+  const split = syncAutoRooms(picked, [...walls, W(400, 200, 800, 200)]).rooms;
+  const kitchen = picked.find((r) => r.name === 'Kitchen');
+  const halves = split.filter((r) => r.floorMaterial === kitchen.floorMaterial);
+  check('rooms: a room split in two passes its floor to both halves', split.length === 3 && halves.length === 2, JSON.stringify(split.map((r) => r.floorMaterial)));
+  // Open a room up (its walls no longer close): its floor stays.
+  const opened = syncAutoRooms(picked, walls.filter((w) => !(w.start.x === 800 && w.end.x === 800))).rooms;
+  check('rooms: a room whose walls no longer close keeps its floor', opened.length === 2 && opened.some((r) => r.name === 'Kitchen'), JSON.stringify(opened.map((r) => r.name)));
+  // A stray room laid over a whole building gives way to the real ones.
+  const stray = { id: 'stray', name: 'Room 9', points: rect(800, 400), floorMaterial: 'oak', color: '#fff', auto: true };
+  const cleaned = syncAutoRooms([stray, ...picked], walls).rooms;
+  check('rooms: a stray outline room is dropped, the real ones kept', cleaned.length === 2 && !cleaned.some((r) => r.id === 'stray'), JSON.stringify(cleaned.map((r) => r.id)));
+  // A room the user drew is never touched.
+  const mine = { id: 'mine', name: 'Mine', points: [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 400 }, { x: 0, y: 400 }], floorMaterial: 'walnut', color: '#fff' };
+  const withMine = syncAutoRooms([mine], walls).rooms;
+  check('rooms: a drawn room stays and is not doubled', withMine.length === 2 && withMine.some((r) => r.id === 'mine'), `${withMine.length}`);
 }
 
 console.log(fails ? `\nGEOMETRY: ${fails} FAILED` : '\nGEOMETRY: all green');

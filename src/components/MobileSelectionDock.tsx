@@ -78,10 +78,10 @@ export default function MobileSelectionDock({ onMore }: { onMore: () => void }) 
               rotation: (item.rotation + (isStairs(item) ? 180 : 90)) % 360,
             }))}
           />
-          {stairTurns(item.type) && (
+          {(stairTurns(item.type) || item.type === 'kitchen_corner_cabinet') && (
             <DockAction
               icon={ArrowLeftRight}
-              label={t('Flip turn')}
+              label={stairTurns(item.type) ? t('Flip turn') : t('Flip corner')}
               onClick={act(() => s.updateFurniture(item.id, { mirrored: !item.mirrored }))}
             />
           )}

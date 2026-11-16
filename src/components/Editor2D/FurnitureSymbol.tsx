@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Group, Path } from 'react-konva';
-import { SYMBOLS, FALLBACK_SYMBOL } from '../../lib/symbols';
+import { SYMBOLS, FALLBACK_SYMBOL, cornerSymbolPaths } from '../../lib/symbols';
 import { isStairShape, stairPlan, stairSymbolPaths } from '../../lib/stairs';
 import type { Shape3D } from '../../data/furnitureCatalog';
 
@@ -9,8 +9,8 @@ import type { Shape3D } from '../../data/furnitureCatalog';
  * the item's footprint; strokes are screen-space (strokeScaleEnabled=false)
  * so line weight stays crisp and uniform at any zoom or footprint size.
  *
- * Stairs are the exception: they are drawn from their real geometry at their
- * real size, so the treads in the plan are the treads in 3D.
+ * Stairs and the L-shaped kitchen corner unit are the exception: they are
+ * drawn from their real geometry at their real size, so the plan matches 3D.
  */
 export default function FurnitureSymbol({
   shape,
@@ -36,13 +36,18 @@ export default function FurnitureSymbol({
     () => (isStairShape(shape) ? stairSymbolPaths(stairPlan(shape, width, depth, height, mirrored)) : null),
     [shape, width, depth, height, mirrored],
   );
-  const spec = stairPaths ?? SYMBOLS[shape] ?? FALLBACK_SYMBOL;
+  const cornerPaths = useMemo(
+    () => (shape === 'kitchen_corner' ? cornerSymbolPaths(width, depth, mirrored) : null),
+    [shape, width, depth, mirrored],
+  );
+  const real = stairPaths ?? cornerPaths;
+  const spec = real ?? SYMBOLS[shape] ?? FALLBACK_SYMBOL;
   return (
     <Group
-      x={stairPaths ? 0 : -width / 2}
-      y={stairPaths ? 0 : -depth / 2}
-      scaleX={stairPaths ? 1 : width / 100}
-      scaleY={stairPaths ? 1 : depth / 100}
+      x={real ? 0 : -width / 2}
+      y={real ? 0 : -depth / 2}
+      scaleX={real ? 1 : width / 100}
+      scaleY={real ? 1 : depth / 100}
       listening={false}
       opacity={opacity}
     >

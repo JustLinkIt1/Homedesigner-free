@@ -27,6 +27,7 @@ import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
 import { exportPlanPNG, exportPlanPDF, exportPlanDXF } from '../lib/planExport';
 import { toast } from '../lib/ui';
+import { isNative } from '../lib/native';
 import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { requirePro } from '../lib/pro';
 import { useProStore } from '../store/proStore';
@@ -135,7 +136,7 @@ export default function Toolbar({
 
   const saveToFile = async () => {
     try {
-      await exportProject({
+      const filename = await exportProject({
         walls: s.walls,
         rooms: s.rooms,
         furniture: s.furniture,
@@ -146,7 +147,13 @@ export default function Toolbar({
         floorGeom: s.floorGeom,
         activeFloorId: s.activeFloorId,
       });
-      toast.success(t('Project file downloaded'));
+      // Say where it went: "downloaded" alone left people hunting for it.
+      // Android hands the file to the share sheet, so there the user chose.
+      if (filename && !isNative()) {
+        toast.success(`${t('Saved to your Downloads folder')}: ${filename}. ${t('Open it again from ⋮ → Open project file.')}`);
+      } else if (filename) {
+        toast.success(t('Project file saved'));
+      }
     } catch {
       toast.error(t('Save failed'));
     }

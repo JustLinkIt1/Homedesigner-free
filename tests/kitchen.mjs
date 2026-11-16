@@ -337,5 +337,97 @@ const span = (parts, axis, size) => ({
     KITCHEN_UNIT_BY_TYPE.kitchen_base_cabinet.worktop && KITCHEN_UNIT_BY_TYPE.wall_cabinet.family === 'wall');
 }
 
+// ---- L-shaped corner unit --------------------------------------------------
+{
+  const fp = app.cornerFootprint(90, 90, 60);
+  check('the corner footprint is an L with 60 cm arms (six corners, open square in front)',
+    fp.length === 6 && near(fp[2].y, -45 + 60) && near(fp[3].x, -45 + 60) && near(fp[3].y, -45 + 60));
+  const area = (pts) => Math.abs(pts.reduce((s, p, i) => {
+    const q = pts[(i + 1) % pts.length];
+    return s + p.x * q.y - q.x * p.y;
+  }, 0)) / 2;
+  check('the L covers the square minus the 30 x 30 notch', near(area(fp), 90 * 90 - 30 * 30), String(area(fp)));
+  const fm = app.cornerFootprint(90, 90, 60, true);
+  check('mirroring moves the side arm to the other wall', fm.every((p, i) => near(p.x, -fp[i].x) && near(p.y, fp[i].y)));
+  check('a small corner unit keeps arms inside itself',
+    app.cornerArm(60, 60, 60) < 60 && app.cornerArm(60, 60, 60) >= 30);
+
+  const L = app.unitLayoutFor('corner', 0.9, 0.9, 0.9, 'bar');
+  const inNotch = (b) => b.x - b.w / 2 > -0.45 + 0.6 + 0.03 && b.z - b.d / 2 > -0.45 + 0.6 + 0.03;
+  check('nothing of the corner unit stands in the open square',
+    [...L.body, ...L.worktop].every((b) => !inNotch(b)));
+  check('the corner worktop is an L of two slabs proud of both fronts',
+    L.worktop.length === 2 && L.worktop.some((b) => near(b.z + b.d / 2, 0.15 + 0.02)) && L.worktop.some((b) => near(b.x + b.w / 2, 0.15 + 0.02)));
+  check('the corner unit has a handle on each door', L.handles.length >= 4);
+  const M = app.unitLayoutFor('corner', 0.9, 0.9, 0.9, 'bar', true);
+  check('the mirrored corner unit is the same parts flipped',
+    M.body.length === L.body.length && M.body.every((b, i) => near(b.x, -L.body[i].x) && near(b.z, L.body[i].z)));
+  check('mirroring is part of the layout cache key',
+    app.layoutKey('corner', 0.9, 0.9, 0.9, 'bar', true) !== app.layoutKey('corner', 0.9, 0.9, 0.9, 'bar'));
+  check('other units ignore the mirror flag',
+    JSON.stringify(app.unitLayoutFor('cabinet', 0.55, 0.6, 0.9, 'bar', true)) === JSON.stringify(app.unitLayout('cabinet', 0.55, 0.6, 0.9, 'bar')));
+  check('the corner unit and the exhaust fan have plan symbols',
+    !!SYMBOLS.kitchen_corner && !!SYMBOLS.exhaust_fan && CATALOG_BY_TYPE.kitchen_corner_cabinet.shape === 'kitchen_corner');
+  const fan = CATALOG_BY_TYPE.exhaust_fan;
+  check('the exhaust fan is a free wall item mounted high', fan && !fan.pro && fan.placement === 'wall' && fan.mountY >= 180);
+  check('the hood is found as a chimney or blower',
+    CATALOG_BY_TYPE.kitchen_hood.searchTerms.includes('chimney') && CATALOG_BY_TYPE.kitchen_hood.searchTerms.includes('blower'));
+}
+
+// ---- corner prompt: where two runs meet ---------------------------------------
+{
+  // Walls: back wall along y = 0 (room below), side wall along x = 0 (room to
+  // the right). Back run faces +y (rotation 0); side run faces +x (270).
+  let n = 0;
+  const unit = (x, y, rotation, type = 'kitchen_base_cabinet') =>
+    ({ id: `u${n++}`, type, position: { x, y }, rotation, width: 55, depth: 60 });
+  const back = [0, 1, 2].map((i) => unit(90 + 27.5 + 55 * i, 30, 0));
+  const side = [0, 1, 2].map((i) => unit(30, 90 + 27.5 + 55 * i, 270));
+  const spot = app.findKitchenCorner([...back, ...side], new Set(side.map((u) => u.id)));
+  check('two runs meeting at a right angle offer a corner unit in the corner',
+    spot && near(spot.position.x, 45) && near(spot.position.y, 45) && spot.remove.length === 0, JSON.stringify(spot));
+  check('the offered corner unit takes the new run\'s facing', spot && spot.rotation === 270, JSON.stringify(spot));
+  // Check its L really lies along both walls: footprint corners in world space.
+  if (spot) {
+    const rad = (spot.rotation * Math.PI) / 180;
+    const world = app.cornerFootprint(90, 90, 60, spot.mirrored).map((p) => ({
+      x: spot.position.x + p.x * Math.cos(rad) - p.y * Math.sin(rad),
+      y: spot.position.y + p.x * Math.sin(rad) + p.y * Math.cos(rad),
+    }));
+    const hasPt = (x, y) => world.some((p) => near(p.x, x, 1e-6) && near(p.y, y, 1e-6));
+    check('its L lies along both walls with the open square toward the room',
+      hasPt(0, 0) && hasPt(90, 0) && hasPt(0, 90) && hasPt(60, 60) && hasPt(90, 60) && hasPt(60, 90), JSON.stringify(world));
+  }
+  const runOver = [...side, unit(30, 27.5 + 5, 270)];
+  const spot2 = app.findKitchenCorner([...back, ...runOver], new Set(runOver.map((u) => u.id)));
+  check('a unit already standing in the corner is replaced by the corner unit',
+    spot2 && spot2.remove.length === 1 && spot2.remove[0] === runOver[3].id, JSON.stringify(spot2));
+  const filled = [...back, ...side, { id: 'c', type: 'kitchen_corner_cabinet', position: { x: 45, y: 45 }, rotation: 0, width: 90, depth: 90 }];
+  check('no prompt when the corner unit is already there', app.findKitchenCorner(filled, new Set(side.map((u) => u.id))) === null);
+  const far = [0, 1].map((i) => unit(30, 400 + 55 * i, 270));
+  check('no prompt when the new run stops far from the other one', app.findKitchenCorner([...back, ...far], new Set(far.map((u) => u.id))) === null);
+  const parallel = [0, 1].map((i) => unit(300 + 55 * i, 250, 180));
+  check('no prompt for a run facing the first one across the room',
+    app.findKitchenCorner([...back, ...parallel], new Set(parallel.map((u) => u.id))) === null);
+  check('runs that already meet the corner are not moved', spot && spot.shift.length === 0, JSON.stringify(spot?.shift));
+  // The back run stops 30 cm short of the corner unit; a wall cabinet hangs
+  // over it, and a separate run further along the wall is left alone.
+  const short = [0, 1].map((i) => unit(120 + 27.5 + 55 * i, 30, 0));
+  const upper = { id: 'up', type: 'wall_cabinet', position: { x: 160, y: 17.5 }, rotation: 0, width: 80, depth: 35 };
+  const apart = unit(400, 30, 0);
+  const s4 = app.findKitchenCorner([...short, upper, apart, ...side], new Set(side.map((u) => u.id)));
+  const sh = s4?.shift[0];
+  check('a run stopping short of the corner slides up to it, with its wall cabinet',
+    s4 && s4.shift.length === 1 && near(sh.dx, -30) && near(sh.dy, 0)
+      && sh.ids.includes(short[0].id) && sh.ids.includes(short[1].id) && sh.ids.includes('up') && !sh.ids.includes(apart.id),
+    JSON.stringify(s4?.shift));
+  // Mirror image: side wall on the right at x = 400, side run faces -x (90).
+  const back2 = [0, 1, 2].map((i) => unit(400 - 90 - 27.5 - 55 * i, 30, 0));
+  const side2 = [0, 1].map((i) => unit(370, 90 + 27.5 + 55 * i, 90));
+  const s3 = app.findKitchenCorner([...back2, ...side2], new Set(back2.map((u) => u.id)));
+  check('a corner on the other hand is found and mirrored',
+    s3 && near(s3.position.x, 355) && near(s3.position.y, 45) && s3.rotation === 0 && s3.mirrored === true, JSON.stringify(s3));
+}
+
 console.log(failed ? `\nKITCHEN: ${failed} FAILED (${passed} passed)` : `KITCHEN: all ${passed} checks passed`);
 process.exit(failed ? 1 : 0);

@@ -6,6 +6,32 @@
 
 import type { Shape3D } from '../data/furnitureCatalog';
 import { stairIconPaths } from './stairs';
+import { cornerArm, cornerFootprint } from './kitchenUnits';
+
+/** Base-run depth the corner unit's arms match, cm. */
+export const CORNER_RUN_DEPTH = 60;
+
+/**
+ * L-shaped corner unit, drawn at its real size: the outline, the worktop's
+ * front edge along both inside faces, and a pull on each door. Coordinates are
+ * centred on the unit; `s`, `ox`, `oy` map them into another box (the icon).
+ */
+export function cornerSymbolPaths(w: number, d: number, mirrored = false, s = 1, ox = 0, oy = 0): SymbolPath[] {
+  const sx = mirrored ? -1 : 1;
+  const P = (x: number, y: number) => `${(ox + x * sx * s).toFixed(2)},${(oy + y * s).toFixed(2)}`;
+  const a = cornerArm(w, d, CORNER_RUN_DEPTH);
+  const xl = -w / 2, xr = w / 2, yb = -d / 2, yf = d / 2;
+  const xi = xl + a, yi = yb + a;
+  const e = Math.min(8, a * 0.14); // worktop overhang line, inset from the edge
+  const outline = cornerFootprint(w, d, CORNER_RUN_DEPTH)
+    .map((p, i) => `${i ? 'L' : 'M'}${P(p.x, p.y)}`).join(' ') + ' Z';
+  const pull = Math.min(14, (xr - xi) * 0.35, (yf - yi) * 0.35);
+  return [
+    { d: outline },
+    { d: `M${P(xr, yi - e)} L${P(xi - e, yi - e)} L${P(xi - e, yf)}`, sw: 2 },
+    { d: `M${P(xi + 6, yi - e / 2)} L${P(xi + 6 + pull, yi - e / 2)} M${P(xi - e / 2, yi + 6)} L${P(xi - e / 2, yi + 6 + pull)}`, sw: 2 },
+  ];
+}
 
 export interface SymbolPath {
   d: string;
@@ -241,6 +267,15 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: rect(4, 4, 92, 92) },
     { d: 'M4,82 H96', sw: 2 },
     { d: 'M40,90 H60', sw: 2 },
+  ],
+  // L-shaped corner unit at its catalog size (90 x 90), fitted to the box.
+  kitchen_corner: cornerSymbolPaths(90, 90, false, 92 / 90, 50, 50),
+  // Wall exhaust fan: the square housing, the round grille and three blades.
+  exhaust_fan: [
+    { d: rect(4, 4, 92, 92, 6) },
+    { d: circle(50, 50, 34), sw: 2 },
+    { d: 'M50,50 Q62,26 50,18 M50,50 Q30,62 23,54 M50,50 Q60,74 72,70', sw: 2 },
+    { d: circle(50, 50, 5), sw: 2 },
   ],
   // Built-in oven: the cavity, the door line and the bar handle at the front.
   oven: [

@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import type { FurnitureItem } from '../../types';
 import { MATERIAL_BY_ID, materialUrl, type Material } from '../../data/materials';
 import {
-  FITTING_SIZE, KITCHEN_UNIT_BY_TYPE, layoutKey, unitLayout, worktopId,
+  FITTING_SIZE, KITCHEN_UNIT_BY_TYPE, layoutKey, unitLayoutFor, worktopId,
   type BoxPart, type FittingId, type FittingPart, type UnitLayout,
 } from '../../lib/kitchenUnits';
 
@@ -96,7 +96,8 @@ const built = new Map<string, Built>();
 function buildUnit(item: FurnitureItem, w: number, d: number, h: number): Built {
   const def = KITCHEN_UNIT_BY_TYPE[item.type];
   const handles = item.handles ?? 'bar';
-  const key = layoutKey(def.kind, w, d, h, handles);
+  const mirrored = def.kind === 'corner' && !!item.mirrored;
+  const key = layoutKey(def.kind, w, d, h, handles, mirrored);
   const hit = built.get(key);
   if (hit) return hit;
   if (built.size > 160) {
@@ -106,7 +107,7 @@ function buildUnit(item: FurnitureItem, w: number, d: number, h: number): Built 
     }
     built.clear();
   }
-  const layout = unitLayout(def.kind, w, d, h, handles);
+  const layout = unitLayoutFor(def.kind, w, d, h, handles, mirrored);
   const made: Built = {
     layout,
     body: layout.body.length ? boxesGeometry(layout.body) : null,

@@ -20,11 +20,12 @@ import { uid, dist, boundsOf, rotatePoint } from '../lib/geometry';
 import { exteriorFaces } from '../lib/exteriorFaces';
 import { withFaceFinish } from '../lib/wallFaces';
 import { CATALOG_BY_TYPE, DEFAULT_WALL_THICKNESS } from '../data/furnitureCatalog';
-import { kitchenRunUnits, kitchenUpperUnits } from '../lib/kitchenRun';
+import { findKitchenCorner, kitchenRunUnits, kitchenUpperUnits, type CornerSpot } from '../lib/kitchenRun';
 import { applyFrontColorToAll, applyHandlesToAll, applyWorktopToAll, swapUnit } from '../lib/kitchenUnits';
 import { splitPolygonBySegment } from '../lib/roomSplit';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
 import { detectRooms, roomMatches } from '../lib/roomDetection';
+import { syncAutoRooms } from '../lib/autoRooms';
 import { structuralWalls, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE, HALF_WALL_HEIGHT } from '../lib/fence';
 import { DEFAULT_ROOF, normalizeRoofs, roofFloorId, roofOf } from '../lib/roof';
 import { SAMPLE_BY_ID, SAMPLES } from '../data/samples';
@@ -156,6 +157,8 @@ interface DesignState extends DesignSnapshot {
   /** Tile a run of base cabinets from a→b (the kitchen-run tool). One undo step.
    *  Adds wall cabinets above when `kitchenUppers` is on. */
   addKitchenRun: (a: Point, b: Point) => void;
+  /** Place the L-shaped corner unit a kitchen run prompt offered. */
+  addKitchenCorner: (spot: CornerSpot) => void;
   /** Change a placed kitchen unit's type in place (cabinet↔appliance, within
    *  its base/tall/wall family), keeping its slot, facing, colour and worktop
    *  so the run stays aligned. See `swapUnit`. */
@@ -607,20 +610,7 @@ export const useDesign = create<DesignState>((set, get) => {
             color: '#ece6db',
           });
         }
-        d.rooms = d.rooms.filter((room) => !room.auto);
-        const palette = ['oak', 'carpet_grey', 'tile_white', 'walnut', 'tile_grey', 'concrete'];
-        let added = 0;
-        for (const poly of detectRooms(structuralWalls(d.walls))) {
-          if (d.rooms.some((room) => roomMatches(poly, room.points))) continue;
-          d.rooms.push({
-            id: uid(),
-            name: `Room ${d.rooms.length + 1}`,
-            points: poly,
-            floorMaterial: palette[added++ % palette.length],
-            color: '#f3ede2',
-            auto: true,
-          });
-        }
+        d.rooms = syncAutoRooms(d.rooms, d.walls).rooms;
       });
     },
 
@@ -669,12 +659,15 @@ export const useDesign = create<DesignState>((set, get) => {
     addKitchenRun: (a, b) => {
       // Uppers are a Pro catalog item (wall_cabinet) — free runs place bases only.
       const withUppers = get().kitchenUppers && useProStore.getState().isPro;
+      const fresh = new Set<string>();
       commit((d) => {
         const push = (type: string, u: { position: Point; rotation: number }) => {
           const entry = CATALOG_BY_TYPE[type];
           if (!entry) return;
+          const id = uid();
+          if (type === 'kitchen_base_cabinet') fresh.add(id);
           d.furniture.push({
-            id: uid(),
+            id,
             type,
             name: entry.name,
             position: u.position,
@@ -688,6 +681,48 @@ export const useDesign = create<DesignState>((set, get) => {
         for (const u of kitchenRunUnits(a, b, d.rooms, d.walls)) push('kitchen_base_cabinet', u);
         if (withUppers) for (const u of kitchenUpperUnits(a, b, d.rooms, d.walls)) push('wall_cabinet', u);
       });
+      // Two runs meeting at a right angle: offer the L-shaped corner unit that
+      // joins them, rather than leaving a gap or a clash in the corner.
+      const spot = findKitchenCorner(get().furniture, fresh);
+      if (!spot) return;
+      const pro = useProStore.getState().isPro;
+      toast.action(t('Join these runs with a corner unit?'), pro
+        ? { label: t('Add corner unit'), onClick: () => get().addKitchenCorner(spot) }
+        : { label: t('Add corner unit'), tone: 'pro', onClick: () => useProStore.getState().openUpsell('catalog') });
+    },
+
+    addKitchenCorner: (spot) => {
+      const entry = CATALOG_BY_TYPE['kitchen_corner_cabinet'];
+      if (!entry) return;
+      commit((d) => {
+        const gone = new Set(spot.remove);
+        // Match the run it joins: its fronts' colour, worktop and handles.
+        const like = d.furniture.find((f) => gone.has(f.id))
+          ?? d.furniture.find((f) => f.type === 'kitchen_base_cabinet');
+        d.furniture = d.furniture.filter((f) => !gone.has(f.id));
+        // Slide runs that stopped short of the corner up against it.
+        for (const s of spot.shift) {
+          const ids = new Set(s.ids);
+          for (const f of d.furniture) {
+            if (ids.has(f.id)) f.position = { x: f.position.x + s.dx, y: f.position.y + s.dy };
+          }
+        }
+        d.furniture.push({
+          id: uid(),
+          type: 'kitchen_corner_cabinet',
+          name: entry.name,
+          position: spot.position,
+          rotation: spot.rotation,
+          width: entry.width,
+          depth: entry.depth,
+          height: entry.height,
+          color: like?.color ?? entry.color,
+          ...(like?.worktop ? { worktop: like.worktop } : {}),
+          ...(like?.handles ? { handles: like.handles } : {}),
+          ...(spot.mirrored ? { mirrored: true } : {}),
+        });
+      });
+      haptics.tapLight();
     },
 
     swapFurnitureType: (id, newType) =>
@@ -1328,26 +1363,13 @@ export const useDesign = create<DesignState>((set, get) => {
     },
 
     detectRoomsFromWalls: () => {
-      // A fenced garden is not a room, so boundary runs never close a polygon.
-      const polys = detectRooms(structuralWalls(get().walls));
+      // A fenced garden is not a room, so boundary runs never close a polygon
+      // (syncAutoRooms leaves fences out).
       let added = 0;
       commit((d) => {
-        // Drop previously auto-generated rooms, keep manually drawn ones.
-        d.rooms = d.rooms.filter((r) => !r.auto);
-        const palette = ['oak', 'carpet_grey', 'tile_white', 'walnut', 'tile_grey', 'concrete'];
-        for (const poly of polys) {
-          // Skip if a manual room already covers this area.
-          if (d.rooms.some((r) => roomMatches(poly, r.points))) continue;
-          added++;
-          d.rooms.push({
-            id: uid(),
-            name: `Room ${d.rooms.length + 1}`,
-            points: poly,
-            floorMaterial: palette[(added - 1) % palette.length],
-            color: '#f3ede2',
-            auto: true,
-          });
-        }
+        const synced = syncAutoRooms(d.rooms, d.walls);
+        d.rooms = synced.rooms;
+        added = synced.added;
       });
       return added;
     },

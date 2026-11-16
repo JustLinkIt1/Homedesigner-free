@@ -5,13 +5,15 @@ import { t } from './i18n';
 import { slugify } from './appInfo';
 
 /** Download the current design as a portable .json project file. */
-export async function exportProject(snapshot: DesignSnapshot): Promise<void> {
+/** Resolves to the file name, or null when the Android share sheet was closed. */
+export async function exportProject(snapshot: DesignSnapshot): Promise<string | null> {
   // `app` tag kept as-is: existing exported files carry it, and import matches on it loosely.
   // `version` is informational only — forward compatibility relies on the
   // `??`-fallbacks in openProjectFile/loadSnapshot, not on migrations. Bump it
   // (and add a real migration) only if a field is ever renamed/reshaped.
   const data = JSON.stringify({ app: 'homedesigner-free', version: 1, ...snapshot }, null, 2);
-  await saveText(data, `${slugify(snapshot.projectName)}.json`);
+  const filename = `${slugify(snapshot.projectName)}.json`;
+  return (await saveText(data, filename)) ? filename : null;
 }
 
 /** Prompt for a .json project file and parse it into a snapshot. */

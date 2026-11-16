@@ -540,7 +540,10 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
 
         {!multi && !selection.id && (
           <>
-            {s.walls.length > 0 && s.rooms.length === 0 && <div className="props" style={{ paddingBottom: 4 }}>
+            {/* Always there once walls are: a closed-in area with no floor shows
+                the lawn through it, and this fills in the missing floors. It
+                keeps every floor that is already there, with its finish. */}
+            {s.walls.length > 0 && <div className="props" style={{ paddingBottom: 4 }}>
               <button
                 className="btn block"
                 onClick={() => {
@@ -766,6 +769,16 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     data-tip={t('Turn the other way')}
                   >
                     <ArrowLeftRight className="icon" /> <span>{t('Flip turn')}</span>
+                  </button>
+                )}
+                {item.type === 'kitchen_corner_cabinet' && (
+                  <button
+                    className="wide"
+                    onClick={() => s.updateFurniture(item.id, { mirrored: !item.mirrored })}
+                    aria-label={t('Flip corner')}
+                    data-tip={t('Flip corner')}
+                  >
+                    <ArrowLeftRight className="icon" /> <span>{t('Flip corner')}</span>
                   </button>
                 )}
                 <button
