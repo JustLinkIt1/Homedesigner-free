@@ -1,0 +1,196 @@
+<en-GB>
+Gable and hip roofs now work on L-shaped and stepped plans, and on walls slightly out of square.
+Flat roofs: set the slab thickness and add a parapet wall.
+Cover a balcony, porch or entrance with its own roof.
+New facade trim: plinth, or plinth and band.
+Fixed: floors missing after moving walls. Small wall gaps are ringed in orange, with a button to close them.
+</en-GB>
+<ar>
+أسقف الجملون والأسقف المائلة من أربع جهات تعمل الآن على المخططات بشكل L والمتدرجة، وعلى الجدران غير المتعامدة قليلًا.
+الأسقف المسطحة: حدّد سماكة البلاطة وأضف جدار دروة.
+غطِّ الشرفة أو المدخل بسقف خاص.
+زخرفة واجهة جديدة: قاعدة، أو قاعدة وشريط.
+إصلاح: اختفاء الأرضيات بعد تحريك الجدران. الفجوات الصغيرة بين الجدران تُحاط بالبرتقالي مع زر لإغلاقها.
+</ar>
+<cs-CZ>
+Sedlové a valbové střechy nyní fungují na půdorysech ve tvaru L i odstupňovaných a na stěnách mírně mimo pravý úhel.
+Ploché střechy: nastavte tloušťku desky a přidejte atiku.
+Zastřešte balkon, verandu nebo vchod vlastní střechou.
+Nové prvky fasády: sokl, nebo sokl a pás.
+Opraveno: chybějící podlahy po posunutí stěn. Malé mezery mezi stěnami jsou označeny oranžově, s tlačítkem pro uzavření.
+</cs-CZ>
+<da-DK>
+Sadeltag og valmtag virker nu på L-formede og forskudte planer og på vægge, der er lidt ude af vinkel.
+Flade tage: vælg dækkets tykkelse, og tilføj en brystning.
+Dæk en altan, veranda eller indgang med sit eget tag.
+Ny facadepynt: sokkel, eller sokkel og bånd.
+Rettet: gulve manglede efter flytning af vægge. Små huller mellem vægge markeres med orange og kan lukkes med en knap.
+</da-DK>
+<de-DE>
+Sattel- und Walmdächer funktionieren jetzt auf L-förmigen und abgestuften Grundrissen und bei leicht schiefen Wänden.
+Flachdächer: Deckenstärke einstellen und eine Attika hinzufügen.
+Balkon, Veranda oder Eingang mit eigenem Dach überdecken.
+Neue Fassadenzier: Sockel oder Sockel und Band.
+Behoben: fehlende Böden nach dem Verschieben von Wänden. Kleine Wandlücken werden orange eingekreist und lassen sich per Knopf schließen.
+</de-DE>
+<es-ES>
+Los tejados a dos y cuatro aguas ya funcionan en plantas en L y escalonadas, y con paredes algo fuera de escuadra.
+Tejados planos: ajusta el grosor de la losa y añade un peto.
+Cubre un balcón, porche o entrada con su propio techo.
+Nuevas molduras de fachada: zócalo, o zócalo y banda.
+Corregido: suelos que faltaban al mover paredes. Los huecos pequeños entre paredes se marcan en naranja, con un botón para cerrarlos.
+</es-ES>
+<fi-FI>
+Harja- ja aumakatot toimivat nyt L-muotoisissa ja porrastetuissa pohjissa sekä hieman vinoissa seinissä.
+Tasakatot: säädä laatan paksuus ja lisää kaide.
+Kata parveke, kuisti tai sisäänkäynti omalla katolla.
+Uusi julkisivukoriste: sokkeli tai sokkeli ja nauha.
+Korjattu: lattiat puuttuivat seinien siirron jälkeen. Pienet seinäraot ympyröidään oranssilla, ja ne voi sulkea painikkeella.
+</fi-FI>
+<fr-FR>
+Les toits à deux et quatre pans fonctionnent sur les plans en L et décalés, et avec des murs légèrement hors d’équerre.
+Toits plats : réglez l’épaisseur de la dalle et ajoutez un acrotère.
+Couvrez un balcon, un porche ou une entrée avec son propre toit.
+Nouvelle modénature de façade : soubassement, ou soubassement et bandeau.
+Corrigé : sols manquants après le déplacement de murs. Les petits écarts entre murs sont entourés en orange, avec un bouton pour les fermer.
+</fr-FR>
+<hi-IN>
+गेबल और हिप छतें अब L-आकार और सीढ़ीदार नक्शों पर, और थोड़ी तिरछी दीवारों पर भी काम करती हैं।
+सपाट छत: स्लैब की मोटाई चुनें और पैरापेट दीवार जोड़ें।
+बालकनी, पोर्च या प्रवेश द्वार पर अलग छत डालें।
+नया फ़साड ट्रिम: प्लिंथ, या प्लिंथ और बैंड।
+ठीक किया गया: दीवारें खिसकाने पर फ़र्श गायब होना। दीवारों के छोटे गैप नारंगी घेरे में दिखते हैं, और एक बटन से बंद हो जाते हैं।
+</hi-IN>
+<hu-HU>
+A nyereg- és kontytetők már L alakú és lépcsős alaprajzokon, valamint kissé ferde falakon is működnek.
+Lapostetők: állítsa be a födém vastagságát, és adjon hozzá attikafalat.
+Fedjen be erkélyt, tornácot vagy bejáratot saját tetővel.
+Új homlokzati díszítés: lábazat, vagy lábazat és sáv.
+Javítva: hiányzó padlók a falak mozgatása után. A kis falhézagokat narancssárga kör jelöli, és egy gombbal bezárhatók.
+</hu-HU>
+<id>
+Atap pelana dan limas kini berfungsi pada denah berbentuk L dan bertingkat, serta pada dinding yang sedikit miring.
+Atap datar: atur ketebalan pelat dan tambahkan dinding parapet.
+Tutup balkon, teras, atau pintu masuk dengan atapnya sendiri.
+Hiasan fasad baru: plint, atau plint dan pita.
+Diperbaiki: lantai hilang setelah dinding dipindahkan. Celah kecil antardinding dilingkari oranye, dengan tombol untuk menutupnya.
+</id>
+<it-IT>
+I tetti a due e a quattro falde ora funzionano su piante a L e a gradoni, e con pareti leggermente fuori squadra.
+Tetti piani: imposta lo spessore del solaio e aggiungi un parapetto.
+Copri un balcone, un portico o un ingresso con un tetto proprio.
+Nuove finiture di facciata: zoccolo, oppure zoccolo e fascia.
+Corretto: pavimenti mancanti dopo lo spostamento delle pareti. I piccoli spazi tra le pareti sono cerchiati in arancione, con un pulsante per chiuderli.
+</it-IT>
+<iw-IL>
+גגות גמלון וגגות ארבעה שיפועים פועלים כעת בתוכניות בצורת L ומדורגות, וגם בקירות שאינם ישרים לגמרי.
+גגות שטוחים: קבעו את עובי התקרה והוסיפו מעקה גג.
+כסו מרפסת, מבואה או כניסה בגג משלה.
+עיטור חזית חדש: מסד, או מסד ופס.
+תוקן: רצפות שנעלמו לאחר הזזת קירות. רווחים קטנים בין קירות מסומנים בכתום, עם כפתור לסגירתם.
+</iw-IL>
+<ja-JP>
+切妻屋根と寄棟屋根が、L字型や段差のある間取り、少し直角からずれた壁でも使えるようになりました。
+陸屋根：スラブの厚さを設定し、パラペットを追加できます。
+バルコニー、ポーチ、玄関に専用の屋根をかけられます。
+新しい外壁装飾：腰壁、または腰壁と帯。
+修正：壁を動かすと床が消える問題。壁の小さなすき間はオレンジの丸で示し、ボタンで閉じられます。
+</ja-JP>
+<ko-KR>
+박공지붕과 우진각지붕이 이제 L자형·계단형 평면과 약간 비뚤어진 벽에서도 작동합니다.
+평지붕: 슬래브 두께를 정하고 파라펫을 추가하세요.
+발코니, 현관, 입구에 전용 지붕을 씌울 수 있습니다.
+새 외벽 장식: 하부 띠, 또는 하부 띠와 상부 띠.
+수정: 벽을 옮긴 뒤 바닥이 사라지던 문제. 벽 사이 작은 틈은 주황색 원으로 표시되고 버튼으로 닫을 수 있습니다.
+</ko-KR>
+<nl-NL>
+Zadel- en schilddaken werken nu op L-vormige en verspringende plattegronden en bij muren die net niet haaks staan.
+Platte daken: stel de dikte van de dakplaat in en voeg een dakrand toe.
+Overdek een balkon, veranda of entree met een eigen dak.
+Nieuwe gevelafwerking: plint, of plint en band.
+Opgelost: vloeren ontbraken na het verplaatsen van muren. Kleine openingen tussen muren worden oranje omcirkeld, met een knop om ze te sluiten.
+</nl-NL>
+<no-NO>
+Saltak og valmtak fungerer nå på L-formede og forskjøvne planer, og på vegger som er litt ute av vinkel.
+Flate tak: velg dekketykkelse og legg til en parapet.
+Dekk en balkong, veranda eller inngang med eget tak.
+Ny fasadepynt: sokkel, eller sokkel og bånd.
+Rettet: gulv manglet etter flytting av vegger. Små åpninger mellom vegger markeres med oransje og kan lukkes med en knapp.
+</no-NO>
+<pl-PL>
+Dachy dwuspadowe i czterospadowe działają teraz na planach w kształcie L i schodkowych oraz przy ścianach lekko odbiegających od kąta prostego.
+Dachy płaskie: ustaw grubość płyty i dodaj attykę.
+Zadasz balkon, ganek lub wejście osobnym dachem.
+Nowe detale elewacji: cokół albo cokół i opaska.
+Naprawiono: brak podłóg po przesunięciu ścian. Małe szczeliny między ścianami są zaznaczane na pomarańczowo, z przyciskiem do ich zamknięcia.
+</pl-PL>
+<pt-BR>
+Telhados de duas e quatro águas agora funcionam em plantas em L e escalonadas, e com paredes um pouco fora de esquadro.
+Telhados planos: defina a espessura da laje e adicione uma platibanda.
+Cubra uma varanda, alpendre ou entrada com um telhado próprio.
+Novo acabamento de fachada: rodapé, ou rodapé e faixa.
+Corrigido: pisos sumindo ao mover paredes. Pequenos vãos entre paredes são circulados em laranja, com um botão para fechá-los.
+</pt-BR>
+<ro>
+Acoperișurile în două și în patru ape funcționează acum pe planuri în L și în trepte și pe pereți ușor strâmbi.
+Acoperișuri plate: setează grosimea plăcii și adaugă un atic.
+Acoperă un balcon, o verandă sau o intrare cu acoperiș propriu.
+Ornamente noi de fațadă: soclu, sau soclu și brâu.
+Remediat: podele lipsă după mutarea pereților. Golurile mici dintre pereți sunt încercuite cu portocaliu, cu un buton pentru a le închide.
+</ro>
+<ru-RU>
+Двускатные и вальмовые крыши теперь работают на Г-образных и ступенчатых планах и при слегка неровных стенах.
+Плоские крыши: задайте толщину плиты и добавьте парапет.
+Накройте балкон, крыльцо или вход отдельной крышей.
+Новая отделка фасада: цоколь или цоколь и пояс.
+Исправлено: полы пропадали после перемещения стен. Небольшие зазоры между стенами обводятся оранжевым, их можно закрыть кнопкой.
+</ru-RU>
+<sk>
+Sedlové a valbové strechy teraz fungujú na pôdorysoch v tvare L aj odstupňovaných a na stenách mierne mimo pravého uhla.
+Ploché strechy: nastavte hrúbku dosky a pridajte atiku.
+Zastrešte balkón, verandu alebo vchod vlastnou strechou.
+Nové prvky fasády: sokel, alebo sokel a pás.
+Opravené: chýbajúce podlahy po posunutí stien. Malé medzery medzi stenami sú označené oranžovou, s tlačidlom na zatvorenie.
+</sk>
+<sv-SE>
+Sadeltak och valmat tak fungerar nu på L-formade och förskjutna planer, och på väggar som är lite ur vinkel.
+Platta tak: ställ in bjälklagets tjocklek och lägg till en sarg.
+Täck en balkong, veranda eller entré med ett eget tak.
+Ny fasaddekor: sockel, eller sockel och band.
+Åtgärdat: golv saknades efter att väggar flyttats. Små glapp mellan väggar ringas in i orange och kan stängas med en knapp.
+</sv-SE>
+<th>
+หลังคาจั่วและหลังคาปั้นหยาใช้ได้แล้วกับแปลนรูปตัว L และแปลนแบบขั้นบันได รวมถึงผนังที่เอียงเล็กน้อย
+หลังคาเรียบ: กำหนดความหนาของพื้นหลังคาและเพิ่มผนังกันตก
+คลุมระเบียง เฉลียง หรือทางเข้าด้วยหลังคาของตัวเอง
+ลายตกแต่งผนังด้านนอกแบบใหม่: ฐานผนัง หรือฐานผนังกับแถบ
+แก้ไข: พื้นหายหลังย้ายผนัง ช่องว่างเล็ก ๆ ระหว่างผนังจะถูกวงด้วยสีส้ม พร้อมปุ่มสำหรับปิด
+</th>
+<tr-TR>
+Beşik ve kırma çatılar artık L biçimli ve kademeli planlarda, hafif gönyesiz duvarlarda da çalışıyor.
+Düz çatılar: döşeme kalınlığını ayarlayın ve parapet duvarı ekleyin.
+Balkonun, sundurmanın veya girişin üstünü kendi çatısıyla kapatın.
+Yeni cephe süsü: subasman veya subasman ve bant.
+Düzeltildi: duvarlar taşınınca kaybolan zeminler. Duvarlar arasındaki küçük boşluklar turuncu halkayla gösterilir ve bir düğmeyle kapatılır.
+</tr-TR>
+<uk>
+Двосхилі та вальмові дахи тепер працюють на Г-подібних і ступінчастих планах та при трохи нерівних стінах.
+Пласкі дахи: задайте товщину плити й додайте парапет.
+Накрийте балкон, ґанок або вхід окремим дахом.
+Нове оздоблення фасаду: цоколь або цоколь і пояс.
+Виправлено: підлоги зникали після переміщення стін. Невеликі проміжки між стінами обводяться помаранчевим, їх можна закрити кнопкою.
+</uk>
+<vi>
+Mái dốc hai mái và mái bốn mái nay dùng được với mặt bằng hình chữ L, giật cấp và tường hơi lệch góc vuông.
+Mái bằng: chỉnh độ dày sàn mái và thêm tường chắn mái.
+Che ban công, hiên hoặc lối vào bằng mái riêng.
+Trang trí mặt tiền mới: chân tường, hoặc chân tường và dải băng.
+Đã sửa: sàn bị mất sau khi di chuyển tường. Khe hở nhỏ giữa các tường được khoanh màu cam, kèm nút để đóng lại.
+</vi>
+<zh-CN>
+双坡和四坡屋顶现在可用于 L 形和错落的平面，以及略微不垂直的墙。
+平屋顶：可设置屋面板厚度并添加女儿墙。
+为阳台、门廊或入口加上单独的屋顶。
+新增立面装饰：勒脚，或勒脚加腰线。
+修复：移动墙后地板缺失。墙之间的小缺口会用橙色圆圈标出，并可一键闭合。
+</zh-CN>

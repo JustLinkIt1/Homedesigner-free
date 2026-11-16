@@ -18,13 +18,14 @@ import { dist, polygonArea } from '../lib/geometry';
 import { formatLength, formatArea } from '../lib/units';
 import { finishForFace, withFaceFinish } from '../lib/wallFaces';
 import { useI18n } from '../lib/i18n';
-import { roofOf } from '../lib/roof';
+import { facadeOf, roofOf } from '../lib/roof';
+import { looseWallEnds } from '../lib/roomDetection';
 import { effectiveRoofType, roofFootprint } from '../lib/roofGeometry';
 import {
   structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE, HALF_WALL_HEIGHT,
   METAL_FENCES, METAL_RAILING_COLOR,
 } from '../lib/fence';
-import type { CustomTexture, FenceStyle, OpeningStyle, RoofType, Room, Wall } from '../types';
+import type { CustomTexture, FacadeStyle, FenceStyle, OpeningStyle, RoofType, Room, Wall } from '../types';
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, worktopMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 import { hasFronts, hasWorktop, swapTargets, worktopId } from '../lib/kitchenUnits';
@@ -258,6 +259,12 @@ function PlanCard() {
   );
 }
 
+const FACADE_STYLES: { id: FacadeStyle | null; label: string }[] = [
+  { id: null, label: 'Plain' },
+  { id: 'plinth', label: 'Plinth' },
+  { id: 'bands', label: 'Plinth and band' },
+];
+
 /**
  * One-tap exterior cladding. Painting an outside wall face already works via the
  * 3D paint popover, but it is effectively unreachable: dollhouse mode is on by
@@ -268,6 +275,8 @@ function PlanCard() {
 function ExteriorCard() {
   const t = useI18n();
   const apply = useDesign((st) => st.applyExteriorFinish);
+  const facade = useDesign((st) => facadeOf(st.floors));
+  const setFacade = useDesign((st) => st.setFacade);
   const wallCount = useDesign((st) => st.walls.length);
   if (!wallCount) return null;
 
@@ -310,6 +319,18 @@ function ExteriorCard() {
               />
             );
           })}
+        </div>
+        <div className="prop-label" style={{ marginTop: 12 }}>{t('Facade trim')}</div>
+        <div className="swap-chips">
+          {FACADE_STYLES.map((f) => (
+            <button
+              key={f.label}
+              className={`swap-chip${facade === f.id ? ' on' : ''}`}
+              onClick={() => setFacade(f.id)}
+            >
+              {t(f.label)}
+            </button>
+          ))}
         </div>
       </div>
     </div>
@@ -378,7 +399,7 @@ function RoofCard() {
         </div>
         {nonRect && (roof.type === 'gable' || roof.type === 'hip') && (
           <p className="prop-hint">
-            {t('This footprint is not rectangular enough for a pitched roof, so a flat roof is drawn instead.')}
+            {t('Some outer walls run at an angle, so a flat roof is drawn instead. A pitched roof needs walls that are square to each other.')}
           </p>
         )}
         {pitched && (
@@ -421,6 +442,34 @@ function RoofCard() {
           />
           <span className="field-val">{formatLength(roof.overhang, units)}</span>
         </div>
+        {roof.type === 'flat' && (
+          <>
+            <div className="prop-row">
+              <label>{t('Slab thickness')}</label>
+              <input
+                type="range"
+                min={5}
+                max={60}
+                step={1}
+                value={roof.thickness}
+                onChange={(e) => setRoof({ thickness: Number(e.target.value) })}
+              />
+              <span className="field-val">{formatLength(roof.thickness, units)}</span>
+            </div>
+            <div className="prop-row">
+              <label>{t('Parapet wall')}</label>
+              <input
+                type="range"
+                min={0}
+                max={150}
+                step={5}
+                value={roof.parapet ?? 0}
+                onChange={(e) => setRoof({ parapet: Number(e.target.value) })}
+              />
+              <span className="field-val">{roof.parapet ? formatLength(roof.parapet, units) : t('None')}</span>
+            </div>
+          </>
+        )}
         <div className="prop-label">{t('Covering')}</div>
         <div className="pp-swatches">
           {ROOF_COVERINGS.map((c) => (
@@ -468,7 +517,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
     updateOpening: st.updateOpening,
     updateRoom: st.updateRoom,
     updateWall: st.updateWall,
+    closeWallGaps: st.closeWallGaps,
   })));
+  const wallGaps = useMemo(() => looseWallEnds(s.walls).filter((l) => l.visible).length, [s.walls]);
   const t = useI18n();
   const isPro = useProStore((st) => st.isPro);
   // Crown marker inside <option> text (options can't render components).
@@ -564,6 +615,16 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               >
                 <Sparkles className="icon" /> {t('Auto-detect rooms')}
               </button>
+              {wallGaps > 0 && (
+                <div className="gap-note">
+                  <p>{wallGaps === 1
+                    ? t('1 wall end stops just short of another wall. It is ringed in orange on the plan.')
+                    : `${wallGaps} ${t('wall ends stop just short of another wall. They are ringed in orange on the plan.')}`}</p>
+                  <button className="btn block" onClick={() => { s.closeWallGaps(); toast.success(t('Gaps closed')); }}>
+                    {t('Close the gaps')}
+                  </button>
+                </div>
+              )}
             </div>}
             <PlanCard />
             <ExteriorCard />
@@ -671,6 +732,20 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               </div>
             </div>
             <OutdoorCard room={room} />
+            <div className="prop-card">
+              <div className="prop-title">{t('Roof over this area')}</div>
+              <p className="prop-hint">
+                {t('Puts a flat roof slab over this area, for a covered balcony, porch or entrance. It shows in 3D with Dollhouse off.')}
+              </p>
+              <label className="toggle-row">
+                <input
+                  type="checkbox"
+                  checked={!!room.covered}
+                  onChange={(e) => s.updateRoom(room.id, { covered: e.target.checked || undefined })}
+                />
+                <span>{t('Covered')}</span>
+              </label>
+            </div>
             {!room.outdoor && <StyleCard roomId={room.id} />}
             {!room.outdoor && (
             <div className="prop-card">

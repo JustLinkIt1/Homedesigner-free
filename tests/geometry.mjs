@@ -16,10 +16,11 @@ const sourceRoot = process.cwd().replaceAll('\\', '/');
 const entry = join(process.cwd(), '.geometry-entry.tmp.ts');
 writeFileSync(entry, `
 export { offsetPolygon, orientedBox, boxFillRatio } from '${sourceRoot}/src/lib/polygonOffset.ts';
-export { detectBuildingOutline, detectRooms } from '${sourceRoot}/src/lib/roomDetection.ts';
+export { detectBuildingOutline, detectRooms, looseWallEnds, closeSmallGaps } from '${sourceRoot}/src/lib/roomDetection.ts';
 export { syncAutoRooms } from '${sourceRoot}/src/lib/autoRooms.ts';
 export { polygonArea, rotatePoint, boundsOf } from '${sourceRoot}/src/lib/geometry.ts';
 export { buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines } from '${sourceRoot}/src/lib/roofGeometry.ts';
+export { squareOutline, maximalRects } from '${sourceRoot}/src/lib/roofRects.ts';
 export { wallCentrelines } from '${sourceRoot}/src/lib/wallCentrelines.ts';
 export { classifyOpening } from '${sourceRoot}/src/lib/dxfOpenings.ts';
 export { buildDxf, LAYERS } from '${sourceRoot}/src/lib/dxfExport.ts';
@@ -47,8 +48,8 @@ await build({ entryPoints: [entry], bundle: true, format: 'esm', platform: 'node
 rmSync(entry, { force: true });
 
 const {
-  offsetPolygon, orientedBox, boxFillRatio, detectBuildingOutline, detectRooms, syncAutoRooms, polygonArea,
-  buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines,
+  offsetPolygon, orientedBox, boxFillRatio, detectBuildingOutline, detectRooms, looseWallEnds, closeSmallGaps, syncAutoRooms, polygonArea,
+  buildRoofGeometry, effectiveRoofType, roofNeedsFallback, roofFootprint, roofOutlines, squareOutline, maximalRects,
   normalizeRoofs, roofFloorId, DEFAULT_ROOF,
   classifyLayer, storeyOf, isDemolished, wallCentrelines, classifyOpening,
   buildDxf, LAYERS, flattenPath, importDxf, isNewer, rotatePoint, boundsOf,
@@ -217,14 +218,65 @@ const allFinite = (built) =>
   // pitched roof over an L-shaped house.
   const L = [ {x:0,y:0},{x:600,y:0},{x:600,y:300},{x:300,y:300},{x:300,y:600},{x:0,y:600} ];
   check('roof: L-plan is not one rectangle', roofNeedsFallback(L));
-  // An L is square-cornered, so a gable follows it in blocks (roofRects.ts). A
-  // hip cannot yet, and neither can an outline with a slanted wall.
+  // An L is square-cornered, so a gable or a hip follows it in blocks
+  // (roofRects.ts). An outline with a slanted wall cannot.
   check('roof: L-plan keeps its gable', effectiveRoofType(roofDef({ type: 'gable' }), L) === 'gable');
-  check('roof: L-plan hip becomes flat', effectiveRoofType(roofDef({ type: 'hip' }), L) === 'flat');
+  check('roof: L-plan keeps its hip', effectiveRoofType(roofDef({ type: 'hip' }), L) === 'hip');
+  {
+    // A hip over an L is one hip per block: two 600 x 300 arms, each 150 to its ridge.
+    const rects = maximalRects(L);
+    check('roof: L-plan is two overlapping blocks', !!rects && rects.length === 2, JSON.stringify(rects));
+    const built = buildRoofGeometry(L, null, roofDef({ type: 'hip', pitch: 45, thickness: 20 }), 2.7);
+    const b = roofBounds(built);
+    check('roof: L-plan hip builds', !!built && allFinite(built) && !built.infill);
+    check('roof: L-plan hip rises half an arm', near(b.maxY, 2.7 + 1.5, 1e-3), `top=${b.maxY}`);
+    check('roof: L-plan hip has a soffit under the eaves', near(b.minY, 2.5, 1e-3), `low=${b.minY}`);
+    check('roof: L-plan hip stays on the plan', near(b.minX, 0, 1e-3) && near(b.maxX, 6, 1e-3) && near(b.maxZ, 6, 1e-3));
+  }
+  check('roof: slant-walled plan hip becomes flat', effectiveRoofType(roofDef({ type: 'hip' }), [ {x:0,y:0},{x:600,y:0},{x:600,y:120},{x:120,y:600},{x:0,y:600} ]) === 'flat');
   const wedge = [ {x:0,y:0},{x:600,y:0},{x:600,y:120},{x:120,y:600},{x:0,y:600} ];
   check('roof: slant-walled plan gable becomes flat', roofNeedsFallback(wedge) && effectiveRoofType(roofDef({ type: 'gable' }), wedge) === 'flat');
   check('roof: rectangle keeps its gable', effectiveRoofType(roofDef({ type: 'gable' }), rect(800, 600)) === 'gable');
   check('roof: shed never falls back', effectiveRoofType(roofDef({ type: 'shed' }), L) === 'shed');
+}
+{
+  // Hand-drawn walls are a centimetre or two out of square. That used to be
+  // enough for a gable or hip to be refused.
+  const skew = [ {x:0,y:0},{x:600,y:1.2},{x:601,y:300},{x:300.5,y:299},{x:300,y:600},{x:-0.8,y:600.6} ];
+  const sq = squareOutline(skew);
+  const square = !!sq && sq.every((p, i) => {
+    const q = sq[(i + 1) % sq.length];
+    const dx = q.x - p.x, dy = q.y - p.y;
+    // Edges of the result are at right angles to each other.
+    const r = sq[(i + 2) % sq.length];
+    return Math.abs(dx * (r.x - q.x) + dy * (r.y - q.y)) < 1e-6;
+  });
+  check('roof: nearly square walls are squared up', square && sq.length === 6, JSON.stringify(sq));
+  check('roof: squaring moves corners by centimetres, not more', !!sq && sq.every((p) => skew.some((q) => Math.hypot(p.x - q.x, p.y - q.y) < 4)));
+  check('roof: a slanted wall is not squared', squareOutline([ {x:0,y:0},{x:600,y:0},{x:600,y:120},{x:120,y:600},{x:0,y:600} ]) === null);
+  check('roof: a rectangle squares to itself', (() => { const r = squareOutline(rect(800, 600)); return !!r && r.length === 4 && r.every((p) => rect(800, 600).some((q) => Math.hypot(p.x - q.x, p.y - q.y) < 1e-6)); })());
+  const wall = (x1, y1, x2, y2) => ({ id: `${x1},${y1},${x2},${y2}`, start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: 15, height: 270, color: '#fff' });
+  const walls = skew.map((p, i) => { const q = skew[(i + 1) % skew.length]; return wall(p.x, p.y, q.x, q.y); });
+  const pitched = roofOutlines(walls, 30);
+  const asDrawn = roofOutlines(walls, 30, false);
+  check('roof: skewed L takes a gable and a hip', !!pitched
+    && effectiveRoofType(roofDef({ type: 'gable' }), pitched.eave) === 'gable'
+    && effectiveRoofType(roofDef({ type: 'hip' }), pitched.eave) === 'hip');
+  check('roof: a flat roof still follows the walls as drawn', !!asDrawn && effectiveRoofType(roofDef({ type: 'gable' }), asDrawn.eave) === 'flat');
+}
+{
+  // A parapet stands on the wall line, above the slab, and is wall rather than roofing.
+  const W = rect(800, 600);
+  const plain = buildRoofGeometry(W, W, roofDef({ type: 'flat', thickness: 20 }), 2.7);
+  const walled = buildRoofGeometry(W, W, roofDef({ type: 'flat', thickness: 20, parapet: 90 }), 2.7);
+  check('roof: a flat roof has no parapet unless asked', !!plain && plain.infill === null);
+  const pos = walled.infill.getAttribute('position');
+  let lo = Infinity, hi = -Infinity, inX = Infinity;
+  for (let i = 0; i < pos.count; i++) { lo = Math.min(lo, pos.getY(i)); hi = Math.max(hi, pos.getY(i)); if (pos.getX(i) > 0.001) inX = Math.min(inX, pos.getX(i)); }
+  check('roof: parapet rises above the slab', near(hi, 2.7 + 0.2 + 0.9, 1e-3) && near(lo, 2.7, 1e-3), `${lo}..${hi}`);
+  check('roof: parapet is a wall thickness deep', near(inX, 0.15, 1e-3), `inner=${inX}`);
+  check('roof: parapet counts in the roof height', near(walled.ridgeHeight, 1.1, 1e-3));
+  check('roof: a pitched roof ignores the parapet', near(buildRoofGeometry(W, W, roofDef({ type: 'gable', pitch: 30, thickness: 20, parapet: 90 }), 2.7).ridgeHeight, 3 * Math.tan(Math.PI / 6) + 0.2, 1e-3));
 }
 {
   check('roof: degenerate outline returns null', buildRoofGeometry([{x:0,y:0},{x:1,y:1}], null, roofDef({}), 2.7) === null);
@@ -1344,6 +1396,31 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
   const twoBuildings = [...box(0, 0, 800, 400), W(400, 0, 400, 400), ...box(1000, 0, 600, 300), W(1300, 0, 1300, 300)];
   check('rooms: two separate buildings give only their real rooms', sizes(detectRooms(twoBuildings)) === '9,9,16,16', sizes(detectRooms(twoBuildings)));
   check('rooms: a lone box is one room', detectRooms(box(0, 0, 500, 400)).length === 1);
+
+  // A dividing wall dragged to stop 15 cm short of the outer wall (and so
+  // clear of its body) still divides the house, and the gap is reported.
+  const gappy = [...box(0, 0, 800, 400), W(400, 0, 400, 385)];
+  check('gaps: a wall 15 cm short still closes both rooms', sizes(detectRooms(gappy)) === '16,16', sizes(detectRooms(gappy)));
+  const loose = looseWallEnds(gappy);
+  check('gaps: the short end is reported, aimed at the wall it misses',
+    loose.length === 1 && loose[0].end === 'end' && loose[0].visible && Math.abs(loose[0].target.y - 400) < 0.01 && Math.abs(loose[0].target.x - 400) < 0.01,
+    JSON.stringify(loose));
+  const closed = closeSmallGaps(gappy);
+  check('gaps: closing them moves only the short end', closed[4].end.y === 400 && closed[0] === gappy[0] && looseWallEnds(closed).length === 0);
+  check('gaps: a doorway-sized opening is left alone', looseWallEnds([...box(0, 0, 800, 400), W(400, 0, 400, 320)]).length === 0);
+  check('gaps: a closed plan reports none', looseWallEnds(twoBuildings).length === 0);
+
+  // A C-shaped balcony wraps a kitchen. The balcony's centroid lies in the
+  // kitchen, which used to hand the balcony's floor to the kitchen.
+  {
+    const cShape = [{ x: 0, y: 0 }, { x: 600, y: 0 }, { x: 600, y: 600 }, { x: 0, y: 600 }, { x: 0, y: 450 }, { x: 450, y: 450 }, { x: 450, y: 150 }, { x: 0, y: 150 }];
+    const balcony = { id: 'bal', name: 'Balcony', points: cShape, floorMaterial: 'deck', color: '#fff', auto: true };
+    const out = syncAutoRooms([balcony], box(0, 150, 450, 300)).rooms;
+    const kept = out.find((r) => r.id === 'bal');
+    check('rooms: a room wrapped by another does not take its floor',
+      out.length === 2 && kept && kept.points === cShape && out.some((r) => r.id !== 'bal' && r.floorMaterial !== 'deck'),
+      JSON.stringify(out.map((r) => [r.id, r.floorMaterial])));
+  }
 
   // Drawing a wall keeps every floor the user picked.
   const walls = [...box(0, 0, 800, 400), W(400, 0, 400, 400)];

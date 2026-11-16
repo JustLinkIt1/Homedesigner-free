@@ -1,4 +1,4 @@
-import type { FloorInfo, Roof } from '../types';
+import type { FacadeStyle, FloorInfo, Roof } from '../types';
 
 /**
  * Roof data helpers (pure — no three.js, so the store can import them).
@@ -45,6 +45,7 @@ function sanitize(roof: Roof): Roof {
     covering: roof.covering ?? DEFAULT_ROOF.covering,
     coveringScaleCm: Math.max(10, Math.min(400, Number(roof.coveringScaleCm) || DEFAULT_ROOF.coveringScaleCm)),
     windows: Math.max(0, Math.min(6, Math.round(Number(roof.windows) || 0))),
+    parapet: Math.max(0, Math.min(200, Math.round(Number(roof.parapet) || 0))),
   };
 }
 
@@ -69,4 +70,9 @@ export function normalizeRoofs(floors: FloorInfo[]): FloorInfo[] {
     const { roof: _drop, ...rest } = f;
     return rest;
   });
+}
+
+/** The building's outside wall trim. It is set on every storey at once. */
+export function facadeOf(floors: FloorInfo[]): FacadeStyle | null {
+  return floors.find((f) => f.facade)?.facade ?? null;
 }

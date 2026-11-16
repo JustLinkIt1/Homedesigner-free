@@ -36,6 +36,7 @@ import {
 import { kitchenRunUnits, RUN_UNIT } from '../../lib/kitchenRun';
 import { computeWallPolygons } from '../../lib/wallGeometry';
 import { isFence, isHalfWall } from '../../lib/fence';
+import { looseWallEnds } from '../../lib/roomDetection';
 import { exteriorSideAt } from '../../lib/exteriorFaces';
 import { BAY_DEPTH, isBay } from '../../lib/bayWindow';
 import { wallDistances } from '../../lib/distanceGuides';
@@ -164,6 +165,8 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   } = s;
   const multi = selectedIds.length > 1;
   const fmtLen = (cm: number) => formatLength(cm, units);
+  // Wall ends that stop just short of another wall, ringed so they can be found.
+  const wallGaps = useMemo(() => looseWallEnds(walls).filter((l) => l.visible), [walls]);
 
   const bgImage = useHtmlImage(background?.src);
 
@@ -1796,6 +1799,27 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
               </Group>
             );
           })}
+
+          {/* A wall end that stops just short of another wall: an amber ring
+              round the gap and a dashed line to where it would meet. */}
+          {wallGaps.map((g) => (
+            <Group key={`${g.wallId}-${g.end}`} listening={false}>
+              <Line
+                points={[g.point.x, g.point.y, g.target.x, g.target.y]}
+                stroke="#f5a524"
+                strokeWidth={2 / zoom}
+                dash={[4 / zoom, 3 / zoom]}
+              />
+              <Circle
+                x={(g.point.x + g.target.x) / 2}
+                y={(g.point.y + g.target.y) / 2}
+                radius={Math.max(22, 13 / zoom)}
+                stroke="#f5a524"
+                strokeWidth={2.5 / zoom}
+                fill="rgba(245,165,36,0.16)"
+              />
+            </Group>
+          ))}
 
           {/* Openings (doors & windows) */}
           {openings.map((o) => {

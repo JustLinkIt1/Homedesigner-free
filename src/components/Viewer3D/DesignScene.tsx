@@ -16,7 +16,8 @@ import { exteriorFaces, exteriorRanges, exteriorSideAt } from '../../lib/exterio
 import { bayParts, isBay } from '../../lib/bayWindow';
 import { isFence, isHalfWall, structuralWalls, fenceRunBoxes, METAL_FENCES } from '../../lib/fence';
 import { buildRoofGeometry, roofOutlines, type RoofLight } from '../../lib/roofGeometry';
-import { roofOf } from '../../lib/roof';
+import { facadeOf, roofOf } from '../../lib/roof';
+import { offsetPolygon } from '../../lib/polygonOffset';
 import { useRemoteCatalog } from '../../lib/remoteCatalog';
 import Furniture3D from './Furniture3D';
 import type { CustomTexture, FloorGeom, FurnitureItem, Opening, Point, Roof, Room, Wall, WallFaceFinish, WallFaceRange } from '../../types';
@@ -189,6 +190,7 @@ function WallMesh({
   skirt = 0,
   outward,
   roofed = false,
+  trim,
   onTap,
 }: {
   wall: Wall;
@@ -206,6 +208,8 @@ function WallMesh({
   outward?: 1 | -1;
   /** A roof sits on this wall, so its top is not a cut edge and takes no cap. */
   roofed?: boolean;
+  /** Facade trim on the outdoor faces: a plinth at the base, a band under the top. */
+  trim?: { plinth: boolean; band: boolean };
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
   unregister: (id: string) => void;
@@ -270,6 +274,31 @@ function WallMesh({
     () => new THREE.MeshStandardMaterial({ color: '#4a453e', roughness: 0.6, metalness: 0.04 }),
     [],
   );
+
+  // Facade trim: painted render for the band, stone grey for the plinth.
+  const trimMats = useMemo(
+    () => ({
+      band: new THREE.MeshStandardMaterial({ color: '#f1efea', roughness: 0.7 }),
+      plinth: new THREE.MeshStandardMaterial({ color: '#8b8780', roughness: 0.9 }),
+    }),
+    [],
+  );
+  useEffect(() => {
+    if (fadeable) {
+      register(`${wall.id}:band`, { mat: trimMats.band, nx: normal.nx, nz: normal.nz, mx, mz });
+      register(`${wall.id}:plinth`, { mat: trimMats.plinth, nx: normal.nx, nz: normal.nz, mx, mz });
+    }
+    return () => {
+      if (fadeable) {
+        unregister(`${wall.id}:band`);
+        unregister(`${wall.id}:plinth`);
+      }
+    };
+  }, [wall.id, trimMats, normal, mx, mz, fadeable, register, unregister]);
+  useEffect(() => () => {
+    trimMats.band.dispose();
+    trimMats.plinth.dispose();
+  }, [trimMats]);
 
   // Register fade data with the parent's single loop; dispose material on unmount.
   useEffect(() => {
@@ -376,6 +405,51 @@ function WallMesh({
               side={finish.side}
             />
           ));
+      })}
+      {/* Facade trim on the outdoor faces. Both pieces stand a little proud of
+          the wall and run just past its ends, so they meet round a corner. */}
+      {trim && ([1, -1] as const).flatMap((side) => {
+        const len = dist(wall.start, wall.end);
+        const lo = -wall.thickness / 2 - 4;
+        const hi = len + wall.thickness / 2 + 4;
+        return outdoors[side].flatMap(([from, to], i) => {
+          const a = Math.max(from, lo);
+          const b = Math.min(to, hi);
+          if (b - a <= 1) return [];
+          const pieces: ReactNode[] = [];
+          if (trim.band) {
+            pieces.push(
+              <mesh
+                key={`band-${side}-${i}`}
+                position={[((a + b) / 2) * M, height * M - 0.35, side * (t / 2 + 0.018)]}
+                material={trimMats.band}
+                castShadow
+              >
+                <boxGeometry args={[(b - a) * M, 0.2, 0.04]} />
+              </mesh>,
+            );
+          }
+          if (trim.plinth) {
+            // Only where the wall stands on the ground: not across a doorway.
+            spans.filter((s) => s.y0 <= 0.01).forEach((s, k) => {
+              const pa = Math.max(a, s.a <= 0.01 ? lo : s.a);
+              const pb = Math.min(b, s.b >= len - 0.01 ? hi : s.b);
+              const ph = Math.min(45, s.y1) * M;
+              if (pb - pa <= 1 || ph <= 0.02) return;
+              pieces.push(
+                <mesh
+                  key={`plinth-${side}-${i}-${k}`}
+                  position={[((pa + pb) / 2) * M, ph / 2, side * (t / 2 + 0.023)]}
+                  material={trimMats.plinth}
+                  castShadow
+                >
+                  <boxGeometry args={[(pb - pa) * M, ph, 0.05]} />
+                </mesh>,
+              );
+            });
+          }
+          return pieces;
+        });
       })}
       {/* Dark top cap along the full wall (fades with the wall body). Left off
           where the storey above sits on this wall. */}
@@ -1043,6 +1117,21 @@ function WingRoof({ room, top }: { room: Room; top: number }) {
   );
 }
 
+/** A flat roof slab over one room: a covered balcony, porch or entrance.
+ * `top` is its upper face and `depth` its thickness (m). */
+function CanopyRoof({ room, top, depth }: { room: Room; top: number; depth: number }) {
+  const geometry = useMemo(() => {
+    const wide = offsetPolygon(room.points, 15);
+    return new THREE.ExtrudeGeometry(roomShape({ points: wide } as Room), { depth, bevelEnabled: false });
+  }, [room.points, depth]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, top, 0]} castShadow receiveShadow>
+      <meshStandardMaterial color="#e9e6df" roughness={0.8} metalness={0} />
+    </mesh>
+  );
+}
+
 const SLAB_T = 0.22; // structural slab thickness between storeys (m)
 
 /** Shared shape builder: a room polygon as a THREE.Shape in plan meters. */
@@ -1201,7 +1290,9 @@ function RoofMesh({ walls, rooms, roof, eaveY }: { walls: Wall[]; rooms: Room[];
   const built = useMemo(() => {
     // Fences carry no roof, and a fence running off the plot would otherwise
     // drag the eave outline out with it.
-    const o = roofOutlines(structuralWalls(walls), roof.overhang);
+    // A pitched roof needs square corners, so walls a touch out of square are
+    // straightened for it. A flat or shed roof follows the walls as drawn.
+    const o = roofOutlines(structuralWalls(walls), roof.overhang, roof.type === 'gable' || roof.type === 'hip');
     if (!o) return null;
     return buildRoofGeometry(o.eave, o.wall, roof, eaveY);
   }, [walls, roof, eaveY]);
@@ -1445,7 +1536,8 @@ export function useDesignBounds() {
     const rise = roof && roof.type !== 'flat' ? halfShort * Math.tan((roof.pitch * Math.PI) / 180) : 0;
     // Frame the whole stack: half-extent plus padding, with extra for storeys.
     const plan = (halfPlan + grow) * M + 4;
-    const modelTop = roof ? wallTop * M + rise * M + roof.thickness * M : topElevation * M;
+    const parapet = roof?.type === 'flat' ? roof.parapet ?? 0 : 0;
+    const modelTop = roof ? wallTop * M + rise * M + roof.thickness * M + parapet * M : topElevation * M;
     const r = plan + modelTop * 0.6;
     return { center: [cx, modelTop * 0.5, cz] as [number, number, number], radius: r };
   }, [floors, floorGeom]);
@@ -1461,6 +1553,7 @@ function FloorContent({
   riseTo,
   above,
   roof,
+  trim,
   dollhouse,
   center,
   register,
@@ -1481,6 +1574,8 @@ function FloorContent({
    *  `isTop` is relative to the currently VISIBLE storeys, which in the
    *  active-floor cutaway would put the roof on the wrong level). */
   roof?: Roof;
+  /** Facade trim for this storey's outside walls. */
+  trim?: { plinth: boolean; band: boolean };
   dollhouse: boolean;
   center: [number, number, number];
   register: (id: string, f: WallFade) => void;
@@ -1561,6 +1656,12 @@ function FloorContent({
       {roof && !dollhouse && (
         <RoofMesh walls={geom.walls} rooms={geom.rooms} roof={roof} eaveY={ceilingHeight} />
       )}
+      {!dollhouse && geom.rooms.filter((r) => r.covered && r.points.length >= 3).map((r) => {
+        // As thick as the main roof, and a hair lower so the two never fight
+        // where a covered room also sits under a flat roof.
+        const depth = (roof?.thickness ?? 14) * M;
+        return <CanopyRoof key={`canopy-${r.id}`} room={r} top={ceilingHeight + depth - 0.003} depth={depth} />;
+      })}
       {riseTo != null && openWings.map((r) => (
         <WingRoof key={`wing-${r.id}`} room={r} top={riseTo * M + 0.1} />
       ))}
@@ -1592,6 +1693,7 @@ function FloorContent({
             fillTo={isHalfWall(w) ? undefined : riseTo}
             skirt={elevation > 0 ? SLAB_T : 0}
             roofed={!!roof && !dollhouse && !isHalfWall(w)}
+            trim={isHalfWall(w) ? undefined : trim}
             onTap={onTap}
           />
         )
@@ -1723,6 +1825,9 @@ export default function DesignScene({
     return result;
   }, [orderedFloors, floorGeom]);
   const topElevation = Math.max(...visible.map((x) => x.elevation));
+  // Facade trim: the plinth goes round the lowest storey only.
+  const facade = facadeOf(floors);
+  const groundElevation = Math.min(...floors.map((x) => x.elevation));
   // How far each drawn storey's walls must run to meet the storey drawn above it.
   const riseByFloor = new Map<string, number>();
   const aboveByFloor = new Map<string, FloorGeom>();
@@ -1749,6 +1854,7 @@ export default function DesignScene({
             riseTo={riseByFloor.get(f.id)}
             above={aboveByFloor.get(f.id)}
             roof={f.roof}
+            trim={facade ? { plinth: f.elevation <= groundElevation, band: facade === 'bands' } : undefined}
             // Dollhouse fade cuts open only the storey being edited; the
             // storeys below stay solid (context, not subject).
             dollhouse={dollhouse && f.id === activeFloorId}

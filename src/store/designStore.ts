@@ -9,6 +9,7 @@ import type {
   Opening,
   Point,
   Roof,
+  FacadeStyle,
   Room,
   Selection,
   ToolMode,
@@ -24,7 +25,7 @@ import { findKitchenCorner, kitchenRunUnits, kitchenUpperUnits, type CornerSpot 
 import { applyFrontColorToAll, applyHandlesToAll, applyWorktopToAll, swapUnit } from '../lib/kitchenUnits';
 import { splitPolygonBySegment } from '../lib/roomSplit';
 import { ROOM_STYLE_BY_ID } from '../data/roomStyles';
-import { detectRooms, roomMatches } from '../lib/roomDetection';
+import { detectRooms, roomMatches, looseWallEnds, closeSmallGaps } from '../lib/roomDetection';
 import { syncAutoRooms } from '../lib/autoRooms';
 import { structuralWalls, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE, HALF_WALL_HEIGHT } from '../lib/fence';
 import { DEFAULT_ROOF, normalizeRoofs, roofFloorId, roofOf } from '../lib/roof';
@@ -140,6 +141,9 @@ interface DesignState extends DesignSnapshot {
 
   addWall: (start: Point, end: Point, kind?: 'wall' | 'half' | 'fence') => string;
   updateWall: (id: string, patch: Partial<Wall>) => void;
+  /** Join every wall end that stops just short of another wall (see
+   *  `looseWallEnds`) and floor the rooms that closes. Returns how many ends moved. */
+  closeWallGaps: () => number;
   addRoom: (points: Point[]) => string;
   /** Create an enclosed room and its structural walls as one undo step. */
   addRoomWithWalls: (points: Point[]) => void;
@@ -209,6 +213,8 @@ interface DesignState extends DesignSnapshot {
   /** Add/adjust the roof (patch merges onto the current or default roof), or
    *  pass null to remove it. Always applies to the top storey. */
   setRoof: (patch: Partial<Roof> | null) => void;
+  /** Trim on the outside walls of every storey, or null for plain walls. */
+  setFacade: (style: FacadeStyle | null) => void;
 
   /** `clearFloor` also empties this floor of rooms and furniture: a whole new
    *  plan has arrived, and the old one's sofa does not belong in it. */
@@ -578,8 +584,23 @@ export const useDesign = create<DesignState>((set, get) => {
     updateWall: (id, patch) =>
       commit((d) => {
         const i = d.walls.findIndex((w) => w.id === id);
-        if (i >= 0) d.walls[i] = { ...d.walls[i], ...patch };
+        if (i < 0) return;
+        d.walls[i] = { ...d.walls[i], ...patch };
+        // A wall that moved (or stopped being a fence) can close an area that
+        // had no floor: floors used to follow only walls being drawn, so a
+        // room made by dragging walls together stayed bare and unselectable.
+        if (patch.start || patch.end || 'kind' in patch) d.rooms = syncAutoRooms(d.rooms, d.walls).rooms;
       }),
+
+    closeWallGaps: () => {
+      const loose = looseWallEnds(get().walls);
+      if (!loose.length) return 0;
+      commit((d) => {
+        d.walls = closeSmallGaps(d.walls);
+        d.rooms = syncAutoRooms(d.rooms, d.walls).rooms;
+      });
+      return loose.length;
+    },
 
     addRoom: (points) => {
       const id = uid();
@@ -1075,6 +1096,7 @@ export const useDesign = create<DesignState>((set, get) => {
           const ne = dist(w.end, from) <= tol ? { x: to.x, y: to.y } : w.end;
           return ns === w.start && ne === w.end ? w : { ...w, start: ns, end: ne };
         });
+        d.rooms = syncAutoRooms(d.rooms, d.walls).rooms;
       }),
 
     // ---- storeys (multi-floor) ----
@@ -1304,6 +1326,16 @@ export const useDesign = create<DesignState>((set, get) => {
         toast.info(t('Dollhouse is off so you can see the roof. Turn it back on to look inside.'));
       }
     },
+
+    setFacade: (style) =>
+      commit((d) => {
+        d.floors = d.floors.map((f) => {
+          if (style) return { ...f, facade: style };
+          if (!f.facade) return f;
+          const { facade: _drop, ...rest } = f;
+          return rest;
+        });
+      }),
 
     importWalls: (walls, replace = false, openings, clearFloor = false) =>
       commit((d) => {

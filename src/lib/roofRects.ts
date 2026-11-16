@@ -233,3 +233,135 @@ export function kinkLines(prisms: RoofPrism[]): { u: number[]; v: number[] } {
   }
   return out;
 }
+
+/**
+ * The outline with walls that are nearly square to each other made exactly
+ * square. Hand-drawn plans are a centimetre or two out, which was enough for a
+ * pitched roof to be refused. Null when a wall really does run at an angle, or
+ * when squaring would move the roof edge visibly off its wall.
+ */
+export function squareOutline(outline: Point[]): Point[] | null {
+  const n0 = outline.length;
+  if (n0 < 4) return null;
+  // The direction most of the walls run, to within a quarter turn.
+  let sx = 0, sy = 0;
+  for (let i = 0; i < n0; i++) {
+    const a = outline[i], b = outline[(i + 1) % n0];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const ang = Math.atan2(b.y - a.y, b.x - a.x) * 4;
+    sx += len * Math.cos(ang);
+    sy += len * Math.sin(ang);
+  }
+  const theta = Math.atan2(sy, sx) / 4;
+  const cos = Math.cos(theta), sin = Math.sin(theta);
+  const pts: Point[] = [];
+  for (const p of outline) {
+    const q = { x: p.x * cos + p.y * sin, y: -p.x * sin + p.y * cos };
+    const last = pts[pts.length - 1];
+    if (!last || Math.hypot(q.x - last.x, q.y - last.y) > 2) pts.push(q);
+  }
+  if (pts.length > 1 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) <= 2) pts.pop();
+  const n = pts.length;
+  if (n < 4) return null;
+
+  // Each edge runs along u ('h') or along v ('v'), give or take a small drift.
+  const DRIFT = 20; // cm an edge may wander off its line, end to end
+  const kinds: ('h' | 'v')[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n];
+    const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
+    const allow = Math.max(6, Math.min(DRIFT, Math.max(dx, dy) * 0.06));
+    if (dy <= dx && dy <= allow) kinds.push('h');
+    else if (dx < dy && dx <= allow) kinds.push('v');
+    else return null;
+  }
+  // Runs of edges on the same line, starting where the direction turns.
+  let first = 0;
+  while (first < n && kinds[first] === kinds[(first - 1 + n) % n]) first++;
+  if (first === n) return null;
+  const runs: { kind: 'h' | 'v'; level: number }[] = [];
+  for (let k = 0; k < n; ) {
+    const kind = kinds[(first + k) % n];
+    let weight = 0, sum = 0, lo = Infinity, hi = -Infinity;
+    while (k < n && kinds[(first + k) % n] === kind) {
+      const a = pts[(first + k) % n], b = pts[(first + k + 1) % n];
+      const len = Math.hypot(b.x - a.x, b.y - a.y) || 1e-6;
+      for (const c of kind === 'h' ? [a.y, b.y] : [a.x, b.x]) {
+        sum += (c * len) / 2;
+        weight += len / 2;
+        lo = Math.min(lo, c);
+        hi = Math.max(hi, c);
+      }
+      k++;
+    }
+    if (hi - lo > DRIFT) return null;
+    runs.push({ kind, level: sum / weight });
+  }
+  if (runs.length < 4 || runs.length % 2) return null;
+  // Lines a few centimetres apart are meant to be the same line.
+  for (const kind of ['h', 'v'] as const) {
+    const sorted = runs.filter((r) => r.kind === kind).sort((a, b) => a.level - b.level);
+    for (let i = 0; i < sorted.length; ) {
+      let j = i + 1;
+      while (j < sorted.length && sorted[j].level - sorted[j - 1].level < 6) j++;
+      const mean = sorted.slice(i, j).reduce((s, r) => s + r.level, 0) / (j - i);
+      for (let k = i; k < j; k++) sorted[k].level = mean;
+      i = j;
+    }
+  }
+  // Corners are where one run meets the next.
+  const raw: Point[] = runs.map((r, i) => {
+    const next = runs[(i + 1) % runs.length];
+    return r.kind === 'h' ? { x: next.level, y: r.level } : { x: r.level, y: next.level };
+  });
+  const corners: Point[] = [];
+  for (const p of raw) {
+    const last = corners[corners.length - 1];
+    if (!last || Math.hypot(p.x - last.x, p.y - last.y) > 0.5) corners.push(p);
+  }
+  if (corners.length > 1 && Math.hypot(corners[0].x - corners[corners.length - 1].x, corners[0].y - corners[corners.length - 1].y) <= 0.5) corners.pop();
+  const kept = corners.filter((p, i) => {
+    const a = corners[(i - 1 + corners.length) % corners.length], b = corners[(i + 1) % corners.length];
+    return Math.abs((p.x - a.x) * (b.y - p.y) - (p.y - a.y) * (b.x - p.x)) > 1e-6;
+  });
+  if (kept.length < 4) return null;
+  const area = (poly: Point[]) => Math.abs(poly.reduce((s, p, i) => {
+    const q = poly[(i + 1) % poly.length];
+    return s + p.x * q.y - q.x * p.y;
+  }, 0) / 2);
+  const before = area(pts), after = area(kept);
+  if (!(before > 0) || Math.abs(after - before) > before * 0.05) return null;
+  return kept.map((p) => ({ x: p.x * cos - p.y * sin, y: p.x * sin + p.y * cos }));
+}
+
+/**
+ * Every rectangle that fits inside the outline and cannot be made any bigger.
+ * A hip roof over a square-cornered plan is a hip over each of these, drawn
+ * through one another: the highest one at any point is the roof.
+ */
+export function maximalRects(local: Point[]): Rect[] | null {
+  const us = levels(local.map((p) => p.x));
+  const vs = levels(local.map((p) => p.y));
+  const nu = us.length - 1, nv = vs.length - 1;
+  if (nu < 1 || nv < 1 || nu > 16 || nv > 16) return null;
+  // sum[j][i]: how many cells of the house lie below and left of (i, j).
+  const sum = Array.from({ length: nv + 1 }, () => new Array<number>(nu + 1).fill(0));
+  for (let j = 0; j < nv; j++) {
+    for (let i = 0; i < nu; i++) {
+      const cell = inside(local, (us[i] + us[i + 1]) / 2, (vs[j] + vs[j + 1]) / 2) ? 1 : 0;
+      sum[j + 1][i + 1] = cell + sum[j][i + 1] + sum[j + 1][i] - sum[j][i];
+    }
+  }
+  const full = (i0: number, i1: number, j0: number, j1: number) =>
+    i0 >= 0 && j0 >= 0 && i1 <= nu && j1 <= nv &&
+    sum[j1][i1] - sum[j0][i1] - sum[j1][i0] + sum[j0][i0] === (i1 - i0) * (j1 - j0);
+  const rects: Rect[] = [];
+  for (let i0 = 0; i0 < nu; i0++) for (let i1 = i0 + 1; i1 <= nu; i1++) {
+    for (let j0 = 0; j0 < nv; j0++) for (let j1 = j0 + 1; j1 <= nv; j1++) {
+      if (!full(i0, i1, j0, j1)) continue;
+      if (full(i0 - 1, i1, j0, j1) || full(i0, i1 + 1, j0, j1) || full(i0, i1, j0 - 1, j1) || full(i0, i1, j0, j1 + 1)) continue;
+      rects.push({ u0: us[i0], u1: us[i1], v0: vs[j0], v1: vs[j1] });
+    }
+  }
+  return rects.length ? rects : null;
+}

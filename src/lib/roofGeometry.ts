@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { orientedBox, boxFillRatio, offsetPolygon } from './polygonOffset';
 import { detectBuildingOutline } from './roomDetection';
-import { coverAt, decompose, kinkLines, planPrisms, rectilinear } from './roofRects';
+import { coverAt, decompose, kinkLines, maximalRects, planPrisms, rectilinear, squareOutline } from './roofRects';
 import type { Point, Roof, Wall } from '../types';
 
 const M = 0.01; // cm -> m, matching DesignScene
@@ -32,10 +32,14 @@ const M = 0.01; // cm -> m, matching DesignScene
  *  - `wall` — pushed out by half a wall; the outer wall face, where the gable
  *    and shed end infill has to sit so it lines up with the walls below.
  * Returns null when the walls don't enclose anything.
+ *
+ * `square` straightens walls that are a centimetre or two out of square, which
+ * a pitched roof needs. A flat or shed roof follows the walls exactly as drawn.
  */
-export function roofOutlines(walls: Wall[], overhang: number): { eave: Point[]; wall: Point[] } | null {
-  const outline = detectBuildingOutline(walls);
-  if (!outline || outline.length < 3) return null;
+export function roofOutlines(walls: Wall[], overhang: number, square = true): { eave: Point[]; wall: Point[] } | null {
+  const drawn = detectBuildingOutline(walls);
+  if (!drawn || drawn.length < 3) return null;
+  const outline = (square && squareOutline(drawn)) || drawn;
   const half = (walls.reduce((m, w) => Math.max(m, w.thickness), 0) || 10) / 2;
   return {
     eave: offsetPolygon(outline, half + Math.max(0, overhang)),
@@ -44,8 +48,8 @@ export function roofOutlines(walls: Wall[], overhang: number): { eave: Point[]; 
 }
 
 /** Just the roof edge — for callers that only need to test the shape. */
-export function roofFootprint(walls: Wall[], overhang: number): Point[] | null {
-  return roofOutlines(walls, overhang)?.eave ?? null;
+export function roofFootprint(walls: Wall[], overhang: number, square = true): Point[] | null {
+  return roofOutlines(walls, overhang, square)?.eave ?? null;
 }
 
 /** True when a pitched roof over this footprint would visibly float. */
@@ -74,9 +78,9 @@ export function roofFollowsOutline(outline: Point[]): boolean {
 export function effectiveRoofType(roof: Roof, outline: Point[]): Roof['type'] {
   if (roof.type === 'flat' || roof.type === 'shed') return roof.type;
   if (!roofNeedsFallback(outline)) return roof.type;
-  // A square-cornered outline takes a gable however far it is from a plain
-  // rectangle: the roof is built in blocks. A hip still needs a compact plan.
-  return roof.type === 'gable' && roofFollowsOutline(outline) ? 'gable' : 'flat';
+  // A square-cornered outline takes a pitched roof however far it is from a
+  // plain rectangle: the roof is built in blocks.
+  return roofFollowsOutline(outline) ? roof.type : 'flat';
 }
 
 function shapeOf(poly: Point[]): THREE.Shape {
@@ -137,6 +141,48 @@ function planarUVs(geo: THREE.BufferGeometry) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
+/**
+ * A low wall standing on the outer wall line, from `y0` up to `y1` (metres).
+ * Each corner of the inner face is mitred, so the wall keeps its thickness
+ * round both outside and inside corners.
+ */
+function parapetGeometry(wall: Point[], y0: number, y1: number): THREE.BufferGeometry | null {
+  const n = wall.length;
+  const area = wall.reduce((s, p, i) => {
+    const q = wall[(i + 1) % n];
+    return s + p.x * q.y - q.x * p.y;
+  }, 0);
+  const turn = area >= 0 ? 1 : -1; // which way is inward
+  const thick = 15; // cm
+  const inner: Point[] = wall.map((p, i) => {
+    const a = wall[(i - 1 + n) % n];
+    const b = wall[(i + 1) % n];
+    const l0 = Math.hypot(p.x - a.x, p.y - a.y) || 1;
+    const l1 = Math.hypot(b.x - p.x, b.y - p.y) || 1;
+    // Inward normals of the edge arriving at this corner and the one leaving it.
+    const n0 = { x: (-(p.y - a.y) / l0) * turn, y: ((p.x - a.x) / l0) * turn };
+    const n1 = { x: (-(b.y - p.y) / l1) * turn, y: ((b.x - p.x) / l1) * turn };
+    const along = 1 + n0.x * n1.x + n0.y * n1.y;
+    // A hairpin corner would send the mitre off to infinity; cap it.
+    const k = thick / Math.max(along, 0.35);
+    return { x: p.x + (n0.x + n1.x) * k, y: p.y + (n0.y + n1.y) * k };
+  });
+  const out: number[] = [];
+  const at = (p: Point, y: number) => new THREE.Vector3(p.x * M, y, p.y * M);
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    quad(out, at(wall[i], y0), at(wall[j], y0), at(wall[j], y1), at(wall[i], y1)); // outside face
+    quad(out, at(inner[j], y0), at(inner[i], y0), at(inner[i], y1), at(inner[j], y1)); // inside face
+    quad(out, at(wall[i], y1), at(wall[j], y1), at(inner[j], y1), at(inner[i], y1)); // coping
+  }
+  if (!out.length) return null;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
+  g.computeVertexNormals();
+  planarUVs(g);
+  return g;
+}
+
 export interface RoofLight { position: THREE.Vector3; along: THREE.Vector3; up: THREE.Vector3 }
 
 /**
@@ -177,7 +223,13 @@ export function buildRoofGeometry(
     geo.computeVertexNormals();
     planarUVs(geo);
     // A flat roof sits straight on the wall top, so there is nothing to fill.
-    return { geometry: geo, infill: null, ridgeHeight: t };
+    // A parapet is wall, not roofing, so it goes out the same way a gable end
+    // does and takes the wall finish.
+    const rise = Math.max(0, roof.parapet ?? 0) * M;
+    const parapet = rise > 0 && wallOutline && wallOutline.length >= 3
+      ? parapetGeometry(wallOutline, eaveY, eaveY + t + rise)
+      : null;
+    return { geometry: geo, infill: parapet, ridgeHeight: t + (parapet ? rise : 0) };
   }
 
   const box = orientedBox(outline);
@@ -385,6 +437,60 @@ export function buildRoofGeometry(
         // On the main roof only, and not where a cross gable runs into it.
         lights: lightsOn(plan.prisms[0].axis, plan.prisms[0].a0, plan.prisms[0].a1, plan.prisms[0].mid, plan.prisms[0].half,
           (u, v) => coverAt(plan.prisms.slice(1), u, v) === null),
+      };
+    }
+  }
+
+  // ---- hip over an L, T or stepped outline ------------------------------
+  if (type === 'hip' && roofNeedsFallback(outline)) {
+    const local = outline.map((p) => ({ x: uOf(p), y: vOf(p) }));
+    const rects = rectilinear(local) ? maximalRects(local) : null;
+    if (rects) {
+      // One hip per rectangle, drawn through one another. They share an eave
+      // height and a pitch, so the highest at any point is the roof and the
+      // hips and valleys between them appear by themselves.
+      const slope = Math.tan(pitch);
+      const cover: number[] = [];
+      const trim: number[] = [];
+      let top = 0;
+      for (const r of rects) {
+        const alongU = r.u1 - r.u0 >= r.v1 - r.v0;
+        const at = (a: number, c: number, y: number) => (alongU ? toWorld(a, c, y) : toWorld(c, a, y));
+        const [a0, a1, c0, c1] = alongU ? [r.u0, r.u1, r.v0, r.v1] : [r.v0, r.v1, r.u0, r.u1];
+        const half = (c1 - c0) / 2;
+        const mid = (c0 + c1) / 2;
+        const up = half * slope * M;
+        top = Math.max(top, up);
+        const eave = (a: number, c: number) => at(a, c, eaveY);
+        const ridge = (a: number) => at(a, mid, eaveY + up);
+        const r0 = a0 + half, r1 = a1 - half;
+        quad(cover, eave(a0, c0), eave(a1, c0), ridge(r1), ridge(r0));
+        quad(cover, eave(a1, c1), eave(a0, c1), ridge(r0), ridge(r1));
+        tri(cover, eave(a1, c0), eave(a1, c1), ridge(r1));
+        tri(cover, eave(a0, c1), eave(a0, c0), ridge(r0));
+      }
+      // Boxed eaves: a level soffit under the whole roof and a fascia round it.
+      const faces = THREE.ShapeUtils.triangulateShape(outline.map((p) => new THREE.Vector2(p.x, p.y)), []);
+      const under = (i: number) => new THREE.Vector3(outline[i].x * M, eaveY - t, outline[i].y * M);
+      const over = (i: number) => new THREE.Vector3(outline[i].x * M, eaveY, outline[i].y * M);
+      for (const f of faces) tri(trim, under(f[2]), under(f[1]), under(f[0]));
+      for (let i = 0; i < outline.length; i++) {
+        const j = (i + 1) % outline.length;
+        quad(trim, under(i), under(j), over(j), over(i));
+      }
+      const make = (positions: number[]) => {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        g.computeVertexNormals();
+        planarUVs(g);
+        return g;
+      };
+      return {
+        geometry: make([...cover, ...trim]),
+        infill: null,
+        ridgeHeight: top + t,
+        parts: { covering: make(cover), trim: make(trim) },
+        lights: [],
       };
     }
   }

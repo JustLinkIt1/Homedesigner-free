@@ -60,6 +60,78 @@ function splitWalls(walls: Wall[], tol: number): Seg[] {
   return out;
 }
 
+/** How far (cm, to the other wall's centre line) a wall end may stop short of
+ *  another wall and still be treated as meeting it. */
+export const GAP_REACH = 30;
+
+export interface LooseEnd {
+  wallId: string;
+  end: 'start' | 'end';
+  /** Where the end is now. */
+  point: Point;
+  /** Where it would meet the wall it stops short of. */
+  target: Point;
+  /** Whether the gap shows in the plan (the end is clear of the other wall's body). */
+  visible: boolean;
+}
+
+/**
+ * Wall ends that stop just short of another wall: more than `mergeTol` from
+ * every other wall (so the wall graph would not join them) but within
+ * `GAP_REACH`. Such a gap is easy to leave when dragging a wall and hard to
+ * see, yet it leaves a room unenclosed. The target is where the wall would
+ * hit the other one if it carried straight on, else the nearest point on it.
+ */
+export function looseWallEnds(walls: Wall[], mergeTol = 12): LooseEnd[] {
+  const out: LooseEnd[] = [];
+  for (const w of walls) {
+    for (const end of ['start', 'end'] as const) {
+      const p = w[end];
+      const q = end === 'start' ? w.end : w.start;
+      let best: { dist: number; closest: Point; wall: Wall } | null = null;
+      for (const o of walls) {
+        if (o === w) continue;
+        const r = pointToSegment(p, o.start, o.end);
+        if (!best || r.dist < best.dist) best = { dist: r.dist, closest: r.closest, wall: o };
+      }
+      if (!best || best.dist <= mergeTol || best.dist > GAP_REACH) continue;
+      // Carry the wall straight on to whatever it meets first within reach.
+      const len = Math.hypot(p.x - q.x, p.y - q.y);
+      let target = best.closest;
+      if (len > 1e-6) {
+        const far = { x: p.x + ((p.x - q.x) / len) * GAP_REACH, y: p.y + ((p.y - q.y) / len) * GAP_REACH };
+        let nearest = Infinity;
+        for (const o of walls) {
+          if (o === w) continue;
+          const hit = segIntersect(p, far, o.start, o.end);
+          if (!hit) continue;
+          const d = Math.hypot(hit.x - p.x, hit.y - p.y);
+          if (d < nearest) {
+            nearest = d;
+            target = hit;
+          }
+        }
+      }
+      out.push({ wallId: w.id, end, point: p, target, visible: best.dist > best.wall.thickness / 2 + 2 });
+    }
+  }
+  return out;
+}
+
+/** The walls with every loose end (see `looseWallEnds`) carried on to the wall
+ *  it stops short of. Walls that need no change are returned as they are. */
+export function closeSmallGaps(walls: Wall[], mergeTol = 12): Wall[] {
+  const loose = looseWallEnds(walls, mergeTol);
+  if (!loose.length) return walls;
+  return walls.map((w) => {
+    const mine = loose.filter((l) => l.wallId === w.id);
+    if (!mine.length) return w;
+    const next = { ...w };
+    for (const l of mine) next[l.end] = l.target;
+    return next;
+  });
+}
+
 /**
  * Planar faces of the wall graph, largest first. Shared by room detection (which
  * discards the outer face) and building-outline detection (which wants it).
@@ -73,7 +145,8 @@ function wallFaces(
   pruneLeaves: boolean,
 ): { poly: Point[]; area: number }[] {
   if (walls.length < 3) return [];
-  const segs = splitWalls(walls, mergeTol);
+  // A wall that stops a few centimetres short still encloses its room.
+  const segs = splitWalls(closeSmallGaps(walls, mergeTol), mergeTol);
 
   // Build merged nodes.
   const nodes: Point[] = [];
@@ -195,8 +268,35 @@ export function detectBuildingOutline(walls: Wall[], mergeTol = 12): Point[] | n
   return poly;
 }
 
-/** A representative interior point for matching a detected polygon to an existing room. */
-export function roomMatches(poly: Point[], existing: Point[]): boolean {
+/**
+ * A point that is really inside the polygon. The centroid of an L- or C-shaped
+ * room can fall outside it (in the notch), where it would "match" whatever
+ * room sits in that notch; then take the middle of the widest stretch of the
+ * polygon on the horizontal line through the centroid.
+ */
+export function interiorPoint(poly: Point[]): Point {
   const c = polygonCentroid(poly);
-  return pointInPolygon(c, existing) || pointInPolygon(polygonCentroid(existing), poly);
+  if (pointInPolygon(c, poly)) return c;
+  const xs: number[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    if (a.y > c.y !== b.y > c.y) xs.push(a.x + ((c.y - a.y) / (b.y - a.y)) * (b.x - a.x));
+  }
+  xs.sort((p, q) => p - q);
+  let best = c;
+  let widest = 0;
+  for (let i = 0; i + 1 < xs.length; i += 2) {
+    if (xs[i + 1] - xs[i] > widest) {
+      widest = xs[i + 1] - xs[i];
+      best = { x: (xs[i] + xs[i + 1]) / 2, y: c.y };
+    }
+  }
+  return best;
+}
+
+/** Whether a detected polygon and an existing room are the same area: an
+ *  interior point of either lies inside the other. */
+export function roomMatches(poly: Point[], existing: Point[]): boolean {
+  return pointInPolygon(interiorPoint(poly), existing) || pointInPolygon(interiorPoint(existing), poly);
 }

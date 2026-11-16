@@ -81,6 +81,8 @@ export interface Room {
    * no slab beneath and no ceiling above, and takes an outdoor material.
    */
   outdoor?: boolean;
+  /** A flat roof slab over this area: a covered balcony, porch or entrance. */
+  covered?: boolean;
 }
 
 /** Visual/behavioural variant of an opening.
@@ -203,6 +205,8 @@ export interface FloorInfo {
   elevation: number;
   /** Roof sitting on this storey. Absent = no roof (all existing saves). */
   roof?: Roof;
+  /** Trim on the outside walls. The same on every storey; absent = plain. */
+  facade?: FacadeStyle;
   /** Hidden in 3D. The floor being edited always shows. */
   hidden?: boolean;
 }
@@ -225,6 +229,10 @@ export interface Selection {
   wallFace?: WallFaceRange;
 }
 
+/** Outside wall trim: a plinth round the base, or a plinth and a band under
+ *  the top of each storey. */
+export type FacadeStyle = 'plinth' | 'bands';
+
 /** Roof shape. `flat` is exact for any footprint and is the safe fallback. */
 export type RoofType = 'flat' | 'shed' | 'gable' | 'hip';
 
@@ -246,6 +254,8 @@ export interface Roof {
   color: string;
   /** Roof windows on each slope of the main roof (a gable only). */
   windows?: number;
+  /** Height of the parapet wall round a flat roof, cm above the slab. 0 = none. */
+  parapet?: number;
   /** A user-supplied image, which wins over `covering` when present. */
   texture?: CustomTexture;
 }

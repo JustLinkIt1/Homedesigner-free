@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.22.40 — roofs on real plans, parapets, covered balconies, facade trim, wall gaps
+
+From a tester's bug report and feature request.
+
+- Floors follow moved walls. Dragging a wall or a corner now floors any room
+  that closes (`updateWall`, `moveCorner`), not only drawing a new wall.
+- A wall end that stops up to 30 cm short of another wall still closes the
+  room (`closeSmallGaps` in `roomDetection.ts`). Each such end is ringed in
+  orange on the plan, and the Properties panel says how many there are, with a
+  "Close the gaps" button that joins them in one undoable step.
+- A floor that wraps round another room (a C-shaped balcony) is no longer
+  moved into that room by Auto-detect: rooms are matched on a point that is
+  really inside them (`interiorPoint`), not the centroid.
+- Gable and hip roofs on hand-drawn plans. Walls a centimetre or two out of
+  square are squared up for a pitched roof (`squareOutline` in `roofRects.ts`),
+  so it is no longer refused and drawn flat. A flat or shed roof still follows
+  the walls exactly as drawn.
+- Hip roofs on L-shaped, T-shaped and stepped plans: one hip per block, drawn
+  through one another (`maximalRects`), with a level soffit under the eaves.
+  Only a plan with a wall at a real angle still falls back to a flat roof, and
+  the note under the roof buttons now says so.
+- Flat roofs: a "Slab thickness" slider and a "Parapet wall" slider (0 to
+  1.5 m). The parapet stands on the outer wall line and takes the wall finish.
+- "Roof over this area" on a room puts a flat roof slab over it: a covered
+  balcony, porch or entrance (`Room.covered`).
+- Facade trim under Exterior: Plain, Plinth, or Plinth and band
+  (`FloorInfo.facade`, the same on every storey). The plinth runs round the
+  lowest storey and breaks at doors; the band runs under the top of each storey.
+
 ## 1.22.39 — edit doors and windows in 3D, metal railings, AC units
 
 From a tester's suggestions.
