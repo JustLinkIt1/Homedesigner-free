@@ -5216,6 +5216,37 @@ button.brand:hover .brand-name {
   background-size: cover;
   background-position: center;
 }
+/* Door/window popover in 3D: a little wider for the style chips. */
+.opening-pop {
+  width: 260px;
+}
+.opening-pop .opening-kind {
+  display: flex;
+  margin-bottom: 8px;
+}
+.opening-pop .opening-kind button {
+  flex: 1;
+}
+.opening-pop .swap-chips {
+  margin-bottom: 8px;
+}
+.opening-pop .opening-flips {
+  margin: 4px 0 2px;
+}
+.opening-width {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.opening-width span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.opening-pop .btn-danger {
+  width: 100%;
+}
 
 /* ---------- Context menu ---------- */
 .ctx-menu {

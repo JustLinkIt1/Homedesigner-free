@@ -1,0 +1,196 @@
+<en-GB>
+Tap a door or window in 3D to change it there: style, door or window, opening direction, width.
+New metal railings for balconies: steel, glass and horizontal bars.
+New AC unit and AC outdoor unit.
+Fixed: the roof now shows as soon as you pick one.
+Also: corner kitchen unit, exhaust fan, and floors no longer go missing.
+</en-GB>
+<ar>
+اضغط على باب أو نافذة في العرض ثلاثي الأبعاد لتغييره مباشرة: النمط، باب أو نافذة، اتجاه الفتح، العرض.
+درابزين معدني جديد للشرفات: فولاذ، زجاج وقضبان أفقية.
+مكيّف هواء جديد ووحدة خارجية.
+إصلاح: السقف يظهر الآن فور اختياره.
+أيضًا: وحدة زاوية للمطبخ، مروحة شفط، والأرضيات لم تعد تختفي.
+</ar>
+<cs-CZ>
+Klepněte ve 3D na dveře nebo okno a upravte je přímo tam: styl, dveře nebo okno, směr otevírání, šířka.
+Nová kovová zábradlí pro balkony: ocelové, skleněné a s vodorovnými tyčemi.
+Nová klimatizace a venkovní jednotka.
+Opraveno: střecha se zobrazí hned po výběru.
+Také: rohová kuchyňská skříňka, odsávací ventilátor a podlahy už nemizí.
+</cs-CZ>
+<da-DK>
+Tryk på en dør eller et vindue i 3D for at ændre det med det samme: stil, dør eller vindue, åbneretning, bredde.
+Nye metalgelændere til altaner: stål, glas og vandrette stænger.
+Nyt klimaanlæg og udedel.
+Rettet: taget vises nu, så snart du vælger et.
+Desuden: hjørneskab til køkkenet, udsugningsventilator, og gulve forsvinder ikke længere.
+</da-DK>
+<de-DE>
+Tippe in 3D auf eine Tür oder ein Fenster und ändere es direkt dort: Stil, Tür oder Fenster, Öffnungsrichtung, Breite.
+Neue Metallgeländer für Balkone: Stahl, Glas und waagerechte Stäbe.
+Neues Klimagerät und Außengerät.
+Behoben: Das Dach erscheint jetzt sofort, wenn du eines auswählst.
+Außerdem: Eckschrank für die Küche, Abluftventilator, und Böden verschwinden nicht mehr.
+</de-DE>
+<es-ES>
+Toca una puerta o ventana en 3D para cambiarla ahí mismo: estilo, puerta o ventana, sentido de apertura, ancho.
+Nuevas barandillas metálicas para balcones: acero, vidrio y barras horizontales.
+Nuevo aire acondicionado y unidad exterior.
+Corregido: el tejado aparece en cuanto eliges uno.
+Además: módulo de esquina para la cocina, extractor, y los suelos ya no desaparecen.
+</es-ES>
+<fi-FI>
+Napauta ovea tai ikkunaa 3D-näkymässä ja muuta sitä heti: tyyli, ovi tai ikkuna, avautumissuunta, leveys.
+Uudet metallikaiteet parvekkeille: teräs, lasi ja vaakatangot.
+Uusi ilmalämpöpumppu ja ulkoyksikkö.
+Korjattu: katto näkyy nyt heti, kun valitset sen.
+Lisäksi: keittiön kulmakaappi, poistopuhallin, eivätkä lattiat enää katoa.
+</fi-FI>
+<fr-FR>
+Touchez une porte ou une fenêtre en 3D pour la modifier sur place : style, porte ou fenêtre, sens d'ouverture, largeur.
+Nouveaux garde-corps métalliques pour balcons : acier, verre et barres horizontales.
+Nouveau climatiseur et unité extérieure.
+Corrigé : le toit s'affiche dès que vous en choisissez un.
+Aussi : meuble d'angle de cuisine, ventilateur d'extraction, et les sols ne disparaissent plus.
+</fr-FR>
+<hi-IN>
+3D में किसी दरवाज़े या खिड़की पर टैप करके उसे वहीं बदलें: स्टाइल, दरवाज़ा या खिड़की, खुलने की दिशा, चौड़ाई।
+बालकनी के लिए नई धातु की रेलिंग: स्टील, कांच और आड़ी छड़ें।
+नया एसी और आउटडोर यूनिट।
+ठीक किया गया: छत अब चुनते ही दिखती है।
+साथ ही: रसोई की कॉर्नर यूनिट, एग्ज़ॉस्ट फ़ैन, और फ़र्श अब गायब नहीं होते।
+</hi-IN>
+<hu-HU>
+Koppints egy ajtóra vagy ablakra 3D-ben, és ott helyben módosíthatod: stílus, ajtó vagy ablak, nyitásirány, szélesség.
+Új fém korlátok erkélyekhez: acél, üveg és vízszintes rudak.
+Új klíma és kültéri egység.
+Javítva: a tető azonnal megjelenik, amint kiválasztod.
+Továbbá: konyhai sarokszekrény, elszívó ventilátor, és a padlók már nem tűnnek el.
+</hu-HU>
+<id>
+Ketuk pintu atau jendela di 3D untuk mengubahnya langsung: gaya, pintu atau jendela, arah bukaan, lebar.
+Railing logam baru untuk balkon: baja, kaca, dan batang horizontal.
+Unit AC baru dan unit luar AC.
+Diperbaiki: atap kini langsung terlihat saat dipilih.
+Juga: unit sudut dapur, kipas exhaust, dan lantai tidak lagi hilang.
+</id>
+<it-IT>
+Tocca una porta o una finestra in 3D per modificarla lì: stile, porta o finestra, verso di apertura, larghezza.
+Nuove ringhiere in metallo per balconi: acciaio, vetro e barre orizzontali.
+Nuovo condizionatore e unità esterna.
+Corretto: il tetto ora appare appena ne scegli uno.
+Inoltre: mobile ad angolo per la cucina, aspiratore, e i pavimenti non spariscono più.
+</it-IT>
+<iw-IL>
+הקישו על דלת או חלון בתלת-ממד כדי לשנות אותם במקום: סגנון, דלת או חלון, כיוון פתיחה, רוחב.
+מעקות מתכת חדשים למרפסות: פלדה, זכוכית ומוטות אופקיים.
+מזגן חדש ויחידה חיצונית.
+תוקן: הגג מופיע עכשיו מיד כשבוחרים אותו.
+בנוסף: יחידת פינה למטבח, מאוורר יניקה, והרצפות כבר לא נעלמות.
+</iw-IL>
+<ja-JP>
+3Dでドアや窓をタップして、その場で変更できます：スタイル、ドアか窓か、開く向き、幅。
+バルコニー用の金属手すりを追加：スチール、ガラス、横桟。
+エアコンと室外機を追加。
+修正：屋根を選ぶとすぐに表示されるようになりました。
+ほかに：キッチンのコーナーユニット、換気扇、床が消える問題の修正。
+</ja-JP>
+<ko-KR>
+3D에서 문이나 창문을 탭해 바로 바꿀 수 있습니다: 스타일, 문 또는 창문, 열리는 방향, 너비.
+발코니용 금속 난간 추가: 스틸, 유리, 가로 봉.
+에어컨과 실외기 추가.
+수정: 지붕을 선택하면 바로 보입니다.
+그 밖에: 주방 코너 유닛, 환풍기, 바닥이 사라지던 문제 수정.
+</ko-KR>
+<nl-NL>
+Tik in 3D op een deur of raam om die ter plekke aan te passen: stijl, deur of raam, draairichting, breedte.
+Nieuwe metalen balustrades voor balkons: staal, glas en horizontale staven.
+Nieuwe airco en buitenunit.
+Opgelost: het dak is nu direct zichtbaar zodra je er een kiest.
+Ook: hoekkast voor de keuken, afzuigventilator, en vloeren verdwijnen niet meer.
+</nl-NL>
+<no-NO>
+Trykk på en dør eller et vindu i 3D for å endre det der og da: stil, dør eller vindu, åpningsretning, bredde.
+Nye metallrekkverk for balkonger: stål, glass og vannrette stenger.
+Nytt klimaanlegg og utedel.
+Rettet: taket vises nå med en gang du velger et.
+Også: hjørneskap til kjøkkenet, avtrekksvifte, og gulv forsvinner ikke lenger.
+</no-NO>
+<pl-PL>
+Dotknij drzwi lub okna w 3D, aby zmienić je na miejscu: styl, drzwi lub okno, kierunek otwierania, szerokość.
+Nowe metalowe balustrady balkonowe: stalowa, szklana i z poziomymi prętami.
+Nowy klimatyzator i jednostka zewnętrzna.
+Naprawiono: dach pojawia się od razu po wybraniu.
+Ponadto: narożna szafka kuchenna, wentylator wyciągowy, a podłogi już nie znikają.
+</pl-PL>
+<pt-BR>
+Toque em uma porta ou janela no 3D para alterá-la ali mesmo: estilo, porta ou janela, sentido de abertura, largura.
+Novos guarda-corpos metálicos para varandas: aço, vidro e barras horizontais.
+Novo ar-condicionado e unidade externa.
+Corrigido: o telhado aparece assim que você escolhe um.
+Também: módulo de canto para cozinha, exaustor, e os pisos não somem mais.
+</pt-BR>
+<ro>
+Atinge o ușă sau o fereastră în 3D pentru a o modifica pe loc: stil, ușă sau fereastră, sens de deschidere, lățime.
+Balustrade metalice noi pentru balcoane: oțel, sticlă și bare orizontale.
+Aparat de aer condiționat nou și unitate exterioară.
+Remediat: acoperișul apare imediat ce alegi unul.
+De asemenea: corp de colț pentru bucătărie, ventilator de evacuare, iar podelele nu mai dispar.
+</ro>
+<ru-RU>
+Нажмите на дверь или окно в 3D, чтобы изменить их на месте: стиль, дверь или окно, направление открывания, ширина.
+Новые металлические ограждения для балконов: сталь, стекло и горизонтальные прутья.
+Новый кондиционер и наружный блок.
+Исправлено: крыша появляется сразу после выбора.
+Также: угловой кухонный модуль, вытяжной вентилятор, и полы больше не пропадают.
+</ru-RU>
+<sk>
+Ťuknite v 3D na dvere alebo okno a upravte ich priamo tam: štýl, dvere alebo okno, smer otvárania, šírka.
+Nové kovové zábradlia pre balkóny: oceľové, sklenené a s vodorovnými tyčami.
+Nová klimatizácia a vonkajšia jednotka.
+Opravené: strecha sa zobrazí hneď po výbere.
+Tiež: rohová kuchynská skrinka, odsávací ventilátor a podlahy už nemiznú.
+</sk>
+<sv-SE>
+Tryck på en dörr eller ett fönster i 3D för att ändra det direkt: stil, dörr eller fönster, öppningsriktning, bredd.
+Nya metallräcken för balkonger: stål, glas och vågräta stänger.
+Ny luftkonditionering och utedel.
+Åtgärdat: taket visas nu så fort du väljer ett.
+Dessutom: hörnskåp för köket, frånluftsfläkt, och golv försvinner inte längre.
+</sv-SE>
+<th>
+แตะประตูหรือหน้าต่างในมุมมอง 3D เพื่อแก้ไขได้ทันที: สไตล์ ประตูหรือหน้าต่าง ทิศทางการเปิด ความกว้าง
+ราวระเบียงโลหะใหม่: เหล็ก กระจก และราวแนวนอน
+แอร์และคอมเพรสเซอร์แอร์ใหม่
+แก้ไข: หลังคาแสดงทันทีเมื่อเลือก
+และ: ตู้เข้ามุมห้องครัว พัดลมดูดอากาศ และพื้นไม่หายอีกต่อไป
+</th>
+<tr-TR>
+3D'de bir kapıya veya pencereye dokunup hemen değiştirin: stil, kapı veya pencere, açılma yönü, genişlik.
+Balkonlar için yeni metal korkuluklar: çelik, cam ve yatay çubuklar.
+Yeni klima ve dış ünite.
+Düzeltildi: çatı artık seçer seçmez görünüyor.
+Ayrıca: mutfak köşe modülü, aspiratör fanı ve zeminler artık kaybolmuyor.
+</tr-TR>
+<uk>
+Торкніться дверей або вікна в 3D, щоб змінити їх на місці: стиль, двері чи вікно, напрямок відчинення, ширина.
+Нові металеві огорожі для балконів: сталь, скло та горизонтальні прути.
+Новий кондиціонер і зовнішній блок.
+Виправлено: дах з'являється одразу після вибору.
+Також: кутовий кухонний модуль, витяжний вентилятор, і підлоги більше не зникають.
+</uk>
+<vi>
+Chạm vào cửa đi hoặc cửa sổ trong 3D để sửa ngay tại chỗ: kiểu, cửa đi hay cửa sổ, hướng mở, chiều rộng.
+Lan can kim loại mới cho ban công: thép, kính và thanh ngang.
+Máy lạnh mới và cục nóng ngoài trời.
+Đã sửa: mái nhà hiện ngay khi bạn chọn.
+Ngoài ra: tủ bếp góc, quạt hút, và sàn không còn bị mất.
+</vi>
+<zh-CN>
+在 3D 中点按门或窗即可就地修改：样式、门或窗、开启方向、宽度。
+新增阳台金属栏杆：钢制、玻璃和横杆。
+新增空调和空调外机。
+修复：选择屋顶后会立即显示。
+另外：厨房转角柜、排气扇，以及地板不再消失。
+</zh-CN>

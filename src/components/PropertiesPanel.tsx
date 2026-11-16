@@ -22,6 +22,7 @@ import { roofOf } from '../lib/roof';
 import { effectiveRoofType, roofFootprint } from '../lib/roofGeometry';
 import {
   structuralWalls, isFence, isHalfWall, FENCE_HEIGHTS, DEFAULT_FENCE_STYLE, HALF_WALL_HEIGHT,
+  METAL_FENCES, METAL_RAILING_COLOR,
 } from '../lib/fence';
 import type { CustomTexture, FenceStyle, OpeningStyle, RoofType, Room, Wall } from '../types';
 
@@ -104,6 +105,9 @@ const FENCE_STYLES: { id: FenceStyle; name: string }[] = [
   { id: 'privacy', name: 'Privacy' },
   { id: 'rail', name: 'Post and rail' },
   { id: 'railing', name: 'Railing' },
+  { id: 'steel', name: 'Steel railing' },
+  { id: 'glass', name: 'Glass balustrade' },
+  { id: 'bars', name: 'Horizontal bars' },
 ];
 
 /** Make a selected structural wall low without inventing a second geometry
@@ -183,7 +187,13 @@ function FenceCard({ wall }: { wall: Wall }) {
     // style's default — once someone has set their own height, keep it.
     const prev = FENCE_HEIGHTS[wall.fenceStyle ?? DEFAULT_FENCE_STYLE];
     const keep = Math.abs(wall.height - prev) > 0.5;
-    updateWall(wall.id, { fenceStyle: style, height: keep ? wall.height : FENCE_HEIGHTS[style] });
+    // A metal railing starts powder-coated charcoal, and going back to a timber
+    // fence drops that again. It can still be painted like any wall.
+    const wasMetal = METAL_FENCES.has(wall.fenceStyle ?? DEFAULT_FENCE_STYLE);
+    const color = METAL_FENCES.has(style) && !wasMetal
+      ? METAL_RAILING_COLOR
+      : !METAL_FENCES.has(style) && wasMetal && wall.color === METAL_RAILING_COLOR ? '#ece6db' : wall.color;
+    updateWall(wall.id, { fenceStyle: style, height: keep ? wall.height : FENCE_HEIGHTS[style], color });
   };
 
   return (

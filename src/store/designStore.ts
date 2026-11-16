@@ -1283,7 +1283,7 @@ export const useDesign = create<DesignState>((set, get) => {
         });
       }),
 
-    setRoof: (patch) =>
+    setRoof: (patch) => {
       commit((d) => {
         const topId = roofFloorId(d.floors);
         if (!topId) return;
@@ -1296,7 +1296,14 @@ export const useDesign = create<DesignState>((set, get) => {
           }
           return { ...f, roof: next };
         });
-      }),
+      });
+      // Dollhouse lifts the roof off to look inside, so a roof picked there
+      // never appeared, whatever type was chosen. Show what was just picked.
+      if (patch !== null && get().view === '3d' && get().dollhouse) {
+        set({ dollhouse: false });
+        toast.info(t('Dollhouse is off so you can see the roof. Turn it back on to look inside.'));
+      }
+    },
 
     importWalls: (walls, replace = false, openings, clearFloor = false) =>
       commit((d) => {

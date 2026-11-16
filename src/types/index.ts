@@ -34,7 +34,7 @@ export interface WallFaceFinish extends WallFaceRange {
 }
 
 /** How a fence run is built. Ignored unless the wall's `kind` is 'fence'. */
-export type FenceStyle = 'picket' | 'privacy' | 'rail' | 'railing';
+export type FenceStyle = 'picket' | 'privacy' | 'rail' | 'railing' | 'steel' | 'glass' | 'bars';
 
 export interface Wall {
   id: string;

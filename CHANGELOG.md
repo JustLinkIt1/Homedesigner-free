@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.22.39 — edit doors and windows in 3D, metal railings, AC units
+
+From a tester's suggestions.
+
+- Tap a door or window in the 3D view and a popup opens at the tap
+  (`OpeningPopover.tsx`): switch it between door and window, pick its style,
+  flip the hinge side and the swing, change the width, or delete it. The model
+  updates live. Pro styles are gated as in the Properties panel.
+- Picking a roof while Dollhouse is on turns Dollhouse off (with a note), since
+  Dollhouse hides the roof and it looked as if no roof type worked.
+- Three metal railing styles for fences and balconies: steel railing, glass
+  balustrade and horizontal bars. Switching to one sets a dark metal colour.
+- AC unit (wall-mounted) and AC outdoor unit, both free.
+
 ## 1.22.38 — corner kitchen units, an exhaust fan, and floors that stay put
 
 From a tester's suggestions and bug report.

@@ -277,6 +277,20 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: 'M50,50 Q62,26 50,18 M50,50 Q30,62 23,54 M50,50 Q60,74 72,70', sw: 2 },
     { d: circle(50, 50, 5), sw: 2 },
   ],
+  // Split AC indoor unit: the long body, the outlet slot along the front and
+  // a dashed airflow line out into the room.
+  ac_split: [
+    { d: rect(2, 8, 96, 84, 14) },
+    { d: 'M10,74 H90', sw: 2 },
+    { d: 'M22,96 V100 M50,96 V100 M78,96 V100', sw: 1.5 },
+  ],
+  // Outdoor condenser: the cabinet with its round fan and a louvre panel.
+  ac_outdoor: [
+    { d: rect(4, 4, 92, 92, 4) },
+    { d: circle(34, 50, 26), sw: 2 },
+    { d: 'M16,32 L52,68 M52,32 L16,68', sw: 1.5 },
+    { d: 'M68,26 H90 M68,38 H90 M68,50 H90 M68,62 H90 M68,74 H90', sw: 1.5 },
+  ],
   // Built-in oven: the cavity, the door line and the bar handle at the front.
   oven: [
     { d: rect(4, 4, 92, 92, 4) },

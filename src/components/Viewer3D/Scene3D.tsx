@@ -27,6 +27,7 @@ import { sunModel } from '../../lib/sun';
 import { GradientSky, skyPalette } from './GradientSky';
 import { SunShade, shadeStrength } from './FakeShadows';
 import StreetScene from './StreetScene';
+import OpeningPopover from './OpeningPopover';
 import { finishForFace, withFaceFinish } from '../../lib/wallFaces';
 import { CATALOG_BY_TYPE, FLOOR_MATERIALS } from '../../data/furnitureCatalog';
 import { WALL_PAINTS, MATERIAL_GROUPS, floorMaterials, wallMaterials, materialUrl } from '../../data/materials';
@@ -48,6 +49,11 @@ export { sunModel };
  * paint jobs are undoable from the 2D editor).
  */
 function PaintPopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }) {
+  if (tap.kind === 'opening') return <OpeningPopover id={tap.id} x={tap.x} y={tap.y} onClose={onClose} />;
+  return <SurfacePopover tap={tap} onClose={onClose} />;
+}
+
+function SurfacePopover({ tap, onClose }: { tap: SurfaceTap; onClose: () => void }) {
   const t = useI18n();
   const wall = useDesign((st) => (tap.kind === 'wall' ? st.walls.find((w) => w.id === tap.id) : undefined));
   const room = useDesign((st) => (tap.kind === 'room' ? st.rooms.find((r) => r.id === tap.id) : undefined));

@@ -824,6 +824,71 @@ export function ShapeMesh({
         </group>
       );
     }
+    case 'ac_split': {
+      // Indoor split air conditioner: a rounded white body high on the wall,
+      // a dark louvre slot along the bottom front and a small status light.
+      const zf = d / 2;
+      return (
+        <group>
+          <Box w={w} d={d * 0.8} h={h * 0.82} y={h * 0.55} dz={-d * 0.1} color={color} roughness={0.35} />
+          {/* The curved front lip that folds under to the outlet. */}
+          <mesh position={[0, h * 0.18, zf * 0.55]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[h * 0.16, h * 0.16, w * 0.995, 20, 1, false, 0, Math.PI]} />
+            <meshStandardMaterial color={color} roughness={0.35} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, h * 0.12, zf * 0.62]} rotation={[-0.5, 0, 0]}>
+            <boxGeometry args={[w * 0.86, h * 0.06, 0.004]} />
+            <meshStandardMaterial color="#2a2d31" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, h * 0.55, zf - d * 0.1 + 0.002]}>
+            <planeGeometry args={[w * 0.96, 0.003]} />
+            <meshStandardMaterial color={shade(color, -18)} roughness={0.5} />
+          </mesh>
+          <mesh position={[w * 0.38, h * 0.32, zf - d * 0.1 + 0.003]}>
+            <circleGeometry args={[0.004, 10]} />
+            <meshStandardMaterial color="#5fd27a" emissive="#5fd27a" emissiveIntensity={1.5} />
+          </mesh>
+        </group>
+      );
+    }
+    case 'ac_outdoor': {
+      // Outdoor condenser: a metal cabinet with a round fan grille on the
+      // front-left and louvres on the right, on two feet.
+      const r = Math.min(w * 0.3, h * 0.38);
+      const zf = d / 2;
+      const fx = -w / 2 + r + w * 0.06;
+      const body = h * 0.92;
+      return (
+        <group>
+          {[-1, 1].map((s) => (
+            <Box key={s} w={0.05} d={d * 1.05} h={h * 0.08} y={h * 0.04} dx={s * w * 0.36} color="#55585c" roughness={0.6} />
+          ))}
+          <Box w={w} d={d} h={body} y={h * 0.08 + body / 2} color={color} roughness={0.45} metalness={0.15} />
+          <mesh position={[fx, h * 0.08 + body / 2, zf + 0.002]}>
+            <circleGeometry args={[r, 32]} />
+            <meshStandardMaterial color="#26282c" roughness={0.8} />
+          </mesh>
+          {[0.35, 0.6, 0.85, 1].map((k) => (
+            <mesh key={k} position={[fx, h * 0.08 + body / 2, zf + 0.006]}>
+              <torusGeometry args={[r * k, 0.003, 4, 36]} />
+              <meshStandardMaterial color="#c9cbce" roughness={0.4} metalness={0.4} />
+            </mesh>
+          ))}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[fx, h * 0.08 + body / 2, zf + 0.006]} rotation={[0, 0, s > 0 ? Math.PI / 4 : -Math.PI / 4]}>
+              <boxGeometry args={[r * 2, 0.005, 0.004]} />
+              <meshStandardMaterial color="#c9cbce" roughness={0.4} metalness={0.4} />
+            </mesh>
+          ))}
+          {Array.from({ length: 7 }, (_, i) => (
+            <mesh key={i} position={[w * 0.3, h * 0.08 + body * (0.18 + i * 0.11), zf + 0.004]}>
+              <boxGeometry args={[w * 0.28, 0.008, 0.006]} />
+              <meshStandardMaterial color={shade(color, -30)} roughness={0.6} />
+            </mesh>
+          ))}
+        </group>
+      );
+    }
     case 'curtains':
       return (
         <group>

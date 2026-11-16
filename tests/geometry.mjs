@@ -1320,6 +1320,19 @@ const clLen = (c) => Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
     top.x > 6.2 && Math.abs(top.z - (500 + l.high.at.y) / 100) < 0.01, JSON.stringify(top));
 }
 
+// ---- metal balcony railings ----------------------------------------------
+{
+  const glass = fenceRunBoxes(0, 240, 105, 'glass');
+  const panes = glass.filter((b) => b.part === 'slat');
+  check('railing: a glass balustrade has one pane per bay, clear of the posts',
+    panes.length === 2 && panes.every((p) => p.w > 100 && p.w < 120 && p.y + p.h / 2 < 105), JSON.stringify(panes.map((p) => Math.round(p.w))));
+  const bars = fenceRunBoxes(0, 280, 105, 'bars');
+  check('railing: horizontal bars are rails, with no balusters', bars.filter((b) => b.part === 'rail').length === 7 && !bars.some((b) => b.part === 'slat'));
+  const steel = fenceRunBoxes(0, 280, 105, 'steel').filter((b) => b.part === 'slat');
+  const gap = steel.length > 1 ? steel[1].x - steel[0].x - steel[0].w : 0;
+  check('railing: steel balusters leave under a 12 cm gap', steel.length > 15 && gap < 12, `${steel.length} at ${gap}`);
+}
+
 // ---- automatic rooms -----------------------------------------------------
 {
   let n = 0;

@@ -30,7 +30,15 @@ export const FENCE_HEIGHTS: Record<FenceStyle, number> = {
   privacy: 180,
   rail: 120,
   railing: 100,
+  steel: 105,
+  glass: 105,
+  bars: 105,
 };
+
+/** Metal balcony railings: steel balusters, glass panels, horizontal bars. */
+export const METAL_FENCES: ReadonlySet<FenceStyle> = new Set(['steel', 'glass', 'bars']);
+/** Powder-coated charcoal a metal railing starts in (it can still be painted). */
+export const METAL_RAILING_COLOR = '#2b2d31';
 
 export const DEFAULT_FENCE_STYLE: FenceStyle = 'picket';
 
@@ -67,6 +75,8 @@ interface Profile {
   railAt: number[];
   /** A capping rail across the very top. */
   topCap: boolean;
+  /** Infill is one sheet per bay (a glass balustrade) instead of slats. */
+  panel?: boolean;
 }
 
 const PROFILES: Record<FenceStyle, Profile> = {
@@ -93,6 +103,26 @@ const PROFILES: Record<FenceStyle, Profile> = {
     postW: 6, postD: 6, postEvery: 150,
     slatW: 3, slatGap: 9, slatD: 3, slatBottom: 6, slatTopGap: 8,
     railD: 7, railH: 6, railAt: [0.12], topCap: true,
+  },
+  // Steel balcony railing: slim square balusters close together, a flat bar
+  // handrail and a bottom rail.
+  steel: {
+    postW: 5, postD: 5, postEvery: 140,
+    slatW: 2, slatGap: 9.5, slatD: 2, slatBottom: 6, slatTopGap: 5,
+    railD: 5, railH: 4, railAt: [0.08], topCap: true,
+  },
+  // Glass balustrade: a glass sheet in each bay between steel posts, under a
+  // steel handrail.
+  glass: {
+    postW: 5, postD: 5, postEvery: 120,
+    slatW: 0, slatGap: 0, slatD: 1.2, slatBottom: 8, slatTopGap: 9,
+    railD: 6, railH: 5, railAt: [], topCap: true, panel: true,
+  },
+  // Modern horizontal bars: thin steel rods between posts.
+  bars: {
+    postW: 5, postD: 5, postEvery: 140,
+    slatW: 0, slatGap: 0, slatD: 0, slatBottom: 0, slatTopGap: 0,
+    railD: 2.5, railH: 2.5, railAt: [0.14, 0.27, 0.4, 0.53, 0.66, 0.79], topCap: true,
   },
 };
 
@@ -163,6 +193,18 @@ export function fenceRunBoxes(
         part: 'rail',
       });
     }
+  }
+
+  // A glass balustrade: one sheet filling each bay between its posts.
+  if (p.panel) {
+    const top = height - p.slatTopGap;
+    const h = top - p.slatBottom;
+    for (let i = 0; i < bays && h > 0; i++) {
+      const x0 = a + (run * i) / bays + p.postW / 2 + 1;
+      const x1 = a + (run * (i + 1)) / bays - p.postW / 2 - 1;
+      if (x1 - x0 > 2) out.push({ x: (x0 + x1) / 2, y: p.slatBottom + h / 2, z: 0, w: x1 - x0, h, d: p.slatD, part: 'slat' });
+    }
+    return out;
   }
 
   // Vertical infill, centred in the run so the end gaps match each other. A

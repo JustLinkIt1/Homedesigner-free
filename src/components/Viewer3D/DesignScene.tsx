@@ -14,7 +14,7 @@ import { isStairs } from '../../lib/stairs';
 import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
 import { exteriorFaces, exteriorRanges, exteriorSideAt } from '../../lib/exteriorFaces';
 import { bayParts, isBay } from '../../lib/bayWindow';
-import { isFence, isHalfWall, structuralWalls, fenceRunBoxes } from '../../lib/fence';
+import { isFence, isHalfWall, structuralWalls, fenceRunBoxes, METAL_FENCES } from '../../lib/fence';
 import { buildRoofGeometry, roofOutlines, type RoofLight } from '../../lib/roofGeometry';
 import { roofOf } from '../../lib/roof';
 import { useRemoteCatalog } from '../../lib/remoteCatalog';
@@ -80,7 +80,7 @@ export interface WallFade {
 
 /** Screen-space tap on a paintable surface (wall body or room floor). */
 export type SurfaceTap = {
-  kind: 'wall' | 'room';
+  kind: 'wall' | 'room' | 'opening';
   id: string;
   x: number;
   y: number;
@@ -415,7 +415,27 @@ function WallMesh({
       )}
       {openings.map((o) => {
         const out = outward ?? exteriorSideAt(wall, rooms, o.offset);
-        return <OpeningMesh key={o.id} opening={o} thickness={t} len={dist(wall.start, wall.end)} outSide={out ?? 1} exterior={out != null} />;
+        const mesh = <OpeningMesh opening={o} thickness={t} len={dist(wall.start, wall.end)} outSide={out ?? 1} exterior={out != null} />;
+        // A tapped door or window selects itself, not the wall it sits in, so
+        // it can be changed right there in 3D (OpeningPopover).
+        return (
+          <group
+            key={o.id}
+            onClick={
+              onTap
+                ? (e) => {
+                    // Unlike the wall round it, a door stays solid when
+                    // dollhouse fades its wall, so it can still be tapped.
+                    if (e.delta > 4) return;
+                    e.stopPropagation();
+                    onTap({ kind: 'opening', id: o.id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY });
+                  }
+                : undefined
+            }
+          >
+            {mesh}
+          </group>
+        );
       })}
     </group>
   );
@@ -491,17 +511,23 @@ function FenceMesh({
   // exactly like painting a wall.
   const mats = useMemo(() => {
     const base = new THREE.Color(wall.color);
-    const railing = (wall.fenceStyle ?? 'picket') === 'railing';
+    const style = wall.fenceStyle ?? 'picket';
+    const metal = style === 'railing' || METAL_FENCES.has(style);
     const frame = new THREE.MeshStandardMaterial({
       color: base,
-      roughness: railing ? 0.45 : 0.85,
-      metalness: railing ? 0.6 : 0,
+      roughness: metal ? 0.4 : 0.85,
+      metalness: metal ? 0.65 : 0,
     });
-    const infill = new THREE.MeshStandardMaterial({
-      color: base.clone().multiplyScalar(0.88),
-      roughness: railing ? 0.45 : 0.88,
-      metalness: railing ? 0.6 : 0,
-    });
+    // A glass balustrade's sheets are glass whatever colour the frame is.
+    const infill = style === 'glass'
+      ? new THREE.MeshStandardMaterial({
+          color: '#cfe3ea', roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.32, depthWrite: false,
+        })
+      : new THREE.MeshStandardMaterial({
+          color: base.clone().multiplyScalar(0.88),
+          roughness: metal ? 0.4 : 0.88,
+          metalness: metal ? 0.65 : 0,
+        });
     return { frame, infill };
   }, [wall.color, wall.fenceStyle]);
 
@@ -524,7 +550,7 @@ function FenceMesh({
       }}
     >
       {geos.frame && <mesh geometry={geos.frame} material={mats.frame} castShadow receiveShadow />}
-      {geos.infill && <mesh geometry={geos.infill} material={mats.infill} castShadow receiveShadow />}
+      {geos.infill && <mesh geometry={geos.infill} material={mats.infill} castShadow={wall.fenceStyle !== 'glass'} receiveShadow />}
     </group>
   );
 }
@@ -1359,8 +1385,7 @@ function FloorMesh({ room, stairsBelow, onTap }: { room: Room; stairsBelow: Furn
       onClick={
         onTap
           ? (e) => {
-              if (e.delta > 4) return; // orbit drag, not a tap
-              e.stopPropagation();
+              if (e.delta > 4) return; // orbit drag, not a tap              e.stopPropagation();
               onTap({
                 kind: 'room',
                 id: room.id,
