@@ -147,7 +147,7 @@ async function submitElevenLabs(key: string, job: RenderJob, image: string, view
   const size = jpegDimensions(base64Bytes(base64, 64 * 1024));
   try {
     const response = await fetch(`${ELEVENLABS_API}/v1/flows/image`, {
-      method: 'POST', signal: AbortSignal.timeout(20_000),
+      method: 'POST', signal: AbortSignal.timeout(ELEVENLABS_SUBMIT_MS),
       headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model_id: ELEVENLABS_IMAGE_MODEL, prompt: renderPrompt(job.style, view), resolution: '1K',
@@ -155,10 +155,18 @@ async function submitElevenLabs(key: string, job: RenderJob, image: string, view
         images: [{ type: 'inline_base64', content_base64: base64, mime_type: 'image/jpeg' }],
       }),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn('ai-render: ElevenLabs refused', response.status, (await response.text().catch(() => '')).slice(0, 300));
+      return null;
+    }
     const data = await response.json() as { id?: unknown };
-    return typeof data.id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(data.id) ? data.id : null;
-  } catch { return null; }
+    if (typeof data.id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(data.id)) return data.id;
+    console.warn('ai-render: ElevenLabs answered without a usable id');
+    return null;
+  } catch (error) {
+    console.warn('ai-render: ElevenLabs did not answer', error instanceof Error ? error.message : String(error));
+    return null;
+  }
 }
 type ElevenLabsGeneration = { status?: string; content_url?: string; failure_reason?: string };
 async function elevenLabsGeneration(key: string, id: string) {
@@ -227,8 +235,23 @@ export async function reserveRender(db: D1Database, subject: string, id: string,
     throw error;
   }
 }
+// Dispatch runs after the response has gone, where a Worker gets about 30
+// seconds. Both submissions together must fit inside that: cut off part way,
+// the job sat "reserved" with nothing to say why, and failed two minutes later.
+const ELEVENLABS_SUBMIT_MS = 12_000;
+const FAL_SUBMIT_MS = 12_000;
+/** Hand a reserved job to a provider. Whatever goes wrong, the job ends
+ * failed (and refunded) with the reason in the log, never silently stuck. */
 export async function dispatchRender(db: D1Database, keys: string | RenderKeys, job: RenderJob, image: string,
   view: RenderView = 'interior') {
+  try { await submitRender(db, keys, job, image, view); }
+  catch (error) {
+    console.error('ai-render: dispatch failed', error instanceof Error ? error.message : String(error));
+    await failRender(db, job.subject, job.id, 'AI render could not start. Your allowance or points were returned.')
+      .catch(() => undefined);
+  }
+}
+async function submitRender(db: D1Database, keys: string | RenderKeys, job: RenderJob, image: string, view: RenderView) {
   const { fal: falKey, elevenlabs } = keysOf(keys);
   if (elevenlabs?.trim()) {
     const generation = await submitElevenLabs(elevenlabs, job, image, view);
@@ -241,6 +264,7 @@ export async function dispatchRender(db: D1Database, keys: string | RenderKeys, 
     // ElevenLabs request costs at most one unread generation, never the user.
   }
   if (!falKey?.trim()) {
+    console.error('ai-render: no provider accepted the render and there is no fal key');
     await failRender(db, job.subject, job.id, 'AI render could not start. Your allowance or points were returned.');
     return;
   }
@@ -254,13 +278,14 @@ export async function dispatchRender(db: D1Database, keys: string | RenderKeys, 
   } });
   try {
     const submitted = await client.queue.submit(ENDPOINT, {
-      abortSignal: AbortSignal.timeout(20_000), startTimeout: 120,
+      abortSignal: AbortSignal.timeout(FAL_SUBMIT_MS), startTimeout: 120,
       input: { image_url: image, prompt: renderPrompt(job.style, view), guidance_scale: 3.5, num_images: 1,
         output_format: 'jpeg', safety_tolerance: '2', enhance_prompt: false },
     });
     await db.prepare("UPDATE ai_render_jobs SET status = 'queued', request_id = ? WHERE subject = ? AND id = ? AND status = 'reserved'")
       .bind(submitted.request_id, job.subject, job.id).run();
-  } catch {
+  } catch (error) {
+    console.error('ai-render: fal refused', error instanceof Error ? error.message : String(error));
     // The same key stays terminal even after refund, so it cannot redispatch.
     await failRender(db, job.subject, job.id, 'AI render could not start. Your allowance or points were returned.');
   }

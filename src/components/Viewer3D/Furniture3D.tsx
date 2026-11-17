@@ -200,7 +200,8 @@ export default function Furniture3D({
         </mesh>
       )}
       {selected && (
-        <mesh position={[0, h / 2 + 0.01, 0]}>
+        // Editor chrome: left out of saved renders (see CaptureBridge).
+        <mesh position={[0, h / 2 + 0.01, 0]} userData={{ overlay: true }}>
           <boxGeometry args={[w + 0.06, h + 0.06, d + 0.06]} />
           <meshBasicMaterial color="#4c8dff" wireframe transparent opacity={0.7} />
         </mesh>
@@ -850,6 +851,110 @@ export function ShapeMesh({
           </mesh>
         </group>
       );
+    }
+    case 'shoe_rack': {
+      // Open rack: two sides, a top and sloping shelves with pairs of shoes.
+      const rows = Math.max(2, Math.round(h / 0.28));
+      const sideT = Math.min(0.025, w * 0.05);
+      const inner = w - sideT * 2;
+      const pairs = Math.max(1, Math.floor(inner / 0.26));
+      const shoeColors = ['#2b2b30', '#7a4a2a', '#e8e6e1', '#3b5a7a', '#8a2f2f'];
+      const items: ReactNode[] = [
+        <Box key="ls" w={sideT} d={d} h={h} y={h * 0.5} dx={-w * 0.5 + sideT * 0.5} color={color} />,
+        <Box key="rs" w={sideT} d={d} h={h} y={h * 0.5} dx={w * 0.5 - sideT * 0.5} color={color} />,
+        <Box key="tp" w={w} d={d} h={0.02} y={h - 0.01} color={shade(color, 10)} />,
+      ];
+      for (let i = 0; i < rows; i++) {
+        const sy = ((i + 0.3) / rows) * (h - 0.04);
+        const shoes: ReactNode[] = [];
+        for (let p = 0; p < pairs; p++) {
+          const cx = -inner / 2 + (inner * (p + 0.5)) / pairs;
+          const c = shoeColors[(i * 2 + p) % shoeColors.length];
+          for (const side of [-1, 1]) {
+            shoes.push(
+              <mesh key={`${p}-${side}`} position={[cx + side * 0.055, 0.04, 0]} castShadow>
+                <boxGeometry args={[0.085, 0.065, d * 0.72]} />
+                <meshStandardMaterial color={c} roughness={0.8} />
+              </mesh>,
+            );
+          }
+        }
+        items.push(
+          <group key={`row${i}`} position={[0, sy, 0]} rotation={[0.2, 0, 0]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[inner, 0.012, d * 0.94]} />
+              <meshStandardMaterial color={shade(color, 14)} roughness={0.7} />
+            </mesh>
+            {shoes}
+          </group>,
+        );
+      }
+      return <group>{items}</group>;
+    }
+    case 'showcase': {
+      // Crockery unit: glass doors over shelves of plates, bowls and cups. A
+      // tall one stands on a closed cupboard; a short one is all glass and
+      // hangs on the wall.
+      const tall = h > 1.2;
+      const frame = Math.min(0.03, w * 0.05);
+      const zf = d / 2;
+      const inner = w - frame * 2;
+      const baseH = tall ? h * 0.36 : 0;
+      const g0 = baseH + frame;
+      const g1 = h - frame;
+      const levels = Math.max(2, Math.round((g1 - g0) / 0.33));
+      const pieces = Math.max(2, Math.floor(inner / 0.24));
+      const glaze = ['#f6f4ee', '#dfe9ec', '#f1dcc9', '#cfe0d2'];
+      const items: ReactNode[] = [
+        <Box key="bk" w={w} d={d * 0.06} h={h} y={h * 0.5} dz={-d * 0.47} color={shade(color, -22)} />,
+        <Box key="ls" w={frame} d={d} h={h} y={h * 0.5} dx={-w * 0.5 + frame * 0.5} color={color} />,
+        <Box key="rs" w={frame} d={d} h={h} y={h * 0.5} dx={w * 0.5 - frame * 0.5} color={color} />,
+        <Box key="tp" w={w} d={d} h={frame} y={h - frame * 0.5} color={color} />,
+        <Box key="bt" w={w} d={d} h={frame} y={baseH + frame * 0.5} color={color} />,
+      ];
+      if (tall) {
+        items.push(<Box key="cb" w={inner} d={d * 0.96} h={baseH} y={baseH * 0.5} color={shade(color, 8)} />);
+        items.push(<Box key="cg" w={0.005} d={0.004} h={baseH * 0.92} y={baseH * 0.5} dz={zf * 0.96 + 0.002} color={shade(color, -35)} />);
+        for (const side of [-1, 1]) {
+          items.push(<Box key={`ch${side}`} w={0.012} d={0.016} h={baseH * 0.22} y={baseH * 0.6} dx={side * 0.035} dz={zf * 0.96 + 0.008} color="#c9c4b8" roughness={0.3} metalness={0.7} />);
+        }
+      }
+      for (let i = 0; i < levels; i++) {
+        const sy = g0 + ((g1 - g0) * i) / levels;
+        if (i > 0) {
+          items.push(
+            <mesh key={`sh${i}`} position={[0, sy, -d * 0.03]}>
+              <boxGeometry args={[inner, 0.008, d * 0.84]} />
+              <meshStandardMaterial color="#dfe9ec" roughness={0.1} transparent opacity={0.55} />
+            </mesh>,
+          );
+        }
+        for (let p = 0; p < pieces; p++) {
+          const cx = -inner / 2 + (inner * (p + 0.5)) / pieces;
+          const kind = (i + p) % 3;
+          const c = glaze[(i * 3 + p) % glaze.length];
+          // A stack of plates, a bowl, or a cup.
+          const [rTop, rBottom, ph] = kind === 0 ? [0.085, 0.085, 0.045] : kind === 1 ? [0.07, 0.04, 0.06] : [0.035, 0.03, 0.07];
+          items.push(
+            <mesh key={`c${i}-${p}`} position={[cx, sy + 0.006 + ph / 2, -d * 0.05]} castShadow>
+              <cylinderGeometry args={[rTop, rBottom, ph, 18]} />
+              <meshStandardMaterial color={c} roughness={0.25} />
+            </mesh>,
+          );
+        }
+      }
+      // Glass doors, the stile between them and two small handles.
+      items.push(
+        <mesh key="gl" position={[0, (g0 + g1) / 2, zf - 0.006]}>
+          <boxGeometry args={[inner, g1 - g0, 0.006]} />
+          <meshStandardMaterial color="#cfe6f0" roughness={0.05} metalness={0.1} transparent opacity={0.2} depthWrite={false} />
+        </mesh>,
+      );
+      items.push(<Box key="st" w={0.014} d={0.012} h={g1 - g0} y={(g0 + g1) / 2} dz={zf - 0.006} color={color} />);
+      for (const side of [-1, 1]) {
+        items.push(<Box key={`gh${side}`} w={0.01} d={0.016} h={Math.min(0.14, (g1 - g0) * 0.25)} y={(g0 + g1) / 2} dx={side * 0.03} dz={zf + 0.004} color="#c9c4b8" roughness={0.3} metalness={0.7} />);
+      }
+      return <group>{items}</group>;
     }
     case 'ac_outdoor': {
       // Outdoor condenser: a metal cabinet with a round fan grille on the

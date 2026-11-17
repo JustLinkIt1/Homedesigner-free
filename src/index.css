@@ -4546,7 +4546,18 @@ button.brand:hover .brand-name {
   border-top: 1px solid var(--border);
   border-radius: 18px 18px 0 0;
   box-shadow: var(--shadow-lg);
-  padding: 8px 14px calc(16px + env(safe-area-inset-bottom));
+  /* The bottom padding clears the Build / Objects / Edit tabs, which sit on
+     top of the sheet, so the last row of tools is not hidden behind them. */
+  padding: 0 14px calc(84px + env(safe-area-inset-bottom));
+  /* The list of tools is taller than a phone screen. Without a height limit
+     the sheet ran off the top with no way to reach the rest of it; now it
+     stops below the toolbar and scrolls. */
+  max-height: calc(100vh - 76px - env(safe-area-inset-top));
+  max-height: calc(100dvh - 76px - env(safe-area-inset-top));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   transform: translateY(110%);
   transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
   will-change: transform;
@@ -4558,7 +4569,12 @@ button.brand:hover .brand-name {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 2px 8px;
+  padding: 12px 2px 8px;
+  /* Stays put while the tools scroll, so Close is always in reach. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
 }
 .bs-title {
   font-size: 15px;

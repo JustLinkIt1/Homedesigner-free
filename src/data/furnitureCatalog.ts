@@ -39,6 +39,8 @@ export type Shape3D =
   | 'exhaust_fan'
   | 'ac_split'
   | 'ac_outdoor'
+  | 'shoe_rack'
+  | 'showcase'
   | 'shelf'
   | 'washer'
   | 'shower'
@@ -162,7 +164,7 @@ export function catalogGroupFor(entry: CatalogEntry): CatalogGroup {
   if (SEATING_SHAPES.has(entry.shape)) return 'Seating';
   if (entry.shape === 'table' || entry.shape === 'side_table') return 'Tables';
   if (
-    entry.shape === 'bookshelf' ||
+    entry.shape === 'bookshelf' || entry.shape === 'shoe_rack' || entry.shape === 'showcase' ||
     ['nightstand', 'wardrobe', 'dresser', 'display_cabinet', 'sideboard', 'chest_of_drawers',
       'low_media_console', 'tv_media_unit'].includes(entry.type)
   ) return 'Storage';
@@ -226,6 +228,9 @@ export const FURNITURE_CATALOG: CatalogEntry[] = [
   { type: 'kitchen_hood', pro: true, name: 'Extractor Hood', category: 'Kitchen', width: 60, depth: 50, height: 75, color: '#b9bcc0', shape: 'hood', icon: '💨', mountY: 155, searchTerms: ['chimney', 'kitchen chimney', 'blower', 'range hood', 'cooker hood', 'cooker extractor'] },
   { type: 'exhaust_fan', name: 'Exhaust Fan', category: 'Kitchen', width: 30, depth: 14, height: 30, color: '#e8e9eb', shape: 'exhaust_fan', icon: '🌀', mountY: 190, placement: 'wall', searchTerms: ['extractor fan', 'ventilation fan', 'vent fan', 'bathroom fan', 'exhaust'] },
   { type: 'ac_split', name: 'AC Unit', category: 'Living', width: 90, depth: 24, height: 30, color: '#f4f5f6', shape: 'ac_split', icon: '❄️', mountY: 215, placement: 'wall', searchTerms: ['air conditioner', 'air conditioning', 'aircon', 'split ac', 'ac', 'heat pump', 'climate'] },
+  { type: 'shoe_rack', name: 'Shoe Rack', category: 'Living', width: 80, depth: 32, height: 100, color: '#8a5a30', shape: 'shoe_rack', icon: '👟', searchTerms: ['shoe unit', 'shoe cabinet', 'shoe stand', 'shoe storage', 'shoes', 'entryway', 'hallway'] },
+  { type: 'crockery_unit', name: 'Crockery Unit', category: 'Living', width: 100, depth: 40, height: 190, color: '#7a5a3a', shape: 'showcase', icon: '🍽️', searchTerms: ['showcase', 'display unit', 'display cabinet', 'china cabinet', 'crockery', 'glass cabinet', 'dresser', 'hutch', 'vitrine'] },
+  { type: 'crockery_unit_wall', name: 'Wall Crockery Unit', category: 'Living', width: 100, depth: 32, height: 80, color: '#7a5a3a', shape: 'showcase', icon: '🍽️', mountY: 130, placement: 'wall', searchTerms: ['showcase', 'display unit', 'wall display', 'wall mounted', 'china cabinet', 'crockery', 'glass cabinet', 'vitrine'] },
   { type: 'ac_outdoor', name: 'AC Outdoor Unit', category: 'Outdoor', width: 80, depth: 32, height: 58, color: '#e6e7e8', shape: 'ac_outdoor', icon: '🌬️', searchTerms: ['air conditioner', 'aircon', 'condenser', 'compressor', 'ac', 'heat pump', 'outdoor unit'] },
   { type: 'kitchen_open_shelf', name: 'Open Shelf', category: 'Kitchen', width: 90, depth: 25, height: 45, color: '#b98a56', shape: 'shelf', icon: '🪵', mountY: 120 },
   { type: 'kitchen_open_niche', name: 'Open Niche', category: 'Kitchen', width: 60, depth: 35, height: 45, color: '#b98a56', shape: 'shelf', icon: '🪵', mountY: 120 },

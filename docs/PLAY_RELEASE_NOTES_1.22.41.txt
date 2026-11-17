@@ -1,0 +1,224 @@
+<en-GB>
+New: shoe rack, crockery unit and wall crockery unit.
+Set how high an object sits: "Height above floor" in its properties (AC units, wall cabinets, shelves).
+Saved renders no longer show the view marker or the selection box.
+Tap the ground outside the house in 3D to deselect.
+AI render: a render that cannot start now says so straight away.
+Phones: the Build menu now scrolls.
+</en-GB>
+<ar>
+جديد: رف أحذية، خزانة أواني وخزانة أواني جدارية.
+حدّد ارتفاع أي عنصر: «الارتفاع عن الأرض» في خصائصه (المكيّفات، الخزائن الجدارية، الرفوف).
+الصور المحفوظة لم تعد تُظهر علامة العرض أو مربع التحديد.
+اضغط على الأرض خارج المنزل في العرض ثلاثي الأبعاد لإلغاء التحديد.
+التصيير بالذكاء الاصطناعي: إذا تعذّر البدء يظهر ذلك فورًا.
+الهواتف: قائمة البناء أصبحت قابلة للتمرير.
+</ar>
+<cs-CZ>
+Novinky: botník, vitrína na nádobí a závěsná vitrína.
+Nastavte, jak vysoko předmět visí: „Výška nad podlahou“ ve vlastnostech (klimatizace, závěsné skříňky, police).
+Uložené rendery už neobsahují značku pohledu ani rámeček výběru.
+Klepnutím na zem mimo dům ve 3D zrušíte výběr.
+AI render: pokud se nespustí, dozvíte se to hned.
+Telefony: nabídku Stavba lze nyní posouvat.
+</cs-CZ>
+<da-DK>
+Nyt: skoreol, vitrineskab og væghængt vitrineskab.
+Vælg hvor højt en genstand sidder: "Højde over gulv" i egenskaberne (aircondition, vægskabe, hylder).
+Gemte billeder viser ikke længere visningsmærket eller markeringsboksen.
+Tryk på jorden uden for huset i 3D for at fravælge.
+AI-rendering: hvis den ikke kan starte, får du besked med det samme.
+Telefoner: Byg-menuen kan nu rulles.
+</da-DK>
+<de-DE>
+Neu: Schuhregal, Geschirrschrank und Hänge-Geschirrschrank.
+Lege fest, wie hoch ein Objekt sitzt: „Höhe über dem Boden“ in den Eigenschaften (Klimaanlagen, Hängeschränke, Regale).
+Gespeicherte Renderings zeigen weder die Ansichtsmarke noch den Auswahlrahmen.
+Tippe in 3D auf den Boden neben dem Haus, um die Auswahl aufzuheben.
+KI-Rendering: Kann es nicht starten, wird das sofort gemeldet.
+Smartphones: Das Bauen-Menü lässt sich jetzt scrollen.
+</de-DE>
+<es-ES>
+Nuevo: zapatero, vitrina para vajilla y vitrina de pared.
+Ajusta a qué altura va un objeto: «Altura sobre el suelo» en sus propiedades (aires acondicionados, muebles altos, estantes).
+Los renders guardados ya no muestran el marcador de vista ni el cuadro de selección.
+Toca el suelo fuera de la casa en 3D para deseleccionar.
+Render con IA: si no puede empezar, ahora lo indica al momento.
+Móviles: el menú Construir ahora se puede desplazar.
+</es-ES>
+<fi-FI>
+Uutta: kenkäteline, astiakaappi ja seinään kiinnitettävä astiakaappi.
+Säädä esineen korkeus: ”Korkeus lattiasta” ominaisuuksissa (ilmalämpöpumput, seinäkaapit, hyllyt).
+Tallennetuissa kuvissa ei enää näy näkymämerkkiä tai valintakehystä.
+Poista valinta napauttamalla maata talon ulkopuolella 3D:ssä.
+Tekoälyrenderöinti: jos se ei käynnisty, saat tiedon heti.
+Puhelimet: Rakenna-valikkoa voi nyt vierittää.
+</fi-FI>
+<fr-FR>
+Nouveau : meuble à chaussures, vaisselier et vaisselier mural.
+Réglez la hauteur d’un objet : « Hauteur au-dessus du sol » dans ses propriétés (climatiseurs, meubles hauts, étagères).
+Les rendus enregistrés n’affichent plus le repère de vue ni le cadre de sélection.
+Touchez le sol hors de la maison en 3D pour désélectionner.
+Rendu IA : s’il ne peut pas démarrer, c’est indiqué tout de suite.
+Téléphones : le menu Construire défile désormais.
+</fr-FR>
+<hi-IN>
+नया: शू रैक, क्रॉकरी यूनिट और दीवार पर लगने वाली क्रॉकरी यूनिट।
+कोई चीज़ कितनी ऊँचाई पर लगे, यह तय करें: उसकी प्रॉपर्टीज़ में "फ़र्श से ऊँचाई" (एसी, दीवार की अलमारी, शेल्फ़)।
+सेव किए गए रेंडर में अब व्यू मार्कर और सिलेक्शन बॉक्स नहीं दिखते।
+3D में घर के बाहर ज़मीन पर टैप करें तो सिलेक्शन हट जाता है।
+AI रेंडर: शुरू न हो पाए तो अब तुरंत बता देता है।
+फ़ोन: बिल्ड मेनू अब स्क्रॉल होता है।
+</hi-IN>
+<hu-HU>
+Új: cipőtartó, tálalószekrény és fali vitrin.
+Állítsa be, milyen magasan legyen egy tárgy: „Magasság a padlótól” a tulajdonságoknál (klímák, faliszekrények, polcok).
+A mentett képeken már nem látszik a nézetjelölő és a kijelölőkeret.
+3D-ben a ház melletti talajra koppintva megszűnik a kijelölés.
+AI-renderelés: ha nem tud elindulni, azonnal jelzi.
+Telefonok: az Építés menü mostantól görgethető.
+</hu-HU>
+<id>
+Baru: rak sepatu, lemari pajangan piring, dan lemari pajangan dinding.
+Atur ketinggian benda: "Tinggi dari lantai" di propertinya (AC, lemari dinding, rak).
+Render yang disimpan tidak lagi menampilkan penanda tampilan atau kotak seleksi.
+Ketuk tanah di luar rumah pada 3D untuk membatalkan pilihan.
+Render AI: jika tidak bisa dimulai, kini langsung diberi tahu.
+Ponsel: menu Bangun kini bisa digulir.
+</id>
+<it-IT>
+Novità: scarpiera, cristalliera e cristalliera a parete.
+Imposta l’altezza di un oggetto: «Altezza dal pavimento» nelle proprietà (condizionatori, pensili, mensole).
+I render salvati non mostrano più il marcatore di vista né il riquadro di selezione.
+Tocca il terreno fuori dalla casa in 3D per deselezionare.
+Render IA: se non può partire, ora lo segnala subito.
+Telefoni: il menu Costruisci ora scorre.
+</it-IT>
+<iw-IL>
+חדש: מעמד נעליים, ויטרינה לכלים וויטרינה תלויה.
+קבעו באיזה גובה יושב חפץ: "גובה מעל הרצפה" במאפיינים (מזגנים, ארונות תלויים, מדפים).
+תמונות שמורות כבר לא מציגות את סמן התצוגה או את מסגרת הבחירה.
+הקישו על הקרקע מחוץ לבית בתלת־ממד כדי לבטל בחירה.
+רינדור AI: אם אינו יכול להתחיל, תופיע הודעה מיד.
+טלפונים: תפריט הבנייה נגלל כעת.
+</iw-IL>
+<ja-JP>
+新登場：シューズラック、食器棚、壁掛け食器棚。
+物の高さを設定：プロパティの「床からの高さ」（エアコン、吊り戸棚、棚）。
+保存したレンダーに、視点マーカーと選択枠が写らなくなりました。
+3Dで家の外の地面をタップすると選択を解除できます。
+AIレンダー：開始できない場合はすぐにお知らせします。
+スマホ：ビルドメニューがスクロールできるようになりました。
+</ja-JP>
+<ko-KR>
+새 가구: 신발장, 그릇장, 벽걸이 그릇장.
+물건의 높이 설정: 속성의 "바닥에서 높이"(에어컨, 벽장, 선반).
+저장한 렌더에 시점 표시와 선택 상자가 더 이상 나오지 않습니다.
+3D에서 집 밖 땅을 탭하면 선택이 해제됩니다.
+AI 렌더: 시작할 수 없으면 바로 알려 줍니다.
+휴대폰: 빌드 메뉴를 이제 스크롤할 수 있습니다.
+</ko-KR>
+<nl-NL>
+Nieuw: schoenenrek, servieskast en hangende servieskast.
+Stel in hoe hoog een object hangt: ‘Hoogte boven de vloer’ in de eigenschappen (airco’s, hangkasten, planken).
+Opgeslagen renders tonen de weergavemarkering en het selectiekader niet meer.
+Tik in 3D op de grond buiten het huis om te deselecteren.
+AI-render: als die niet kan starten, zie je dat nu meteen.
+Telefoons: het Bouwen-menu kan nu scrollen.
+</nl-NL>
+<no-NO>
+Nytt: skohylle, vitrineskap og veggmontert vitrineskap.
+Velg hvor høyt en gjenstand sitter: «Høyde over gulv» i egenskapene (klimaanlegg, veggskap, hyller).
+Lagrede bilder viser ikke lenger visningsmerket eller markeringsrammen.
+Trykk på bakken utenfor huset i 3D for å fjerne markeringen.
+AI-rendering: hvis den ikke kan starte, får du beskjed med en gang.
+Telefoner: Bygg-menyen kan nå rulles.
+</no-NO>
+<pl-PL>
+Nowości: szafka na buty, witryna na zastawę i wisząca witryna.
+Ustaw, jak wysoko wisi obiekt: „Wysokość nad podłogą” we właściwościach (klimatyzatory, szafki wiszące, półki).
+Zapisane rendery nie pokazują już znacznika widoku ani ramki zaznaczenia.
+Dotknij ziemi poza domem w 3D, aby odznaczyć.
+Render AI: jeśli nie może się rozpocząć, od razu o tym informuje.
+Telefony: menu Buduj można teraz przewijać.
+</pl-PL>
+<pt-BR>
+Novo: sapateira, cristaleira e cristaleira de parede.
+Defina a altura de um objeto: "Altura acima do piso" nas propriedades (ar-condicionado, armários de parede, prateleiras).
+Os renders salvos não mostram mais o marcador de vista nem a caixa de seleção.
+Toque no chão fora da casa em 3D para desmarcar.
+Render com IA: se não puder começar, agora avisa na hora.
+Celulares: o menu Construir agora rola.
+</pt-BR>
+<ro>
+Nou: pantofar, vitrină pentru veselă și vitrină suspendată.
+Setează la ce înălțime stă un obiect: „Înălțime față de podea” în proprietăți (aer condiționat, dulapuri suspendate, rafturi).
+Randările salvate nu mai arată marcajul de vizualizare sau caseta de selecție.
+Atinge solul din afara casei în 3D pentru a deselecta.
+Randare AI: dacă nu poate porni, ești anunțat imediat.
+Telefoane: meniul Construire poate fi derulat acum.
+</ro>
+<ru-RU>
+Новое: обувница, шкаф для посуды и навесной шкаф для посуды.
+Задайте высоту предмета: «Высота над полом» в свойствах (кондиционеры, навесные шкафы, полки).
+На сохранённых рендерах больше нет метки вида и рамки выделения.
+Коснитесь земли рядом с домом в 3D, чтобы снять выделение.
+ИИ-рендер: если он не может начаться, об этом сообщается сразу.
+Телефоны: меню «Стройка» теперь прокручивается.
+</ru-RU>
+<sk>
+Novinky: botník, vitrína na riad a závesná vitrína.
+Nastavte, ako vysoko je predmet: „Výška nad podlahou“ vo vlastnostiach (klimatizácie, závesné skrinky, police).
+Uložené rendery už neobsahujú značku pohľadu ani rámček výberu.
+Ťuknutím na zem mimo domu v 3D zrušíte výber.
+AI render: ak sa nespustí, dozviete sa to hneď.
+Telefóny: ponuku Stavba možno teraz posúvať.
+</sk>
+<sv-SE>
+Nytt: skohylla, vitrinskåp och väggmonterat vitrinskåp.
+Välj hur högt ett föremål sitter: ”Höjd över golv” i egenskaperna (luftkonditionering, väggskåp, hyllor).
+Sparade bilder visar inte längre vymarkören eller markeringsramen.
+Tryck på marken utanför huset i 3D för att avmarkera.
+AI-rendering: om den inte kan starta får du veta det direkt.
+Telefoner: Bygg-menyn går nu att rulla.
+</sv-SE>
+<th>
+ใหม่: ชั้นวางรองเท้า ตู้โชว์ถ้วยชาม และตู้โชว์แบบแขวนผนัง
+กำหนดความสูงของวัตถุ: "ความสูงจากพื้น" ในคุณสมบัติ (แอร์ ตู้แขวน ชั้นวาง)
+ภาพเรนเดอร์ที่บันทึกจะไม่มีเครื่องหมายมุมมองและกรอบการเลือกอีกต่อไป
+แตะพื้นดินนอกบ้านในโหมด 3D เพื่อยกเลิกการเลือก
+เรนเดอร์ AI: หากเริ่มไม่ได้ จะแจ้งให้ทราบทันที
+โทรศัพท์: เมนูสร้างเลื่อนได้แล้ว
+</th>
+<tr-TR>
+Yeni: ayakkabılık, vitrin ve duvar vitrini.
+Bir nesnenin yüksekliğini ayarlayın: özelliklerinde "Zeminden yükseklik" (klimalar, duvar dolapları, raflar).
+Kaydedilen görüntülerde artık görünüm işareti ve seçim kutusu yok.
+Seçimi kaldırmak için 3D'de evin dışındaki zemine dokunun.
+Yapay zekâ render: başlayamazsa artık hemen bildiriyor.
+Telefonlar: İnşa menüsü artık kaydırılabiliyor.
+</tr-TR>
+<uk>
+Нове: полиця для взуття, шафа для посуду та навісна шафа для посуду.
+Задайте висоту предмета: «Висота над підлогою» у властивостях (кондиціонери, навісні шафи, полиці).
+На збережених рендерах більше немає мітки вигляду та рамки виділення.
+Торкніться землі поруч із будинком у 3D, щоб зняти виділення.
+ШІ-рендер: якщо він не може початися, про це повідомляється одразу.
+Телефони: меню «Будівництво» тепер прокручується.
+</uk>
+<vi>
+Mới: kệ giày, tủ trưng bày bát đĩa và tủ trưng bày treo tường.
+Chỉnh độ cao của đồ vật: "Chiều cao so với sàn" trong thuộc tính (điều hòa, tủ treo tường, kệ).
+Ảnh render đã lưu không còn hiện dấu góc nhìn và khung chọn.
+Chạm vào mặt đất bên ngoài nhà trong 3D để bỏ chọn.
+Render AI: nếu không thể bắt đầu, ứng dụng sẽ báo ngay.
+Điện thoại: menu Xây dựng giờ đã cuộn được.
+</vi>
+<zh-CN>
+新增：鞋架、餐具展示柜和壁挂餐具柜。
+设置物体的安装高度：属性中的“离地高度”（空调、吊柜、搁板）。
+保存的渲染图不再显示视角标记和选择框。
+在 3D 中点按房屋外的地面即可取消选择。
+AI 渲染：如果无法开始，会立即提示。
+手机：建造菜单现在可以滚动。
+</zh-CN>

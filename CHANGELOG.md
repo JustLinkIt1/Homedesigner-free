@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.22.41 — new storage furniture, object height, clean renders, AI render start
+
+From a tester's feedback.
+
+- Furniture: Shoe Rack, Crockery Unit and Wall Crockery Unit (`shoe_rack` and
+  `showcase` shapes, plan symbols and 3D models). The wall unit hangs at 130 cm.
+- "Height above floor (cm)" in an object's properties sets its elevation, so an
+  AC unit, wall cabinet or shelf can be raised or lowered from 2D or 3D.
+- Saved renders and the AI render preview no longer contain the view marker,
+  the selection box, wall handles or the build ghost: anything marked
+  `userData.overlay` is hidden for the capture (`CaptureBridge`).
+- Tapping the ground outside the house in 3D clears the selection.
+- Phones: the Build sheet is limited to the screen height and scrolls; its
+  title stays in place and the last row clears the bottom tabs.
+- AI render (server): a render that cannot be handed to a provider now fails
+  at once and returns the allowance or points, instead of sitting in
+  "reserved" until the two-minute timeout. Provider submit timeouts are 12 s
+  each so both fit in the background budget, and every refusal is logged with
+  an `ai-render:` prefix. Worker logs are kept (`observability`).
+
 ## 1.22.40 — roofs on real plans, parapets, covered balconies, facade trim, wall gaps
 
 From a tester's bug report and feature request.

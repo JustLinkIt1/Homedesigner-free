@@ -4,6 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-07-22",
   "workers_dev": true,
+  // Keep logs, so a render that fails to start can be looked up afterwards.
+  "observability": { "enabled": true },
   "vars": {
     "GOOGLE_WEB_CLIENT_ID": "753361416167-cpdo4k5g15etg79kadcj52h853hf3bqi.apps.googleusercontent.com",
     "REVENUECAT_PROJECT_ID": "proja88f8624",

@@ -816,8 +816,20 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
   const { gl, size, scene, camera, invalidate } = useThree();
   useEffect(() => {
     const capture = (scale: number, mobile: boolean, format: 'image/png' | 'image/jpeg' = 'image/png') => {
+      // A saved picture shows the design, not the editor: the view anchor, wall
+      // handles, drawing guides and the selection box are taken out for it.
+      const hidden: THREE.Object3D[] = [];
+      scene.traverse((o) => {
+        if (o.userData.overlay && o.visible) {
+          o.visible = false;
+          hidden.push(o);
+        }
+      });
       try { return captureRenderer(gl, scene, camera, size, composerRef.current, scale, mobile, format); }
-      finally { invalidate(); }
+      finally {
+        for (const o of hidden) o.visible = true;
+        invalidate();
+      }
     };
     sceneSnapshot.current = () => capture(Math.min(1, 1280 / Math.max(size.width, size.height)), true, 'image/jpeg');
     // The scene is in metres with y up; the plan is in centimetres.
@@ -1262,7 +1274,16 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         // NB: attached unconditionally — R3F doesn't reliably re-register an
         // object whose handler toggles between undefined and a function.
         onClick={(e) => {
-          if (!armedTool()) return;
+          if (!armedTool()) {
+            // A tap on the ground outside the house lets go of whatever is
+            // selected, as a tap on empty paper does in 2D. Not at the end of
+            // an orbit drag, and not while an object is waiting to be placed.
+            if (e.delta <= 4 && !useDesign.getState().pendingFurnitureType) {
+              useDesign.getState().clearSelection();
+              setPaintTap(null);
+            }
+            return;
+          }
           e.stopPropagation();
           addDraftPoint({ x: e.point.x / 0.01, y: e.point.z / 0.01 });
         }}
@@ -1318,9 +1339,11 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       <CaptureBridge composerRef={composerRef} />
       {!walkMode && <ZoomBridge />}
       <PortraitLift enabled={!walkMode} />
-      {!walkMode && !buildArmed && <FocusAnchor />}
-      {!walkMode && !buildArmed && <WallEndpointHandles />}
-      {buildArmed && draft.length > 0 && <BuildGhost draft={draft} tool={tool} />}
+      <group userData={{ overlay: true }}>
+        {!walkMode && !buildArmed && <FocusAnchor />}
+        {!walkMode && !buildArmed && <WallEndpointHandles />}
+        {buildArmed && draft.length > 0 && <BuildGhost draft={draft} tool={tool} />}
+      </group>
 
       {walkMode ? (
         <WalkControls isTouch={IS_TOUCH} moveRef={moveRef} lookRef={lookRef} />

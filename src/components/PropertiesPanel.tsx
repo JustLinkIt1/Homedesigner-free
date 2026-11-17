@@ -817,6 +817,12 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               <NumberRow label={t('Width (cm)')} value={item.width} min={10} max={500} onChange={(v) => s.updateFurniture(item.id, { width: v })} />
               <NumberRow label={t('Depth (cm)')} value={item.depth} min={10} max={500} onChange={(v) => s.updateFurniture(item.id, { depth: v })} />
               <NumberRow label={t('Height (cm)')} value={item.height} min={1} max={300} onChange={(v) => s.updateFurniture(item.id, { height: v })} />
+              {/* How high its base sits: an AC unit, a wall cabinet, a shelf.
+                  Ceiling lights hang from the ceiling until a height is set. */}
+              {(item.elevation != null || !['pendant', 'ceiling_light', 'spotlight'].includes(CATALOG_BY_TYPE[item.type]?.shape ?? '')) && (
+                <NumberRow label={t('Height above floor (cm)')} value={Math.round(item.elevation ?? CATALOG_BY_TYPE[item.type]?.mountY ?? 0)} min={0} max={400}
+                  onChange={(v) => s.updateFurniture(item.id, { elevation: v })} />
+              )}
             </div>
             <div className="prop-card">
               <div className="prop-row">

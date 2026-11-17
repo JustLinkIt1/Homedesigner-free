@@ -284,6 +284,20 @@ export const SYMBOLS: Partial<Record<Shape3D, SymbolPath[]>> = {
     { d: 'M10,74 H90', sw: 2 },
     { d: 'M22,96 V100 M50,96 V100 M78,96 V100', sw: 1.5 },
   ],
+  // Shoe rack: the frame, two shelf lines and a pair of shoes.
+  shoe_rack: [
+    { d: rect(4, 10, 92, 80, 4) },
+    { d: 'M4,37 H96 M4,63 H96', sw: 2 },
+    { d: rect(18, 43, 12, 14, 5), sw: 1.5 },
+    { d: rect(34, 43, 12, 14, 5), sw: 1.5 },
+  ],
+  // Crockery unit: the carcass, the glass front and two plates behind it.
+  showcase: [
+    { d: rect(4, 10, 92, 80) },
+    { d: 'M4,76 H96 M50,76 V90', sw: 2 },
+    { d: circle(28, 44, 13), sw: 1.5 },
+    { d: circle(72, 44, 13), sw: 1.5 },
+  ],
   // Outdoor condenser: the cabinet with its round fan and a louvre panel.
   ac_outdoor: [
     { d: rect(4, 4, 92, 92, 4) },
