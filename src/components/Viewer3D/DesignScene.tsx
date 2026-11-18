@@ -17,6 +17,9 @@ import { bayParts, isBay } from '../../lib/bayWindow';
 import { isFence, isHalfWall, structuralWalls, fenceRunBoxes, METAL_FENCES } from '../../lib/fence';
 import { buildRoofGeometry, roofOutlines, type RoofLight } from '../../lib/roofGeometry';
 import { facadeOf, roofOf } from '../../lib/roof';
+import { ceilingHeightAt, roomCeilingHeights, storeyTop } from '../../lib/ceilings';
+import { toast } from '../../lib/ui';
+import { t as translate } from '../../lib/i18n';
 import { offsetPolygon } from '../../lib/polygonOffset';
 import { useRemoteCatalog } from '../../lib/remoteCatalog';
 import Furniture3D from './Furniture3D';
@@ -29,6 +32,8 @@ const OUTDOOR_PATCH_M = 2;
 /** Whether to synthesise normal maps — resolved once, not per material. */
 const RELIEF = tierCaps(activeTier()).derivedNormals;
 const NO_FACE_FINISHES: WallFaceFinish[] = [];
+/** Height of a skirting board (cm). */
+const SKIRTING_CM = 9;
 const NO_STAIRS: FurnitureItem[] = [];
 const NORMAL_SCALE = new THREE.Vector2(0.5, 0.5);
 
@@ -226,6 +231,9 @@ function WallMesh({
   const mz = ((wall.start.y + wall.end.y) / 2) * M;
 
   const height = fillTo != null && fillTo > wall.height ? fillTo : wall.height;
+  // The dark cap is 3cm on any normal wall. A half wall can be a few
+  // centimetres high (a kerb, a step edge), and there it thins with the wall.
+  const capT = Math.min(0.03, Math.max(0.004, wall.height * M * 0.2));
   const spans = useMemo(() => wallSpans(wall, openings, height), [wall, openings, height]);
   // The outdoor stretches of each face (cm along the wall). A stretch that
   // reaches a wall end runs on over the half-thickness corner overlap.
@@ -455,17 +463,17 @@ function WallMesh({
           where the storey above sits on this wall. */}
       {fillTo == null && !roofed && (
         <mesh
-          position={[(dist(wall.start, wall.end) / 2) * M, wall.height * M + 0.015, 0]}
+          position={[(dist(wall.start, wall.end) / 2) * M, wall.height * M + capT / 2, 0]}
           material={capMat}
           castShadow
         >
-          <boxGeometry args={[dist(wall.start, wall.end) * M, 0.03, t + 0.016]} />
+          <boxGeometry args={[dist(wall.start, wall.end) * M, capT, t + 0.016]} />
         </mesh>
       )}
       {/* Skirting boards on floor-level spans (skip headers; breaks at doors),
           one per face, and only where that face is indoors: a house has no
           skirting on its outside walls. */}
-      {([1, -1] as const).flatMap((side) =>
+      {wall.height >= SKIRTING_CM + 3 && ([1, -1] as const).flatMap((side) =>
         spans
           .filter((s) => s.y0 <= 0.01 && s.b - s.a > 1)
           .flatMap((s, i) => {
@@ -1175,11 +1183,45 @@ function SlabMesh({ room, stairsBelow }: { room: Room; stairsBelow: FurnitureIte
   );
 }
 
+/** When the ceiling last explained itself, so a few quick taps show one note. */
+let ceilingNoteAt = 0;
+
+/**
+ * A tap on the closed top of the house. People who did not switch Dollhouse
+ * off on purpose (adding a roof does it for them) see a slab they never drew
+ * and cannot select or delete. Say what it is and offer the way back in.
+ */
+function explainCeiling() {
+  const now = Date.now();
+  if (now - ceilingNoteAt < 4000) return;
+  ceilingNoteAt = now;
+  toast.action(translate('This is the ceiling. Turn Dollhouse on to look inside.'), {
+    label: translate('Turn on'),
+    onClick: () => useDesign.getState().setDollhouse(true),
+  });
+}
+
 /** Flat ceiling over a room at the given height (m), shown when not in dollhouse. */
-function CeilingMesh({ room, height }: { room: Room; height: number }) {
+function CeilingMesh({ room, height, interactive }: { room: Room; height: number; interactive: boolean }) {
   const geometry = useMemo(() => new THREE.ShapeGeometry(roomShape(room)), [room.points]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, height, 0]} receiveShadow>
+    <mesh
+      geometry={geometry}
+      rotation={[Math.PI / 2, 0, 0]}
+      position={[0, height, 0]}
+      receiveShadow
+      onClick={interactive ? (e) => {
+        if (e.delta > 4) return; // the end of an orbit drag, not a tap
+        // Seen from inside the room it is just the ceiling overhead, and while
+        // drawing or placing, the tap belongs to the floor underneath.
+        if (e.ray.direction.y >= 0) return;
+        const st = useDesign.getState();
+        if (st.walkMode || st.tool !== 'select' || st.pendingFurnitureType) return;
+        // Otherwise the tap went on through and selected a floor nobody can see.
+        e.stopPropagation();
+        explainCeiling();
+      } : undefined}
+    >
       <meshStandardMaterial color="#f4f1ea" roughness={0.95} metalness={0} side={THREE.DoubleSide} />
     </mesh>
   );
@@ -1626,8 +1668,18 @@ function FloorContent({
 
   // Ceiling only matters for the top storey (lower storeys get the slab of
   // the storey above); hidden in dollhouse so you can look inside from above.
-  const ceilingHeight =
-    (geom.walls.reduce((m, w) => Math.max(m, w.height), 0) || 270) * M;
+  const ceilingHeight = storeyTop(geom.walls) * M;
+  // Each room's ceiling sits on that room's own walls, so raising one wall
+  // does not lift every ceiling in the house off the rest.
+  const roomCeilings = useMemo(() => roomCeilingHeights(geom.rooms, geom.walls), [geom.rooms, geom.walls]);
+  // Ceiling lights hang from the ceiling of the room they are in.
+  const fixtureCeilings = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const f of geom.furniture) {
+      m.set(f.id, ceilingHeightAt(f.position, geom.rooms, roomCeilings, storeyTop(geom.walls)) * M);
+    }
+    return m;
+  }, [geom.furniture, geom.rooms, geom.walls, roomCeilings]);
 
   // Tapping a wall or floor selects it (so the Properties/Edit panel can edit
   // its height, thickness, paint or delete it — wall editing right in 3D) AND
@@ -1649,7 +1701,7 @@ function FloorContent({
       </group>
       <group name="ceilings">
       {isTop && !dollhouse && geom.rooms.filter((r) => !r.outdoor).map((r) => (
-        <CeilingMesh key={`ceil-${r.id}`} room={r} height={ceilingHeight} />
+        <CeilingMesh key={`ceil-${r.id}`} room={r} height={(roomCeilings.get(r.id) ?? storeyTop(geom.walls)) * M} interactive={interactive} />
       ))}
       </group>
       <group name="roof">
@@ -1727,7 +1779,7 @@ function FloorContent({
           onSelect={() => interactive && select({ kind: 'furniture', id: f.id })}
           interactive={interactive}
           draggable={interactive}
-          ceilingHeight={ceilingHeight}
+          ceilingHeight={fixtureCeilings.get(f.id) ?? ceilingHeight}
           preferRenderModel={useRenderModels}
         />
       ))}
@@ -1776,21 +1828,30 @@ export default function DesignScene({
     fades.current.forEach((w) => {
       const m = w.mat;
       if (!dollhouse) {
-        if (m.opacity !== 1) {
+        if (m.opacity !== 1 || m.transparent) {
           m.opacity = 1;
           m.transparent = false;
           m.depthWrite = true;
+          m.needsUpdate = true;
         }
         return;
       }
       const camDot = w.nx * (camera.position.x - w.mx) + w.nz * (camera.position.z - w.mz);
       const target = camDot > 0.25 ? 0.18 : 1;
-      m.transparent = true;
       if (dollhouseInstant || Math.abs(m.opacity - target) < 0.01) {
         m.opacity = target;
       } else {
         m.opacity += (target - m.opacity) * 0.2;
         transitioning = true;
+      }
+      // Only a wall that is actually see-through is drawn as transparent. A
+      // solid wall left in the transparent pass is depth-sorted against the
+      // faded ones by its centre, and each time that order swapped as the
+      // camera turned, the faded wall in front of it blinked out or back in.
+      const seeThrough = m.opacity < 0.995;
+      if (m.transparent !== seeThrough) {
+        m.transparent = seeThrough;
+        m.needsUpdate = true;
       }
       m.depthWrite = m.opacity > 0.85;
     });

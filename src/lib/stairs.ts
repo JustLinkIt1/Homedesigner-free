@@ -42,8 +42,27 @@ export interface StairEnd {
   out: Point;
 }
 
+/** A corner of a handrail's line. `level` counts rises: the rail stands a fixed
+ *  height above `level × rise`, so it climbs with the treads beneath it. */
+export interface StairRailPoint {
+  x: number;
+  y: number;
+  level: number;
+}
+
+/** One handrail, as a line along an edge of the stair. Left and right are as
+ *  you walk UP the stair. */
+export interface StairRail {
+  side: 'left' | 'right';
+  pts: StairRailPoint[];
+}
+
+export type StairRailing = 'left' | 'right' | 'both';
+
 export interface StairPlan {
   treads: StairTread[];
+  /** Where a handrail runs on each side. A spiral has only its outer one. */
+  rails: StairRail[];
   /** Walking line from the bottom step to the top, for the plan arrow. */
   path: Point[];
   low: StairEnd;
@@ -60,6 +79,17 @@ export interface StairPlan {
 /** Same step count the original straight stair used, so it looks unchanged. */
 export function stairStepCount(height: number): number {
   return Math.max(6, Math.round(height / 18));
+}
+
+/** How far a handrail stands in from the edge of a flight (cm). */
+const railInset = (flightWidth: number) => Math.min(4, flightWidth * 0.08);
+
+/** The rails of a stair that the chosen option switches on. A spiral has one
+ *  rail, so any choice shows it. */
+export function stairRailsFor(plan: StairPlan, railing: StairRailing | undefined): StairRail[] {
+  if (!railing) return [];
+  if (railing === 'both' || plan.rails.length <= 1) return plan.rails;
+  return plan.rails.filter((r) => r.side === railing);
 }
 
 const rect = (x0: number, y0: number, x1: number, y1: number): Point[] => [
@@ -102,11 +132,25 @@ export function stairPlan(
     const n2 = steps - 1 - n1;
     const x0 = -hw;
     const x1 = -hw + s;
+    const e = railInset(s);
+    const land = n1 + 1;
     plan = {
       treads: [
         ...flight('y', -hd, hd - s, x0, x1, n1, 1),
         { poly: rect(x0, hd - s, x1, hd), level: n1 + 1, landing: true },
         ...flight('x', x1, hw, hd - s, hd, n2, n1 + 2),
+      ],
+      // The stair turns left, so the long outer edge is on the right.
+      rails: [
+        { side: 'right', pts: [
+          { x: x0 + e, y: -hd, level: 0.5 }, { x: x0 + e, y: hd - s, level: land },
+          { x: x0 + e, y: hd - e, level: land }, { x: x1, y: hd - e, level: land },
+          { x: hw, y: hd - e, level: steps },
+        ] },
+        { side: 'left', pts: [
+          { x: x1 - e, y: -hd, level: 0.5 }, { x: x1 - e, y: hd - s + e, level: land },
+          { x: hw, y: hd - s + e, level: steps },
+        ] },
       ],
       path: [{ x: x0 + s / 2, y: -hd }, { x: x0 + s / 2, y: hd - s / 2 }, { x: hw, y: hd - s / 2 }],
       low: { at: { x: x0 + s / 2, y: -hd }, out: { x: 0, y: -1 } },
@@ -122,11 +166,26 @@ export function stairPlan(
     const landing = Math.min(s, d * 0.45);
     const n1 = Math.max(1, Math.floor((steps - 1) / 2));
     const n2 = Math.max(1, steps - 1 - n1);
+    const e = railInset(s);
+    const land = n1 + 1;
+    const top = n1 + n2 + 1;
     plan = {
       treads: [
         ...flight('y', -hd, hd - landing, -hw, -hw + s, n1, 1),
         { poly: rect(-hw, hd - landing, hw, hd), level: n1 + 1, landing: true },
         ...flight('y', hd - landing, -hd, hw - s, hw, n2, n1 + 2),
+      ],
+      // Turns left twice: the outer edge runs up, round the landing and back.
+      rails: [
+        { side: 'right', pts: [
+          { x: -hw + e, y: -hd, level: 0.5 }, { x: -hw + e, y: hd - landing, level: land },
+          { x: -hw + e, y: hd - e, level: land }, { x: hw - e, y: hd - e, level: land },
+          { x: hw - e, y: hd - landing, level: land }, { x: hw - e, y: -hd, level: top },
+        ] },
+        { side: 'left', pts: [
+          { x: -hw + s - e, y: -hd, level: 0.5 }, { x: -hw + s - e, y: hd - landing + e, level: land },
+          { x: hw - s + e, y: hd - landing + e, level: land }, { x: hw - s + e, y: -hd, level: top },
+        ] },
       ],
       path: [
         { x: -hw + s / 2, y: -hd },
@@ -169,8 +228,15 @@ export function stairPlan(
       return { x: v.x / len, y: v.y / len };
     };
     const t0 = tangent(start);
+    // The post is the inner support, so the one handrail follows the rim. It
+    // climbs half a rise ahead of each tread edge, which puts it level with a
+    // tread at that tread's middle.
+    const rim = 1 - railInset(Math.min(hw, hd)) / Math.min(hw, hd);
+    const rimPts: StairRailPoint[] = [];
+    for (let i = 0; i <= steps; i++) rimPts.push({ ...at(rim, start + per * i), level: i + 0.5 });
     plan = {
       treads,
+      rails: [{ side: 'left', pts: rimPts }],
       path,
       low: { at: at(walkR, start), out: { x: -t0.x, y: -t0.y } },
       high: { at: at(walkR, end), out: tangent(end) },
@@ -180,8 +246,13 @@ export function stairPlan(
       post: { radius: post },
     };
   } else {
+    const e = railInset(w);
     plan = {
       treads: flight('y', -hd, hd, -hw, hw, steps, 1),
+      rails: [
+        { side: 'right', pts: [{ x: -hw + e, y: -hd, level: 0.5 }, { x: -hw + e, y: hd, level: steps }] },
+        { side: 'left', pts: [{ x: hw - e, y: -hd, level: 0.5 }, { x: hw - e, y: hd, level: steps }] },
+      ],
       path: [{ x: 0, y: -hd }, { x: 0, y: hd }],
       low: { at: { x: 0, y: -hd }, out: { x: 0, y: -1 } },
       high: { at: { x: 0, y: hd }, out: { x: 0, y: 1 } },
@@ -196,6 +267,11 @@ export function stairPlan(
   return {
     ...plan,
     treads: plan.treads.map((t) => ({ ...t, poly: t.poly.map(flip).reverse() })),
+    // Mirrored, the stair turns the other way and its sides trade places.
+    rails: plan.rails.map((r) => ({
+      side: r.side === 'left' ? 'right' as const : 'left' as const,
+      pts: r.pts.map((p) => ({ ...p, x: -p.x })),
+    })),
     path: plan.path.map(flip),
     low: { at: flip(plan.low.at), out: flip(plan.low.out) },
     high: { at: flip(plan.high.at), out: flip(plan.high.out) },

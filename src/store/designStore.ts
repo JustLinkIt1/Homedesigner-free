@@ -477,6 +477,9 @@ export const useDesign = create<DesignState>((set, get) => {
     }));
   };
 
+  /** Dollhouse was switched off by adding a roof, not by the user. */
+  let roofHidDollhouse = false;
+
   return {
     ...loadInitial(),
     tool: 'select',
@@ -520,7 +523,10 @@ export const useDesign = create<DesignState>((set, get) => {
       persistSettings({ units: u });
       set({ units: u });
     },
-    setDollhouse: (b) => set({ dollhouse: b }),
+    setDollhouse: (b) => {
+      roofHidDollhouse = false; // a choice made by hand stands
+      set({ dollhouse: b });
+    },
     setWalkMode: (b) => set({ walkMode: b }),
     setMoveLock: (b) => set({ moveLock: b }),
     setSunTime: (t) => {
@@ -1323,7 +1329,14 @@ export const useDesign = create<DesignState>((set, get) => {
       // never appeared, whatever type was chosen. Show what was just picked.
       if (patch !== null && get().view === '3d' && get().dollhouse) {
         set({ dollhouse: false });
+        roofHidDollhouse = true;
         toast.info(t('Dollhouse is off so you can see the roof. Turn it back on to look inside.'));
+      } else if (patch === null && roofHidDollhouse) {
+        // The roof was the only reason Dollhouse went off. With it gone the
+        // house would stay closed by flat ceilings that seem to come from
+        // nowhere, so open it again.
+        roofHidDollhouse = false;
+        if (!get().dollhouse) set({ dollhouse: true });
       }
     },
 

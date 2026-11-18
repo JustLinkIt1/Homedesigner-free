@@ -158,6 +158,9 @@ export interface FurnitureItem {
   handles?: 'bar' | 'none';
   /** Turning stairs (L, U, spiral): true turns the other way. */
   mirrored?: boolean;
+  /** Stairs: which sides carry a handrail, as you walk up. Absent means none,
+   *  so stairs in older projects look as they did. */
+  railing?: 'left' | 'right' | 'both';
 }
 
 /** A raster plan (from PDF or image) shown beneath the editor for tracing. */

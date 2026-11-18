@@ -29,7 +29,7 @@ import type { CustomTexture, FacadeStyle, FenceStyle, OpeningStyle, RoofType, Ro
 
 import { MATERIAL_GROUPS, floorMaterials, wallMaterials, worktopMaterials, materialUrl, WALL_PAINTS } from '../data/materials';
 import { hasFronts, hasWorktop, swapTargets, worktopId } from '../lib/kitchenUnits';
-import { isStairs, stairTurns } from '../lib/stairs';
+import { isStairs, stairTurns, type StairRailing } from '../lib/stairs';
 
 // Opening styles whose catalog entry is Pro — derived from the catalog's
 // `pro` flags so the Style dropdown gate can never drift from it.
@@ -100,6 +100,14 @@ function OutdoorCard({ room }: { room: Room }) {
     </div>
   );
 }
+
+/** Handrail choices for a stair. Sides are as you walk up it. */
+const STAIR_RAILINGS: { id: StairRailing | undefined; label: string }[] = [
+  { id: undefined, label: 'None' },
+  { id: 'left', label: 'Left side' },
+  { id: 'right', label: 'Right side' },
+  { id: 'both', label: 'Both sides' },
+];
 
 const FENCE_STYLES: { id: FenceStyle; name: string }[] = [
   { id: 'picket', name: 'Picket' },
@@ -355,6 +363,7 @@ function RoofCard() {
   const walls = useDesign((st) => st.walls);
   const setRoof = useDesign((st) => st.setRoof);
   const units = useDesign((st) => st.units);
+  const ceilingsShown = useDesign((st) => st.view === '3d' && !st.dollhouse);
   const roof = roofOf(floors);
 
   // Warn before the render silently disagrees with the picker: a markedly
@@ -373,6 +382,9 @@ function RoofCard() {
         <div className="prop-card">
           <div className="prop-title">{t('Roof')}</div>
           <p className="prop-hint">{t('Cover the building with a roof, built from your outer walls.')}</p>
+          {ceilingsShown && (
+            <p className="prop-hint">{t('With Dollhouse off, the top of the house is closed with flat ceilings until you add a roof. Turn Dollhouse on to look inside.')}</p>
+          )}
           <button className="btn block" onClick={() => setRoof({})}>
             <Home className="icon" /> {t('Add roof')}
           </button>
@@ -653,8 +665,9 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
               <NumberRow label={t('Thickness (cm)')} value={wall.thickness} min={4} max={50}
                 onChange={(v) => s.updateWall(wall.id, { thickness: v })} />
               {/* A fence can legitimately be knee-high (a railing) or head-high
-                  (a privacy screen), so it does not share the wall's 100cm floor. */}
-              <NumberRow label={t('Height (cm)')} value={wall.height} min={isFence(wall) ? 40 : isHalfWall(wall) ? 60 : 100} max={isHalfWall(wall) ? 200 : 400}
+                  (a privacy screen), so it does not share the wall's 100cm floor.
+                  A half wall goes right down to a kerb or a single step. */}
+              <NumberRow label={t('Height (cm)')} value={wall.height} min={isFence(wall) ? 40 : isHalfWall(wall) ? 1 : 100} max={isHalfWall(wall) ? 200 : 400}
                 onChange={(v) => s.updateWall(wall.id, { height: v })} />
             </div>
             <HalfWallCard wall={wall} />
@@ -890,6 +903,22 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                 </button>
               )}
             </div>
+            {isStairs(item) && (
+              <div className="prop-card">
+                <div className="prop-label">{t('Handrail')}</div>
+                <div className="swap-chips">
+                  {STAIR_RAILINGS.filter((r) => item.type !== 'stairs_spiral' || r.id === undefined || r.id === 'both').map((r) => (
+                    <button
+                      key={r.id ?? 'none'}
+                      className={`swap-chip ${(item.type === 'stairs_spiral' ? (item.railing ? 'both' : undefined) : item.railing) === r.id ? 'on' : ''}`}
+                      onClick={() => s.updateFurniture(item.id, { railing: r.id })}
+                    >
+                      {t(item.type === 'stairs_spiral' && r.id === 'both' ? 'Outer side' : r.label)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* A selected unit swaps to any other unit of its family (base /
                 tall / wall) in place: same slot, facing, colour and worktop. */}
             {swapTargets(item.type).length > 0 && (

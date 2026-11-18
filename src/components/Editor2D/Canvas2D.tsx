@@ -262,12 +262,21 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
   // guessed 800×600, then the ResizeObserver reports the real (often much
   // narrower phone) size a tick later — we must re-frame for that real size, or
   // the plan stays fit to the guess and reads as over-zoomed on entry.
-  const lastFit = useRef({ req: 0, w: 0, h: 0 });
+  //
+  // A size change on its own re-frames only while the view is still exactly
+  // where the last fit left it. Once someone has zoomed or panned, the view is
+  // theirs: the phone keyboard opening over a number field shrinks the canvas,
+  // and re-fitting for that threw away the zoom they had just set up.
+  const lastFit = useRef({ req: 0, w: 0, h: 0, x: 0, y: 0, zoom: 0 });
   useEffect(() => {
     if (s.fitRequest === 0 || size.w === 0) return;
     const f = lastFit.current;
-    if (s.fitRequest === f.req && size.w === f.w && size.h === f.h) return;
-    lastFit.current = { req: s.fitRequest, w: size.w, h: size.h };
+    if (s.fitRequest === f.req) {
+      if (size.w === f.w && size.h === f.h) return;
+      const now = useDesign.getState();
+      if (now.pan.x !== f.x || now.pan.y !== f.y || now.zoom !== f.zoom) return;
+    }
+    lastFit.current = { ...f, req: s.fitRequest, w: size.w, h: size.h };
     const pts = [
       ...walls.flatMap((w) => [w.start, w.end]),
       ...rooms.flatMap((r) => r.points),
@@ -279,10 +288,12 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
     const bh = Math.max(1, max.y - min.y);
     const pad = 90;
     const z = Math.max(0.05, Math.min(2, Math.min(size.w / (bw + pad * 2), size.h / (bh + pad * 2))));
-    s.setViewport(
-      { x: size.w / 2 - ((min.x + max.x) / 2) * z, y: size.h / 2 - ((min.y + max.y) / 2) * z },
-      z,
-    );
+    const at = { x: size.w / 2 - ((min.x + max.x) / 2) * z, y: size.h / 2 - ((min.y + max.y) / 2) * z };
+    s.setViewport(at, z);
+    // Read back what the store kept (it may clamp), so "untouched" compares
+    // like with like.
+    const kept = useDesign.getState();
+    lastFit.current = { req: s.fitRequest, w: size.w, h: size.h, x: kept.pan.x, y: kept.pan.y, zoom: kept.zoom };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.fitRequest, size.w, size.h]);
 

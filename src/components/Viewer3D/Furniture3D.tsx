@@ -14,7 +14,9 @@ import { ItemShade } from './FakeShadows';
 import type { FurnitureItem } from '../../types';
 import { isSurfacePlaceable, supportElevationAt } from '../../lib/furniturePlacement';
 import { notifyPlacementComplete } from '../../lib/placementFeedback';
-import { stairPlan, type StairShape } from '../../lib/stairs';
+import { stairPlan, stairRailsFor, type StairPlan, type StairRail, type StairRailing, type StairShape } from '../../lib/stairs';
+import { pointInPolygon } from '../../lib/geometry';
+import { METAL_RAILING_COLOR } from '../../lib/fence';
 
 const M = 0.01; // cm -> m
 /** Battery saver tier has no shadow maps: floor-standing items carry a soft
@@ -223,7 +225,7 @@ export default function Furniture3D({
         <ResilientGltfFurniture
           item={item}
           preferRender={preferRenderModel}
-          fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={!!item.mirrored} seed={item.position.x * 0.013 + item.position.y * 0.029} />}
+          fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={!!item.mirrored} railing={item.railing} seed={item.position.x * 0.013 + item.position.y * 0.029} />}
         />
       )}
     </group>
@@ -295,13 +297,15 @@ function FourLegs({
 }
 
 export function ShapeMesh({
-  shape, w, d, h, color, seed = 0, mirrored = false,
+  shape, w, d, h, color, seed = 0, mirrored = false, railing,
 }: {
   shape: Shape3D; w: number; d: number; h: number; color: string;
   /** Turns otherwise identical garden shapes so two trees never match. */
   seed?: number;
   /** Turning stairs: the other hand. */
   mirrored?: boolean;
+  /** Stairs: which sides carry a handrail. */
+  railing?: StairRailing;
 }) {
   switch (shape) {
     case 'sofa': {
@@ -1193,10 +1197,81 @@ export function ShapeMesh({
     case 'stairs_l':
     case 'stairs_u':
     case 'stairs_spiral':
-      return <StairMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={mirrored} />;
+      return <StairMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={mirrored} railing={railing} />;
     default:
       return <Box w={w} d={d} h={h} y={h * 0.5} color={color} />;
   }
+}
+
+/** Handrail height above the treads, and the sizes of its parts (m). */
+const RAIL_HEIGHT = 0.9;
+const RAIL_BAR = { w: 0.05, h: 0.04 };
+const RAIL_NEWEL = 0.05;
+const RAIL_BALUSTER = 0.02;
+const RAIL_BALUSTER_EVERY = 0.125;
+
+/**
+ * Handrails for a stair: a bar that climbs with the treads, a post at every
+ * corner of its line and slim balusters between, all merged into one geometry.
+ * Each upright starts on the tread it stands over, so nothing hangs below a
+ * step or stops short of one.
+ */
+function stairRailGeometry(plan: StairPlan, rails: StairRail[], rise: number): THREE.BufferGeometry | null {
+  if (rails.length === 0) return null;
+  const parts: THREE.BufferGeometry[] = [];
+  /** Top of the tread under a plan point (m), or null where there is none. */
+  const treadTop = (x: number, y: number): number | null => {
+    const tread = plan.treads.find((t) => pointInPolygon({ x, y }, t.poly));
+    return tread ? tread.level * rise : null;
+  };
+  const upright = (x: number, y: number, level: number, size: number, top: number) => {
+    const base = treadTop(x, y) ?? Math.max(0, (level - 0.5) * rise);
+    const height = top - base;
+    if (height <= 0.02) return;
+    const g = new THREE.BoxGeometry(size, height, size);
+    g.translate(x * M, base + height / 2, y * M);
+    parts.push(g);
+  };
+  const up = new THREE.Vector3(0, 1, 0);
+  for (const rail of rails) {
+    const pts = rail.pts;
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      const from = new THREE.Vector3(a.x * M, a.level * rise + RAIL_HEIGHT, a.y * M);
+      const to = new THREE.Vector3(b.x * M, b.level * rise + RAIL_HEIGHT, b.y * M);
+      const along = to.clone().sub(from);
+      const length = along.length();
+      if (length < 1e-4) continue;
+      // The bar, laid along the slope with its flat faces kept upright.
+      const x = along.clone().normalize();
+      const z = new THREE.Vector3().crossVectors(x, up).normalize();
+      const y = new THREE.Vector3().crossVectors(z, x);
+      const bar = new THREE.BoxGeometry(length + RAIL_BAR.w, RAIL_BAR.h, RAIL_BAR.w);
+      bar.applyMatrix4(new THREE.Matrix4().makeBasis(x, y, z));
+      bar.translate((from.x + to.x) / 2, (from.y + to.y) / 2 - RAIL_BAR.h / 2, (from.z + to.z) / 2);
+      parts.push(bar);
+      // Balusters between this stretch's two posts, evenly spaced.
+      const run = Math.hypot((b.x - a.x) * M, (b.y - a.y) * M);
+      const bays = Math.max(1, Math.round(run / RAIL_BALUSTER_EVERY));
+      for (let k = 1; k < bays; k++) {
+        const f = k / bays;
+        const level = a.level + (b.level - a.level) * f;
+        upright(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f, level, RAIL_BALUSTER, level * rise + RAIL_HEIGHT - RAIL_BAR.h);
+      }
+    }
+    // A sturdier post wherever the rail starts, ends or turns a corner. On a
+    // curve (the rim of a spiral) the corners are only facets, so those stay slim.
+    const curved = pts.length > 8;
+    pts.forEach((p, i) => {
+      const end = i === 0 || i === pts.length - 1;
+      upright(p.x, p.y, p.level, curved && !end ? RAIL_BALUSTER : RAIL_NEWEL, p.level * rise + RAIL_HEIGHT);
+    });
+  }
+  if (parts.length === 0) return null;
+  const merged = mergeGeometries(parts, false);
+  parts.forEach((g) => g.dispose());
+  return merged;
 }
 
 /**
@@ -1205,10 +1280,11 @@ export function ShapeMesh({
  * spiral's are thin wedges on a central post. Merged into two meshes (the
  * alternating tread colours) whatever the step count.
  */
-function StairMesh({ shape, w, d, h, color, mirrored }: {
+function StairMesh({ shape, w, d, h, color, mirrored, railing }: {
   shape: StairShape; w: number; d: number; h: number; color: string; mirrored: boolean;
+  railing?: StairRailing;
 }) {
-  const { even, odd, post, postH } = useMemo(() => {
+  const { even, odd, post, postH, rail } = useMemo(() => {
     const plan = stairPlan(shape, w / M, d / M, h / M, mirrored);
     const rise = plan.rise * M;
     const spiral = !!plan.post;
@@ -1233,9 +1309,10 @@ function StairMesh({ shape, w, d, h, color, mirrored }: {
       odd: merge(parts[1]),
       post: plan.post ? plan.post.radius * M : 0,
       postH: plan.steps * rise + 0.9,
+      rail: stairRailGeometry(plan, stairRailsFor(plan, railing), rise),
     };
-  }, [shape, w, d, h, mirrored]);
-  useEffect(() => () => { even?.dispose(); odd?.dispose(); }, [even, odd]);
+  }, [shape, w, d, h, mirrored, railing]);
+  useEffect(() => () => { even?.dispose(); odd?.dispose(); rail?.dispose(); }, [even, odd, rail]);
   return (
     <group>
       {even && (
@@ -1252,6 +1329,12 @@ function StairMesh({ shape, w, d, h, color, mirrored }: {
         <mesh position={[0, postH / 2, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[post * 0.55, post * 0.55, postH, 20]} />
           <meshStandardMaterial color={shade(color, -30)} roughness={0.4} metalness={0.5} />
+        </mesh>
+      )}
+      {/* Powder-coated steel, the same charcoal as a steel balcony railing. */}
+      {rail && (
+        <mesh geometry={rail} castShadow receiveShadow>
+          <meshStandardMaterial color={METAL_RAILING_COLOR} roughness={0.4} metalness={0.65} />
         </mesh>
       )}
     </group>

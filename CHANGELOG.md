@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.22.42 — stair handrails, low half walls, ceilings that sit on their walls
+
+From a tester's feedback.
+
+- Stairs: a "Handrail" choice in the properties (none, left side, right side,
+  both sides; a spiral stair has "Outer side"). `stairPlan` now returns the
+  line each rail follows (`rails`), and `stairRailGeometry` in `Furniture3D`
+  builds a sloped steel bar, balusters down to the treads and newel posts
+  from it, on all four stair shapes. 3D only; the plan symbol is unchanged.
+- Half walls can be set from 1 cm (was 60). The dark wall cap thins with a
+  very low wall and the skirting board is left off below 12 cm.
+- Ceilings sit on their own room's walls (`src/lib/ceilings.ts`). Every
+  ceiling used to hang at the tallest wall of the storey, so raising one wall
+  lifted all of them into the air. A room's ceiling is now at the height most
+  of its perimeter is built to. Ceiling lights hang from their own room's
+  ceiling. The roof still sits on the tallest wall.
+- Tapping a ceiling from above in 3D says what it is and offers to turn
+  Dollhouse on, instead of selecting the floor underneath.
+- Removing a roof turns Dollhouse back on when adding the roof was what
+  turned it off. The roof panel also explains the flat ceilings while
+  Dollhouse is off.
+- 2D plan: a change in canvas size alone (the phone keyboard opening) no
+  longer re-fits the plan once the view has been zoomed or panned.
+- Dollhouse: a wall is only drawn in the transparent pass while it is
+  actually see-through, which stops faded walls blinking as the camera turns.
+- New `tests/ceilings.mjs` in both test chains.
+
 ## 1.22.41 — new storage furniture, object height, clean renders, AI render start
 
 From a tester's feedback.

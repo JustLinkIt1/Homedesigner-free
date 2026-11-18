@@ -1,0 +1,224 @@
+<en-GB>
+New: handrails on stairs. Choose left, right or both sides in the stair's properties.
+Half walls can now be any height from 1 cm.
+Phones: the plan keeps your zoom when the keyboard opens.
+Raising one wall no longer lifts the ceilings off the other walls.
+Tap a ceiling in 3D to see what it is and turn Dollhouse back on. Removing a roof opens the house again.
+Fixed: walls flickering in Dollhouse view.
+</en-GB>
+<ar>
+جديد: درابزين للسلالم. اختر الجهة اليسرى أو اليمنى أو الجهتين من خصائص السلّم.
+الجدران النصفية يمكن أن تكون بأي ارتفاع ابتداءً من 1 سم.
+الهواتف: يحافظ المخطط على مستوى التكبير عند ظهور لوحة المفاتيح.
+رفع جدار واحد لم يعد يرفع الأسقف عن بقية الجدران.
+اضغط على السقف في العرض ثلاثي الأبعاد لمعرفة ما هو ولإعادة تشغيل Dollhouse. إزالة السطح تفتح المنزل من جديد.
+إصلاح: وميض الجدران في عرض Dollhouse.
+</ar>
+<cs-CZ>
+Novinka: zábradlí na schodech. Ve vlastnostech schodiště zvolte levou, pravou nebo obě strany.
+Poloviční stěny mohou mít libovolnou výšku od 1 cm.
+Telefony: plán si po otevření klávesnice ponechá přiblížení.
+Zvýšení jedné stěny už nezvedne stropy nad ostatními stěnami.
+Klepnutím na strop ve 3D zjistíte, co to je, a znovu zapnete Dollhouse. Odebráním střechy se dům opět otevře.
+Opraveno: blikání stěn v zobrazení Dollhouse.
+</cs-CZ>
+<da-DK>
+Nyt: gelænder på trapper. Vælg venstre, højre eller begge sider i trappens egenskaber.
+Halvvægge kan nu have enhver højde fra 1 cm.
+Telefoner: planen beholder dit zoom, når tastaturet åbnes.
+Når én væg hæves, løftes lofterne ikke længere fra de andre vægge.
+Tryk på et loft i 3D for at se, hvad det er, og slå Dollhouse til igen. Fjerner du taget, åbnes huset igen.
+Rettet: vægge, der flimrede i Dollhouse-visning.
+</da-DK>
+<de-DE>
+Neu: Handläufe an Treppen. Wähle in den Eigenschaften der Treppe links, rechts oder beide Seiten.
+Halbwände können jetzt jede Höhe ab 1 cm haben.
+Smartphones: Der Plan behält den Zoom, wenn die Tastatur aufgeht.
+Wird eine Wand erhöht, heben sich die Decken nicht mehr von den anderen Wänden ab.
+Tippe in 3D auf eine Decke, um zu erfahren, was sie ist, und das Puppenhaus wieder einzuschalten. Entfernst du das Dach, öffnet sich das Haus wieder.
+Behoben: flackernde Wände in der Puppenhaus-Ansicht.
+</de-DE>
+<es-ES>
+Novedad: pasamanos en las escaleras. Elige lado izquierdo, derecho o ambos en las propiedades de la escalera.
+Los medios muros pueden tener cualquier altura desde 1 cm.
+Móviles: el plano mantiene el zoom al abrirse el teclado.
+Subir un muro ya no levanta los techos de los demás muros.
+Toca un techo en 3D para saber qué es y volver a activar Casa de muñecas. Al quitar el tejado, la casa se abre de nuevo.
+Corregido: muros que parpadeaban en la vista Casa de muñecas.
+</es-ES>
+<fi-FI>
+Uutta: käsijohteet portaisiin. Valitse portaan ominaisuuksista vasen, oikea tai molemmat puolet.
+Puoliseinät voivat nyt olla minkä tahansa korkuisia 1 cm:stä alkaen.
+Puhelimet: pohja säilyttää zoomauksen, kun näppäimistö avautuu.
+Yhden seinän korottaminen ei enää nosta kattoja irti muista seinistä.
+Napauta sisäkattoa 3D:ssä, niin näet, mikä se on, ja voit kytkeä Dollhouse-tilan takaisin. Katon poistaminen avaa talon uudelleen.
+Korjattu: seinien välkkyminen Dollhouse-näkymässä.
+</fi-FI>
+<fr-FR>
+Nouveau : mains courantes sur les escaliers. Choisissez côté gauche, droit ou les deux dans les propriétés de l'escalier.
+Les demi-murs peuvent avoir n'importe quelle hauteur à partir de 1 cm.
+Téléphones : le plan garde votre zoom quand le clavier s'ouvre.
+Rehausser un mur ne décolle plus les plafonds des autres murs.
+Touchez un plafond en 3D pour savoir ce que c'est et réactiver Maison de poupée. Retirer le toit rouvre la maison.
+Corrigé : murs qui clignotaient en vue Maison de poupée.
+</fr-FR>
+<hi-IN>
+नया: सीढ़ियों पर रेलिंग। सीढ़ी की प्रॉपर्टीज़ में बायां, दायां या दोनों तरफ़ चुनें।
+आधी दीवारें अब 1 सेमी से किसी भी ऊंचाई की हो सकती हैं।
+फ़ोन: कीबोर्ड खुलने पर प्लान आपका ज़ूम बनाए रखता है।
+एक दीवार ऊंची करने पर अब बाकी दीवारों से छतें ऊपर नहीं उठतीं।
+3D में छत पर टैप करें, पता चलेगा कि यह क्या है और Dollhouse फिर चालू कर सकेंगे। रूफ़ हटाने पर घर फिर खुल जाता है।
+ठीक किया गया: Dollhouse व्यू में दीवारों का टिमटिमाना।
+</hi-IN>
+<hu-HU>
+Új: korlát a lépcsőkön. A lépcső tulajdonságainál válaszd a bal, a jobb vagy mindkét oldalt.
+A félfalak mostantól bármilyen magasak lehetnek 1 cm-től.
+Telefonok: a terv megtartja a nagyítást, amikor megnyílik a billentyűzet.
+Egy fal megemelése már nem emeli el a mennyezeteket a többi faltól.
+Koppints egy mennyezetre 3D-ben, hogy megtudd, mi az, és visszakapcsold a Dollhouse módot. A tető eltávolítása újra megnyitja a házat.
+Javítva: villogó falak Dollhouse nézetben.
+</hu-HU>
+<id>
+Baru: pegangan tangga. Pilih sisi kiri, kanan, atau keduanya di properti tangga.
+Dinding setengah kini bisa setinggi berapa pun mulai dari 1 cm.
+Ponsel: denah mempertahankan zoom saat keyboard terbuka.
+Meninggikan satu dinding tidak lagi mengangkat plafon dari dinding lainnya.
+Ketuk plafon di 3D untuk mengetahui apa itu dan menyalakan Dollhouse lagi. Menghapus atap membuka rumah kembali.
+Diperbaiki: dinding berkedip di tampilan Dollhouse.
+</id>
+<it-IT>
+Novità: corrimano sulle scale. Scegli lato sinistro, destro o entrambi nelle proprietà della scala.
+I mezzi muri possono avere qualsiasi altezza a partire da 1 cm.
+Telefoni: la pianta mantiene lo zoom quando si apre la tastiera.
+Alzare un muro non solleva più i soffitti dagli altri muri.
+Tocca un soffitto in 3D per sapere cos'è e riattivare Casa delle bambole. Togliendo il tetto la casa si riapre.
+Corretto: muri che sfarfallavano nella vista Casa delle bambole.
+</it-IT>
+<iw-IL>
+חדש: מעקות למדרגות. בחרו צד שמאל, צד ימין או שני הצדדים במאפייני המדרגות.
+קירות חצי יכולים להיות בכל גובה החל מ-1 ס"מ.
+טלפונים: התוכנית שומרת על הזום כשהמקלדת נפתחת.
+הגבהת קיר אחד כבר לא מרימה את התקרות מעל שאר הקירות.
+הקישו על תקרה בתלת-ממד כדי לדעת מה היא ולהפעיל שוב את Dollhouse. הסרת הגג פותחת את הבית מחדש.
+תוקן: הבהוב קירות בתצוגת Dollhouse.
+</iw-IL>
+<ja-JP>
+新機能：階段の手すり。階段のプロパティで左側、右側、両側から選べます。
+腰壁の高さを1cmから自由に設定できるようになりました。
+スマートフォン：キーボードが開いても平面図のズームが保たれます。
+壁を1枚高くしても、ほかの壁から天井が浮かなくなりました。
+3Dで天井をタップすると説明が表示され、ドールハウスをオンに戻せます。屋根を削除すると家がまた開きます。
+修正：ドールハウス表示で壁がちらつく問題。
+</ja-JP>
+<ko-KR>
+새 기능: 계단 난간. 계단 속성에서 왼쪽, 오른쪽 또는 양쪽을 선택하세요.
+반벽 높이를 1cm부터 자유롭게 설정할 수 있습니다.
+휴대폰: 키보드가 열려도 평면도의 확대 상태가 유지됩니다.
+벽 하나를 높여도 다른 벽 위의 천장이 뜨지 않습니다.
+3D에서 천장을 탭하면 설명이 표시되고 돌하우스를 다시 켤 수 있습니다. 지붕을 제거하면 집이 다시 열립니다.
+수정: 돌하우스 보기에서 벽이 깜박이던 문제.
+</ko-KR>
+<nl-NL>
+Nieuw: leuningen op trappen. Kies links, rechts of beide kanten in de eigenschappen van de trap.
+Halve muren kunnen nu elke hoogte hebben vanaf 1 cm.
+Telefoons: de plattegrond behoudt je zoom wanneer het toetsenbord opent.
+Eén muur verhogen tilt de plafonds niet meer van de andere muren.
+Tik in 3D op een plafond om te zien wat het is en Poppenhuis weer aan te zetten. Als je het dak verwijdert, gaat het huis weer open.
+Opgelost: flikkerende muren in de Poppenhuis-weergave.
+</nl-NL>
+<no-NO>
+Nytt: rekkverk på trapper. Velg venstre, høyre eller begge sider i trappens egenskaper.
+Halvvegger kan nå ha hvilken som helst høyde fra 1 cm.
+Telefoner: planen beholder zoomen når tastaturet åpnes.
+Å heve én vegg løfter ikke lenger takene fra de andre veggene.
+Trykk på en himling i 3D for å se hva det er og slå på Dollhouse igjen. Fjerner du taket, åpnes huset igjen.
+Rettet: vegger som flimret i Dollhouse-visning.
+</no-NO>
+<pl-PL>
+Nowość: poręcze na schodach. Wybierz lewą, prawą lub obie strony we właściwościach schodów.
+Ścianki mogą mieć teraz dowolną wysokość od 1 cm.
+Telefony: plan zachowuje powiększenie po otwarciu klawiatury.
+Podniesienie jednej ściany nie unosi już sufitów nad pozostałymi ścianami.
+Dotknij sufitu w 3D, by sprawdzić, co to jest, i ponownie włączyć Domek dla lalek. Usunięcie dachu znów otwiera dom.
+Naprawiono: migotanie ścian w widoku Domek dla lalek.
+</pl-PL>
+<pt-BR>
+Novidade: corrimão nas escadas. Escolha lado esquerdo, direito ou ambos nas propriedades da escada.
+Meias-paredes agora podem ter qualquer altura a partir de 1 cm.
+Celulares: a planta mantém o zoom quando o teclado abre.
+Aumentar uma parede não levanta mais os tetos das outras paredes.
+Toque em um teto no 3D para saber o que é e reativar Casa de bonecas. Remover o telhado abre a casa de novo.
+Corrigido: paredes piscando na vista Casa de bonecas.
+</pt-BR>
+<ro>
+Nou: balustrade la scări. Alege partea stângă, dreaptă sau ambele în proprietățile scării.
+Pereții pe jumătate pot avea acum orice înălțime de la 1 cm.
+Telefoane: planul păstrează zoomul când se deschide tastatura.
+Înălțarea unui perete nu mai ridică tavanele de pe ceilalți pereți.
+Atinge un tavan în 3D ca să afli ce este și să repornești Dollhouse. Eliminarea acoperișului deschide din nou casa.
+Remediat: pereți care pâlpâiau în vizualizarea Dollhouse.
+</ro>
+<ru-RU>
+Новое: перила на лестницах. Выберите левую, правую или обе стороны в свойствах лестницы.
+Полустены теперь могут быть любой высоты от 1 см.
+Телефоны: план сохраняет масштаб, когда открывается клавиатура.
+Если поднять одну стену, потолки больше не отрываются от остальных стен.
+Коснитесь потолка в 3D, чтобы узнать, что это, и снова включить «Кукольный дом». Удаление крыши снова открывает дом.
+Исправлено: мерцание стен в режиме «Кукольный дом».
+</ru-RU>
+<sk>
+Novinka: zábradlie na schodoch. Vo vlastnostiach schodiska zvoľte ľavú, pravú alebo obe strany.
+Polovičné steny môžu mať ľubovoľnú výšku od 1 cm.
+Telefóny: plán si po otvorení klávesnice ponechá priblíženie.
+Zvýšenie jednej steny už nezdvihne stropy nad ostatnými stenami.
+Ťuknutím na strop v 3D zistíte, čo to je, a znova zapnete Dollhouse. Odstránením strechy sa dom opäť otvorí.
+Opravené: blikanie stien v zobrazení Dollhouse.
+</sk>
+<sv-SE>
+Nytt: ledstänger på trappor. Välj vänster, höger eller båda sidor i trappans egenskaper.
+Halvväggar kan nu ha vilken höjd som helst från 1 cm.
+Telefoner: planen behåller din zoom när tangentbordet öppnas.
+Att höja en vägg lyfter inte längre innertaken från de andra väggarna.
+Tryck på ett innertak i 3D för att se vad det är och slå på Dollhouse igen. Tar du bort taket öppnas huset igen.
+Åtgärdat: väggar som flimrade i Dollhouse-vyn.
+</sv-SE>
+<th>
+ใหม่: ราวจับบันได เลือกด้านซ้าย ด้านขวา หรือทั้งสองด้านได้ในคุณสมบัติของบันได
+ผนังครึ่งสูงได้ทุกระดับตั้งแต่ 1 ซม.
+โทรศัพท์: แปลนคงระดับการซูมไว้เมื่อแป้นพิมพ์เปิดขึ้น
+การเพิ่มความสูงผนังด้านเดียวจะไม่ยกฝ้าเพดานออกจากผนังอื่นอีกต่อไป
+แตะฝ้าเพดานใน 3D เพื่อดูว่าคืออะไรและเปิด Dollhouse อีกครั้ง การลบหลังคาจะเปิดบ้านอีกครั้ง
+แก้ไข: ผนังกะพริบในมุมมอง Dollhouse
+</th>
+<tr-TR>
+Yeni: merdivenlere korkuluk. Merdivenin özelliklerinden sol, sağ veya her iki tarafı seçin.
+Yarım duvarlar artık 1 cm'den başlayarak her yükseklikte olabilir.
+Telefonlar: klavye açıldığında plan yakınlaştırmanızı korur.
+Bir duvarı yükseltmek artık tavanları diğer duvarlardan ayırmıyor.
+3D'de bir tavana dokunarak ne olduğunu görün ve Oyuncak evi yeniden açın. Çatıyı kaldırmak evi tekrar açar.
+Düzeltildi: Oyuncak ev görünümünde titreyen duvarlar.
+</tr-TR>
+<uk>
+Нове: поручні на сходах. Виберіть ліву, праву або обидві сторони у властивостях сходів.
+Напівстіни тепер можуть мати будь-яку висоту від 1 см.
+Телефони: план зберігає масштаб, коли відкривається клавіатура.
+Якщо підняти одну стіну, стелі більше не відриваються від інших стін.
+Торкніться стелі в 3D, щоб дізнатися, що це, і знову ввімкнути Dollhouse. Видалення даху знову відкриває будинок.
+Виправлено: мерехтіння стін у режимі Dollhouse.
+</uk>
+<vi>
+Mới: tay vịn cầu thang. Chọn bên trái, bên phải hoặc cả hai bên trong thuộc tính của cầu thang.
+Tường lửng giờ có thể cao bất kỳ từ 1 cm.
+Điện thoại: bản vẽ giữ nguyên mức thu phóng khi bàn phím mở ra.
+Nâng một bức tường không còn nhấc trần khỏi các bức tường khác.
+Chạm vào trần trong 3D để biết đó là gì và bật lại Dollhouse. Xóa mái sẽ mở lại ngôi nhà.
+Đã sửa: tường nhấp nháy trong chế độ xem Dollhouse.
+</vi>
+<zh-CN>
+新增：楼梯扶手。在楼梯属性中选择左侧、右侧或两侧。
+半墙高度现在可从 1 厘米起任意设置。
+手机：键盘弹出时平面图保持当前缩放。
+加高一面墙不再把天花板从其他墙上抬起。
+在 3D 中点按天花板可查看说明并重新打开娃娃屋模式。移除屋顶后房屋会重新打开。
+修复：娃娃屋视图中墙面闪烁的问题。
+</zh-CN>
