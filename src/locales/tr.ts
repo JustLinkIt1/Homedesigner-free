@@ -337,10 +337,10 @@ export const TR: Record<string, string> = {
     'İkinci bir tasarım başlatın',
   'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.':
     'Ücretsiz sürüm bir proje saklar. Pro, bu cihazda başlattığınız her tasarımı saklar; aralarında istediğiniz zaman geçiş yaparsınız.',
-  'Open this sample as its own project':
-    'Bu örneği ayrı bir proje olarak açın',
-  'Free keeps one project. With Pro you can open every sample and keep your own design too.':
-    'Ücretsiz sürüm bir proje saklar. Pro ile tüm örnekleri açar, kendi tasarımınızı da korursunuz.',
+  'Keep this design and your own':
+    'Bu tasarımı ve kendi tasarımınızı saklayın',
+  'Your change is saved. Free keeps one project. Pro keeps every design, samples included.':
+    'Değişikliğiniz kaydedildi. Ücretsiz sürüm bir proje saklar. Pro, örnekler dahil tüm tasarımları saklar.',
   'Duplicate this design':
     'Bu tasarımı çoğaltın',
   'Try a second layout without touching the first. Pro keeps as many copies as you like.':

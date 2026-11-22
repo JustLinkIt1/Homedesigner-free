@@ -337,10 +337,10 @@ export const PT: Record<string, string> = {
     'Comece um segundo projeto',
   'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.':
     'A versão grátis guarda um projeto. O Pro guarda todos os projetos que você começar neste dispositivo, e você alterna entre eles quando quiser.',
-  'Open this sample as its own project':
-    'Abra este exemplo como projeto próprio',
-  'Free keeps one project. With Pro you can open every sample and keep your own design too.':
-    'A versão grátis guarda um projeto. Com o Pro você abre todos os exemplos e mantém o seu projeto também.',
+  'Keep this design and your own':
+    'Mantenha este projeto e o seu',
+  'Your change is saved. Free keeps one project. Pro keeps every design, samples included.':
+    'Sua alteração foi salva. A versão grátis guarda um projeto. O Pro guarda todos os projetos, inclusive os exemplos.',
   'Duplicate this design':
     'Duplique este projeto',
   'Try a second layout without touching the first. Pro keeps as many copies as you like.':
