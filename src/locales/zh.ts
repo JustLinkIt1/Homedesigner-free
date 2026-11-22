@@ -858,7 +858,7 @@ export const ZH: Record<string, string> = {
   'Flip swing direction': '切换开启方向',
   'In / out': '内 / 外',
   'Delete account': '删除账号',
-  'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. A Pro purchase made on Google Play stays with your Google Play account. You will be signed out.': '删除您的账号？云端户型图、社区帖子和图片、头像以及 AI 积分将被删除且无法恢复。保存在本设备上的户型图会保留在本设备上。删除后您将退出登录。在 Google Play 购买的 Pro 会保留在你的 Google Play 账号中。',
+  'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. A Pro purchase made on Google Play stays with your Google Play account. Pro bought on the web stays linked to your Google account: deleting does not refund or cancel it, and signing in again with the same Google account brings it back. You will be signed out.': '删除您的账号？云端户型图、社区帖子和图片、头像以及 AI 积分将被删除且无法恢复。保存在本设备上的户型图会保留在本设备上。删除后您将退出登录。在 Google Play 购买的 Pro 会保留在你的 Google Play 账号中。在网页上购买的 Pro 仍与你的 Google 账号关联：删除不会退款或取消，用同一个 Google 账号重新登录后即可恢复。',
   'Couldn\'t delete your account. Try again when you\'re online.': '无法删除账号。请在联网后重试。',
   'Account deleted. Plans saved on this device are still here.': '账号已删除。保存在本设备上的户型图仍然保留。',
   'Signed in — your plans and Pro access are synced.': '已登录 — 户型图与 Pro 权限已同步。',

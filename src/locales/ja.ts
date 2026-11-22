@@ -858,7 +858,7 @@ export const JA: Record<string, string> = {
   'Flip swing direction': '開き方向を反転',
   'In / out': '内 / 外',
   'Delete account': 'アカウントを削除',
-  'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. A Pro purchase made on Google Play stays with your Google Play account. You will be signed out.': 'アカウントを削除しますか？クラウド上の間取り、コミュニティの投稿と画像、アバター、AIポイントは削除され、元に戻せません。この端末に保存した間取りは端末に残ります。削除後はログアウトされます。Google Play で購入した Pro は Google Play アカウントに残ります。',
+  'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. A Pro purchase made on Google Play stays with your Google Play account. Pro bought on the web stays linked to your Google account: deleting does not refund or cancel it, and signing in again with the same Google account brings it back. You will be signed out.': 'アカウントを削除しますか？クラウド上の間取り、コミュニティの投稿と画像、アバター、AIポイントは削除され、元に戻せません。この端末に保存した間取りは端末に残ります。削除後はログアウトされます。Google Play で購入した Pro は Google Play アカウントに残ります。ウェブで購入した Pro は Google アカウントに紐づいたままです。削除しても返金や解約にはならず、同じ Google アカウントで再度サインインすると戻ります。',
   'Couldn\'t delete your account. Try again when you\'re online.': 'アカウントを削除できませんでした。オンラインになってから、もう一度お試しください。',
   'Account deleted. Plans saved on this device are still here.': 'アカウントを削除しました。この端末に保存した間取りは残っています。',
   'Signed in — your plans and Pro access are synced.': 'サインインしました — 間取りとPro権限が同期されています。',
