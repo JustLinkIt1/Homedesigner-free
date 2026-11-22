@@ -858,7 +858,7 @@ export const IT: Record<string, string> = {
   'Flip swing direction': 'Cambia verso di apertura',
   'In / out': 'Dentro / fuori',
   'Delete account': 'Elimina account',
-  'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.': 'Eliminare il tuo account? I tuoi progetti nel cloud, i post e le immagini della community, l’avatar e i punti IA vengono eliminati e non possono essere recuperati. I progetti salvati su questo dispositivo restano su questo dispositivo. Verrai disconnesso.',
+  'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. A Pro purchase made on Google Play stays with your Google Play account. You will be signed out.': 'Eliminare il tuo account? I tuoi progetti nel cloud, i post e le immagini della community, l’avatar e i punti IA vengono eliminati e non possono essere recuperati. I progetti salvati su questo dispositivo restano su questo dispositivo. Verrai disconnesso. Un acquisto Pro fatto su Google Play resta legato al tuo account Google Play.',
   'Couldn\'t delete your account. Try again when you\'re online.': 'Impossibile eliminare l’account. Riprova quando sei online.',
   'Account deleted. Plans saved on this device are still here.': 'Account eliminato. I progetti salvati su questo dispositivo sono ancora qui.',
   'Signed in — your plans and Pro access are synced.': 'Accesso effettuato — progetti e accesso Pro sincronizzati.',

@@ -111,7 +111,7 @@ export default function SettingsDialog({
                   <button
                     className="btn icon-btn"
                     onClick={() => {
-                      if (!window.confirm(t('Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.'))) return;
+                      if (!window.confirm(t('Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. A Pro purchase made on Google Play stays with your Google Play account. You will be signed out.'))) return;
                       void deleteAccount();
                     }}
                     disabled={authBusy}
