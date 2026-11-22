@@ -26,7 +26,7 @@ const SEND_TIMEOUT_MS = 10_000;
 const REFERRER_TIMEOUT_MS = 2_000;
 
 interface QueuedEvent { event: HdEventName; detail?: string }
-interface InstallReferrerPlugin { getReferrer(): Promise<{ referrer: string }> }
+interface InstallReferrerPlugin { getReferrer(): Promise<{ ok?: boolean; referrer: string }> }
 const InstallReferrer = registerPlugin<InstallReferrerPlugin>('InstallReferrer');
 
 let queue: QueuedEvent[] = [];
@@ -87,10 +87,11 @@ function readSource(): Promise<string> {
         if (cached) return cached;
       } catch { /* ignore */ }
       try {
-        const { referrer } = await Promise.race([
+        const { ok, referrer } = await Promise.race([
           InstallReferrer.getReferrer(),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), REFERRER_TIMEOUT_MS)),
         ]);
+        if (ok === false) return 'unknown'; // Play could not answer: retried next launch, not cached
         const source = sourceFromReferrer(String(referrer ?? ''));
         // The plugin answers "" when Play has no referrer to give; that is
         // organic, while a failed or slow read stays "unknown" and is retried

@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Reads the Google Play install referrer once so the app can tell which campaign
  * an install came from. Returns only the raw referrer string
  * (e.g. "utm_source=google-play&utm_campaign=spring"); the web layer picks the
- * two values it wants. Every failure resolves with an empty referrer: this must
+ * two values it wants. Every failure resolves with ok=false: this must
  * never crash the app or leave the call pending.
  */
 @CapacitorPlugin(name = "InstallReferrer")
@@ -30,14 +30,15 @@ public class InstallReferrerPlugin extends Plugin {
             client.startConnection(new InstallReferrerStateListener() {
                 @Override
                 public void onInstallReferrerSetupFinished(int responseCode) {
-                    String referrer = "";
+                    String referrer = null;
                     try {
                         if (responseCode == InstallReferrerClient.InstallReferrerResponse.OK) {
+                            referrer = "";
                             String raw = client.getInstallReferrer().getInstallReferrer();
                             if (raw != null) referrer = raw;
                         }
                     } catch (Throwable ignored) {
-                        referrer = "";
+                        referrer = null;
                     }
                     try { client.endConnection(); } catch (Throwable ignored) { /* ignore */ }
                     finish(call, done, referrer);
@@ -45,11 +46,11 @@ public class InstallReferrerPlugin extends Plugin {
 
                 @Override
                 public void onInstallReferrerServiceDisconnected() {
-                    finish(call, done, "");
+                    finish(call, done, null);
                 }
             });
         } catch (Throwable t) {
-            finish(call, done, "");
+            finish(call, done, null);
         }
     }
 
@@ -57,6 +58,9 @@ public class InstallReferrerPlugin extends Plugin {
         if (!done.compareAndSet(false, true)) return;
         try {
             JSObject result = new JSObject();
+            // ok=false: Play could not say (no service, not supported, error). Not the
+            // same as an organic install, which is ok=true with no campaign.
+            result.put("ok", referrer != null);
             result.put("referrer", referrer == null ? "" : referrer);
             call.resolve(result);
         } catch (Throwable ignored) {
