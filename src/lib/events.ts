@@ -19,6 +19,10 @@ const BASE = (import.meta.env.VITE_CLOUD_SYNC_URL ?? '').replace(/\/$/, '');
 const INSTALL_KEY = 'homedesigner.install.v1';
 const SOURCE_KEY = 'homedesigner.installSource.v1';
 const FIRST_OPEN_KEY = 'homedesigner.firstOpen.v1';
+// Data an install from before this module already has (src/lib/projects.ts).
+// Found on the first launch after an update: that is an upgrade, not a first
+// open, and is not reported (a release-day flood would fake the baseline).
+const EARLIER_DATA_KEYS = ['homedesigner.projects.index.v1', 'homedesigner.project.v1', 'homedesigner.activeProject.v1'];
 const MAX_QUEUE = 50;
 const MAX_PER_REQUEST = 20;
 const FLUSH_DELAY_MS = 2_000;
@@ -115,6 +119,7 @@ function scheduleFlush(delay = FLUSH_DELAY_MS): void {
 export async function flush(keepalive = false): Promise<void> {
   if (sending || queue.length === 0 || !/^https:\/\//.test(BASE)) return;
   sending = true;
+  let sent = false;
   try {
     const install = installId();
     if (!install) { queue = []; return; }
@@ -133,6 +138,7 @@ export async function flush(keepalive = false): Promise<void> {
       // 2xx stored; 4xx (invalid / over the daily cap) will not improve on a
       // retry, so drop. Only a server/network failure keeps the batch.
       if (response.status < 500) queue = queue.slice(batch.length);
+      sent = true;
     } finally {
       window.clearTimeout(timer);
     }
@@ -141,6 +147,8 @@ export async function flush(keepalive = false): Promise<void> {
   } finally {
     sending = false;
     if (queue.length > MAX_QUEUE) queue = queue.slice(-MAX_QUEUE);
+    // More than one request's worth was waiting: send the rest too.
+    if (sent && queue.length > 0) scheduleFlush(500);
   }
 }
 
@@ -168,8 +176,9 @@ export function initEvents(): void {
     let first = false;
     try {
       if (!localStorage.getItem(FIRST_OPEN_KEY)) {
-        localStorage.setItem(FIRST_OPEN_KEY, '1');
-        first = true;
+        const upgrade = EARLIER_DATA_KEYS.some((key) => localStorage.getItem(key) !== null);
+        localStorage.setItem(FIRST_OPEN_KEY, upgrade ? 'upgrade' : '1');
+        first = !upgrade;
       }
     } catch { /* no storage: never claim a first open we cannot remember */ }
     if (first) trackEvent('app_first_open');

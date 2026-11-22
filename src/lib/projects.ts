@@ -213,6 +213,35 @@ function touchMeta(id: string, patch: Partial<ProjectMeta>): void {
   writeIndex(index);
 }
 
+// A sample's content when it was opened (a hash), until its first edit is saved.
+const SAMPLE_BASE_KEY = 'homedesigner.projects.sampleBase.v1';
+
+/** Whether a project is an untouched bundled sample (free, not counted). */
+export function isSample(id: string): boolean {
+  return sampleIds().includes(id);
+}
+
+/**
+ * Called on every save of a sample project with its content key. The first
+ * save records the opened sample; the first save whose content differs is the
+ * user's first edit, and makes the sample the user's own project (it then
+ * counts toward the free limit). Returns true on that claiming save.
+ */
+export function noteSampleSave(id: string, contentKey: string): boolean {
+  if (!isSample(id)) return false;
+  const base = readJSON<Record<string, string>>(SAMPLE_BASE_KEY) ?? {};
+  if (base[id] === undefined) {
+    writeJSON(SAMPLE_BASE_KEY, { ...base, [id]: contentKey });
+    return false;
+  }
+  if (base[id] === contentKey) return false;
+  writeJSON(SAMPLES_KEY, sampleIds().filter((x) => x !== id));
+  const rest = { ...base };
+  delete rest[id];
+  writeJSON(SAMPLE_BASE_KEY, rest);
+  return true;
+}
+
 function sampleIds(): string[] {
   const stored = readJSON<string[]>(SAMPLES_KEY);
   return Array.isArray(stored) ? stored.filter((x) => typeof x === 'string') : [];

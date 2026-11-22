@@ -95,4 +95,20 @@ await flush();
 await flush();
 const total = sent.reduce((n, r) => n + r.body.events.length, 0);
 check(total === 50 && sent.every((r) => r.body.events.length <= 20), 'queue capped at 50, requests at 20 events');
+// The first launch after an update (projects already on the phone) is an
+// upgrade: remembered, not reported as app_first_open.
+sent.length = 0;
+store.delete('homedesigner.firstOpen.v1');
+store.set('homedesigner.projects.index.v1', '[]');
+initEvents();
+await flush();
+check(store.get('homedesigner.firstOpen.v1') === 'upgrade', 'upgrade remembered as such');
+check(!sent.some((r) => r.body.events.some((e) => e.event === 'app_first_open')), 'an upgrade sends no app_first_open');
+
+// More than one request's worth queued: the rest goes out without another event.
+sent.length = 0;
+for (let i = 0; i < 50; i++) trackEvent('import_result', 'ok');
+await flush();
+await new Promise((resolve) => setTimeout(resolve, 3_400)); // the pending 2 s flush, then the re-armed one
+check(sent.reduce((n, r) => n + r.body.events.length, 0) === 50, 'a long queue drains on its own');
 console.log(`events: ${checks} checks passed`);

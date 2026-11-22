@@ -34,7 +34,7 @@ try {
 } finally {
   rmSync(entry, { force: true });
 }
-const { createProject, countOwnProjects, listProjects, deleteProject } = mod;
+const { createProject, countOwnProjects, listProjects, deleteProject, noteSampleSave, isSample } = mod;
 
 let fails = 0;
 const check = (name, ok, detail = '') => {
@@ -58,6 +58,14 @@ const samples = listProjects();
 deleteProject(samples[0].id);
 check('deleting a sample keeps the count right', countOwnProjects() === 0 && listProjects().length === 1);
 check('sample id set is pruned on delete', JSON.parse(store.get('homedesigner.projects.samples.v1')).length === 1);
+
+// Decision 22 Nov: a sample's first saved edit makes it the user's own project.
+const sample = createProject('Loft', { sample: true });
+const before = countOwnProjects();
+check('opening a sample: the first save records it, nothing counted', noteSampleSave(sample, 'A') === false && countOwnProjects() === before);
+check('re-saving the unchanged sample does not claim it', noteSampleSave(sample, 'A') === false && isSample(sample));
+check('the first edit claims it', noteSampleSave(sample, 'B') === true && !isSample(sample) && countOwnProjects() === before + 1);
+check('later saves of a claimed project do nothing', noteSampleSave(sample, 'C') === false && countOwnProjects() === before + 1);
 
 const src = readFileSync(join(root, 'src/components/ProjectsScreen.tsx'), 'utf8');
 check('openSample no longer calls requirePro', !/projects:sample'\)/.test(src) && !/openSample[\s\S]{0,300}requirePro/.test(src));

@@ -393,8 +393,27 @@ const loadInitial = (): DesignSnapshot => {
 // meant quietly losing work. Warn the user (throttled: persist runs on every
 // edit, one toast per minute is plenty).
 let lastPersistWarning = 0;
+/** A short hash of what a design contains (not which floor is showing, not
+ * its name): tells a sample's first real edit from re-saves of the sample. */
+const contentKeyOf = (snap: DesignSnapshot): string => {
+  const text = JSON.stringify([snap.walls, snap.rooms, snap.furniture, snap.openings, snap.floors, snap.floorGeom]);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return `${text.length}:${(h >>> 0).toString(36)}`;
+};
+
 const writeSnap = (snap: DesignSnapshot, id?: string) => {
   const result = projects.saveActive(snap, id);
+  // A bundled sample opens free; its first saved edit makes it the user's own
+  // project (decision 22 Nov). A free user who already has one sees the
+  // project wall once; the edit is kept either way.
+  if (result === 'saved') {
+    const pid = id ?? projects.getActiveId();
+    if (pid && projects.isSample(pid) && projects.noteSampleSave(pid, contentKeyOf(snap))) {
+      const pro = useProStore.getState();
+      if (!pro.isPro && projects.countOwnProjects() > 1) pro.openUpsell('projects', 'projects:sample');
+    }
+  }
   if (result === 'deleted') {
     toast.error('This project was deleted in another tab and can no longer be saved.');
     return;
