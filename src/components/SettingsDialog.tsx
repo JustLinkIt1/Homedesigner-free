@@ -12,7 +12,6 @@ import { useStoreDiagnosticHold } from './useStoreDiagnosticHold';
 import { useAuthStore } from '../store/authStore';
 import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
 import { openCommunityForum } from '../lib/communityAccess';
-import { toast } from '../lib/ui';
 import Modal from './Modal';
 
 const THEME_OPTIONS: { id: ThemePref; label: string; icon: typeof Sun }[] = [

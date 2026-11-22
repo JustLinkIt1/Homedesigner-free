@@ -859,7 +859,7 @@ export const DE: Record<string, string> = {
   'In / out': 'Innen / außen',
   'Delete account': 'Konto löschen',
   'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.': 'Konto löschen? Deine Cloud-Pläne, Community-Beiträge und -Bilder, dein Avatar und deine KI-Punkte werden gelöscht und können nicht wiederhergestellt werden. Auf diesem Gerät gespeicherte Pläne bleiben auf diesem Gerät. Du wirst abgemeldet.',
-  "Couldn't delete your account. Try again when you're online.": 'Konto konnte nicht gelöscht werden. Versuche es erneut, wenn du online bist.',
+  'Couldn\'t delete your account. Try again when you\'re online.': 'Konto konnte nicht gelöscht werden. Versuche es erneut, wenn du online bist.',
   'Account deleted. Plans saved on this device are still here.': 'Konto gelöscht. Auf diesem Gerät gespeicherte Pläne sind weiterhin vorhanden.',
   'Signed in — your plans and Pro access are synced.': 'Angemeldet — Pläne und Pro-Zugang sind synchronisiert.',
   'Signed in — plans and Pro access will sync across devices.': 'Angemeldet — Pläne und Pro-Zugang werden geräteübergreifend synchronisiert.',

@@ -924,7 +924,7 @@ export const TR: Record<string, string> = {
   'In / out': 'İç / dış',
   'Delete account': 'Hesabı sil',
   'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.': 'Hesabınız silinsin mi? Buluttaki planlarınız, topluluk gönderileriniz ve görselleriniz, avatarınız ve yapay zekâ puanlarınız silinir ve geri alınamaz. Bu cihazda kayıtlı planlar bu cihazda kalır. Oturumunuz kapatılır.',
-  "Couldn't delete your account. Try again when you're online.": 'Hesabınız silinemedi. Çevrimiçi olduğunuzda tekrar deneyin.',
+  'Couldn\'t delete your account. Try again when you\'re online.': 'Hesabınız silinemedi. Çevrimiçi olduğunuzda tekrar deneyin.',
   'Account deleted. Plans saved on this device are still here.': 'Hesap silindi. Bu cihazda kayıtlı planlar hâlâ burada.',
   'Signed in — your plans and Pro access are synced.': 'Oturum açıldı — planlarınız ve Pro erişiminiz eşitlendi.',
   'Signed in — plans and Pro access will sync across devices.': 'Oturum açıldı — planlar ve Pro erişimi cihazlar arasında eşitlenecek.',

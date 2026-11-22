@@ -859,7 +859,7 @@ export const NL: Record<string, string> = {
   'In / out': 'Binnen / buiten',
   'Delete account': 'Account verwijderen',
   'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.': 'Je account verwijderen? Je cloudplattegronden, communityberichten en -afbeeldingen, avatar en AI-punten worden verwijderd en kunnen niet worden hersteld. Plattegronden die op dit apparaat zijn opgeslagen, blijven op dit apparaat. Je wordt uitgelogd.',
-  "Couldn't delete your account. Try again when you're online.": 'Je account kon niet worden verwijderd. Probeer het opnieuw als je online bent.',
+  'Couldn\'t delete your account. Try again when you\'re online.': 'Je account kon niet worden verwijderd. Probeer het opnieuw als je online bent.',
   'Account deleted. Plans saved on this device are still here.': 'Account verwijderd. Plattegronden op dit apparaat zijn er nog.',
   'Signed in — your plans and Pro access are synced.': 'Aangemeld — je plattegronden en Pro-toegang zijn gesynchroniseerd.',
   'Signed in — plans and Pro access will sync across devices.': 'Aangemeld — plattegronden en Pro-toegang synchroniseren tussen apparaten.',

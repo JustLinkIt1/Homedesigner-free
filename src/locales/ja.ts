@@ -859,7 +859,7 @@ export const JA: Record<string, string> = {
   'In / out': '内 / 外',
   'Delete account': 'アカウントを削除',
   'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.': 'アカウントを削除しますか？クラウド上の間取り、コミュニティの投稿と画像、アバター、AIポイントは削除され、元に戻せません。この端末に保存した間取りは端末に残ります。削除後はログアウトされます。',
-  "Couldn't delete your account. Try again when you're online.": 'アカウントを削除できませんでした。オンラインになってから、もう一度お試しください。',
+  'Couldn\'t delete your account. Try again when you\'re online.': 'アカウントを削除できませんでした。オンラインになってから、もう一度お試しください。',
   'Account deleted. Plans saved on this device are still here.': 'アカウントを削除しました。この端末に保存した間取りは残っています。',
   'Signed in — your plans and Pro access are synced.': 'サインインしました — 間取りとPro権限が同期されています。',
   'Signed in — plans and Pro access will sync across devices.': 'サインインしました — 間取りとPro権限が端末間で同期されます。',

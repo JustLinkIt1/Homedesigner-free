@@ -859,7 +859,7 @@ export const RU: Record<string, string> = {
   'In / out': 'Внутрь / наружу',
   'Delete account': 'Удалить аккаунт',
   'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.': 'Удалить аккаунт? Ваши облачные планы, публикации и изображения в сообществе, аватар и баллы ИИ будут удалены без возможности восстановления. Планы, сохранённые на этом устройстве, останутся на нём. Вы выйдете из аккаунта.',
-  "Couldn't delete your account. Try again when you're online.": 'Не удалось удалить аккаунт. Повторите попытку, когда будете онлайн.',
+  'Couldn\'t delete your account. Try again when you\'re online.': 'Не удалось удалить аккаунт. Повторите попытку, когда будете онлайн.',
   'Account deleted. Plans saved on this device are still here.': 'Аккаунт удалён. Планы, сохранённые на этом устройстве, остались.',
   'Signed in — your plans and Pro access are synced.': 'Вход выполнен — планы и доступ Pro синхронизированы.',
   'Signed in — plans and Pro access will sync across devices.': 'Вход выполнен — планы и доступ Pro будут синхронизироваться между устройствами.',

@@ -859,7 +859,7 @@ export const KO: Record<string, string> = {
   'In / out': '안 / 밖',
   'Delete account': '계정 삭제',
   'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.': '계정을 삭제할까요? 클라우드 도면, 커뮤니티 게시물과 이미지, 아바타, AI 포인트가 삭제되며 복구할 수 없습니다. 이 기기에 저장된 도면은 기기에 그대로 남습니다. 삭제 후 로그아웃됩니다.',
-  "Couldn't delete your account. Try again when you're online.": '계정을 삭제하지 못했습니다. 온라인 상태에서 다시 시도해 주세요.',
+  'Couldn\'t delete your account. Try again when you\'re online.': '계정을 삭제하지 못했습니다. 온라인 상태에서 다시 시도해 주세요.',
   'Account deleted. Plans saved on this device are still here.': '계정을 삭제했습니다. 이 기기에 저장된 도면은 그대로 있습니다.',
   'Signed in — your plans and Pro access are synced.': '로그인됨 — 도면과 Pro 이용권이 동기화되었습니다.',
   'Signed in — plans and Pro access will sync across devices.': '로그인됨 — 도면과 Pro 이용권이 기기 간에 동기화됩니다.',

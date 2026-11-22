@@ -924,7 +924,7 @@ export const PT: Record<string, string> = {
   'In / out': 'Dentro / fora',
   'Delete account': 'Eliminar conta',
   'Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.': 'Eliminar a sua conta? Os seus projetos na nuvem, publicações e imagens da comunidade, avatar e pontos de IA são eliminados e não podem ser recuperados. Os projetos guardados neste dispositivo ficam neste dispositivo. A sua sessão será terminada.',
-  "Couldn't delete your account. Try again when you're online.": 'Não foi possível eliminar a conta. Tente novamente quando estiver online.',
+  'Couldn\'t delete your account. Try again when you\'re online.': 'Não foi possível eliminar a conta. Tente novamente quando estiver online.',
   'Account deleted. Plans saved on this device are still here.': 'Conta eliminada. Os projetos guardados neste dispositivo continuam aqui.',
   'Signed in — your plans and Pro access are synced.': 'Sessão iniciada — os teus projetos e acesso Pro estão sincronizados.',
   'Signed in — plans and Pro access will sync across devices.': 'Sessão iniciada — projetos e acesso Pro vão sincronizar entre dispositivos.',
