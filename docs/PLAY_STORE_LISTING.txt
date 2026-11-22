@@ -1,16 +1,16 @@
 <en-GB>
 App name: Home Designer: Floor Plans 3D
-Short description: Draw house plans, design your kitchen, furnish rooms and walk through in 3D
+Short description: Import a floor plan, auto-trace the walls, furnish rooms and walk through in 3D
 Full description:
-Design your home on your phone: draw a floor plan, furnish every room, plan the kitchen and walk through it all in 3D. No experience needed.
+Got a floor plan? Import it as a PDF, photo or DXF and see your home in 3D. No plan yet? Draw one with your finger, or describe your home and let AI sketch it.
 
-HomeDesigner is a floor plan creator, room planner and 3D home design app in one. Use it to plan a renovation, try a furniture layout before you buy, design a kitchen, or sketch the house you dream of.
+HomeDesigner is a free floor plan creator, room planner and 3D home design app. Plan a renovation, test a furniture layout before you buy, design a kitchen or sketch your dream house. No account and no experience needed to start.
 
 DRAW FLOOR PLANS TO SCALE
 • Sketch walls with smart snapping and type exact lengths
 • Add doors, windows and openings in many styles
 • Rooms and their areas are worked out as you draw
-• Import a PDF, photo or DXF plan and trace over it
+• Import a PDF, photo or DXF plan and let auto-trace draw the walls
 • Metric and imperial units
 
 FURNISH AND DECORATE
@@ -33,7 +33,7 @@ AI TOOLS
 • AI floor plan: describe your home and get a plan you can edit
 • AI render: turn your 3D view into a photo-like image
 • AI designer review of your layout, and a narrated voice tour (Pro)
-AI tools need a free account and use points. New accounts get free points to try them.
+AI tools need a free account and use points.
 
 SAVE AND SHARE
 • Export plans as PNG images
@@ -87,7 +87,7 @@ HomeDesigner يجمع بين أداة رسم المخططات ومخطِّط ا�
 • مخطط بالذكاء الاصطناعي: صِف منزلك واحصل على مخطط قابل للتعديل
 • تصيير بالذكاء الاصطناعي: حوّل المشهد ثلاثي الأبعاد إلى صورة تشبه الصورة الفوتوغرافية
 • مراجعة من مصمّم بالذكاء الاصطناعي وجولة صوتية مع تعليق (Pro)
-تتطلب أدوات الذكاء الاصطناعي حسابًا مجانيًا وتستخدم نقاطًا. تحصل الحسابات الجديدة على نقاط مجانية للتجربة.
+تتطلب أدوات الذكاء الاصطناعي حسابًا مجانيًا وتستخدم نقاطًا.
 
 احفظ وشارك
 • صدّر المخططات كصور PNG
@@ -141,7 +141,7 @@ NÁSTROJE AI
 • AI půdorys: popište svůj domov a získejte plán, který lze upravovat
 • AI render: proměňte 3D pohled v obrázek jako z fotografie
 • Posudek AI designéra a komentovaná prohlídka (Pro)
-Nástroje AI vyžadují bezplatný účet a spotřebovávají body. Nové účty dostanou body zdarma na vyzkoušení.
+Nástroje AI vyžadují bezplatný účet a spotřebovávají body.
 
 UKLÁDEJTE A SDÍLEJTE
 • Exportujte plány jako obrázky PNG
@@ -195,7 +195,7 @@ AI-VÆRKTØJER
 • AI-plantegning: beskriv dit hjem, og få en plan, du kan redigere
 • AI-rendering: gør din 3D-visning til et fotolignende billede
 • AI-designerens vurdering af din indretning og en oplæst rundvisning (Pro)
-AI-værktøjerne kræver en gratis konto og bruger point. Nye konti får gratis point til at prøve dem.
+AI-værktøjerne kræver en gratis konto og bruger point.
 
 GEM OG DEL
 • Eksportér planer som PNG-billeder
@@ -249,7 +249,7 @@ KI-WERKZEUGE
 • KI-Grundriss: Beschreibe dein Zuhause und erhalte einen bearbeitbaren Plan
 • KI-Rendering: Verwandle die 3D-Ansicht in ein fotoähnliches Bild
 • KI-Designberatung für deinen Grundriss und eine gesprochene Tour (Pro)
-Die KI-Werkzeuge benötigen ein kostenloses Konto und verbrauchen Punkte. Neue Konten erhalten Gratispunkte zum Ausprobieren.
+Die KI-Werkzeuge benötigen ein kostenloses Konto und verbrauchen Punkte.
 
 SPEICHERN UND TEILEN
 • Pläne als PNG-Bild exportieren
@@ -303,7 +303,7 @@ HERRAMIENTAS DE IA
 • Plano con IA: describe tu casa y obtén un plano editable
 • Render con IA: convierte la vista 3D en una imagen fotorrealista
 • Revisión de un diseñador IA y recorrido narrado con voz (Pro)
-Las herramientas de IA requieren una cuenta gratuita y usan puntos. Las cuentas nuevas reciben puntos gratis para probarlas.
+Las herramientas de IA requieren una cuenta gratuita y usan puntos.
 
 GUARDA Y COMPARTE
 • Exporta los planos como imagen PNG
@@ -357,7 +357,7 @@ HERRAMIENTAS DE IA
 • Plano con IA: describe tu casa y obtén un plano editable
 • Render con IA: convierte la vista 3D en una imagen fotorrealista
 • Revisión de un diseñador IA y visita guiada con voz (Pro)
-Las herramientas de IA requieren una cuenta gratuita y usan puntos. Las cuentas nuevas reciben puntos gratis para probarlas.
+Las herramientas de IA requieren una cuenta gratuita y usan puntos.
 
 GUARDA Y COMPARTE
 • Exporta los planos como imagen PNG
@@ -411,7 +411,7 @@ TEKOÄLYTYÖKALUT
 • Tekoälypohja: kuvaile kotisi ja saat muokattavan pohjapiirroksen
 • Tekoälyrenderöinti: muuta 3D-näkymä valokuvamaiseksi kuvaksi
 • Tekoälysuunnittelijan arvio pohjastasi ja selostettu äänikierros (Pro)
-Tekoälytyökalut vaativat ilmaisen tilin ja käyttävät pisteitä. Uudet tilit saavat ilmaisia pisteitä kokeilua varten.
+Tekoälytyökalut vaativat ilmaisen tilin ja käyttävät pisteitä.
 
 TALLENNA JA JAA
 • Vie pohjapiirrokset PNG-kuvina
@@ -465,7 +465,7 @@ OUTILS IA
 • Plan IA : décrivez votre maison et obtenez un plan modifiable
 • Rendu IA : transformez la vue 3D en image photoréaliste
 • Avis d'un designer IA sur votre agencement et visite commentée (Pro)
-Les outils IA nécessitent un compte gratuit et utilisent des points. Les nouveaux comptes reçoivent des points offerts pour les essayer.
+Les outils IA nécessitent un compte gratuit et utilisent des points.
 
 ENREGISTREZ ET PARTAGEZ
 • Exportez vos plans en image PNG
@@ -519,7 +519,7 @@ AI टूल
 • AI फ़्लोर प्लान: अपने घर के बारे में बताएं और एडिट करने लायक नक्शा पाएं
 • AI रेंडर: अपने 3D व्यू को फ़ोटो जैसी तस्वीर में बदलें
 • AI डिज़ाइनर की सलाह और आवाज़ वाला टूर (Pro)
-AI टूल के लिए मुफ़्त खाता ज़रूरी है और इनमें पॉइंट लगते हैं। नए खातों को आज़माने के लिए मुफ़्त पॉइंट मिलते हैं।
+AI टूल के लिए मुफ़्त खाता ज़रूरी है और इनमें पॉइंट लगते हैं।
 
 सेव करें और शेयर करें
 • नक्शे PNG इमेज के रूप में एक्सपोर्ट करें
@@ -573,7 +573,7 @@ MI-ESZKÖZÖK
 • MI-alaprajz: írd le az otthonod, és szerkeszthető tervet kapsz
 • MI-render: alakítsd a 3D nézetet fotószerű képpé
 • MI-tervezői értékelés és narrált hangos séta (Pro)
-Az MI-eszközökhöz ingyenes fiók kell, és pontokat használnak. Az új fiókok ingyenes pontokat kapnak a kipróbáláshoz.
+Az MI-eszközökhöz ingyenes fiók kell, és pontokat használnak.
 
 MENTSD ÉS OSZD MEG
 • Exportáld a terveket PNG képként
@@ -627,7 +627,7 @@ FITUR AI
 • Denah AI: jelaskan rumah Anda dan dapatkan denah yang bisa diedit
 • Render AI: ubah tampilan 3D menjadi gambar seperti foto
 • Ulasan desainer AI untuk tata letak Anda dan tur bersuara (Pro)
-Fitur AI memerlukan akun gratis dan memakai poin. Akun baru mendapat poin gratis untuk mencobanya.
+Fitur AI memerlukan akun gratis dan memakai poin.
 
 SIMPAN DAN BAGIKAN
 • Ekspor denah sebagai gambar PNG
@@ -681,7 +681,7 @@ STRUMENTI IA
 • Planimetria IA: descrivi la tua casa e ottieni una pianta modificabile
 • Render IA: trasforma la vista 3D in un'immagine fotorealistica
 • Consigli di un designer IA e tour con voce narrante (Pro)
-Gli strumenti IA richiedono un account gratuito e usano punti. I nuovi account ricevono punti gratuiti per provarli.
+Gli strumenti IA richiedono un account gratuito e usano punti.
 
 SALVA E CONDIVIDI
 • Esporta le planimetrie come immagini PNG
@@ -735,7 +735,7 @@ HomeDesigner משלב כלי לשרטוט תוכניות, מתכנן חדרים 
 • תוכנית AI: תארו את הבית וקבלו תוכנית שאפשר לערוך
 • הדמיית AI: הפכו את תצוגת התלת־ממד לתמונה שנראית כמו צילום
 • חוות דעת של מעצב AI וסיור קולי מודרך (Pro)
-כלי ה־AI דורשים חשבון חינמי ומשתמשים בנקודות. חשבונות חדשים מקבלים נקודות חינם להתנסות.
+כלי ה־AI דורשים חשבון חינמי ומשתמשים בנקודות.
 
 שמרו ושתפו
 • ייצאו תוכניות כתמונות PNG
@@ -789,7 +789,7 @@ AIツール
 • AI間取り：家の希望を文章で伝えると、編集できる間取り図を作成
 • AIレンダー：3Dビューを写真のような画像に変換
 • AIデザイナーによるレイアウト診断と音声ガイドツアー（Pro）
-AIツールの利用には無料アカウントとポイントが必要です。新規アカウントにはお試し用の無料ポイントが付与されます。
+AIツールの利用には無料アカウントとポイントが必要です。
 
 保存と共有
 • 間取り図をPNG画像として書き出し
@@ -843,7 +843,7 @@ AI 도구
 • AI 평면도: 원하는 집을 설명하면 편집 가능한 평면도 생성
 • AI 렌더: 3D 화면을 사진 같은 이미지로 변환
 • AI 디자이너의 배치 리뷰와 음성 해설 투어(Pro)
-AI 도구는 무료 계정이 필요하며 포인트를 사용합니다. 신규 계정에는 체험용 무료 포인트가 제공됩니다.
+AI 도구는 무료 계정이 필요하며 포인트를 사용합니다.
 
 저장 및 공유
 • 평면도를 PNG 이미지로 내보내기
@@ -897,7 +897,7 @@ AI-TOOLS
 • AI-plattegrond: beschrijf je huis en krijg een plattegrond die je kunt bewerken
 • AI-render: maak van je 3D-weergave een fotorealistisch beeld
 • Advies van een AI-ontwerper en een gesproken rondleiding (Pro)
-AI-tools vereisen een gratis account en gebruiken punten. Nieuwe accounts krijgen gratis punten om ze te proberen.
+AI-tools vereisen een gratis account en gebruiken punten.
 
 OPSLAAN EN DELEN
 • Exporteer plattegronden als PNG-afbeelding
@@ -951,7 +951,7 @@ AI-VERKTØY
 • AI-plantegning: beskriv hjemmet ditt og få en plan du kan redigere
 • AI-rendering: gjør 3D-visningen om til et fotolignende bilde
 • AI-designerens vurdering av planløsningen og en opplest omvisning (Pro)
-AI-verktøyene krever en gratis konto og bruker poeng. Nye kontoer får gratis poeng til å prøve dem.
+AI-verktøyene krever en gratis konto og bruker poeng.
 
 LAGRE OG DEL
 • Eksporter planer som PNG-bilder
@@ -1005,7 +1005,7 @@ NARZĘDZIA AI
 • Plan AI: opisz swój dom i otrzymaj rzut, który można edytować
 • Render AI: zamień widok 3D w obraz przypominający zdjęcie
 • Ocena projektanta AI oraz spacer z lektorem (Pro)
-Narzędzia AI wymagają darmowego konta i zużywają punkty. Nowe konta dostają darmowe punkty na próbę.
+Narzędzia AI wymagają darmowego konta i zużywają punkty.
 
 ZAPISUJ I UDOSTĘPNIAJ
 • Eksportuj plany jako obrazy PNG
@@ -1059,7 +1059,7 @@ FERRAMENTAS DE IA
 • Planta com IA: descreva sua casa e receba uma planta editável
 • Render com IA: transforme a vista 3D em uma imagem fotorrealista
 • Avaliação de um designer IA e tour narrado por voz (Pro)
-As ferramentas de IA exigem uma conta gratuita e usam pontos. Contas novas recebem pontos grátis para experimentar.
+As ferramentas de IA exigem uma conta gratuita e usam pontos.
 
 SALVE E COMPARTILHE
 • Exporte as plantas como imagem PNG
@@ -1113,7 +1113,7 @@ INSTRUMENTE AI
 • Plan AI: descrie-ți casa și primești un plan pe care îl poți edita
 • Randare AI: transformă vederea 3D într-o imagine ca o fotografie
 • Evaluare de la un designer AI și tur narat cu voce (Pro)
-Instrumentele AI necesită un cont gratuit și folosesc puncte. Conturile noi primesc puncte gratuite de probă.
+Instrumentele AI necesită un cont gratuit și folosesc puncte.
 
 SALVEAZĂ ȘI DISTRIBUIE
 • Exportă planurile ca imagini PNG
@@ -1167,7 +1167,7 @@ HomeDesigner — это редактор планировок, планиров�
 • План от ИИ: опишите дом и получите редактируемую планировку
 • Рендер ИИ: превратите 3D-вид в изображение как на фото
 • Советы ИИ-дизайнера и голосовая экскурсия (Pro)
-Инструменты ИИ требуют бесплатного аккаунта и расходуют баллы. Новые аккаунты получают бесплатные баллы для пробы.
+Инструменты ИИ требуют бесплатного аккаунта и расходуют баллы.
 
 СОХРАНЯЙТЕ И ДЕЛИТЕСЬ
 • Экспорт планов в PNG
@@ -1221,7 +1221,7 @@ NÁSTROJE AI
 • AI pôdorys: opíšte svoj domov a získajte plán, ktorý sa dá upravovať
 • AI render: premeňte 3D pohľad na obrázok ako z fotografie
 • Posudok AI dizajnéra a komentovaná prehliadka (Pro)
-Nástroje AI vyžadujú bezplatný účet a spotrebúvajú body. Nové účty dostanú body zadarmo na vyskúšanie.
+Nástroje AI vyžadujú bezplatný účet a spotrebúvajú body.
 
 UKLADAJTE A ZDIEĽAJTE
 • Exportujte plány ako obrázky PNG
@@ -1275,7 +1275,7 @@ AI-VERKTYG
 • AI-planritning: beskriv ditt hem och få en ritning du kan redigera
 • AI-rendering: gör din 3D-vy till en fotoliknande bild
 • AI-designerns omdöme om din planlösning och en berättad rundtur (Pro)
-AI-verktygen kräver ett gratiskonto och använder poäng. Nya konton får gratis poäng att prova med.
+AI-verktygen kräver ett gratiskonto och använder poäng.
 
 SPARA OCH DELA
 • Exportera ritningar som PNG-bilder
@@ -1329,7 +1329,7 @@ HomeDesigner รวมเครื่องมือวาดแปลนบ้�
 • แปลน AI: บรรยายบ้านของคุณ แล้วรับแปลนที่แก้ไขได้
 • เรนเดอร์ AI: เปลี่ยนมุมมอง 3D ให้เป็นภาพเหมือนภาพถ่าย
 • คำแนะนำจากนักออกแบบ AI และทัวร์พร้อมเสียงบรรยาย (Pro)
-เครื่องมือ AI ต้องใช้บัญชีฟรีและใช้คะแนน บัญชีใหม่จะได้รับคะแนนฟรีสำหรับทดลองใช้
+เครื่องมือ AI ต้องใช้บัญชีฟรีและใช้คะแนน
 
 บันทึกและแชร์
 • ส่งออกแปลนเป็นภาพ PNG
@@ -1383,7 +1383,7 @@ YAPAY ZEKÂ ARAÇLARI
 • YZ kat planı: evinizi anlatın, düzenleyebileceğiniz bir plan alın
 • YZ render: 3D görünümü fotoğraf gibi bir görsele dönüştürün
 • YZ tasarımcı değerlendirmesi ve sesli anlatımlı tur (Pro)
-Yapay zekâ araçları ücretsiz bir hesap gerektirir ve puan kullanır. Yeni hesaplara denemek için ücretsiz puan verilir.
+Yapay zekâ araçları ücretsiz bir hesap gerektirir ve puan kullanır.
 
 KAYDEDİN VE PAYLAŞIN
 • Planları PNG görseli olarak dışa aktarın
@@ -1437,7 +1437,7 @@ HomeDesigner — це редактор планувань, планувальн�
 • План від ШІ: опишіть дім і отримайте планування, яке можна редагувати
 • Рендер ШІ: перетворіть 3D-вид на зображення, схоже на фото
 • Поради ШІ-дизайнера та голосова екскурсія (Pro)
-Інструменти ШІ потребують безплатного облікового запису й витрачають бали. Нові облікові записи отримують безплатні бали для проби.
+Інструменти ШІ потребують безплатного облікового запису й витрачають бали.
 
 ЗБЕРІГАЙТЕ Й ДІЛІТЬСЯ
 • Експорт планів у PNG
@@ -1491,7 +1491,7 @@ CÔNG CỤ AI
 • Mặt bằng AI: mô tả ngôi nhà và nhận bản vẽ có thể chỉnh sửa
 • Render AI: biến góc nhìn 3D thành hình ảnh như ảnh chụp
 • Nhận xét của nhà thiết kế AI và chuyến tham quan có thuyết minh (Pro)
-Công cụ AI cần tài khoản miễn phí và dùng điểm. Tài khoản mới được tặng điểm để dùng thử.
+Công cụ AI cần tài khoản miễn phí và dùng điểm.
 
 LƯU VÀ CHIA SẺ
 • Xuất mặt bằng thành ảnh PNG
@@ -1545,7 +1545,7 @@ AI 工具
 • AI 户型图：描述你的家，即可获得可编辑的户型图
 • AI 渲染：将 3D 视图变成照片般的图像
 • AI 设计师点评你的布局，以及语音讲解导览（Pro）
-AI 工具需要免费账号并消耗积分。新账号可获得免费积分用于体验。
+AI 工具需要免费账号并消耗积分。
 
 保存与分享
 • 将户型图导出为 PNG 图片
