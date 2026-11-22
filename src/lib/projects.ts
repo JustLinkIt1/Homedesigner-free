@@ -37,6 +37,9 @@ const INDEX_KEY = 'homedesigner.projects.index.v1';
 const ACTIVE_KEY = 'homedesigner.activeProject.v1';
 const LEGACY_KEY = 'homedesigner.project.v1';
 const TOMBSTONES_KEY = 'homedesigner.projects.deleted.v1';
+// Ids of projects that were opened from a bundled sample. Kept apart from the
+// index rows (which cloud sync rewrites field by field) so the flag survives.
+const SAMPLES_KEY = 'homedesigner.projects.samples.v1';
 const projectKey = (id: string) => `homedesigner.project.${id}`;
 
 const readJSON = <T,>(key: string): T | null => {
@@ -210,9 +213,23 @@ function touchMeta(id: string, patch: Partial<ProjectMeta>): void {
   writeIndex(index);
 }
 
-/** Create a new empty project and make it active. Returns its id. */
-export function createProject(name = 'Untitled home'): string {
+function sampleIds(): string[] {
+  const stored = readJSON<string[]>(SAMPLES_KEY);
+  return Array.isArray(stored) ? stored.filter((x) => typeof x === 'string') : [];
+}
+
+/** Projects the user made themselves: bundled samples do not count toward the
+ * free-tier project limit. */
+export function countOwnProjects(): number {
+  const samples = new Set(sampleIds());
+  return listProjects().filter((p) => !samples.has(p.id)).length;
+}
+
+/** Create a new empty project and make it active. Returns its id.
+ *  `sample` marks a project opened from a bundled sample (not counted). */
+export function createProject(name = 'Untitled home', opts?: { sample?: boolean }): string {
   const id = uid();
+  if (opts?.sample) writeJSON(SAMPLES_KEY, [...sampleIds(), id]);
   writeIndex([{ id, name, updatedAt: Date.now() }, ...listProjects()]);
   setActiveId(id);
   notifyLocalChange();
@@ -231,6 +248,7 @@ export function renameProject(id: string, name: string): void {
 export function deleteProject(id: string): void {
   const updatedAt = Date.now();
   writeIndex(listProjects().filter((p) => p.id !== id));
+  if (sampleIds().includes(id)) writeJSON(SAMPLES_KEY, sampleIds().filter((x) => x !== id));
   const tombstones = readJSON<ProjectTombstone[]>(TOMBSTONES_KEY) ?? [];
   writeJSON(TOMBSTONES_KEY, [
     { id, updatedAt },

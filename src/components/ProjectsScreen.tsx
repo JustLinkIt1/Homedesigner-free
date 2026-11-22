@@ -59,7 +59,9 @@ export default function ProjectsScreen({
   // per-template: your first project is free whichever card you pick. Deriving
   // the badge from the same expression is the only way it cannot lie — a static
   // badge would tell a brand-new user their free first project costs money.
-  const projectsGated = list.length >= 1 && !isPro;
+  // Bundled samples don't count: only the user's own projects do.
+  const ownCount = list.length ? projects.countOwnProjects() : 0;
+  const projectsGated = ownCount >= 1 && !isPro;
   const [renaming, setRenaming] = useState<string | null>(null);
   // Which bottom-nav destination is selected. It's an explicit tapped state
   // (not scroll-spy) — the home content barely overflows, so a scroll-position
@@ -91,7 +93,7 @@ export default function ProjectsScreen({
 
   const newProject = (then?: () => void) => {
     // Second-and-later projects are the Pro 'projects' feature.
-    if (list.length >= 1 && !requirePro('projects', 'projects:new')) return;
+    if (projects.countOwnProjects() >= 1 && !requirePro('projects', 'projects:new')) return;
     projects.createProject();
     newProjectAction();
     onOpenEditor();
@@ -99,8 +101,8 @@ export default function ProjectsScreen({
   };
 
   const openSample = (sampleId: string, name: string) => {
-    if (list.length >= 1 && !requirePro('projects', 'projects:sample')) return;
-    projects.createProject(name);
+    // Samples never open the Pro wall and don't count toward the free limit.
+    projects.createProject(name, { sample: true });
     loadSample(sampleId);
     onOpenEditor();
   };
@@ -231,8 +233,8 @@ export default function ProjectsScreen({
                 <span className="tpl-sub">{tpl.sub}</span>
                 {/* The AI plan is not a second project for a free account: it asks,
                     then replaces the plan they have. A Pro badge there would
-                    wrongly say the AI tool itself needs Pro. */}
-                {projectsGated && tpl.key !== '__ai' && <ProTag />}
+                    wrongly say the AI tool itself needs Pro. Samples open free. */}
+                {projectsGated && tpl.key !== '__ai' && !SAMPLES.some((smp) => smp.id === tpl.key) && <ProTag />}
               </button>
             ))}
           </div>
