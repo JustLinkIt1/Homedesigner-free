@@ -35,7 +35,7 @@ export default function ToolDock() {
   }, [openingsOpen, stairsOpen]);
 
   const pickOpening = (type: string, locked: boolean) => {
-    if (locked && !requirePro('catalog')) return;
+    if (locked && !requirePro('catalog', 'catalog:opening')) return;
     setPendingFurniture(pendingFurnitureType === type ? null : type);
     setOpeningsOpen(false);
     setStairsOpen(false);

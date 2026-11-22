@@ -332,6 +332,71 @@ export const TR: Record<string, string> = {
   'Keep every project': 'Tüm projelerinizi saklayın',
   'Save and switch between unlimited designs on this device.':
     'Bu cihazda sınırsız tasarım kaydedin ve aralarında geçiş yapın.',
+  // Per-trigger Pro wall copy (section 1 of the paywall copy spec).
+  'Start a second design':
+    'İkinci bir tasarım başlatın',
+  'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.':
+    'Ücretsiz sürüm bir proje saklar. Pro, bu cihazda başlattığınız her tasarımı saklar; aralarında istediğiniz zaman geçiş yaparsınız.',
+  'Open this sample as its own project':
+    'Bu örneği ayrı bir proje olarak açın',
+  'Free keeps one project. With Pro you can open every sample and keep your own design too.':
+    'Ücretsiz sürüm bir proje saklar. Pro ile tüm örnekleri açar, kendi tasarımınızı da korursunuz.',
+  'Duplicate this design':
+    'Bu tasarımı çoğaltın',
+  'Try a second layout without touching the first. Pro keeps as many copies as you like.':
+    'İlkine dokunmadan başka bir yerleşim deneyin. Pro ile istediğiniz kadar kopya saklarsınız.',
+  'Add another floor':
+    'Bir kat daha ekleyin',
+  'Add upper floors or a basement, switch between them, and see the whole home stacked in 3D.':
+    'Üst kat veya bodrum ekleyin, aralarında geçiş yapın ve tüm evi 3D\'de üst üste görün.',
+  'Copy this floor up or down':
+    'Bu katı yukarı veya aşağı kopyalayın',
+  'Start the next storey from this one instead of drawing it again.':
+    'Sonraki katı yeniden çizmek yerine bu kattan başlatın.',
+  'Plan a home with more than one floor':
+    'Birden fazla katlı bir ev planlayın',
+  'With Pro, the AI plan lays out every storey. Your answers so far are saved.':
+    'Pro ile yapay zekâ planı her katı yerleştirir. Şimdiye kadarki yanıtlarınız kaydedildi.',
+  'Export this plan as a PDF':
+    'Bu planı PDF olarak dışa aktarın',
+  'A titled, print-ready PDF for builders, landlords and permits. PNG export stays free.':
+    'Usta, ev sahibi veya ruhsat için başlıklı, baskıya hazır bir PDF. PNG dışa aktarma ücretsiz kalır.',
+  'Export this plan as DXF':
+    'Bu planı DXF olarak dışa aktarın',
+  'Open your plan in CAD software. PNG export stays free.':
+    'Planınızı bir CAD programında açın. PNG dışa aktarma ücretsiz kalır.',
+  'Place this piece':
+    'Bu parçayı yerleştirin',
+  'It\'s one of the premium 3D models. Pro unlocks every furniture piece and fixture in the catalog.':
+    'Bu, premium 3D modellerden biri. Pro, katalogdaki tüm mobilya ve donanımların kilidini açar.',
+  'Use this door or window style':
+    'Bu kapı veya pencere stilini kullanın',
+  'Pro unlocks every door and window style, in 2D and 3D.':
+    'Pro, tüm kapı ve pencere stillerinin kilidini 2D ve 3D\'de açar.',
+  'Swap in this appliance':
+    'Bu cihazla değiştirin',
+  'Pro unlocks every appliance and fixture in the catalog.':
+    'Pro, katalogdaki tüm beyaz eşya ve donanımların kilidini açar.',
+  'Add wall cabinets to this kitchen':
+    'Bu mutfağa üst dolaplar ekleyin',
+  'Wall cabinets are part of the full Pro catalog.':
+    'Üst dolaplar, Pro\'daki tam kataloğun parçasıdır.',
+  'Add the corner unit':
+    'Köşe modülünü ekleyin',
+  'Corner units are part of the full Pro catalog.':
+    'Köşe modülleri, Pro\'daki tam kataloğun parçasıdır.',
+  'Save it without the watermark':
+    'Filigransız kaydedin',
+  'With Pro, every render and photo you save or share has no watermark.':
+    'Pro ile kaydettiğiniz veya paylaştığınız her render ve fotoğraf filigransız olur.',
+  'AI renders without the watermark':
+    'Filigransız yapay zekâ renderları',
+  'Everything free stays free. Pro adds the rest.':
+    'Ücretsiz olan her şey ücretsiz kalır. Pro gerisini ekler.',
+  'Unlimited projects and floors':
+    'Sınırsız proje ve kat',
+  'Every furniture piece, door and window style':
+    'Tüm mobilyalar ile kapı ve pencere stilleri',
   'Unlock Pro': 'Pro’nun kilidini aç',
 
   /* ---------- Pro upsell ---------- */

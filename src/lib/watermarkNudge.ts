@@ -15,6 +15,6 @@ export function nudgeWatermarkedExport(): void {
   toast.action(t('Saved with a watermark.'), {
     label: t('Remove watermark'),
     tone: 'pro',
-    onClick: () => useProStore.getState().openUpsell('cleanExport'),
+    onClick: () => useProStore.getState().openUpsell('cleanExport', 'cleanExport:saved'),
   });
 }

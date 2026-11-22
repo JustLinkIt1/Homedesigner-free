@@ -734,7 +734,7 @@ export default function App() {
                     checked={kitchenUppers && isPro}
                     onChange={(e) => {
                       // Uppers place Pro wall cabinets — gate behind the upsell.
-                      if (e.target.checked && !requirePro('catalog')) return;
+                      if (e.target.checked && !requirePro('catalog', 'catalog:uppers')) return;
                       setKitchenUppers(e.target.checked);
                     }}
                   />

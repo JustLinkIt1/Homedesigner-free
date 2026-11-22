@@ -26,7 +26,7 @@ const dir = mkdtempSync(join(tmpdir(), 'hdbilling-'));
 const entry = join(root, '.billing-entry.tmp.ts');
 writeFileSync(entry, `
 export { useProStore } from '${rootImport}/src/store/proStore.ts';
-export { setProProvider, playPackage, playStoreProduct, playPlansFromProducts, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics, resolveWebEntitlement } from '${rootImport}/src/lib/pro.ts';
+export { setProProvider, requirePro, playPackage, playStoreProduct, playPlansFromProducts, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics, resolveWebEntitlement } from '${rootImport}/src/lib/pro.ts';
 `);
 
 const out = join(dir, 'bundle.mjs');
@@ -55,7 +55,7 @@ try {
   rmSync(entry, { force: true });
 }
 
-const { useProStore, setProProvider, playPackage, playStoreProduct, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics, resolveWebEntitlement } = mod;
+const { useProStore, setProProvider, requirePro, playPackage, playStoreProduct, describeMissingProduct, webPlansFromOfferings, collectStoreDiagnostics, resolveWebEntitlement } = mod;
 
 let failures = 0;
 const check = (name, ok, detail = '') => {
@@ -669,6 +669,49 @@ const reset = (isPro) => {
   const freed = await useProStore.getState().settleStranded();
   check('resume is a no-op when no purchase is in flight',
     freed === false && p.calls.sync === 0 && useProStore.getState().isPro === false);
+}
+
+// --- per-wall paywall copy: the trigger rides with the feature ----------------
+{
+  reset(false);
+  const closed = requirePro('catalog', 'catalog:uppers');
+  const st = useProStore.getState();
+  check('trigger: requirePro opens the sheet with feature and trigger on the store',
+    closed === false && st.upsellOpen && st.upsellFeature === 'catalog' && st.upsellTrigger === 'catalog:uppers');
+  st.closeUpsell();
+  check('trigger: closing the sheet clears the trigger',
+    useProStore.getState().upsellTrigger === null && useProStore.getState().upsellFeature === null);
+  requirePro('catalog');
+  check('trigger: a wall with no trigger key leaves it null (falls back to feature copy)',
+    useProStore.getState().upsellFeature === 'catalog' && useProStore.getState().upsellTrigger === null);
+  useProStore.getState().openUpsell();
+  check('trigger: a direct open has neither feature nor trigger',
+    useProStore.getState().upsellFeature === null && useProStore.getState().upsellTrigger === null);
+  useProStore.getState().closeUpsell();
+  reset(true);
+  check('trigger: Pro users pass the gate without opening anything',
+    requirePro('pdfExport', 'pdfExport:dxf') === true && !useProStore.getState().upsellOpen);
+  reset(false);
+}
+
+// Every trigger key has copy, and every translated locale carries it.
+{
+  const pro = readFileSync(join(root, 'src/lib/pro.ts'), 'utf8');
+  const keys = [...pro.match(/export type ProTrigger =([^;]+);/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  const modal = readFileSync(join(root, 'src/components/ProUpsellModal.tsx'), 'utf8');
+  const block = modal.match(/export const TRIGGER_COPY[^=]*=\s*\{([\s\S]*?)\n\};/)[1];
+  const unq = (v) => v.replace(/\'/g, "'");
+  const q = String.raw`((?:[^'\\]|\\.)*)`;
+  const entry = new RegExp(String.raw`'([^']+)': \{ title: '${q}', blurb: '${q}' \}`, 'g');
+  const copy = new Map([...block.matchAll(entry)].map((m) => [m[1], { title: unq(m[2]), blurb: unq(m[3]) }]));
+  check('trigger copy: every ProTrigger key has a headline and blurb',
+    keys.length === 15 && keys.every((k) => copy.has(k)), keys.filter((k) => !copy.has(k)).join(', '));
+  for (const lang of ['es', 'pt', 'pl', 'tr']) {
+    const src = readFileSync(join(root, 'src/locales', lang + '.ts'), 'utf8');
+    const missing = [...copy.values()].flatMap((c) => [c.title, c.blurb])
+      .filter((en) => !src.includes(`'${en.replace(/'/g, "\'")}':`));
+    check(`trigger copy: ${lang} translates every headline and blurb`, missing.length === 0, missing[0]);
+  }
 }
 
 rmSync(dir, { recursive: true, force: true });

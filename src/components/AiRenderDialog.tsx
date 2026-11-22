@@ -155,7 +155,7 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
               onClick={() => setMarked(false)}>{t('No watermark')} · {points?.features.ai_render_clean?.points ?? '—'}</button>
           </div>
           <p className="muted ai-render-pro-note">{t('With Pro, AI renders have no watermark at the lower price.')}{' '}
-            <button type="button" className="link-btn" onClick={() => useProStore.getState().openUpsell('cleanExport')}>{t('See Pro')}</button></p>
+            <button type="button" className="link-btn" onClick={() => useProStore.getState().openUpsell('cleanExport', 'cleanExport:render')}>{t('See Pro')}</button></p>
         </>}
         {state && !state.enabled && <p>{t('AI rendering is temporarily unavailable.')}</p>}
         {!!state?.styles.length && <label className="ai-render-style">{t('Style')}

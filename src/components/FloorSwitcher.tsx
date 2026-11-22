@@ -48,14 +48,14 @@ export default function FloorSwitcher({ variant = 'floating' }: { variant?: 'flo
   // Gate CREATION of extra storeys only — existing multi-floor designs stay
   // fully switchable/editable/renderable regardless of entitlement.
   const handleAdd = () => {
-    if (floors.length >= 1 && !requirePro('multiFloor')) return;
+    if (floors.length >= 1 && !requirePro('multiFloor', 'multiFloor:add')) return;
     addFloor();
     setMobileOpen(false);
   };
 
   const handleClone = (direction: 'above' | 'below') => {
     setCloneOpen(false);
-    if (!requirePro('multiFloor')) return;
+    if (!requirePro('multiFloor', 'multiFloor:clone')) return;
     cloneFloor(direction);
     setMobileOpen(false);
     toast.success(`Copied ${activeFloor?.name ?? 'floor'} ${direction}`);

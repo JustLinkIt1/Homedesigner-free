@@ -91,7 +91,7 @@ export default function ProjectsScreen({
 
   const newProject = (then?: () => void) => {
     // Second-and-later projects are the Pro 'projects' feature.
-    if (list.length >= 1 && !requirePro('projects')) return;
+    if (list.length >= 1 && !requirePro('projects', 'projects:new')) return;
     projects.createProject();
     newProjectAction();
     onOpenEditor();
@@ -99,7 +99,7 @@ export default function ProjectsScreen({
   };
 
   const openSample = (sampleId: string, name: string) => {
-    if (list.length >= 1 && !requirePro('projects')) return;
+    if (list.length >= 1 && !requirePro('projects', 'projects:sample')) return;
     projects.createProject(name);
     loadSample(sampleId);
     onOpenEditor();
@@ -306,7 +306,7 @@ export default function ProjectsScreen({
                       data-tip={t('Duplicate')}
                       aria-label={`${t('Duplicate')} ${p.name}`}
                       onClick={() => {
-                        if (!requirePro('projects')) return;
+                        if (!requirePro('projects', 'projects:duplicate')) return;
                         const id = projects.duplicateProject(p.id);
                         if (id) {
                           refresh();

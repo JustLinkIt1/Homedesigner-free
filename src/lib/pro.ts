@@ -18,6 +18,15 @@ import {
 } from './playBilling';
 
 export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects' | 'aiRender' | 'cleanExport' | 'voiceTour';
+/** Which specific wall opened the Pro sheet (a finer cut than ProFeature). Picks
+ * the headline and blurb in ProUpsellModal, and is what a future
+ * `pro_wall_shown` event should report. */
+export type ProTrigger =
+  | 'projects:new' | 'projects:sample' | 'projects:duplicate'
+  | 'multiFloor:add' | 'multiFloor:clone' | 'multiFloor:aiPlan'
+  | 'pdfExport:pdf' | 'pdfExport:dxf'
+  | 'catalog:item' | 'catalog:opening' | 'catalog:appliance' | 'catalog:uppers' | 'catalog:corner'
+  | 'cleanExport:saved' | 'cleanExport:render';
 export type ProPlanID = 'monthly' | 'yearly' | 'lifetime';
 
 export interface ProPlan {
@@ -921,12 +930,13 @@ export function setProProvider(p: ProProvider): void {
 
 /**
  * One-line feature gate. Returns true when the user may proceed; otherwise
- * opens the upsell for `feature` and returns false. Reads the store
+ * opens the upsell for `feature` and returns false. `trigger` (optional) names
+ * the exact wall for its copy and analytics. Reads the store
  * synchronously so call sites need no async plumbing.
  */
-export function requirePro(feature: ProFeature): boolean {
+export function requirePro(feature: ProFeature, trigger?: ProTrigger): boolean {
   const st = useProStore.getState();
   if (st.isPro) return true;
-  st.openUpsell(feature);
+  st.openUpsell(feature, trigger);
   return false;
 }

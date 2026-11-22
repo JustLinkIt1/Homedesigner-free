@@ -55,7 +55,7 @@ export default function OpeningPopover({ id, x, y, onClose }: { id: string; x: n
   const left = Math.min(Math.max(x, 140), window.innerWidth - 140);
   const top = Math.max(86, y - 14);
   const pick = (style: OpeningStyle) => {
-    if (PRO_STYLES.has(`${kind}:${style}`) && !requirePro('catalog')) return;
+    if (PRO_STYLES.has(`${kind}:${style}`) && !requirePro('catalog', 'catalog:opening')) return;
     st.updateOpening(id, { style, ...(kind === 'window' && style === 'french' ? { sill: 0, height: 220 } : {}) });
   };
   const resize = (by: number) => st.updateOpening(id, { width: Math.max(40, Math.min(400, opening.width + by)) });

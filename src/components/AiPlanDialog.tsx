@@ -192,7 +192,7 @@ function AiPlanSession({ onClose, onApplied }: { onClose: () => void; onApplied:
       // The same gate as adding a storey in the editor. The answers so far are
       // saved, so the dialog reopens where it was.
       onClose();
-      requirePro('multiFloor');
+      requirePro('multiFloor', 'multiFloor:aiPlan');
       return;
     }
     update({ storeys });

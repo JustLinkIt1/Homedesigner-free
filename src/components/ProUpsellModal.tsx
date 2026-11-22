@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useProStore } from '../store/proStore';
 import { usePointsStore } from '../store/pointsStore';
-import { isWebBillingConfigured, type ProFeature } from '../lib/pro';
+import { isWebBillingConfigured, type ProFeature, type ProTrigger } from '../lib/pro';
 import { useAuthStore } from '../store/authStore';
 import { APP_NAME } from '../lib/appInfo';
 import { useI18n } from '../lib/i18n';
@@ -50,20 +50,66 @@ const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blur
   },
 };
 
+/** Per-wall headline and blurb (paywall copy spec, section 1). The icon comes
+ * from the trigger's feature. A trigger with no entry, or an unset one, falls
+ * back to FEATURE_COPY[feature]. Locales translate these like FEATURE_COPY:
+ * English string as the key, English shown where a locale has no entry. */
+export const TRIGGER_COPY: Record<ProTrigger, { title: string; blurb: string }> = {
+  'projects:new': { title: 'Start a second design', blurb: 'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.' },
+  'projects:sample': { title: 'Open this sample as its own project', blurb: 'Free keeps one project. With Pro you can open every sample and keep your own design too.' },
+  'projects:duplicate': { title: 'Duplicate this design', blurb: 'Try a second layout without touching the first. Pro keeps as many copies as you like.' },
+  'multiFloor:add': { title: 'Add another floor', blurb: 'Add upper floors or a basement, switch between them, and see the whole home stacked in 3D.' },
+  'multiFloor:clone': { title: 'Copy this floor up or down', blurb: 'Start the next storey from this one instead of drawing it again.' },
+  'multiFloor:aiPlan': { title: 'Plan a home with more than one floor', blurb: 'With Pro, the AI plan lays out every storey. Your answers so far are saved.' },
+  'pdfExport:pdf': { title: 'Export this plan as a PDF', blurb: 'A titled, print-ready PDF for builders, landlords and permits. PNG export stays free.' },
+  'pdfExport:dxf': { title: 'Export this plan as DXF', blurb: 'Open your plan in CAD software. PNG export stays free.' },
+  'catalog:item': { title: 'Place this piece', blurb: 'It\'s one of the premium 3D models. Pro unlocks every furniture piece and fixture in the catalog.' },
+  'catalog:opening': { title: 'Use this door or window style', blurb: 'Pro unlocks every door and window style, in 2D and 3D.' },
+  'catalog:appliance': { title: 'Swap in this appliance', blurb: 'Pro unlocks every appliance and fixture in the catalog.' },
+  'catalog:uppers': { title: 'Add wall cabinets to this kitchen', blurb: 'Wall cabinets are part of the full Pro catalog.' },
+  'catalog:corner': { title: 'Add the corner unit', blurb: 'Corner units are part of the full Pro catalog.' },
+  'cleanExport:saved': { title: 'Save it without the watermark', blurb: 'With Pro, every render and photo you save or share has no watermark.' },
+  'cleanExport:render': { title: 'AI renders without the watermark', blurb: 'With Pro, every render and photo you save or share has no watermark.' },
+};
+
+/** Headline and blurb for a wall: the trigger's copy when it has any, else the
+ * feature's. Null when there is neither (a direct open from /buy). */
+export function resolveUpsellCopy(feature: ProFeature | null, trigger: ProTrigger | null) {
+  const featureCopy = feature ? FEATURE_COPY[feature] : null;
+  const triggerCopy = trigger ? TRIGGER_COPY[trigger] : undefined;
+  if (!featureCopy) return null;
+  return { icon: featureCopy.icon, title: triggerCopy?.title ?? featureCopy.title, blurb: triggerCopy?.blurb ?? featureCopy.blurb };
+}
+
 // Every line here is something the code actually gates on Pro — see the
 // requirePro() call sites, and PhotoMode's capture scale for the photo one.
-const CORE_BENEFITS: { icon: typeof Crown; label: string }[] = [
-  { icon: Layers, label: 'Unlimited floors & projects' },
-  { icon: Sofa, label: 'Full furniture catalog' },
-  { icon: ImageIcon, label: 'Watermark-free renders & photos' },
+// `legacy` is the previous English wording: locales that have not translated the
+// new label yet keep showing their translation of it, not an English line.
+const CORE_BENEFITS: { icon: typeof Crown; label: string; legacy?: string; feature?: ProFeature }[] = [
+  { icon: Layers, label: 'Unlimited projects and floors', legacy: 'Unlimited floors & projects', feature: 'projects' },
+  { icon: Sofa, label: 'Every furniture piece, door and window style', legacy: 'Full furniture catalog', feature: 'catalog' },
+  { icon: ImageIcon, label: 'Watermark-free renders & photos', feature: 'cleanExport' },
   { icon: Camera, label: 'Sharper, higher-resolution photos' },
-  { icon: FileText, label: 'PDF & DXF plan export' },
+  { icon: FileText, label: 'PDF & DXF plan export', feature: 'pdfExport' },
 ];
+
+/** Subline for the wall opened with no feature (/buy, header chip, account
+ * menu). Looked up through t() like TRIGGER_COPY, so locales without a
+ * translation show English. */
+const NO_FEATURE_SUBLINE = 'Everything free stays free. Pro adds the rest.';
+
+/** Which "Everything in Pro" bullet a feature's wall is about. */
+function benefitIsFor(b: { feature?: ProFeature; label: string }, feature: ProFeature | null) {
+  if (!feature) return false;
+  if (feature === 'multiFloor') return b.feature === 'projects';
+  if (feature === 'voiceTour') return b.label === 'AI voice tours of your home';
+  return b.feature === feature;
+}
 
 /** Feature-triggered Pro purchase sheet (Play Billing on Android, Stripe-backed
  * RevenueCat Web Billing on configured desktop builds). */
 export default function ProUpsellModal() {
-  const { upsellFeature, upsellOpen, closeUpsell, purchase, restore, busy, priceLabel, plans, isPro } = useProStore();
+  const { upsellFeature, upsellTrigger, upsellOpen, closeUpsell, purchase, restore, busy, priceLabel, plans, isPro } = useProStore();
   const account = useAuthStore((s) => s.account);
   const authBusy = useAuthStore((s) => s.busy);
   const signIn = useAuthStore((s) => s.signIn);
@@ -80,6 +126,10 @@ export default function ProUpsellModal() {
   const lastFeature = useRef<ProFeature | null>(upsellFeature);
   if (upsellFeature) lastFeature.current = upsellFeature;
   const feature = upsellFeature ?? lastFeature.current;
+  // Same for the trigger, but only while its feature is the one still showing.
+  const lastTrigger = useRef<ProTrigger | null>(upsellTrigger);
+  if (upsellFeature) lastTrigger.current = upsellTrigger;
+  const trigger = upsellFeature ? upsellTrigger : lastTrigger.current;
 
   const native = Capacitor.isNativePlatform();
   const webBilling = !native && isWebBillingConfigured();
@@ -144,7 +194,7 @@ export default function ProUpsellModal() {
     }).format(yearly.priceMicros / 12 / 1_000_000);
     return { saving, monthlyEquivalent };
   }, [plans]);
-  const copy = feature ? FEATURE_COPY[feature] : null;
+  const copy = resolveUpsellCopy(feature, trigger);
   const Icon = copy?.icon;
   const buyLabel = needsAccount
     ? t('Sign in with Google')
@@ -172,13 +222,26 @@ export default function ProUpsellModal() {
   // so fall back to the one-time claim until the plans are actually loaded.
   // Only claimed once the server has said it can record one for this account.
   const voiceTours = usePointsStore((s) => s.state?.available?.voice_tour === true);
-  const benefits = [
+  const benefitList: { icon: typeof Crown; label: string; legacy?: string; feature?: ProFeature }[] = [
     ...CORE_BENEFITS,
     ...(voiceTours ? [{ icon: Mic, label: 'AI voice tours of your home' }] : []),
+  ];
+  // The bullet that matches the wall the user hit goes first.
+  const matched = benefitList.filter((b) => benefitIsFor(b, feature));
+  const benefits = [
+    ...matched,
+    ...benefitList.filter((b) => !matched.includes(b)),
     webBilling || plans.length > 1
       ? { icon: CalendarCheck, label: 'Monthly, yearly or lifetime — your choice' }
       : { icon: BadgeCheck, label: 'One-time purchase — no subscription' },
   ];
+  // The new label when this locale has it, else its translation of the old one.
+  const benefitText = (b: { label: string; legacy?: string }) => {
+    const translated = t(b.label);
+    if (translated !== b.label || !b.legacy) return translated;
+    const old = t(b.legacy);
+    return old !== b.legacy ? old : b.label;
+  };
 
   return (
     <Modal open={open} onClose={closeUpsell} className="pro-upsell" labelledBy="pro-title">
@@ -205,6 +268,7 @@ export default function ProUpsellModal() {
                 <Crown className="icon" />
               </span>
               <h2>{t('Unlock Pro')}</h2>
+              <p>{t(NO_FEATURE_SUBLINE)}</p>
             </>
           )}
         </div>
@@ -217,7 +281,7 @@ export default function ProUpsellModal() {
                 <span className="pro-benefit-ico">
                   <BenefitIcon className="icon" />
                 </span>
-                <span>{t(b.label)}</span>
+                <span>{benefitText(b)}</span>
               </li>
             );
           })}

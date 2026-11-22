@@ -2,7 +2,7 @@
 // snapshots feed undo/persist, and entitlement must never ride along.
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
-import { getProProvider, STORE_TIMEOUT_MS, type ProFeature, type ProPlan, type ProPlanID } from '../lib/pro';
+import { getProProvider, STORE_TIMEOUT_MS, type ProFeature, type ProTrigger, type ProPlan, type ProPlanID } from '../lib/pro';
 import {
   isValidReferralCode,
   markReferralRedeemed,
@@ -58,6 +58,9 @@ interface ProState {
   plans: ProPlan[];
   busy: boolean;
   upsellFeature: ProFeature | null;
+  /** Which specific wall opened the sheet (null for a direct open or a wall
+   *  with no trigger key). Read it for a pro_wall_shown event. */
+  upsellTrigger: ProTrigger | null;
   /** Whether the Pro sheet is showing. Separate from `upsellFeature` because
    *  the sheet can also be opened directly — from the /buy landing page — with
    *  no feature to frame it, in which case it shows the plain Pro pitch. */
@@ -76,7 +79,7 @@ interface ProState {
   unlinkAccount: () => Promise<void>;
   redeemCode: (code: string) => boolean;
   /** Omit the feature for a direct "buy Pro" entry with no feature framing. */
-  openUpsell: (f?: ProFeature | null) => void;
+  openUpsell: (f?: ProFeature | null, trigger?: ProTrigger | null) => void;
   closeUpsell: () => void;
 }
 
@@ -88,6 +91,7 @@ export const useProStore = create<ProState>((set, get) => ({
   plans: [],
   busy: false,
   upsellFeature: null,
+  upsellTrigger: null,
   upsellOpen: false,
 
   refresh: async () => {
@@ -144,7 +148,7 @@ export const useProStore = create<ProState>((set, get) => ({
       // become visible without relying on a stale SDK customer cache.
       const entitled = await provider.isEntitled();
       if (!entitled) return false;
-      set({ isPro: true, upsellFeature: null });
+      set({ isPro: true, upsellFeature: null, upsellTrigger: null });
       writeCache(true);
       return true;
     } catch {
@@ -172,7 +176,7 @@ export const useProStore = create<ProState>((set, get) => ({
       const provider = getProProvider();
       const entitled = provider.sync ? await provider.sync() : await provider.isEntitled();
       if (entitled && !get().isPro) {
-        set({ isPro: true, upsellFeature: null });
+        set({ isPro: true, upsellFeature: null, upsellTrigger: null });
         writeCache(true);
         unlocked = true;
       }
@@ -212,7 +216,7 @@ export const useProStore = create<ProState>((set, get) => ({
         // announced it. Setting the flag again is harmless; congratulating the
         // user twice for one payment is not.
         const alreadyKnown = get().isPro;
-        set({ isPro: true, upsellFeature: null });
+        set({ isPro: true, upsellFeature: null, upsellTrigger: null });
         writeCache(true);
         if (!alreadyKnown) toast.success(t('Pro unlocked — thank you!'));
       } else if (Capacitor.isNativePlatform()) {
@@ -238,7 +242,7 @@ export const useProStore = create<ProState>((set, get) => ({
     try {
       const ok = await getProProvider().restore();
       if (ok) {
-        set({ isPro: true, upsellFeature: null });
+        set({ isPro: true, upsellFeature: null, upsellTrigger: null });
         writeCache(true);
         toast.success('Pro purchase restored.');
       } else {
@@ -266,14 +270,14 @@ export const useProStore = create<ProState>((set, get) => ({
     let entitled = isReferralRedeemed();
     // Clear account-derived state before touching the network so sign-out is
     // immediate and cannot leave another person's Pro badge or prices visible.
-    set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null, upsellOpen: false });
+    set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null, upsellTrigger: null, upsellOpen: false });
     writeCache(entitled);
     try {
       await provider.init();
       entitled = (await provider.disconnect()) || entitled;
     } finally {
       // A device-owned Play purchase remains valid after account sign-out.
-      set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null, upsellOpen: false });
+      set({ isPro: entitled, plans: [], priceLabel: null, upsellFeature: null, upsellTrigger: null, upsellOpen: false });
       writeCache(entitled);
     }
   },
@@ -281,12 +285,12 @@ export const useProStore = create<ProState>((set, get) => ({
   redeemCode: (code: string) => {
     if (!isValidReferralCode(code)) return false;
     markReferralRedeemed(code);
-    set({ isPro: true, upsellFeature: null });
+    set({ isPro: true, upsellFeature: null, upsellTrigger: null });
     writeCache(true);
     toast.success('Pro unlocked with your referral code!');
     return true;
   },
 
-  openUpsell: (f = null) => set({ upsellFeature: f, upsellOpen: true }),
-  closeUpsell: () => set({ upsellFeature: null, upsellOpen: false }),
+  openUpsell: (f = null, trigger = null) => set({ upsellFeature: f, upsellTrigger: trigger, upsellOpen: true }),
+  closeUpsell: () => set({ upsellFeature: null, upsellTrigger: null, upsellOpen: false }),
 }));

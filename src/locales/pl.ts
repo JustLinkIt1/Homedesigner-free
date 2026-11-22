@@ -332,6 +332,71 @@ export const PL: Record<string, string> = {
   'Keep every project': 'Zachowaj każdy projekt',
   'Save and switch between unlimited designs on this device.':
     'Zapisuj i przełączaj się między nieograniczoną liczbą projektów na tym urządzeniu.',
+  // Per-trigger Pro wall copy (section 1 of the paywall copy spec).
+  'Start a second design':
+    'Zacznij drugi projekt',
+  'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.':
+    'Wersja darmowa przechowuje jeden projekt. Pro zachowuje każdy projekt, który zaczniesz na tym urządzeniu, a przełączać się między nimi możesz w dowolnej chwili.',
+  'Open this sample as its own project':
+    'Otwórz ten przykład jako osobny projekt',
+  'Free keeps one project. With Pro you can open every sample and keep your own design too.':
+    'Wersja darmowa przechowuje jeden projekt. Z Pro otworzysz każdy przykład i zachowasz też własny projekt.',
+  'Duplicate this design':
+    'Zduplikuj ten projekt',
+  'Try a second layout without touching the first. Pro keeps as many copies as you like.':
+    'Wypróbuj inny układ, nie ruszając pierwszego. Z Pro zachowasz tyle kopii, ile chcesz.',
+  'Add another floor':
+    'Dodaj kolejne piętro',
+  'Add upper floors or a basement, switch between them, and see the whole home stacked in 3D.':
+    'Dodaj piętra lub piwnicę, przełączaj się między nimi i oglądaj cały dom piętro nad piętrem w 3D.',
+  'Copy this floor up or down':
+    'Skopiuj to piętro w górę lub w dół',
+  'Start the next storey from this one instead of drawing it again.':
+    'Zacznij następną kondygnację od tej, zamiast rysować ją od nowa.',
+  'Plan a home with more than one floor':
+    'Zaplanuj dom z więcej niż jednym piętrem',
+  'With Pro, the AI plan lays out every storey. Your answers so far are saved.':
+    'Z Pro plan AI rozmieści każdą kondygnację. Twoje dotychczasowe odpowiedzi są zapisane.',
+  'Export this plan as a PDF':
+    'Eksportuj ten plan do PDF',
+  'A titled, print-ready PDF for builders, landlords and permits. PNG export stays free.':
+    'PDF z tytułem, gotowy do druku – dla wykonawcy, wynajmującego lub do pozwolenia. Eksport do PNG pozostaje darmowy.',
+  'Export this plan as DXF':
+    'Eksportuj ten plan do DXF',
+  'Open your plan in CAD software. PNG export stays free.':
+    'Otwórz swój plan w programie CAD. Eksport do PNG pozostaje darmowy.',
+  'Place this piece':
+    'Postaw ten mebel',
+  'It\'s one of the premium 3D models. Pro unlocks every furniture piece and fixture in the catalog.':
+    'To jeden z modeli 3D premium. Pro odblokowuje wszystkie meble i wyposażenie w katalogu.',
+  'Use this door or window style':
+    'Użyj tego stylu drzwi lub okna',
+  'Pro unlocks every door and window style, in 2D and 3D.':
+    'Pro odblokowuje wszystkie style drzwi i okien, w 2D i 3D.',
+  'Swap in this appliance':
+    'Zamień na to urządzenie',
+  'Pro unlocks every appliance and fixture in the catalog.':
+    'Pro odblokowuje wszystkie urządzenia i wyposażenie w katalogu.',
+  'Add wall cabinets to this kitchen':
+    'Dodaj szafki górne w tej kuchni',
+  'Wall cabinets are part of the full Pro catalog.':
+    'Szafki górne są częścią pełnego katalogu Pro.',
+  'Add the corner unit':
+    'Dodaj moduł narożny',
+  'Corner units are part of the full Pro catalog.':
+    'Moduły narożne są częścią pełnego katalogu Pro.',
+  'Save it without the watermark':
+    'Zapisz bez znaku wodnego',
+  'With Pro, every render and photo you save or share has no watermark.':
+    'Z Pro każdy render i zdjęcie, które zapiszesz lub udostępnisz, jest bez znaku wodnego.',
+  'AI renders without the watermark':
+    'Rendery AI bez znaku wodnego',
+  'Everything free stays free. Pro adds the rest.':
+    'Wszystko, co darmowe, zostaje darmowe. Pro dodaje resztę.',
+  'Unlimited projects and floors':
+    'Nieograniczone projekty i piętra',
+  'Every furniture piece, door and window style':
+    'Wszystkie meble oraz style drzwi i okien',
   'Unlock Pro': 'Odblokuj Pro',
 
   /* ---------- Pro upsell ---------- */

@@ -933,7 +933,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                         className={`swap-chip ${item.type === k.type ? 'on' : ''}`}
                         onClick={() => {
                           // Pro appliances stay behind the same gate as the catalog.
-                          if (gated && !requirePro('catalog')) return;
+                          if (gated && !requirePro('catalog', 'catalog:appliance')) return;
                           s.swapFurnitureType(item.id, k.type);
                         }}
                       >
@@ -1019,7 +1019,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     value={opening.style ?? 'single'}
                     onChange={(e) => {
                       const style = e.target.value as OpeningStyle;
-                      if (isProStyle('door', style) && !requirePro('catalog')) return;
+                      if (isProStyle('door', style) && !requirePro('catalog', 'catalog:opening')) return;
                       s.updateOpening(opening.id, { style });
                     }}
                   >
@@ -1039,7 +1039,7 @@ export default function PropertiesPanel({ open = false }: { open?: boolean }) {
                     value={opening.style ?? 'standard'}
                     onChange={(e) => {
                       const style = e.target.value as OpeningStyle;
-                      if (isProStyle('window', style) && !requirePro('catalog')) return;
+                      if (isProStyle('window', style) && !requirePro('catalog', 'catalog:opening')) return;
                       s.updateOpening(opening.id, {
                         style,
                         ...(style === 'french' ? { sill: 0, height: 220 } : {}),

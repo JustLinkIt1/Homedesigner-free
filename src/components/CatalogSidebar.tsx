@@ -216,7 +216,7 @@ export default function CatalogSidebar({
   const placePreviewed = () => {
     if (!previewEntry) return;
     const locked = !!previewEntry.pro && !useProStore.getState().isPro;
-    if (locked && !requirePro('catalog')) return;
+    if (locked && !requirePro('catalog', 'catalog:item')) return;
     useDesign.getState().setPendingFurniture(previewEntry.type);
     onClose?.();
   };

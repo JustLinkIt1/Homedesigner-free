@@ -332,6 +332,71 @@ export const ES: Record<string, string> = {
   'Keep every project': 'Guarda todos tus proyectos',
   'Save and switch between unlimited designs on this device.':
     'Guarda y cambia entre diseños ilimitados en este dispositivo.',
+  // Per-trigger Pro wall copy (section 1 of the paywall copy spec).
+  'Start a second design':
+    'Empieza un segundo diseño',
+  'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.':
+    'La versión gratis guarda un proyecto. Pro guarda todos los diseños que empieces en este dispositivo y puedes cambiar entre ellos cuando quieras.',
+  'Open this sample as its own project':
+    'Abre este ejemplo como proyecto propio',
+  'Free keeps one project. With Pro you can open every sample and keep your own design too.':
+    'La versión gratis guarda un proyecto. Con Pro abres todos los ejemplos y conservas también tu propio diseño.',
+  'Duplicate this design':
+    'Duplica este diseño',
+  'Try a second layout without touching the first. Pro keeps as many copies as you like.':
+    'Prueba otra distribución sin tocar la primera. Con Pro guardas todas las copias que quieras.',
+  'Add another floor':
+    'Añade otra planta',
+  'Add upper floors or a basement, switch between them, and see the whole home stacked in 3D.':
+    'Añade plantas altas o un sótano, cambia entre ellas y mira toda la casa apilada en 3D.',
+  'Copy this floor up or down':
+    'Copia esta planta arriba o abajo',
+  'Start the next storey from this one instead of drawing it again.':
+    'Empieza la siguiente planta a partir de esta en vez de dibujarla de nuevo.',
+  'Plan a home with more than one floor':
+    'Planifica una casa de varias plantas',
+  'With Pro, the AI plan lays out every storey. Your answers so far are saved.':
+    'Con Pro, el plano con IA distribuye todas las plantas. Tus respuestas están guardadas.',
+  'Export this plan as a PDF':
+    'Exporta este plano en PDF',
+  'A titled, print-ready PDF for builders, landlords and permits. PNG export stays free.':
+    'Un PDF con título, listo para imprimir, para la obra, el alquiler o los permisos. Exportar en PNG sigue siendo gratis.',
+  'Export this plan as DXF':
+    'Exporta este plano en DXF',
+  'Open your plan in CAD software. PNG export stays free.':
+    'Abre tu plano en un programa CAD. Exportar en PNG sigue siendo gratis.',
+  'Place this piece':
+    'Coloca este mueble',
+  'It\'s one of the premium 3D models. Pro unlocks every furniture piece and fixture in the catalog.':
+    'Es uno de los modelos 3D premium. Pro desbloquea todos los muebles y accesorios del catálogo.',
+  'Use this door or window style':
+    'Usa este estilo de puerta o ventana',
+  'Pro unlocks every door and window style, in 2D and 3D.':
+    'Pro desbloquea todos los estilos de puertas y ventanas, en 2D y 3D.',
+  'Swap in this appliance':
+    'Cambia a este electrodoméstico',
+  'Pro unlocks every appliance and fixture in the catalog.':
+    'Pro desbloquea todos los electrodomésticos y accesorios del catálogo.',
+  'Add wall cabinets to this kitchen':
+    'Añade muebles altos a esta cocina',
+  'Wall cabinets are part of the full Pro catalog.':
+    'Los muebles altos forman parte del catálogo completo de Pro.',
+  'Add the corner unit':
+    'Añade el módulo de esquina',
+  'Corner units are part of the full Pro catalog.':
+    'Los módulos de esquina forman parte del catálogo completo de Pro.',
+  'Save it without the watermark':
+    'Guárdalo sin marca de agua',
+  'With Pro, every render and photo you save or share has no watermark.':
+    'Con Pro, todos los renders y fotos que guardes o compartas salen sin marca de agua.',
+  'AI renders without the watermark':
+    'Renders con IA sin marca de agua',
+  'Everything free stays free. Pro adds the rest.':
+    'Todo lo gratis sigue siendo gratis. Pro añade el resto.',
+  'Unlimited projects and floors':
+    'Proyectos y plantas ilimitados',
+  'Every furniture piece, door and window style':
+    'Todos los muebles y estilos de puertas y ventanas',
   'Unlock Pro': 'Desbloquear Pro',
 
   /* ---------- Pro upsell ---------- */

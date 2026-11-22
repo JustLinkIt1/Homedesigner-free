@@ -715,7 +715,7 @@ export const useDesign = create<DesignState>((set, get) => {
       const pro = useProStore.getState().isPro;
       toast.action(t('Join these runs with a corner unit?'), pro
         ? { label: t('Add corner unit'), onClick: () => get().addKitchenCorner(spot) }
-        : { label: t('Add corner unit'), tone: 'pro', onClick: () => useProStore.getState().openUpsell('catalog') });
+        : { label: t('Add corner unit'), tone: 'pro', onClick: () => useProStore.getState().openUpsell('catalog', 'catalog:corner') });
     },
 
     addKitchenCorner: (spot) => {

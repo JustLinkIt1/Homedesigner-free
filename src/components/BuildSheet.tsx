@@ -38,7 +38,7 @@ export default function BuildSheet({ open, onClose, limited = false }: { open: b
   };
 
   const pickOpening = (type: string, locked: boolean) => {
-    if (locked && !requirePro('catalog')) return;
+    if (locked && !requirePro('catalog', 'catalog:opening')) return;
     tapLight();
     setPendingFurniture(type);
     onClose();
