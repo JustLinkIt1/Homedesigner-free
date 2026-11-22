@@ -2130,9 +2130,15 @@ export default {
       }
       if (request.method === 'POST' && url.pathname === '/v1/sync') return await sync(request, env, identity.subject);
       if (request.method === 'DELETE' && url.pathname === '/v1/account') {
-        const objects = await listAll(env.USER_DATA, `users/${identity.subject}/`);
-        for (let i = 0; i < objects.length; i += 1000) {
-          await env.USER_DATA.delete(objects.slice(i, i + 1000).map((item) => item.key));
+        // listAll stops at about 1,250 objects, so sweep until the prefix is empty.
+        let deletedObjects = 0;
+        for (let pass = 0; pass < 50; pass += 1) {
+          const objects = await listAll(env.USER_DATA, `users/${identity.subject}/`);
+          if (objects.length === 0) break;
+          for (let i = 0; i < objects.length; i += 1000) {
+            await env.USER_DATA.delete(objects.slice(i, i + 1000).map((item) => item.key));
+          }
+          deletedObjects += objects.length;
         }
         // "Delete my account" has to mean the same thing everywhere. Leaving
         // someone's posts up after they erased their designs would make that
@@ -2154,7 +2160,7 @@ export default {
         // ids/refs is replaced by a one-way tag. `grant:erased:<tag>` stays as
         // the "already had the free grant" marker.
         await erasePoints(env.COMMUNITY, identity.subject);
-        return json(request, { deleted: objects.length });
+        return json(request, { deleted: deletedObjects });
       }
 
       if (url.pathname.startsWith('/v1/community/')) {
