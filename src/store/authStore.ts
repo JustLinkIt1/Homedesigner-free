@@ -10,7 +10,7 @@ import {
 import { toast } from '../lib/ui';
 import { t } from '../lib/i18n';
 import { useProStore } from './proStore';
-import { startProjectSync, syncProjects } from '../lib/cloudSync';
+import { startProjectSync, syncProjects, deleteCloudAccount } from '../lib/cloudSync';
 
 const ACCOUNT_CACHE_KEY = 'homedesigner.google-account.v1';
 let stopProjectSync: (() => void) | null = null;
@@ -110,6 +110,8 @@ interface AuthState {
   restoreSession: () => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Deletes the account's cloud data on the server, then signs out here. */
+  deleteAccount: () => Promise<boolean>;
   syncNow: () => Promise<void>;
 }
 
@@ -208,6 +210,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       set({ busy: false });
     }
+  },
+
+  deleteAccount: async () => {
+    if (get().busy || !get().account) return false;
+    set({ busy: true });
+    // Nothing may re-upload while (or after) the server erases the account.
+    stopProjectSync?.();
+    stopProjectSync = null;
+    try {
+      await deleteCloudAccount();
+    } catch {
+      // Still signed in, so keep syncing as before.
+      stopProjectSync = startProjectSync();
+      toast.error(t("Couldn't delete your account. Try again when you're online."));
+      set({ busy: false });
+      return false;
+    }
+    writeAccount(null);
+    set({ account: null, ready: true });
+    await Promise.race([
+      Promise.allSettled([
+        useProStore.getState().unlinkAccount(),
+        signOutFromGoogle(),
+      ]),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+    ]);
+    toast.success(t('Account deleted. Plans saved on this device are still here.'));
+    set({ busy: false });
+    return true;
   },
 
   syncNow: async () => {

@@ -12,7 +12,6 @@ import { useStoreDiagnosticHold } from './useStoreDiagnosticHold';
 import { useAuthStore } from '../store/authStore';
 import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
 import { openCommunityForum } from '../lib/communityAccess';
-import { deleteCloudProjects } from '../lib/cloudSync';
 import { toast } from '../lib/ui';
 import Modal from './Modal';
 
@@ -75,6 +74,7 @@ export default function SettingsDialog({
   const signIn = useAuthStore((s) => s.signIn);
   const signOut = useAuthStore((s) => s.signOut);
   const syncNow = useAuthStore((s) => s.syncNow);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const t = useI18n();
   const canOpenModelStudio = isModelStudioOwner(account?.email);
   const { busy: diagBusy, holdProps } = useStoreDiagnosticHold();
@@ -112,14 +112,12 @@ export default function SettingsDialog({
                   <button
                     className="btn icon-btn"
                     onClick={() => {
-                      if (!window.confirm(t('Delete every cloud backup for this account? Plans on this device will remain.'))) return;
-                      void deleteCloudProjects()
-                        .then(() => toast.success(t('Cloud backups deleted. Future changes will continue syncing.')))
-                        .catch(() => toast.error(t("Couldn't delete cloud backups — try again when you're online.")));
+                      if (!window.confirm(t('Delete your account? Your cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered. Plans saved on this device stay on this device. You will be signed out.'))) return;
+                      void deleteAccount();
                     }}
                     disabled={authBusy}
-                    aria-label={t('Delete cloud backups')}
-                    data-tip={t('Delete cloud backups')}
+                    aria-label={t('Delete account')}
+                    data-tip={t('Delete account')}
                   >
                     <Trash2 className="icon" />
                   </button>

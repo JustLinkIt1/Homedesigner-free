@@ -120,8 +120,11 @@ export async function syncProjects(): Promise<number> {
   return syncPromise;
 }
 
-export async function deleteCloudProjects(): Promise<void> {
+/** Deletes the whole account on the server (designs, community data, points). */
+export async function deleteCloudAccount(): Promise<void> {
   if (!isCloudSyncConfigured()) throw new Error('Cloud sync is not configured.');
+  // A sync still in flight could re-create what the delete is about to remove.
+  if (syncPromise) await syncPromise.catch(() => {});
   const token = await getGoogleIdToken();
   const response = await fetchWithTimeout(`${SYNC_URL}/v1/account`, {
     method: 'DELETE',
