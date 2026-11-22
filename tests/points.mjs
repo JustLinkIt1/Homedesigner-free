@@ -38,7 +38,7 @@ const mod = await import(pathToFileURL(out).href);
 
 const {
   FEATURES, PACKS, USD_PER_POINT, PLAY_FEE_RATE, PRO_DISCOUNT,
-  FREE_GRANT_POINTS, MAX_FREE_GRANTS_PER_MONTH,
+  FREE_GRANT_POINTS, MAX_FREE_GRANTS_PER_MONTH, erasePoints, erasedTag,
   assertPricingIsSolvent, pointsFor,
   spendPoints, refundPoints, grantFreePoints, readAccount, readLiability, runMetered,
   creditPurchase, packById, packPriceCents, readUnsettledPurchases, UNSETTLED_BALANCE,
@@ -646,6 +646,39 @@ for (const failAt of [1, 2]) {
   db.exec("UPDATE point_ledger SET balance_after = -1 WHERE id = 'in-flight-old-worker'");
   check('old Worker finishing during deployment settles even at minus one', db.prepare("SELECT purchase_settled FROM point_ledger WHERE id = 'in-flight-old-worker'").get().purchase_settled === 1);
   db.close();
+}
+
+console.log('Erasure (account deletion)');
+{
+  const db = makeDb();
+  const sub = '112233445566778899001';
+  const tag = await erasedTag(sub);
+  check('tag is one-way, prefixed and does not contain the sub', tag.startsWith('erased:') && !tag.includes(sub) && tag.length === 'erased:'.length + 32);
+  check('tag is stable per subject and differs between subjects', tag === await erasedTag(sub) && tag !== await erasedTag('other-sub'));
+  await grantFreePoints(db, sub);
+  await spendPoints(db, sub, 'room_naming', `room_naming:${sub}:abcdefgh`);
+  db.raw.prepare(`INSERT INTO point_ledger (id, subject, kind, delta, balance_after, ref, created_at)
+    VALUES (?, ?, 'refund', 1, 1, ?, 1)`).run(`refund:room_naming:${sub}:abcdefgh`, sub, `room_naming:${sub}:abcdefgh`);
+  db.raw.prepare(`INSERT INTO point_ledger (id, subject, kind, delta, balance_after, ref, created_at)
+    VALUES (?, 'bystander', 'grant', 1, 1, NULL, 1)`).run('grant:bystander');
+  await erasePoints(db, sub);
+  const rows = db.raw.prepare('SELECT id, subject, ref FROM point_ledger').all();
+  check('no ledger id, ref or subject keeps the raw sub', !rows.some((r) => `${r.id} ${r.subject} ${r.ref ?? ''}`.includes(sub)));
+  check('grant id became the hashed marker', rows.some((r) => r.id === `grant:${tag}`));
+  check('ids stay unique and no row was lost', new Set(rows.map((r) => r.id)).size === rows.length && rows.length === 4);
+  check('another account is untouched', rows.some((r) => r.id === 'grant:bystander' && r.subject === 'bystander'));
+  check('points account is deleted', db.raw.prepare('SELECT COUNT(*) AS n FROM point_accounts WHERE subject = ?').get(sub).n === 0);
+  const again = await grantFreePoints(db, sub);
+  check('signing in again after deletion is refused a second free grant', again.granted === 0 && again.reason === 'already_granted' && again.balance === 0);
+  check('no second grant row was written', db.raw.prepare("SELECT COUNT(*) AS n FROM point_ledger WHERE kind = 'grant' AND delta > 0 AND id LIKE 'grant:%'").get().n === 2);
+  // Second erasure after reusing the same idempotency key must not collide.
+  await grantFreePoints(db, 'unused');
+  db.raw.prepare(`INSERT INTO point_ledger (id, subject, kind, delta, balance_after, ref, created_at)
+    VALUES (?, ?, 'spend', -1, 0, NULL, 2)`).run(`room_naming:${sub}:abcdefgh`, sub);
+  await erasePoints(db, sub);
+  const after = db.raw.prepare('SELECT id FROM point_ledger').all();
+  check('second erasure with a colliding id stays unique and clean', new Set(after.map((r) => r.id)).size === after.length && !after.some((r) => r.id.includes(sub)));
+  db.raw.close();
 }
 
 console.log('Schema');

@@ -14,7 +14,7 @@ const check = (value, label) => { assert.ok(value, label); checks++; };
 try {
   const src = readFileSync('workers/design-sync/src/hd-events.ts', 'utf8');
   writeFileSync(join(dir, 'hd-events.mjs'), ts.transpileModule(src, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText);
-  const { recordHdEvents } = await import(pathToFileURL(join(dir, 'hd-events.mjs')).href);
+  const { recordHdEvents, purgeOldHdEvents } = await import(pathToFileURL(join(dir, 'hd-events.mjs')).href);
   const sql = new DatabaseSync(':memory:');
   sql.exec(readFileSync('workers/design-sync/migrations/0010_hd_events.sql', 'utf8'));
   const db = {
@@ -67,6 +67,16 @@ try {
   check(r.status === 429 && count() === before, 'over the daily cap is 429 and stores nothing');
   check((await post({ ...good, install: '9a1d4e60-7b3c-4f58-a2d6-1e8b5c07f923' }, T)).status === 202, 'another install is unaffected');
   check((await post(good, T + 86400000)).status === 202, 'cap resets on the next UTC day');
+  // 13-month retention: rows older than today - 396 days go, the boundary day stays.
+  const day = Math.floor(T / 86400000);
+  const ins = sql.prepare("INSERT INTO hd_events (install, event, day, created_at) VALUES (?, 'editor_opened', ?, 0)");
+  ins.run(install, day - 397); ins.run(install, day - 396); ins.run(install, day - 395);
+  const total = count();
+  const removed = await purgeOldHdEvents(db, T);
+  check(removed >= 1 && count() === total - removed, 'purge reports what it deleted');
+  check(sql.prepare('SELECT COUNT(*) AS n FROM hd_events WHERE day < ?').get(day - 396).n === 0, 'nothing older than 396 days remains');
+  check(sql.prepare('SELECT COUNT(*) AS n FROM hd_events WHERE day = ?').get(day - 396).n === 1, 'the 396-day boundary row is kept');
+  check(sql.prepare('SELECT COUNT(*) AS n FROM hd_events WHERE day = ?').get(day).n > 0, 'recent rows are kept');
   console.log(`hd-events: ${checks} checks passed`);
 } finally {
   rmSync(dir, { recursive: true, force: true });
