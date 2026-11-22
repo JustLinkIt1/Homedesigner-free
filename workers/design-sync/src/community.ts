@@ -643,6 +643,9 @@ export async function listReports(env: CommunityEnv, identity: AuthIdentity) {
  * forum that kept your posts after you deleted your account would make that
  * promise a lie, and the GDPR request unanswerable.
  */
+// The image FILES (posts and avatars) live in R2 under `users/<sub>/community/`
+// (uploadCommunityImage, objectKey), the prefix DELETE /v1/account sweeps before calling
+// this, so only the D1 rows are removed here.
 export async function erasePerson(env: CommunityEnv, subject: string): Promise<void> {
   await env.COMMUNITY.batch([
     env.COMMUNITY.prepare('DELETE FROM reports WHERE reporter = ?').bind(subject),
