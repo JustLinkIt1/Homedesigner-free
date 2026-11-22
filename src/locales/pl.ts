@@ -382,9 +382,9 @@ export const PL: Record<string, string> = {
   'Wall cabinets are part of the full Pro catalog.':
     'Szafki górne są częścią pełnego katalogu Pro.',
   'Add the corner unit':
-    'Dodaj moduł narożny',
+    'Dodaj szafkę narożną',
   'Corner units are part of the full Pro catalog.':
-    'Moduły narożne są częścią pełnego katalogu Pro.',
+    'Szafki narożne są częścią pełnego katalogu Pro.',
   'Save it without the watermark':
     'Zapisz bez znaku wodnego',
   'With Pro, every render and photo you save or share has no watermark.':

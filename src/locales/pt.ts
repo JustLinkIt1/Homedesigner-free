@@ -336,7 +336,7 @@ export const PT: Record<string, string> = {
   'Start a second design':
     'Comece um segundo projeto',
   'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.':
-    'A versão grátis guarda um projeto. O Pro guarda todos os projetos que você começar neste aparelho, e você alterna entre eles quando quiser.',
+    'A versão grátis guarda um projeto. O Pro guarda todos os projetos que você começar neste dispositivo, e você alterna entre eles quando quiser.',
   'Open this sample as its own project':
     'Abra este exemplo como projeto próprio',
   'Free keeps one project. With Pro you can open every sample and keep your own design too.':
@@ -382,9 +382,9 @@ export const PT: Record<string, string> = {
   'Wall cabinets are part of the full Pro catalog.':
     'Armários superiores fazem parte do catálogo completo do Pro.',
   'Add the corner unit':
-    'Adicione o módulo de canto',
+    'Adicione o armário de canto',
   'Corner units are part of the full Pro catalog.':
-    'Módulos de canto fazem parte do catálogo completo do Pro.',
+    'Armários de canto fazem parte do catálogo completo do Pro.',
   'Save it without the watermark':
     'Salve sem marca d’água',
   'With Pro, every render and photo you save or share has no watermark.':

@@ -374,7 +374,7 @@ export const TR: Record<string, string> = {
   'Pro unlocks every door and window style, in 2D and 3D.':
     'Pro, tüm kapı ve pencere stillerinin kilidini 2D ve 3D\'de açar.',
   'Swap in this appliance':
-    'Bu cihazla değiştirin',
+    'Bu beyaz eşyayla değiştirin',
   'Pro unlocks every appliance and fixture in the catalog.':
     'Pro, katalogdaki tüm beyaz eşya ve donanımların kilidini açar.',
   'Add wall cabinets to this kitchen':
@@ -382,9 +382,9 @@ export const TR: Record<string, string> = {
   'Wall cabinets are part of the full Pro catalog.':
     'Üst dolaplar, Pro\'daki tam kataloğun parçasıdır.',
   'Add the corner unit':
-    'Köşe modülünü ekleyin',
+    'Köşe dolabını ekleyin',
   'Corner units are part of the full Pro catalog.':
-    'Köşe modülleri, Pro\'daki tam kataloğun parçasıdır.',
+    'Köşe dolapları, Pro\'daki tam kataloğun parçasıdır.',
   'Save it without the watermark':
     'Filigransız kaydedin',
   'With Pro, every render and photo you save or share has no watermark.':
