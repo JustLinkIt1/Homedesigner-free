@@ -51,9 +51,11 @@ const VIEWPORT = process.env.LANDSCAPE === '1'
   : { width: 390, height: 844 };
 const VIDEO = VIEWPORT;
 
+// Vite's JS entry through node, not node_modules/.bin/vite: on Windows that
+// shim is vite.cmd, which spawn() cannot start without a shell.
 const preview = spawn(
-  join(root, 'node_modules', '.bin', 'vite'),
-  ['preview', '--port', String(PORT), '--strictPort'],
+  process.execPath,
+  [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', String(PORT), '--strictPort'],
   { cwd: root, stdio: 'ignore' },
 );
 const stopPreview = () => {
