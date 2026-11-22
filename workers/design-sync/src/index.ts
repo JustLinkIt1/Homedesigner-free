@@ -25,7 +25,8 @@ import {
   sanitizePlan, type PlanSource,
 } from './ai-plan';
 import { stripeSignatureValid } from './stripe';
-import { SHARED_PLAN_PATH, countSharedPlanOpen, readSharedPlan } from './shared-plans';
+import { SHARED_PLAN_PATH, countSharedPlanOpen, readSharedPlan } from './shared-plans';
+import { recordHdEvents } from './hd-events';
 import {
   RenderError, validRenderId, validRenderImage, readRender,
   reserveRender, dispatchRender, refreshRender, publicRender, freeRenderAvailable,
@@ -1958,6 +1959,18 @@ export default {
         voice_tour: !!env.ANTHROPIC_API_KEY && !!env.ELEVENLABS_API_KEY,
         plan_design: !!env.ANTHROPIC_API_KEY,
       }, 200, { 'Cache-Control': 'public, max-age=300' });
+    }
+
+    // Anonymous first-session events. Public (no sign-in: the point is to see
+    // what a newcomer does before any account exists). Validated, capped per
+    // install id per UTC day, and stored without IP or user agent.
+    if (request.method === 'POST' && url.pathname === '/v1/events') {
+      try {
+        const result = await recordHdEvents(request, env.COMMUNITY);
+        return json(request, result.body, result.status, result.headers);
+      } catch {
+        return json(request, { error: 'Events are unavailable right now.' }, 503);
+      }
     }
 
     // A shared plan is opened by whoever holds its link, signed in or not: the
