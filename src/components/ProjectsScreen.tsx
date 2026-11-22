@@ -17,6 +17,7 @@ import AccountButton from './AccountButton';
 import * as projects from '../lib/projects';
 import ProTag from './ProTag';
 import { useProStore } from '../store/proStore';
+import { trackEvent } from '../lib/events';
 import { openCommunityForum } from '../lib/communityAccess';
 
 function timeAgo(ts: number, t: (en: string) => string): string {
@@ -220,7 +221,10 @@ export default function ProjectsScreen({
               <button
                 key={tpl.key}
                 className={`tpl-card ${i === 0 ? 'accent' : ''} ${tpl.preview ? 'has-preview' : ''}`}
-                onClick={tpl.onClick}
+                onClick={() => {
+                  trackEvent('template_chosen', tpl.key.replace(/^__/, ''), { once: true });
+                  tpl.onClick();
+                }}
               >
                 {tpl.preview ? (
                   <span className="tpl-preview">

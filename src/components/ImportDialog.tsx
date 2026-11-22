@@ -10,6 +10,7 @@ import { autoThreshold, type PixelSegment } from '../lib/autoTrace';
 import { traceWallsV2, traceWallsAuto } from '../lib/wallTrace';
 import { segmentsToWalls } from '../lib/wallBuilder';
 import { toast } from '../lib/ui';
+import { trackEvent } from '../lib/events';
 import Modal from './Modal';
 
 type Stage = 'pick' | 'raster' | 'dxf' | 'busy';
@@ -141,6 +142,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
       }
     } catch (err) {
       console.error(err);
+      trackEvent('import_result', 'fail');
       setError(err instanceof Error ? err.message : t('Could not read that file.'));
       setStage('pick');
     }
@@ -171,12 +173,14 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     if (walls.length === 0) {
       setShowAdvanced(true);
       setTraceInfo(t('No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.'));
+      trackEvent('import_result', 'fail');
       return;
     }
     s.importWalls(walls, replace);
     s.detectRoomsFromWalls(); // auto-create floors from the traced walls
     s.requestFit();
     s.setView('2d');
+    trackEvent('import_result', 'ok');
     onClose();
   };
 
@@ -214,6 +218,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     }
     s.requestFit();
     s.setView('2d');
+    trackEvent('import_result', 'ok');
     onClose();
   };
 

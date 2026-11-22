@@ -68,6 +68,8 @@ dependencies {
     // Direct Play Billing. Checkout sells the lifetime product; ownership also
     // reads subscriptions granted externally by Play promo codes.
     implementation "com.android.billingclient:billing:9.1.0"
+    // Play install referrer: which campaign an install came from (read once).
+    implementation "com.android.installreferrer:installreferrer:2.2"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

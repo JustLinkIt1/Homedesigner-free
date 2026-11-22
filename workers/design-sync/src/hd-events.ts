@@ -14,9 +14,9 @@ export const HD_EVENTS_PER_REQUEST = 20;
 export const HD_EVENTS_PER_INSTALL_PER_DAY = 60;
 const MAX_BODY_CHARS = 8192;
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const DETAIL = /^[A-Za-z0-9][A-Za-z0-9:_.\-]*$/;
-const SOURCE = /^[A-Za-z0-9][A-Za-z0-9:_.\-]*$/;
-const VERSION = /^[A-Za-z0-9][A-Za-z0-9._+\-]*$/;
+const DETAIL = /^[A-Za-z0-9][A-Za-z0-9:_.-]*$/;
+const SOURCE = /^[A-Za-z0-9][A-Za-z0-9:_.-]*$/;
+const VERSION = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
 
 interface Parsed {
   install: string;

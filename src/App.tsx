@@ -65,6 +65,7 @@ import { loadAiCapabilities } from './lib/aiCapabilities';
 import { isWebGLAvailable } from './lib/webgl';
 import { orbitZoom } from './lib/renderBridge';
 import { useI18n, t as translate } from './lib/i18n';
+import { trackEvent } from './lib/events';
 
 // Heavy modules loaded on demand to keep the 2D-first experience light:
 //  - Scene3D pulls in three + drei + postprocessing
@@ -188,6 +189,14 @@ export default function App() {
   // reverse, hinge and swing cannot be expressed by the generic ring.
   const contextualDockSelection =
     selection.kind !== 'furniture' || isStairShape(selectedFurnitureType ?? undefined);
+
+  // Anonymous funnel events: the editor reached, and 3D opened (once a session each).
+  useEffect(() => {
+    if (screen === 'editor') trackEvent('editor_opened', undefined, { once: true });
+  }, [screen]);
+  useEffect(() => {
+    if (screen === 'editor' && view === '3d') trackEvent('view_3d_opened', undefined, { once: true });
+  }, [screen, view]);
 
   // First-run tour: only on entering the editor with a truly blank project
   // (the sample home loads walls before onOpenEditor, so it never shows).

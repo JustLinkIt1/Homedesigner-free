@@ -10,6 +10,7 @@ import { useAuthStore } from '../store/authStore';
 import { APP_NAME } from '../lib/appInfo';
 import { useI18n, useLang } from '../lib/i18n';
 import { toast } from '../lib/ui';
+import { trackEvent } from '../lib/events';
 import Modal from './Modal';
 
 const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blurb: string }> = {
@@ -123,6 +124,11 @@ export default function ProUpsellModal() {
   // with no feature, and then shows the plain Pro pitch — the feature hero
   // below is already conditional on `copy`.
   const open = upsellOpen && !isPro;
+  // Funnel event: the wall was shown. Reports the trigger key, else the feature, else "direct" (/buy, header chip).
+  useEffect(() => {
+    if (open) trackEvent('pro_wall_shown', upsellTrigger ?? upsellFeature ?? 'direct');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire on the open transition only
+  }, [open]);
   // Escape, focus handling and presence now live in <Modal>. Because the modal
   // stays mounted while it animates out, `upsellFeature` may already be null —
   // keep the last one so the closing frame still renders its copy instead of

@@ -9,6 +9,7 @@ import { useDesign } from './store/designStore';
 import { initTheme } from './lib/theme';
 import { toast } from './lib/ui';
 import { finishStrandedGooglePopup } from './lib/googleAuth';
+import { initEvents } from './lib/events';
 import './index.css';
 
 const ModelStudio = React.lazy(() => import('./model-studio/ModelStudio'));
@@ -92,6 +93,8 @@ window.addEventListener('unhandledrejection', (event) => {
 
 // Apply the persisted (or OS) theme before first paint to avoid a flash.
 initTheme();
+// Anonymous first-session events (records the first launch; no-op offline).
+initEvents();
 
 // Expose the design store on window for Playwright tests only (dev builds).
 // The compiled production bundle will still include this because it's
