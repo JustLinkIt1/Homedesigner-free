@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HomeDesigner — Delete your account</title>
+    <meta name="description" content="How to delete your HomeDesigner account and data, what is removed and what is kept." />
+    <link rel="canonical" href="https://homedesignerapp.com/delete-account/" />
+    <style>
+      /* Matches privacy.html and terms deliberately: these pages are read together. */
+      :root { color-scheme: light dark; }
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 40px 20px 80px;
+        line-height: 1.65;
+        color: #1c2026;
+        background: #f6f5f2;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { color: #e8e8e4; background: #17191d; }
+        a { color: #8ab0ff; }
+      }
+      h1 { font-size: 1.7rem; margin-bottom: 0.2rem; }
+      h2 { font-size: 1.15rem; margin-top: 2rem; }
+      .updated { color: #777; font-size: 0.9rem; }
+      ul, ol { padding-left: 1.2rem; }
+      li { margin: 0.35rem 0; }
+      .box {
+        border-left: 3px solid #8ab0ff; padding: 0.6rem 0 0.6rem 0.9rem;
+        margin: 1.1rem 0; background: rgba(138, 176, 255, 0.08);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Delete your HomeDesigner account</h1>
+    <p class="updated">Last updated: 22 November 2026</p>
+
+    <p>
+      You can delete your HomeDesigner account and the data stored with it at any time. This
+      page explains how, what is removed, and what is kept. It applies to the Android app and to
+      the web app.
+    </p>
+
+    <div class="box">
+      <strong>Deleting is permanent.</strong> Your cloud designs, community posts and images,
+      profile picture and AI points cannot be recovered afterwards.
+    </div>
+
+    <h2>How to delete your account</h2>
+    <p><strong>In the Android app</strong></p>
+    <ol>
+      <li>Open HomeDesigner and go to <strong>Settings</strong>.</li>
+      <li>Sign in with Google if you are not already signed in.</li>
+      <li>Tap the bin icon, <strong>Delete account</strong>, and confirm.</li>
+    </ol>
+    <p><strong>On the web</strong></p>
+    <ol>
+      <li>Open <a href="https://homedesignerapp.com/app/">homedesignerapp.com/app/</a> and go to <strong>Settings</strong>.</li>
+      <li>Sign in with the same Google account.</li>
+      <li>Choose <strong>Delete account</strong> and confirm.</li>
+    </ol>
+    <p>You are signed out when it finishes.</p>
+
+    <h2>By email</h2>
+    <p>
+      If you cannot use the app, email
+      <a href="mailto:nathanjoppich@gmail.com?subject=Delete%20my%20HomeDesigner%20account">nathanjoppich@gmail.com</a>
+      from the Google account address you signed in with, and ask us to delete your account. We
+      will confirm when it is done.
+    </p>
+
+    <h2>What is deleted</h2>
+    <ul>
+      <li>Your designs saved in the cloud, and their deletion records.</li>
+      <li>Your community profile (handle, display name, bio), your threads and replies, and any reports you filed.</li>
+      <li>Your profile picture and the images you uploaded to the community.</li>
+      <li>Your AI points balance. Unused points are forfeited.</li>
+      <li>The link between your account and any render links we held (the result links are removed from our records).</li>
+    </ul>
+
+    <h2>What is kept</h2>
+    <ul>
+      <li>
+        <strong>Financial records.</strong> Records of point purchases and spending, and of
+        Google Play purchases (purchase token, order ID, product, time), are kept because they
+        are financial records. They are no longer linked to your account: your Google account
+        identifier is replaced by a one-way hash, and the Play purchase record is unlinked.
+      </li>
+      <li>
+        <strong>Pseudonymous usage counts.</strong> We keep a hashed marker that your free AI
+        render and free starting points were used, and a count of renders made, so the free
+        offers cannot be claimed again by deleting and signing in again. These do not contain
+        your name, email or Google identifier. They are pseudonymous rather than anonymous,
+        because anyone who already knew your Google identifier could recompute the hash.
+      </li>
+      <li>
+        <strong>Anonymous usage events.</strong> The app's anonymous events are tied to a random
+        install identifier, not to your account, so they cannot be removed per person. They are
+        deleted automatically after 13 months.
+      </li>
+      <li>
+        <strong>Plans on your device.</strong> Plans saved on your phone or in your browser stay
+        there. We cannot delete them for you. Uninstalling the app or clearing site data removes them.
+      </li>
+      <li>
+        <strong>Records held by others.</strong> Google Play, Stripe, RevenueCat and our AI
+        providers (ElevenLabs, fal.ai) keep their own records under their own privacy policies.
+        Images generated by AI render are held by ElevenLabs or fal.ai; we only drop our link.
+      </li>
+    </ul>
+
+    <p>
+      See the <a href="/privacy.html">Privacy Policy</a> for the full picture, including
+      retention and service providers.
+    </p>
+  </body>
+</html>

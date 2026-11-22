@@ -27,13 +27,15 @@
   </head>
   <body>
     <h1>HomeDesigner Privacy Policy</h1>
-    <p class="updated">Last updated: November 2026</p>
+    <p class="updated">Last updated: 22 November 2026</p>
 
     <h2>The short version</h2>
     <p>
       HomeDesigner stores your work locally by default. If you choose Google Sign-In, your plans
       are also encrypted in transit and stored in our private cloud storage so you can open them
-      on your other signed-in Android devices. We do not run ads or behavioural analytics.
+      on your other signed-in Android devices. We do not run ads or third-party analytics. The app
+      sends a small set of anonymous usage events, described under
+      <a href="#events">Anonymous usage events</a>.
     </p>
 
     <h2>Community forum (website only)</h2>
@@ -49,7 +51,7 @@
       your display name, your profile picture and your bio are visible to anyone on the internet
       and to search engines. Your email address and
       your Google account identifier are never shown to other users. We still do not run ads or
-      behavioural analytics — the forum sets no tracking cookies and embeds nothing from anyone
+      third-party analytics — the forum sets no tracking cookies and embeds nothing from anyone
       else.
     </p>
     <p>
@@ -58,8 +60,23 @@
       moderation decision.
     </p>
     <p>
-      Deleting your account deletes your forum profile, your discussions and your replies along
-      with your designs.
+      Deleting your account deletes your forum profile, your discussions and your replies, your
+      profile picture and post images, and your AI points balance (forfeited), along with your
+      designs. In the app, open Settings, sign in, and choose <strong>Delete account</strong>. On
+      the web, do the same at <code>homedesignerapp.com/app/</code>. Steps are on
+      <a href="https://homedesignerapp.com/delete-account/">https://homedesignerapp.com/delete-account/</a>, or email us (see Changes &amp; contact).
+    </p>
+
+    <h2 id="events">Anonymous usage events</h2>
+    <p>
+      The app creates a random install identifier on first launch. It is not your Android ID,
+      advertising ID or account. The app sends that identifier, the app version, how the app was
+      installed (from Google Play's install referrer: campaign source and name, or "organic"),
+      and six fixed events: first open, template chosen, editor opened, 3D view opened, Pro
+      screen shown, and import succeeded or failed. We do not store your IP address or user
+      agent with them, and they are not linked to your Google account. These events cannot be
+      switched off. You can reset the identifier by clearing the app's data. Events are kept for
+      13 months and then deleted automatically.
     </p>
 
     <h2>Data stored on your device</h2>
@@ -68,7 +85,9 @@
       browser, for the web version). Files you export — project files, plan images, PDFs and
       renders — are written to the location you choose. Deleting the app (or clearing browser
       site data) deletes the local copy. Signed-in cloud copies remain available until you use
-      <strong>Delete cloud backups</strong> in Settings or ask us to delete them.
+      <strong>Delete account</strong> in Settings, which also deletes your other account data
+      (see <a href="#retention">Data retention and deletion</a>), or ask us to delete them.
+      How to delete: <a href="https://homedesignerapp.com/delete-account/">https://homedesignerapp.com/delete-account/</a>.
     </p>
 
     <h2>Google Sign-In and plan sync</h2>
@@ -77,7 +96,10 @@
       email address and profile image. The app uses the identifier to separate your private plan
       files from every other user's files. Plan snapshots, project names, thumbnails and deletion
       timestamps are stored in a private Cloudflare R2 bucket. Google identity tokens are verified
-      by our Cloudflare Worker and are not stored. See the
+      by our Cloudflare Worker and are not stored. Our server reads your email address only to check
+      that it is verified (and, for card checkout, passes it to Stripe); it does not store it.
+      Your account identifier is also the key for your points, purchases and AI render records.
+      See the
       <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare privacy policy</a>
       and <a href="https://policies.google.com/privacy" rel="noopener">Google privacy policy</a>.
     </p>
@@ -92,11 +114,15 @@
       in either case.
     </p>
     <p>
-      Either way, a record of the purchase is held by our billing provider, RevenueCat
-      (<a href="https://www.revenuecat.com/privacy" rel="noopener">RevenueCat privacy policy</a>),
-      so we can recognise it and restore it across your devices. If you sign in, the purchase is
-      linked to a namespaced version of your stable Google account identifier so Pro access
-      follows you to your other devices. It is not used for advertising.
+      For Android purchases, our server verifies the purchase with Google Play and keeps our own
+      record: the purchase token, order ID, product, purchase time and, if you are signed in, a
+      link to your account. For web Pro purchases, a record is held by our billing provider,
+      RevenueCat
+      (<a href="https://www.revenuecat.com/privacy" rel="noopener">RevenueCat privacy policy</a>).
+      We also query RevenueCat with a namespaced version of your Google account identifier to
+      check web or older purchases, so Pro access follows you to your other devices. For point
+      packs bought on Android, a one-way hash of your account identifier is passed to Google Play
+      to tie the purchase to your account. None of this is used for advertising.
     </p>
 
     <h2>Optional AI design assistant</h2>
@@ -116,7 +142,8 @@
       (storeys, bedrooms, bathrooms, size, furnished, garage), the description you type, and
       when you ask for a change, your request and the plan being changed. For a
       <strong>designer review</strong> we send a text summary of the current floor (room
-      names, sizes, doors, windows and furniture types), an optional picture of the 2D plan,
+      names, sizes, doors, windows and furniture types), an optional picture of the 2D plan (which includes any image you imported as a tracing
+      background),
       and any focus you type. For a <strong>voice tour</strong> Claude writes a short
       narration from the same kind of summary, and that narration text is sent to ElevenLabs
       to be read aloud; the audio comes straight back to your device and we do not store it.
@@ -128,8 +155,11 @@
     <p>
       AI point packs are separate purchases from Pro. We keep private balance and transaction
       records to deliver features, prevent duplicate charges, and restore credits after failed
-      requests. Google Play verifies Android purchases; card checkout is shown only when the
-      payment service is configured. No automatic top-up is made.
+      requests. Google Play verifies Android purchases. On the web, point packs are paid by card
+      through <strong>Stripe</strong>
+      (<a href="https://stripe.com/privacy" rel="noopener">Stripe privacy policy</a>); we send
+      Stripe your Google account identifier and email address to link the payment to your
+      account. No automatic top-up is made.
     </p>
 
     <h2>Optional AI rendering</h2>
@@ -143,24 +173,59 @@
       free account at the lower price carry a small homedesignerapp.com watermark.
       See <a href="https://elevenlabs.io/privacy-policy" rel="noopener">ElevenLabs' privacy policy</a>
       and <a href="https://fal.ai/privacy" rel="noopener">fal.ai's privacy policy</a>
-      for their handling of uploaded and generated media.
+      for their handling of uploaded and generated media. The generated image is stored by
+      ElevenLabs or fal.ai under their own retention terms, and we keep only a link to it. We
+      do not control how long they keep it.
     </p>
     <p>
       We keep private render job records, result links, point balances and transaction records
       to deliver results, prevent duplicate charges and restore failed-render credits.
-      Account deletion removes direct identity and result links from render records. A hashed
-      allowance marker and pseudonymous usage records remain to prevent repeated free-trial
-      claims; financial records are retained without your account identifier.
+      Account deletion removes the render result links and your account identifier from render
+      records. A hashed allowance marker and pseudonymous usage records remain to prevent
+      repeated free-trial claims; the marker is derived from your account identifier with a
+      one-way hash. Points transaction records are kept as financial records, with your account
+      identifier replaced by a one-way hash. These records are pseudonymous rather than
+      anonymous: anyone who already knew your account identifier could recompute the hash, but
+      the identifier cannot be read back from it.
       Images you save on Android are prepared in temporary app storage and shared to the
       destination you choose. Save an AI image you want to keep; provider links are not permanent storage.
     </p>
 
     <h2>Permissions</h2>
     <p>
-      The Android app requests no permissions beyond basic internet access, which is used only
-      for account authentication, plan synchronisation, purchase verification and downloading
-      optional 3D furniture models, and AI assistance or rendering when you request it.
+      The Android app requests no dangerous permissions: no camera, microphone, location,
+      contacts or file access. It uses internet access (account sign-in, plan synchronisation,
+      purchase verification, optional 3D furniture models, and AI assistance or rendering when
+      you request it), plus the normal permissions for Google Play Billing, the Google Play
+      install referrer, network state, vibration (haptics) and Google sign-in credentials.
     </p>
+
+    <h2 id="retention">Data retention and deletion</h2>
+    <ul>
+      <li><strong>Synced designs</strong> (private cloud storage): kept until you delete them or delete your account.</li>
+      <li><strong>Forum profile, posts and images</strong>: kept until you delete them or your account.</li>
+      <li><strong>Points and purchase records</strong>: kept as financial records after deletion, with your account identifier replaced by a one-way hash (see above).</li>
+      <li><strong>Anonymous usage events</strong>: deleted automatically after 13 months. They are not linked to your account, so they cannot be deleted per person.</li>
+      <li><strong>Server logs</strong>: we keep only short-lived error logs from our hosting provider, Cloudflare. We have turned off its per-request logging, so request IP addresses and locations are not recorded in them. Their retention is set by Cloudflare.</li>
+    </ul>
+    <p>
+      To delete your account, open the app, go to Settings, sign in, and choose
+      <strong>Delete account</strong> (or do the same on the web at
+      <code>homedesignerapp.com/app/</code>). Full steps, and what is removed or kept:
+      <a href="https://homedesignerapp.com/delete-account/">https://homedesignerapp.com/delete-account/</a>. You can also email us.
+    </p>
+
+    <h2 id="providers">Service providers</h2>
+    <p>We use these companies to run HomeDesigner. Each processes data for us and only for that purpose:</p>
+    <ul>
+      <li><strong>Cloudflare</strong>: hosting, storage, Workers AI and error logs.</li>
+      <li><strong>Google</strong>: Sign-In, Google Play Billing and the Play install referrer.</li>
+      <li><strong>RevenueCat</strong>: web and older Pro purchases.</li>
+      <li><strong>Stripe</strong>: web card payments.</li>
+      <li><strong>Anthropic</strong>: AI plan, designer review and voice-tour script.</li>
+      <li><strong>ElevenLabs</strong>: voice tour audio and AI renders (using a Google Gemini image model).</li>
+      <li><strong>fal.ai</strong>: fallback AI renders.</li>
+    </ul>
 
     <h2>Children</h2>
     <p>HomeDesigner is a general-audience app and is not directed to children.</p>
