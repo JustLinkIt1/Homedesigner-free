@@ -8,7 +8,7 @@ import { usePointsStore } from '../store/pointsStore';
 import { isWebBillingConfigured, type ProFeature, type ProTrigger } from '../lib/pro';
 import { useAuthStore } from '../store/authStore';
 import { APP_NAME } from '../lib/appInfo';
-import { useI18n } from '../lib/i18n';
+import { useI18n, useLang } from '../lib/i18n';
 import { toast } from '../lib/ui';
 import Modal from './Modal';
 
@@ -73,10 +73,14 @@ export const TRIGGER_COPY: Record<ProTrigger, { title: string; blurb: string }> 
 };
 
 /** Headline and blurb for a wall: the trigger's copy when it has any, else the
- * feature's. Null when there is neither (a direct open from /buy). */
-export function resolveUpsellCopy(feature: ProFeature | null, trigger: ProTrigger | null) {
+ * feature's. Null when there is neither (a direct open from /buy). `shown`
+ * says whether a string can be shown in the current language (English, or
+ * translated): a locale without the trigger copy keeps its translated feature
+ * copy rather than switching to an English headline. */
+export function resolveUpsellCopy(feature: ProFeature | null, trigger: ProTrigger | null, shown: (en: string) => boolean = () => true) {
   const featureCopy = feature ? FEATURE_COPY[feature] : null;
-  const triggerCopy = trigger ? TRIGGER_COPY[trigger] : undefined;
+  const candidate = trigger ? TRIGGER_COPY[trigger] : undefined;
+  const triggerCopy = candidate && shown(candidate.title) && shown(candidate.blurb) ? candidate : undefined;
   if (!featureCopy) return null;
   return { icon: featureCopy.icon, title: triggerCopy?.title ?? featureCopy.title, blurb: triggerCopy?.blurb ?? featureCopy.blurb };
 }
@@ -194,7 +198,9 @@ export default function ProUpsellModal() {
     }).format(yearly.priceMicros / 12 / 1_000_000);
     return { saving, monthlyEquivalent };
   }, [plans]);
-  const copy = resolveUpsellCopy(feature, trigger);
+  const lang = useLang((s) => s.lang);
+  const shown = (en: string) => lang === 'en' || t(en) !== en;
+  const copy = resolveUpsellCopy(feature, trigger, shown);
   const Icon = copy?.icon;
   const buyLabel = needsAccount
     ? t('Sign in with Google')
@@ -268,7 +274,7 @@ export default function ProUpsellModal() {
                 <Crown className="icon" />
               </span>
               <h2>{t('Unlock Pro')}</h2>
-              <p>{t(NO_FEATURE_SUBLINE)}</p>
+              {shown(NO_FEATURE_SUBLINE) && <p>{t(NO_FEATURE_SUBLINE)}</p>}
             </>
           )}
         </div>
