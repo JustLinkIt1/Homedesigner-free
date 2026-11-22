@@ -278,6 +278,12 @@ export function deleteProject(id: string): void {
   const updatedAt = Date.now();
   writeIndex(listProjects().filter((p) => p.id !== id));
   if (sampleIds().includes(id)) writeJSON(SAMPLES_KEY, sampleIds().filter((x) => x !== id));
+  const base = readJSON<Record<string, string>>(SAMPLE_BASE_KEY);
+  if (base && id in base) {
+    const rest = { ...base };
+    delete rest[id];
+    writeJSON(SAMPLE_BASE_KEY, rest);
+  }
   const tombstones = readJSON<ProjectTombstone[]>(TOMBSTONES_KEY) ?? [];
   writeJSON(TOMBSTONES_KEY, [
     { id, updatedAt },

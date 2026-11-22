@@ -12,7 +12,8 @@ const root = process.cwd();
 const rootImport = root.replaceAll('\\', '/');
 const dir = mkdtempSync(join(tmpdir(), 'hdgate-'));
 const entry = join(root, '.gate-entry.tmp.ts');
-writeFileSync(entry, `export * from '${rootImport}/src/lib/projects.ts';`);
+writeFileSync(entry, `export * from '${rootImport}/src/lib/projects.ts';
+export * from '${rootImport}/src/lib/sampleContent.ts';`);
 const out = join(dir, 'bundle.mjs');
 
 // projects.ts touches localStorage at import time.
@@ -34,7 +35,7 @@ try {
 } finally {
   rmSync(entry, { force: true });
 }
-const { createProject, countOwnProjects, listProjects, deleteProject, noteSampleSave, isSample } = mod;
+const { createProject, countOwnProjects, listProjects, deleteProject, noteSampleSave, isSample, sampleContentKey } = mod;
 
 let fails = 0;
 const check = (name, ok, detail = '') => {
@@ -66,6 +67,22 @@ check('opening a sample: the first save records it, nothing counted', noteSample
 check('re-saving the unchanged sample does not claim it', noteSampleSave(sample, 'A') === false && isSample(sample));
 check('the first edit claims it', noteSampleSave(sample, 'B') === true && !isSample(sample) && countOwnProjects() === before + 1);
 check('later saves of a claimed project do nothing', noteSampleSave(sample, 'C') === false && countOwnProjects() === before + 1);
+
+// Looking at another floor is not an edit: the mirror changes, the key does not.
+const ground = { walls: [{ id: 'w1' }], rooms: [], furniture: [], openings: [] };
+const upper = { walls: [{ id: 'w2' }], rooms: [{ id: 'r2' }], furniture: [], openings: [] };
+const floors = [{ id: 'g' }, { id: 'u' }];
+const onGround = { ...ground, floors, floorGeom: { g: ground, u: upper }, activeFloorId: 'g' };
+const onUpper = { ...upper, floors, floorGeom: { g: ground, u: upper }, activeFloorId: 'u' };
+check('switching floors keeps the content key', sampleContentKey(onGround) === sampleContentKey(onUpper));
+const moved = { ...onUpper, walls: [{ id: 'w2', x: 5 }] };
+check('an edit on the floor on screen changes it', sampleContentKey(moved) !== sampleContentKey(onUpper));
+const stale = { ...ground, floors, floorGeom: { g: { ...ground, walls: [] }, u: upper }, activeFloorId: 'g' };
+check('the mirror wins over a stale stored copy of the same floor', sampleContentKey(stale) === sampleContentKey(onGround));
+const gone = createProject('Gone', { sample: true });
+noteSampleSave(gone, 'A');
+deleteProject(gone);
+check('deleting an unclaimed sample drops its recorded key', !(gone in JSON.parse(store.get('homedesigner.projects.sampleBase.v1') ?? '{}')));
 
 const src = readFileSync(join(root, 'src/components/ProjectsScreen.tsx'), 'utf8');
 check('openSample no longer calls requirePro', !/projects:sample'\)/.test(src) && !/openSample[\s\S]{0,300}requirePro/.test(src));

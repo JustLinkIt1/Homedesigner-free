@@ -35,6 +35,7 @@ import { t } from '../lib/i18n';
 import * as haptics from '../lib/haptics';
 import { recordRecent } from '../lib/recent';
 import { useProStore } from './proStore';
+import { sampleContentKey } from '../lib/sampleContent';
 import * as projects from '../lib/projects';
 import type { Units } from '../lib/units';
 
@@ -393,15 +394,6 @@ const loadInitial = (): DesignSnapshot => {
 // meant quietly losing work. Warn the user (throttled: persist runs on every
 // edit, one toast per minute is plenty).
 let lastPersistWarning = 0;
-/** A short hash of what a design contains (not which floor is showing, not
- * its name): tells a sample's first real edit from re-saves of the sample. */
-const contentKeyOf = (snap: DesignSnapshot): string => {
-  const text = JSON.stringify([snap.walls, snap.rooms, snap.furniture, snap.openings, snap.floors, snap.floorGeom]);
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
-  return `${text.length}:${(h >>> 0).toString(36)}`;
-};
-
 const writeSnap = (snap: DesignSnapshot, id?: string) => {
   const result = projects.saveActive(snap, id);
   // A bundled sample opens free; its first saved edit makes it the user's own
@@ -409,7 +401,7 @@ const writeSnap = (snap: DesignSnapshot, id?: string) => {
   // project wall once; the edit is kept either way.
   if (result === 'saved') {
     const pid = id ?? projects.getActiveId();
-    if (pid && projects.isSample(pid) && projects.noteSampleSave(pid, contentKeyOf(snap))) {
+    if (pid && projects.isSample(pid) && projects.noteSampleSave(pid, sampleContentKey(snap))) {
       const pro = useProStore.getState();
       if (!pro.isPro && projects.countOwnProjects() > 1) pro.openUpsell('projects', 'projects:sample');
     }
