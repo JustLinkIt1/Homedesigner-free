@@ -13,6 +13,8 @@
     "MODEL_CATALOG_PUBLIC_BASE": "https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev",
     "COMMUNITY_ADMIN_EMAIL": "nathanjoppich@gmail.com"
   },
+  // Daily clean-up of hd_events older than 13 months (03:17 UTC).
+  "triggers": { "crons": ["17 3 * * *"] },
   "ratelimits": [
     {
       "name": "USER_READ_LIMITER",

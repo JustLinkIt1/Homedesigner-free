@@ -83,3 +83,13 @@ export async function recordHdEvents(
   ).bind(parsed.install, e.event, e.detail, parsed.appVersion, parsed.source, day, now)));
   return { status: 202, body: { ok: true, stored: parsed.events.length } };
 }
+
+/** Anonymous events are kept for 13 months (396 days), then deleted. */
+export const HD_EVENTS_RETENTION_DAYS = 396;
+
+/** Deletes events older than the retention window. Returns the rows removed. */
+export async function purgeOldHdEvents(db: D1Database, now = Date.now()): Promise<number> {
+  const cutoff = Math.floor(now / 86_400_000) - HD_EVENTS_RETENTION_DAYS;
+  const result = await db.prepare('DELETE FROM hd_events WHERE day < ?').bind(cutoff).run();
+  return result.meta?.changes ?? 0;
+}

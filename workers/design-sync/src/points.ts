@@ -395,6 +395,16 @@ export async function grantFreePoints(
   if (account.freeGrantAt) {
     return { granted: 0, balance: account.balance, reason: 'already_granted' };
   }
+  // Erasure rewrites `grant:<sub>` to `grant:erased:<hash>` and deletes the
+  // account row, so `free_grant_at` is gone. The hashed ledger row is the
+  // marker that this person already had their one grant.
+  const erasedMarker = await db
+    .prepare(`SELECT 1 AS found FROM point_ledger WHERE id = ?`)
+    .bind(`grant:${await erasedTag(subject)}`)
+    .first<{ found: number }>();
+  if (erasedMarker) {
+    return { granted: 0, balance: account.balance, reason: 'already_granted' };
+  }
 
   const monthAgo = now - 30 * 24 * 60 * 60 * 1000;
   const issued = await db
@@ -634,4 +644,40 @@ export async function readLiability(db: D1Database): Promise<{
     outstandingPoints: outstanding,
     liabilityUsd: Number((outstanding * USD_PER_POINT).toFixed(2)),
   };
+}
+
+/**
+ * One-way tag that replaces a raw Google `sub` inside ledger ids and refs after
+ * erasure. There is no server secret to pepper it with, so a fixed app constant
+ * is used: it stops the `sub` being read back from the table, but anyone who
+ * already knows a `sub` can recompute the tag (pseudonymous, not anonymous).
+ * Truncated to 32 hex characters (128 bits).
+ */
+export async function erasedTag(subject: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`homedesigner-erased:${subject}`));
+  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `erased:${hex.slice(0, 32)}`;
+}
+
+/**
+ * Erasure for the points tables. Ledger rows are the financial record and stay,
+ * but every id/ref that embedded the raw `sub` gets the one-way tag instead
+ * (`grant:<sub>` becomes `grant:erased:<hash>`, which `grantFreePoints` reads as
+ * "already granted"). Ids stay unique: if a rewritten id would collide with an
+ * existing row it gets the rowid appended. Then the balance row is dropped.
+ */
+export async function erasePoints(db: D1Database, subject: string): Promise<void> {
+  const tag = await erasedTag(subject);
+  const next = (col: string) => `replace(${col}, ?1, ?2)`;
+  await db.batch([
+    db.prepare(
+      `UPDATE point_ledger SET
+         id = CASE WHEN EXISTS (SELECT 1 FROM point_ledger o WHERE o.id = ${next('point_ledger.id')} AND o.rowid != point_ledger.rowid)
+                   THEN ${next('id')} || ':' || rowid ELSE ${next('id')} END,
+         ref = ${next('ref')},
+         subject = 'erased'
+       WHERE subject = ?1 OR instr(id, ?1) > 0 OR instr(COALESCE(ref, ''), ?1) > 0`,
+    ).bind(subject, tag),
+    db.prepare(`DELETE FROM point_accounts WHERE subject = ?`).bind(subject),
+  ]);
 }

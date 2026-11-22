@@ -8,7 +8,7 @@ import {
 } from './community';
 import {
   FEATURES, PACKS, PRO_DISCOUNT, TYPICAL_ROOM_POINTS, readAccount, grantFreePoints, runMetered,
-  creditPurchase, packById, packPriceCents,
+  creditPurchase, packById, packPriceCents, erasePoints,
 } from './points';
 import {
   MAX_ROOMS_PER_CALL, generateRoomNames, generateColourScheme,
@@ -26,7 +26,7 @@ import {
 } from './ai-plan';
 import { stripeSignatureValid } from './stripe';
 import { SHARED_PLAN_PATH, countSharedPlanOpen, readSharedPlan } from './shared-plans';
-import { recordHdEvents } from './hd-events';
+import { recordHdEvents, purgeOldHdEvents } from './hd-events';
 import {
   RenderError, validRenderId, validRenderImage, readRender,
   reserveRender, dispatchRender, refreshRender, publicRender, freeRenderAvailable,
@@ -2149,14 +2149,11 @@ export default {
         ).bind(identity.subject).run();
         // Points die with the account: the balance stops counting towards the
         // outstanding liability, because we no longer owe this person compute.
-        // The ledger rows are detached rather than dropped — they are the
-        // financial record of money taken, and that has to survive an erasure
-        // request without still naming the person.
-        await env.COMMUNITY.prepare(`DELETE FROM point_accounts WHERE subject = ?`)
-          .bind(identity.subject).run();
-        await env.COMMUNITY.prepare(
-          `UPDATE point_ledger SET subject = 'erased' WHERE subject = ?`,
-        ).bind(identity.subject).run();
+        // The ledger rows are detached rather than dropped (the financial
+        // record of money taken must survive), and the raw sub inside their
+        // ids/refs is replaced by a one-way tag. `grant:erased:<tag>` stays as
+        // the "already had the free grant" marker.
+        await erasePoints(env.COMMUNITY, identity.subject);
         return json(request, { deleted: objects.length });
       }
 
@@ -2250,5 +2247,10 @@ export default {
         unauthorized ? 401 : forbidden ? 403 : 400,
       );
     }
+  },
+  // Daily cron (wrangler.jsonc triggers.crons): 13-month retention for the
+  // anonymous app events.
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(purgeOldHdEvents(env.COMMUNITY));
   },
 } satisfies ExportedHandler<Env>;
