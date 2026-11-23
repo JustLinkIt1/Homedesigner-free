@@ -4262,7 +4262,7 @@ button.brand:hover .brand-name {
   top: calc(16px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--surface);
   color: var(--text);
   padding: 9px 16px;
   border-radius: 999px;
@@ -4278,8 +4278,9 @@ button.brand:hover .brand-name {
   height: 38px;
   padding: 0 16px;
   border-radius: var(--r);
+  /* Inverse of the page in both themes (it was white on near-white in dark). */
   background: var(--text);
-  color: #fff;
+  color: var(--surface);
   font-weight: 700;
   font-size: 13px;
   z-index: 8;
