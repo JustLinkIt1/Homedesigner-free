@@ -293,6 +293,17 @@ function makeAnchorTexture(): THREE.CanvasTexture {
   return t;
 }
 
+/** The camera anchor stays fully shown this long after the view last moved. */
+export const ANCHOR_HOLD_MS = 2500;
+/** ...then fades out over this long. */
+export const ANCHOR_FADE_MS = 400;
+/** Anchor opacity for a given idle time (ms since the view last moved). */
+export const anchorAlpha = (idleMs: number): number => {
+  if (idleMs <= ANCHOR_HOLD_MS) return 0.92;
+  const t = (idleMs - ANCHOR_HOLD_MS) / ANCHOR_FADE_MS;
+  return t >= 1 ? 0 : 0.92 * (1 - t);
+};
+
 /**
  * Movable camera anchor (IKEA-kitchen-planner style): a puck lying on the floor
  * at the orbit target. Dragging it pans camera + target together, so orbit and
@@ -325,6 +336,19 @@ function FocusAnchor() {
       }
     };
   }, []);
+  // Shown while the view is being moved and for a moment after, then faded out:
+  // a puck parked in the middle of the room read as a stray control in still
+  // views (store screenshots, promo video, a user just looking). It comes back
+  // on the first touch, so it stays discoverable and grabbable while orbiting.
+  const materialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const lastActive = useRef(performance.now());
+  useEffect(() => {
+    if (!controls) return;
+    const wake = () => { lastActive.current = performance.now(); invalidate(); };
+    const events = ['start', 'change', 'end'] as const;
+    for (const ev of events) controls.addEventListener(ev as never, wake);
+    return () => { for (const ev of events) controls.removeEventListener(ev as never, wake); };
+  }, [controls, invalidate]);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const FLOOR = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
   const drag = useRef<{
@@ -358,6 +382,15 @@ function FocusAnchor() {
     g.position.set(controls.target.x, 0.02, controls.target.z);
     const s = Math.min(1.8, Math.max(0.55, camera.position.distanceTo(controls.target) * 0.075));
     g.scale.setScalar(s);
+    // Fade: full while moving and ANCHOR_HOLD_MS after, then out over ANCHOR_FADE_MS.
+    if (drag.current) lastActive.current = performance.now();
+    const idle = performance.now() - lastActive.current;
+    const alpha = anchorAlpha(idle);
+    const mat = materialRef.current;
+    if (mat && mat.opacity !== alpha) mat.opacity = alpha;
+    g.visible = alpha > 0;
+    // The orbit view renders on demand: keep frames coming while shown, so the hold ends and the fade runs.
+    if (alpha > 0) invalidate();
   });
 
   // Intersections use a camera FROZEN at pointer-down: the live camera pans
@@ -421,7 +454,7 @@ function FocusAnchor() {
         onClick={(e) => e.stopPropagation()}
       >
         <circleGeometry args={[0.5, 24]} />
-        <meshBasicMaterial map={texture} transparent depthWrite={false} depthTest={false} opacity={0.92} />
+        <meshBasicMaterial ref={materialRef} map={texture} transparent depthWrite={false} depthTest={false} opacity={0.92} />
       </mesh>
     </group>
   );
