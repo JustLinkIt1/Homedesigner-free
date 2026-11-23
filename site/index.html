@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HomeDesigner — Free Floor Plan Maker &amp; 3D Home Design App</title>
-  <meta name="description" content="Draw floor plans to scale, furnish every room, plan your kitchen and walk through your home in 3D. With AI floor plans and photo-like AI renders. Free on Android and in your browser." />
+  <title>HomeDesigner — Turn Your PDF or Photo Floor Plan into 3D, Free</title>
+  <meta name="description" content="Import a PDF, photo or DXF of your floor plan. HomeDesigner detects the walls, sets the scale and turns it into a 3D home you can furnish and walk through. Free on Android and web." />
   <link rel="canonical" href="https://homedesignerapp.com/" />
   <link rel="alternate" hreflang="en" href="https://homedesignerapp.com/" />
   <link rel="alternate" hreflang="de" href="https://homedesignerapp.com/de/" />
@@ -15,8 +15,8 @@
   <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="HomeDesigner" />
-  <meta property="og:title" content="HomeDesigner — Free Floor Plan Maker &amp; 3D Home Design App" />
-  <meta property="og:description" content="Draw floor plans, furnish every room, plan your kitchen and walk through your home in 3D. Free on Android and in your browser." />
+  <meta property="og:title" content="HomeDesigner — Turn Your PDF or Photo Floor Plan into 3D, Free" />
+  <meta property="og:description" content="Import your PDF or photo floor plan, let the walls trace themselves, then furnish it and walk through it in 3D. Free on Android and web." />
   <meta property="og:image" content="https://homedesignerapp.com/assets/og-banner.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -292,6 +292,7 @@
     .band .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px 34px; margin-top: 34px; }
     .tick { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; }
     .tick svg { flex: none; width: 22px; height: 22px; margin-top: 2px; }
+    #import { scroll-margin-top: 88px; }
     .tick b { display: block; font-size: 15.5px; letter-spacing: -0.01em; }
     .tick span { color: var(--text-2); font-size: 14px; }
 
@@ -338,6 +339,7 @@
       .nav .btn:not(.primary) { display: none; }
       .nav .btn { padding: 9px 15px; font-size: 13px; }
       .hero { padding-top: 120px; }
+      .hero h1 { font-size: clamp(24px, 8.2vw, 38px); }
       .play-badge { width: 210px; }
       .get .play-badge { width: 224px; }
       .film .stage-head { top: 72px; padding: 0 12px; }
@@ -375,20 +377,20 @@
     <!-- Hero -->
     <section class="hero">
       <div class="wrap">
-        <a class="hero-badge" href="#ai">
-          <span class="dot"></span> New: AI floor plans and photo-like renders <span class="chev">→</span>
+        <a class="hero-badge" href="#import">
+          <span class="dot"></span> Have a plan already? Import PDF, photo, DXF or DWG <span class="chev">→</span>
         </a>
-        <h1>Design your dream home<br /><span class="accent">in 2D &amp; 3D</span></h1>
-        <p class="sub">A free floor plan maker and 3D home design app. Draw a plan in minutes, furnish it, plan the kitchen and walk through the result — on your phone or right here in your browser.</p>
+        <h1>Import your floor plan.<br /><span class="accent">Walk through it in 3D.</span></h1>
+        <p class="sub">Drop in a PDF, a photo or a CAD file (DXF/DWG) of your plan. HomeDesigner detects the walls, you set the scale with one measurement, and it becomes a 3D home to furnish and walk through. No plan yet? Draw one from scratch. Free on your phone or right here in your browser.</p>
         <div class="ctas">
           <a class="play-badge-link" href="https://play.google.com/store/apps/details?id=com.homedesigner.app" target="_blank" rel="noopener" aria-label="Get HomeDesigner on Google Play">
             <img class="play-badge" src="./assets/google-play-badge.png" alt="Get it on Google Play" width="734" height="219" />
           </a>
-          <a class="btn" href="./app/">Use the web app →</a>
+          <a class="btn" href="./app/">Import a plan in your browser →</a>
         </div>
         <div class="launch-proof" aria-label="Availability">
-          <span>Available worldwide</span>
-          <span>Free to start</span>
+          <span>PDF · photo · DXF · DWG</span>
+          <span>Free import, no credits</span>
           <span>Web app included</span>
         </div>
       </div>
@@ -542,9 +544,9 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" opacity="0.35"/><path d="m8.5 12.5 2.4 2.4 4.9-5.3"/></svg>
             <div><b>Exact measurements</b><span>Metric or imperial, typed lengths, live dimension labels.</span></div>
           </div>
-          <div class="tick">
+          <div class="tick" id="import">
             <svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" opacity="0.35"/><path d="m8.5 12.5 2.4 2.4 4.9-5.3"/></svg>
-            <div><b>Import existing plans</b><span>Bring in a PDF, image or DXF and scale it with one measurement.</span></div>
+            <div><b>Import existing plans</b><span>Bring in a PDF, image, DXF or DWG and scale it with one measurement.</span></div>
           </div>
           <div class="tick">
             <svg viewBox="0 0 24 24" fill="none" stroke="#3d8bff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" opacity="0.35"/><path d="m8.5 12.5 2.4 2.4 4.9-5.3"/></svg>
