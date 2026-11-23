@@ -345,7 +345,9 @@ function FocusAnchor() {
   useEffect(() => {
     if (!controls) return;
     const wake = () => { lastActive.current = performance.now(); invalidate(); };
-    const events = ['start', 'change', 'end'] as const;
+    // Only real touches wake it: 'change' also fires from damping and our own renders,
+    // which would keep it shown and the demand loop rendering forever.
+    const events = ['start', 'end'] as const;
     for (const ev of events) controls.addEventListener(ev as never, wake);
     return () => { for (const ev of events) controls.removeEventListener(ev as never, wake); };
   }, [controls, invalidate]);
