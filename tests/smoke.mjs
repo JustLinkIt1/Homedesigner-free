@@ -416,7 +416,7 @@ check('desktop header Settings opens', await page.locator('.modal.settings').isV
 await page.locator('.modal.settings .modal-foot .btn.primary').click();
 await page.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
 check('editor opens', await page.waitForSelector('.toolbar', { timeout: 15000 }).then(() => true).catch(() => false));
-await page.locator('.coach-skip').click().catch(() => {});
+await page.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
 check('2D canvas mounts', (await page.locator('.konvajs-content canvas').count()) > 0);
 
 // A configured desktop build must offer web checkout. Because purchases are
@@ -1027,7 +1027,7 @@ browser.close().catch(() => {});
   await lp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await lp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await lp.waitForSelector('.toolbar', { timeout: 20000 });
-  await lp.locator('.coach-skip').click().catch(() => {});
+  await lp.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
   await lp.waitForSelector('.konvajs-content canvas', { timeout: 15000 });
   await lp.evaluate(() => {
     const s = window.useDesign.getState();
@@ -1268,7 +1268,7 @@ browser.close().catch(() => {});
   await md.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await md.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await md.waitForSelector('.toolbar', { timeout: 20000 });
-  await md.locator('.coach-skip').click().catch(() => {});
+  await md.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
 
   const mobileStairId = await md.evaluate(() => {
     const s = window.useDesign.getState();
@@ -1388,7 +1388,7 @@ if (!process.env.SMOKE_SKIP_3D) {
   await r3.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await r3.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await r3.waitForSelector('.toolbar', { timeout: 20000 });
-  await r3.locator('.coach-skip').click().catch(() => {});
+  await r3.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
   await r3.waitForTimeout(500);
   await r3.click('.view-toggle button:nth-child(2)');
   await r3.waitForTimeout(14000);
@@ -1416,7 +1416,7 @@ if (!process.env.SMOKE_SKIP_3D) {
   await od.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await od.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await od.waitForSelector('.toolbar', { timeout: 20000 });
-  await od.locator('.coach-skip').click().catch(() => {});
+  await od.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
   await od.waitForTimeout(500);
 
   const made = await od.evaluate(() => {
@@ -1469,7 +1469,7 @@ if (!process.env.SMOKE_SKIP_3D) {
   await fp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await fp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await fp.waitForSelector('.toolbar', { timeout: 20000 });
-  await fp.locator('.coach-skip').click().catch(() => {});
+  await fp.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
   await fp.waitForTimeout(500);
 
   // Enclose a square of garden entirely in fence, clear of the house. If fences
@@ -1552,7 +1552,7 @@ if (!process.env.SMOKE_SKIP_3D) {
   await hp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await hp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await hp.waitForSelector('.toolbar', { timeout: 20000 });
-  await hp.locator('.coach-skip').click().catch(() => {});
+  await hp.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
   await hp.waitForTimeout(500);
 
   const made = await hp.evaluate(async () => {
@@ -1613,7 +1613,7 @@ if (!process.env.SMOKE_SKIP_3D) {
   await gp.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await gp.getByRole('button', { name: /Sunlit open-plan home/ }).first().click();
   await gp.waitForSelector('.toolbar', { timeout: 20000 });
-  await gp.locator('.coach-skip').click().catch(() => {});
+  await gp.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
   await gp.waitForTimeout(500);
 
   // Every garden piece must actually place and keep its own footprint — a type
@@ -1971,7 +1971,7 @@ await staleEditorPage.close();
   await dg.reload({ waitUntil: 'networkidle' });
   await dg.locator('.tpl-card', { hasText: 'Start with a room' }).click();
   await dg.waitForSelector('.toolbar', { timeout: 20000 });
-  await dg.locator('.coach-skip').click().catch(() => {});
+  await dg.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
 
   /** Open a dialog from the toolbar overflow and measure how it fits. */
   const openAndMeasure = async (label) => {
@@ -2041,7 +2041,7 @@ await staleEditorPage.close();
   await dd.reload({ waitUntil: 'networkidle' });
   await dd.locator('.tpl-card', { hasText: 'Start with a room' }).click();
   await dd.waitForSelector('.toolbar', { timeout: 20000 });
-  await dd.locator('.coach-skip').click().catch(() => {});
+  await dd.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
   await dd.waitForSelector('.konvajs-content canvas', { timeout: 15000 });
 
   // One press-drag-release with the wall tool, sampling the live preview
@@ -2508,7 +2508,14 @@ await staleEditorPage.close();
 // fires webglcontextrestored and the canvas stays black forever. Simulated here
 // with WEBGL_lose_context, which drives the same real events.
 {
-  const gl = await isolatedBrowser.newPage({ viewport: { width: 900, height: 780 }, reducedMotion: 'reduce' });
+  // Its own Chromium: after a lost WebGL context the browser process can stay
+  // wedged (the next newPage took over a minute, or never returned), so the
+  // remaining checks must not share it. Closed below.
+  const glBrowser = await chromium.launch({
+    executablePath: process.env.CHROMIUM_PATH || undefined,
+    args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'],
+  });
+  const gl = await glBrowser.newPage({ viewport: { width: 900, height: 780 }, reducedMotion: 'reduce' });
   // Collected separately, NOT into the shared pageErrors gate: three.js throws
   // once from its own internals in the same tick the context dies (it compiles
   // against a now-null context), before React can unmount anything. That is the
@@ -2554,7 +2561,7 @@ await staleEditorPage.close();
     check('context loss: nothing unexpected thrown while recovering',
       afterRecovery.length === 0, afterRecovery.slice(0, 2).join(' | '));
   }
-  await gl.close();
+  await Promise.race([glBrowser.close(), new Promise((r) => setTimeout(r, 10000))]).catch(() => {});
 }
 
 // ---- the projects paywall, once it actually applies ------------------------
@@ -2575,14 +2582,28 @@ await staleEditorPage.close();
   await ps.waitForSelector('.projects-screen', { timeout: PAGE_BOOT_TIMEOUT });
   await ps.waitForTimeout(400);
 
-  const gated = await ps.evaluate(() => ({
-    templates: document.querySelectorAll('.tpl-card').length,
-    templateBadges: document.querySelectorAll('.tpl-card .pro-tag-corner').length,
-    heroBadge: document.querySelectorAll('.ps-hero-new .pro-tag-corner').length,
-    cards: document.querySelectorAll('.ps-card').length,
-  }));
-  check('pro: templates are badged once a second project would cost money',
-    gated.templates > 0 && gated.templateBadges === gated.templates, JSON.stringify(gated));
+  // Bundled samples open free (1.22.43), so they carry no badge; every other
+  // card (Import, Blank) does. The AI card is never badged.
+  const gated = await ps.evaluate(async () => {
+    const { SAMPLES } = await import('/src/data/samples.ts');
+    const names = new Set(SAMPLES.map((smp) => smp.name));
+    const cards = [...document.querySelectorAll('.tpl-card')].map((c) => ({
+      title: c.querySelector('.tpl-title')?.textContent ?? '',
+      badged: c.querySelectorAll('.pro-tag-corner').length === 1,
+    }));
+    const paid = cards.filter((c) => !names.has(c.title) && !/with AI/i.test(c.title));
+    return {
+      templates: cards.length,
+      samplesBadged: cards.filter((c) => names.has(c.title) && c.badged).length,
+      paidCards: paid.length,
+      paidBadged: paid.filter((c) => c.badged).length,
+      heroBadge: document.querySelectorAll('.ps-hero-new .pro-tag-corner').length,
+      cards: document.querySelectorAll('.ps-card').length,
+    };
+  });
+  check('pro: non-sample templates are badged once a second project would cost money; samples stay free',
+    gated.templates > 0 && gated.paidCards > 0 && gated.paidBadged === gated.paidCards && gated.samplesBadged === 0,
+    JSON.stringify(gated));
   check('pro: the New project button is badged too', gated.heroBadge === 1, JSON.stringify(gated));
 
   // Duplicate is gated unconditionally, not by count, so it is always marked.
@@ -2620,7 +2641,7 @@ await staleEditorPage.close();
   await tz.reload({ waitUntil: 'networkidle' });
   await tz.locator('.tpl-card', { hasText: 'Start with a room' }).click();
   await tz.waitForSelector('.toolbar', { timeout: 20000 });
-  await tz.locator('.coach-skip').click().catch(() => {});
+  await tz.locator('.coach-skip').click({ timeout: 3000 }).catch(() => {});
 
   // Place something, open Objects, then delete it so the Undo toast appears
   // while the sheet is open — exactly the reported situation.
