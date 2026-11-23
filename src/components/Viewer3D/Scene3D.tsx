@@ -328,6 +328,7 @@ function FocusAnchor() {
     if (!m) return;
     const base = m.raycast.bind(m);
     m.raycast = (rc: THREE.Raycaster, hits: THREE.Intersection[]) => {
+      if (!(materialRef.current && materialRef.current.opacity > 0)) return;
       const tmp: THREE.Intersection[] = [];
       base(rc, tmp);
       for (const h of tmp) {
@@ -342,15 +343,34 @@ function FocusAnchor() {
   // on the first touch, so it stays discoverable and grabbable while orbiting.
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const lastActive = useRef(performance.now());
+  /** A finger (or mouse button) is down on the orbit controls. */
+  const held = useRef(false);
+  const fadeTimer = useRef<number | undefined>(undefined);
+  // The orbit view renders on demand, so nothing would draw the fade: one
+  // render is asked for when the hold ends, and the fade frames ask for the rest.
+  const scheduleFade = () => {
+    window.clearTimeout(fadeTimer.current);
+    fadeTimer.current = window.setTimeout(() => invalidate(), ANCHOR_HOLD_MS + 20);
+  };
+  const wake = () => { lastActive.current = performance.now(); scheduleFade(); invalidate(); };
   useEffect(() => {
     if (!controls) return;
-    const wake = () => { lastActive.current = performance.now(); invalidate(); };
     // Only real touches wake it: 'change' also fires from damping and our own renders,
     // which would keep it shown and the demand loop rendering forever.
-    const events = ['start', 'end'] as const;
-    for (const ev of events) controls.addEventListener(ev as never, wake);
-    return () => { for (const ev of events) controls.removeEventListener(ev as never, wake); };
-  }, [controls, invalidate]);
+    const press = () => { held.current = true; wake(); };
+    const release = () => { held.current = false; wake(); };
+    controls.addEventListener('start' as never, press);
+    controls.addEventListener('end' as never, release);
+    return () => {
+      controls.removeEventListener('start' as never, press);
+      controls.removeEventListener('end' as never, release);
+    };
+  }, [controls, invalidate]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Shown on entering 3D too, then the same hold and fade.
+  useEffect(() => {
+    scheduleFade();
+    return () => window.clearTimeout(fadeTimer.current);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const FLOOR = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
   const drag = useRef<{
@@ -385,14 +405,14 @@ function FocusAnchor() {
     const s = Math.min(1.8, Math.max(0.55, camera.position.distanceTo(controls.target) * 0.075));
     g.scale.setScalar(s);
     // Fade: full while moving and ANCHOR_HOLD_MS after, then out over ANCHOR_FADE_MS.
-    if (drag.current) lastActive.current = performance.now();
+    if (drag.current || held.current) lastActive.current = performance.now();
     const idle = performance.now() - lastActive.current;
     const alpha = anchorAlpha(idle);
     const mat = materialRef.current;
     if (mat && mat.opacity !== alpha) mat.opacity = alpha;
     g.visible = alpha > 0;
-    // The orbit view renders on demand: keep frames coming while shown, so the hold ends and the fade runs.
-    if (alpha > 0) invalidate();
+    // Only the 0.4 s fade itself renders frame after frame; the hold costs nothing.
+    if (alpha > 0 && idle > ANCHOR_HOLD_MS) invalidate();
   });
 
   // Intersections use a camera FROZEN at pointer-down: the live camera pans
@@ -437,6 +457,7 @@ function FocusAnchor() {
     if (!drag.current) return;
     e.stopPropagation();
     drag.current = null;
+    wake();
     if (controls) controls.enabled = true;
     invalidate();
   };
