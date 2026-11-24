@@ -874,7 +874,9 @@ class WebRevenueCatProvider implements ProProvider {
     const result = await purchases.purchase({
       rcPackage: pkg,
       customerEmail: this.email ?? undefined,
-      selectedLocale: document.documentElement.lang || undefined,
+      // Was document.documentElement.lang, which was always 'en'. <html lang> now follows the UI
+      // language (i18n.ts), so the checkout stays on 'en' until a test purchase proves other locales.
+      selectedLocale: 'en',
       defaultLocale: 'en',
       showDiscountCodeField: true,
       discountCode: initialWebDiscountCode(),
