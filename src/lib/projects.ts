@@ -254,6 +254,12 @@ export function countOwnProjects(): number {
   return listProjects().filter((p) => !samples.has(p.id)).length;
 }
 
+/** Whether starting another project of your own (New, or Import a 2D plan) asks
+ *  for Pro: the first own project is free from any card, samples don't count. */
+export function nextProjectNeedsPro(): boolean {
+  return countOwnProjects() >= 1;
+}
+
 /** Create a new empty project and make it active. Returns its id.
  *  `sample` marks a project opened from a bundled sample (not counted). */
 export function createProject(name = 'Untitled home', opts?: { sample?: boolean }): string {

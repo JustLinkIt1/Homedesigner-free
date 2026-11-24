@@ -22,7 +22,7 @@ export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects' | '
  * the headline and blurb in ProUpsellModal, and is what a future
  * `pro_wall_shown` event should report. */
 export type ProTrigger =
-  | 'projects:new' | 'projects:sample' | 'projects:duplicate'
+  | 'projects:new' | 'projects:import' | 'projects:sample' | 'projects:duplicate'
   | 'multiFloor:add' | 'multiFloor:clone' | 'multiFloor:aiPlan'
   | 'pdfExport:pdf' | 'pdfExport:dxf'
   | 'catalog:item' | 'catalog:opening' | 'catalog:appliance' | 'catalog:uppers' | 'catalog:corner'

@@ -137,7 +137,7 @@ export default function ProjectsScreen({
       onClick: () => {
         // An import starts a project of your own, so it is gated like New: the
         // first one is free from any card, a second asks for Pro (EXEC cycle 46).
-        if (projects.countOwnProjects() >= 1 && !requirePro('projects', 'projects:new')) return;
+        if (projects.nextProjectNeedsPro() && !requirePro('projects', 'projects:import')) return;
         projects.createProject('Imported plan');
         newProjectAction();
         onOpenEditor();
