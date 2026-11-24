@@ -457,6 +457,7 @@ function FocusAnchor() {
     if (!drag.current) return;
     e.stopPropagation();
     drag.current = null;
+    held.current = false; // orbit is paused during an anchor drag, so its end event may not come
     wake();
     if (controls) controls.enabled = true;
     invalidate();
