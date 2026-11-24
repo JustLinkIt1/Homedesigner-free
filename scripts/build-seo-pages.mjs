@@ -1197,7 +1197,7 @@ const TOPICS = [
     hero: { src: 'plan-2d.webp', w: 1280, h: 823 },
     shots: [
       { src: 'import.webp', w: 640, h: 640 },
-      { src: 'plan-2d.webp', w: 1280, h: 823 },
+      { src: 'phone-2-plan2d.webp', w: 720, h: 1560, phone: true },
       { src: 'house-3d.webp', w: 1101, h: 782 },
     ],
     cardImg: { src: 'import.webp', w: 640, h: 640 },
