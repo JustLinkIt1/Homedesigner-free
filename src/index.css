@@ -4292,8 +4292,14 @@ button.brand:hover .brand-name {
 @media (max-width: 600px) {
   .walk-hint {
     top: calc(62px + env(safe-area-inset-top));
+    width: max-content; /* lets max-width apply, so the hint fits on two lines */
     max-width: calc(100% - 32px);
     text-align: center;
+  }
+  /* The Build/Objects/Edit bar stays over the canvas in walk mode (about 70 px
+     with its margin); keep the whole joystick ring above it. */
+  .walk-joystick {
+    bottom: calc(96px + env(safe-area-inset-bottom));
   }
 }
 
