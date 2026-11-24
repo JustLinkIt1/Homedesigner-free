@@ -86,6 +86,10 @@ check('deleting an unclaimed sample drops its recorded key', !(gone in JSON.pars
 
 const src = readFileSync(join(root, 'src/components/ProjectsScreen.tsx'), 'utf8');
 check('openSample no longer calls requirePro', !/projects:sample'\)/.test(src) && !/openSample[\s\S]{0,300}requirePro/.test(src));
+const importCard = src.slice(src.indexOf("key: '__import'"), src.indexOf("key: '__import'") + 700);
+const importGate = importCard.indexOf("if (projects.countOwnProjects() >= 1 && !requirePro('projects', 'projects:new')) return;");
+check('an import is gated like New, before its project is made',
+  importGate > 0 && importGate < importCard.indexOf("projects.createProject('Imported plan')"));
 check('new project is gated on the own-project count', /countOwnProjects\(\) >= 1 && !requirePro\('projects', 'projects:new'\)/.test(src));
 
 rmSync(dir, { recursive: true, force: true });
