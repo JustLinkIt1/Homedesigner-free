@@ -4287,6 +4287,16 @@ button.brand:hover .brand-name {
   box-shadow: var(--shadow-md);
 }
 
+/* Phones: the hint wraps to two or three lines and ran under the Exit walk
+   pill (13 px at 412 px wide). Below the pill instead (pill: top 14 + 38 high). */
+@media (max-width: 600px) {
+  .walk-hint {
+    top: calc(62px + env(safe-area-inset-top));
+    max-width: calc(100% - 32px);
+    text-align: center;
+  }
+}
+
 /* On-screen walk controls (touch): a move joystick (bottom-left) and a
    look pad covering the rest of the screen. The joystick sits above the look
    pad so a thumb on the stick never gets read as a look-drag. */
