@@ -345,6 +345,7 @@ function FocusAnchor() {
   const lastActive = useRef(performance.now());
   /** A finger (or mouse button) is down on the orbit controls. */
   const held = useRef(false);
+  const firstFrame = useRef(false);
   const fadeTimer = useRef<number | undefined>(undefined);
   // The orbit view renders on demand, so nothing would draw the fade: one
   // render is asked for when the hold ends, and the fade frames ask for the rest.
@@ -405,6 +406,9 @@ function FocusAnchor() {
     const s = Math.min(1.8, Math.max(0.55, camera.position.distanceTo(controls.target) * 0.075));
     g.scale.setScalar(s);
     // Fade: full while moving and ANCHOR_HOLD_MS after, then out over ANCHOR_FADE_MS.
+    // The hold starts at the first frame actually drawn, not at mount: a cold 3D
+    // load can take seconds, and the puck was gone before the scene appeared.
+    if (!firstFrame.current) { firstFrame.current = true; lastActive.current = performance.now(); scheduleFade(); }
     if (drag.current || held.current) lastActive.current = performance.now();
     const idle = performance.now() - lastActive.current;
     const alpha = anchorAlpha(idle);
