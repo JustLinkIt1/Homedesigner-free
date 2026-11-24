@@ -1066,4 +1066,8 @@ export const NL: Record<string, string> = {
   'Outer side': "Buitenkant",
   'This is the ceiling. Turn Dollhouse on to look inside.': "Dit is het plafond. Zet Poppenhuis aan om naar binnen te kijken.",
   'Turn on': "Aanzetten",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': 'Linkerstick om te bewegen · sleep rechts om rond te kijken · Stoppen om te verlaten',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Klik om rond te kijken · WASD / pijltjes om te bewegen · Shift om te rennen · Esc om te stoppen',
+  'Exit walk': 'Rondlopen stoppen',
 };

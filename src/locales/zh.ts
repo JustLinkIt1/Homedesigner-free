@@ -1066,4 +1066,8 @@ export const ZH: Record<string, string> = {
   'Outer side': "外侧",
   'This is the ceiling. Turn Dollhouse on to look inside.': "这是天花板。打开娃娃屋模式即可查看内部。",
   'Turn on': "打开",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': '左摇杆移动 · 拖动右侧环顾 · 点“退出”离开',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': '点击环顾 · WASD / 方向键移动 · Shift 奔跑 · Esc 退出',
+  'Exit walk': '退出漫游',
 };

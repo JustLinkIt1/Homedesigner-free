@@ -1066,4 +1066,8 @@ export const JA: Record<string, string> = {
   'Outer side': "外側",
   'This is the ceiling. Turn Dollhouse on to look inside.': "これは天井です。中を見るにはドールハウスをオンにしてください。",
   'Turn on': "オンにする",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': '左スティックで移動・右側をドラッグで見回す・「終了」で戻る',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'クリックで見回す・WASD／矢印キーで移動・Shiftで走る・Escで終了',
+  'Exit walk': 'ウォークスルーを終了',
 };

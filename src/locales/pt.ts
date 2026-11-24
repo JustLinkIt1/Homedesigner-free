@@ -1131,4 +1131,8 @@ export const PT: Record<string, string> = {
   'Outer side': "Lado externo",
   'This is the ceiling. Turn Dollhouse on to look inside.': "Este é o teto. Ative Casa de bonecas para olhar por dentro.",
   'Turn on': "Ativar",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': 'Manche esquerdo para mover · arraste à direita para olhar · Sair para terminar',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Clique para olhar · WASD / setas para mover · Shift para correr · Esc para sair',
+  'Exit walk': 'Sair do percurso',
 };

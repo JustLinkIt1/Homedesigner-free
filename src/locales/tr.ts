@@ -1131,4 +1131,8 @@ export const TR: Record<string, string> = {
   'Outer side': "Dış taraf",
   'This is the ceiling. Turn Dollhouse on to look inside.': "Bu tavan. İçeriye bakmak için Oyuncak evi açın.",
   'Turn on': "Aç",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': 'Sol çubukla yürüyün · sağ tarafı sürükleyerek bakının · çıkmak için Çık',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Bakmak için tıklayın · WASD / oklarla yürüyün · Shift ile koşun · Esc ile çıkın',
+  'Exit walk': 'Gezintiden çık',
 };

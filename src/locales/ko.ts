@@ -1066,4 +1066,8 @@ export const KO: Record<string, string> = {
   'Outer side': "바깥쪽",
   'This is the ceiling. Turn Dollhouse on to look inside.': "천장입니다. 내부를 보려면 돌하우스를 켜세요.",
   'Turn on': "켜기",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': '왼쪽 스틱으로 이동 · 오른쪽을 드래그해 둘러보기 · 종료를 눌러 나가기',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': '클릭해 둘러보기 · WASD / 방향키로 이동 · Shift로 달리기 · Esc로 종료',
+  'Exit walk': '워크스루 종료',
 };

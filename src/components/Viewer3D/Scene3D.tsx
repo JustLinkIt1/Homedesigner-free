@@ -1454,11 +1454,11 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       <>
         <div className="walk-hint">
           {IS_TOUCH
-            ? 'Left stick to move · drag the right side to look · Exit to leave'
-            : 'Click to look · WASD / arrows to move · Shift to run · Esc to exit'}
+            ? t3('Left stick to move · drag the right side to look · Exit to leave')
+            : t3('Click to look · WASD / arrows to move · Shift to run · Esc to exit')}
         </div>
         <button className="walk-exit" onClick={() => setWalkMode(false)}>
-          ✕ Exit walk
+          ✕ {t3('Exit walk')}
         </button>
         {IS_TOUCH && <WalkTouchControls moveRef={moveRef} lookRef={lookRef} />}
       </>

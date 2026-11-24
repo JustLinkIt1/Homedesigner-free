@@ -1066,4 +1066,8 @@ export const RU: Record<string, string> = {
   'Outer side': "Внешняя сторона",
   'This is the ceiling. Turn Dollhouse on to look inside.': "Это потолок. Включите «Кукольный дом», чтобы заглянуть внутрь.",
   'Turn on': "Включить",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': 'Левый джойстик — движение · проведите справа — обзор · «Завершить» — выход',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Щелчок — обзор · WASD / стрелки — движение · Shift — бег · Esc — выход',
+  'Exit walk': 'Завершить прогулку',
 };
