@@ -35,7 +35,7 @@ const site = resolve(root, 'site');
 const ORIGIN = 'https://homedesignerapp.com';
 const PLAY = 'https://play.google.com/store/apps/details?id=com.homedesigner.app';
 /** Last change to the pages written here and to the home page. */
-const UPDATED = '2026-11-12';
+const UPDATED = '2026-11-25';
 /** Last change to the pages the sitemap lists but this script does not write. */
 const UPDATED_OTHER = '2026-11-11';
 
@@ -1036,7 +1036,7 @@ const TOPICS = [
         ['Render it', 'Switch to 3D and turn the view into a photo-like picture.'],
       ],
       faq: [
-        ['What do the AI tools cost?', 'They use points. New accounts get a one-time set of free points, enough to try an AI plan or a couple of renders, and more can be bought in the app. Everything else in HomeDesigner works without points.'],
+        ['What do the AI tools cost?', 'They use points, which can be bought in the app. Everything else in HomeDesigner works without points.'],
         ['Can I edit a plan the AI made?', 'Yes. The result is a normal HomeDesigner project. You can move walls, change rooms, swap furniture and view it in 3D.'],
         ['How close is the AI render to my design?', 'It keeps the layout, walls and main furniture of your 3D view and adds realistic materials and lighting. It can add small decorative details, so treat it as an impression, not a technical drawing.'],
         ['Where do my images go?', 'A render sends only the preview image to the rendering service. An AI plan sends your answers, and a designer review sends a picture of the plan. The privacy policy lists the services used.'],
@@ -1084,7 +1084,7 @@ const TOPICS = [
         ['Rendern', 'Wechsle zu 3D und verwandle die Ansicht in ein fotoähnliches Bild.'],
       ],
       faq: [
-        ['Was kosten die KI-Werkzeuge?', 'Sie verbrauchen Punkte. Neue Konten erhalten einmalig Gratispunkte, genug für einen KI-Grundriss oder ein paar Renderings, und weitere Punkte lassen sich in der App kaufen. Alles andere in HomeDesigner funktioniert ohne Punkte.'],
+        ['Was kosten die KI-Werkzeuge?', 'Sie verbrauchen Punkte, die sich in der App kaufen lassen. Alles andere in HomeDesigner funktioniert ohne Punkte.'],
         ['Kann ich einen KI-Grundriss bearbeiten?', 'Ja. Das Ergebnis ist ein normales HomeDesigner-Projekt. Du kannst Wände verschieben, Räume ändern, Möbel tauschen und alles in 3D ansehen.'],
         ['Wie nah ist das KI-Rendering an meinem Entwurf?', 'Es behält Aufteilung, Wände und die wichtigsten Möbel deiner 3D-Ansicht bei und ergänzt realistische Materialien und Licht. Es kann kleine dekorative Details hinzufügen. Sieh es deshalb als Eindruck, nicht als technische Zeichnung.'],
         ['Wohin gehen meine Bilder?', 'Beim Rendering wird nur das Vorschaubild an den Rendering-Dienst gesendet. Ein KI-Grundriss sendet deine Antworten, eine Designberatung ein Bild des Plans. Die Datenschutzerklärung nennt die verwendeten Dienste.'],
@@ -1133,7 +1133,7 @@ const TOPICS = [
         ['Lancez le rendu', 'Passez en 3D et transformez la vue en image photoréaliste.'],
       ],
       faq: [
-        ['Combien coûtent les outils IA ?', 'Ils utilisent des points. Les nouveaux comptes reçoivent une seule fois des points offerts, de quoi essayer un plan IA ou quelques rendus, et il est possible d’en acheter d’autres dans l’appli. Tout le reste de HomeDesigner fonctionne sans points.'],
+        ['Combien coûtent les outils IA ?', 'Ils utilisent des points, qui s’achètent dans l’appli. Tout le reste de HomeDesigner fonctionne sans points.'],
         ['Puis-je modifier un plan créé par l’IA ?', 'Oui. Le résultat est un projet HomeDesigner normal. Vous pouvez déplacer les murs, modifier les pièces, changer les meubles et voir le tout en 3D.'],
         ['Le rendu IA est-il fidèle à mon projet ?', 'Il conserve l’agencement, les murs et les meubles principaux de votre vue 3D et ajoute des matériaux et un éclairage réalistes. Il peut ajouter de petits détails décoratifs : voyez-le comme une impression d’ensemble, pas comme un dessin technique.'],
         ['Où vont mes images ?', 'Un rendu n’envoie que l’image d’aperçu au service de rendu. Un plan IA envoie vos réponses, et un avis de designer envoie une image du plan. La politique de confidentialité indique les services utilisés.'],
@@ -1182,12 +1182,82 @@ const TOPICS = [
         ['Renderízalo', 'Pasa al 3D y convierte la vista en una imagen fotorrealista.'],
       ],
       faq: [
-        ['¿Cuánto cuestan las herramientas de IA?', 'Usan puntos. Las cuentas nuevas reciben una sola vez puntos gratis, suficientes para probar un plano con IA o un par de renders, y se pueden comprar más en la app. Todo lo demás en HomeDesigner funciona sin puntos.'],
+        ['¿Cuánto cuestan las herramientas de IA?', 'Usan puntos, que se pueden comprar en la app. Todo lo demás en HomeDesigner funciona sin puntos.'],
         ['¿Puedo editar un plano hecho por la IA?', 'Sí. El resultado es un proyecto normal de HomeDesigner. Puedes mover paredes, cambiar habitaciones, sustituir muebles y verlo en 3D.'],
         ['¿Cuánto se parece el render con IA a mi diseño?', 'Conserva la distribución, las paredes y los muebles principales de tu vista 3D y añade materiales e iluminación realistas. Puede añadir pequeños detalles decorativos, así que tómalo como una impresión, no como un dibujo técnico.'],
         ['¿Adónde van mis imágenes?', 'Un render envía solo la imagen de vista previa al servicio de renderizado. Un plano con IA envía tus respuestas, y la revisión de un diseñador envía una imagen del plano. La política de privacidad indica los servicios que se utilizan.'],
       ],
       card: ['Planos y renders con IA', 'Describe tu casa para obtener un plano y convierte la vista 3D en una imagen fotorrealista.', 'Render fotorrealista con IA de una casa'],
+    },
+  },
+  {
+    // English only (EXEC cycle 50): no de/fr/es page, no hreflang to them, no link in their nav.
+    // Copy: drafts/hd-landing-dxf-to-3d-2026-11-25.md, claims from research/hd-dxf-import-claims-2026-11-25.md §6.
+    only: ['en'],
+    hero: { src: 'plan-2d.webp', w: 1280, h: 823 },
+    shots: [
+      { src: 'import.webp', w: 640, h: 640 },
+      { src: 'plan-2d.webp', w: 1280, h: 823 },
+      { src: 'house-3d.webp', w: 1101, h: 782 },
+    ],
+    cardImg: { src: 'import.webp', w: 640, h: 640 },
+    en: {
+      slug: 'dxf-to-3d',
+      nav: 'DXF to 3D',
+      title: 'DXF Floor Plan to 3D Online, Free | HomeDesigner',
+      description:
+        'Import a DXF or DWG floor plan in your browser, or a DXF in the Android app. Walls, doors and room names come from the file, then walk through it in 3D. Free.',
+      h1: ['DXF floor plan to 3D', 'free, in your browser'],
+      sub: 'Import the DXF from your CAD app and HomeDesigner turns its lines into real walls, doors and rooms. One tap later you are walking through it in 3D.',
+      heroAlt: 'A floor plan with walls, doors and room names in the HomeDesigner 2D editor',
+      kicker: 'DXF and DWG import',
+      heading: 'Your CAD drawing as a home you can walk through',
+      lead: 'HomeDesigner reads the drawing itself, not a picture of it, so walls come in as real geometry you can edit, furnish and view in 3D. It works in the browser and in the Android app, with no credits needed.',
+      rows: [
+        {
+          alt: 'A floor plan drawing with an import arrow',
+          h: 'Real walls from your drawing',
+          p: 'Choose a .dxf or .dwg file and HomeDesigner reads the geometry: lines, polylines, arcs and blocks. Before anything is placed, it shows how many walls it found and the scale it used.',
+          list: [
+            ['Double-line walls', 'become single walls with their measured thickness'],
+            ['Units from the file', 'read and checked against a sensible building size'],
+            ['Clutter left out', 'dimension lines and stray title blocks are skipped'],
+          ],
+        },
+        {
+          alt: 'A floor plan with doors, windows and room names in the 2D editor',
+          h: 'Doors, windows and room names come with it',
+          p: 'Layer names tell HomeDesigner which lines are walls, doors and windows, in English, German, French, Italian or Spanish. Room labels written on the plan become the room names.',
+          list: [
+            ['Doors and windows', 'from door and window layers and blocks'],
+            ['Room names', 'taken from the text on your plan'],
+            ['Storeys', 'named on layers are imported as stacked floors'],
+          ],
+        },
+        {
+          alt: 'A floor plan shown as a furnished 3D house',
+          h: 'Then see it in 3D',
+          p: 'After the import you are in the 2D editor. Switch to 3D with one tap, walk through the rooms, and furnish them to scale before anything is built or bought.',
+          list: [
+            ['Walk-through 3D', 'on your phone or in the browser'],
+            ['Edit after import', 'move walls, add openings, change rooms'],
+            ['Export', 'PNG for free, PDF and DXF export in HomeDesigner Pro'],
+          ],
+        },
+      ],
+      steps: [
+        ['Open HomeDesigner', 'Start the web app in your browser, or the Android app.'],
+        ['Import your plan', 'Tap "Import a 2D plan" and pick the .dxf or .dwg. In the browser you can also drag the file in.'],
+        ['Check and import', 'Look over the walls, scale and floors found, then import.'],
+        ['Switch to 3D', 'One tap takes you from the plan to a 3D walk-through.'],
+      ],
+      faq: [
+        ['Is importing a DXF free?', 'Yes. The import uses no credits and runs on your own device. Your first project is free whichever way you start it; a second project needs HomeDesigner Pro, which also adds PDF and DXF export.'],
+        ['Can I import a DWG file?', 'Yes. HomeDesigner converts a DWG to DXF in the browser before importing it. If a file can\'t be converted, save it as DXF from your CAD program and import that.'],
+        ['What in my drawing is imported?', 'Lines, polylines, arcs, circles and blocks, plus text for room names. Splines, hatches, dimension objects and 3D objects are left out: HomeDesigner builds a 2D plan and raises the walls to a standard height.'],
+        ['Does it work on Android?', 'Yes. The Android app has the same importer as the web app. Pick the file from your phone\'s files; in the browser you can also drag and drop it.'],
+      ],
+      card: ['DXF to 3D', 'Import a DXF or DWG floor plan and walk through it in 3D.', 'A floor plan drawing with an import arrow'],
     },
   },
 ];
@@ -1202,12 +1272,16 @@ const frenchSpacing = (v) => {
   return v;
 };
 LANGS.fr = frenchSpacing(LANGS.fr);
-for (const topic of TOPICS) topic.fr = frenchSpacing(topic.fr);
+for (const topic of TOPICS) if (topic.fr) topic.fr = frenchSpacing(topic.fr);
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 /** Site path of a language's landing page, and of a topic page in that language. */
 const homePath = (code) => `${LANGS[code].dir}/`;
 const topicPath = (topic, code) => `${LANGS[code].dir}/${topic[code].slug}/`;
+/** Whether a topic has a page in a language: all four, unless `only` names a few (e.g. the English-only DXF page). */
+const has = (topic, code) => !topic.only || topic.only.includes(code);
+/** The topics a language has pages for, in nav order. */
+const topicsIn = (code) => TOPICS.filter((t) => has(t, code));
 const playUrl = (code) => esc(PLAY + (LANGS[code].hl ? `&hl=${LANGS[code].hl}` : ''));
 /** The first sentence of a paragraph, with its full stop. */
 const firstSentence = (s) => s.split(/(?<=[.!?])\s/)[0];
@@ -1231,7 +1305,7 @@ function head(code, { title, description, paths, jsonLd }) {
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}" />
   <link rel="canonical" href="${self}" />
-  ${CODES.map((c) => `<link rel="alternate" hreflang="${c}" href="${ORIGIN}${paths[c]}" />`).join('\n  ')}
+  ${Object.keys(paths).map((c) => `<link rel="alternate" hreflang="${c}" href="${ORIGIN}${paths[c]}" />`).join('\n  ')}
   <link rel="alternate" hreflang="x-default" href="${ORIGIN}${paths.en}" />
   <link rel="icon" type="image/png" href="/assets/brand-icon.png" />
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -1256,7 +1330,7 @@ function header(code, current) {
     <div class="wrap nav">
       <a class="logo" href="${homePath(code)}"><img src="/assets/brand-icon.png" alt="" width="32" height="32" />HomeDesigner</a>
       <nav class="links">
-        ${TOPICS.map((t) => `<a href="${topicPath(t, code)}"${t === current ? ' aria-current="page"' : ''}>${esc(t[code].nav)}</a>`).join('\n        ')}
+        ${topicsIn(code).map((t) => `<a href="${topicPath(t, code)}"${t === current ? ' aria-current="page"' : ''}>${esc(t[code].nav)}</a>`).join('\n        ')}
         <a href="/buy/">Pro</a>
       </nav>
       <span class="spacer"></span>
@@ -1294,13 +1368,13 @@ function footer(code, paths) {
     <div class="wrap row">
       <span>© ${UPDATED.slice(0, 4)} HomeDesigner</span>
       <span class="spacer"></span>
-      ${TOPICS.map((t) => `<a href="${topicPath(t, code)}">${esc(t[code].nav)}</a>`).join('\n      ')}
+      ${topicsIn(code).map((t) => `<a href="${topicPath(t, code)}">${esc(t[code].nav)}</a>`).join('\n      ')}
       <a href="/buy/">Pro</a>
       <a href="/privacy">${esc(ui.privacy)}</a>
       <a href="/terms/">${esc(ui.terms)}</a>
     </div>
     <nav class="wrap langs" aria-label="${esc(ui.language)}">
-      ${CODES.map((c) => `<a href="${paths[c]}" hreflang="${c}" lang="${c}"${c === code ? ' aria-current="page"' : ''}>${LANGS[c].name}</a>`).join(' ·\n      ')}
+      ${Object.keys(paths).map((c) => `<a href="${paths[c]}" hreflang="${c}" lang="${c}"${c === code ? ' aria-current="page"' : ''}>${LANGS[c].name}</a>`).join(' ·\n      ')}
     </nav>
   </footer>`;
 }
@@ -1308,8 +1382,8 @@ function footer(code, paths) {
 function renderTopic(topic, code) {
   const { ui, colon } = LANGS[code];
   const page = topic[code];
-  const paths = Object.fromEntries(CODES.map((c) => [c, topicPath(topic, c)]));
-  const others = TOPICS.filter((t) => t !== topic);
+  const paths = Object.fromEntries(CODES.filter((c) => has(topic, c)).map((c) => [c, topicPath(topic, c)]));
+  const others = topicsIn(code).filter((t) => t !== topic);
   const jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -1451,7 +1525,7 @@ ${header(code, null)}
         <span class="kicker">${esc(home.kicker)}</span>
         <h2 class="title">${esc(home.heading)}</h2>
         <div class="features">
-${TOPICS.map((t) => {
+${topicsIn(code).map((t) => {
   const [title, text, alt] = t[code].card;
   return `          <a class="feature" href="${topicPath(t, code)}">
             <div class="shot">${img(t.cardImg, alt)}</div>
@@ -1481,7 +1555,7 @@ const checkMeta = (where, { title, description }) => {
 };
 for (const code of CODES) {
   if (LANGS[code].home) checkMeta(homePath(code), LANGS[code].home);
-  for (const topic of TOPICS) {
+  for (const topic of topicsIn(code)) {
     const page = topic[code];
     checkMeta(topicPath(topic, code), page);
     if (page.rows.length !== topic.shots.length) problems.push(`${topicPath(topic, code)}: ${page.rows.length} rows for ${topic.shots.length} pictures`);
@@ -1504,7 +1578,7 @@ for (const code of CODES) {
     await write(homePath(code), renderHome(code));
     written.push(homePath(code));
   }
-  for (const topic of TOPICS) {
+  for (const topic of topicsIn(code)) {
     await write(topicPath(topic, code), renderTopic(topic, code));
     written.push(topicPath(topic, code));
   }
@@ -1519,6 +1593,8 @@ const entries = [
   ['/buy/', '0.6', UPDATED_OTHER],
   ['/community/', '0.5', UPDATED_OTHER],
   ['/terms/', '0.2', UPDATED_OTHER],
+  // The account deletion page Google Play links to (written by hand, 22 Nov 2026).
+  ['/delete-account/', '0.2', '2026-11-22'],
 ];
 await writeFile(
   resolve(site, 'sitemap.xml'),
