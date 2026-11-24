@@ -4296,11 +4296,6 @@ button.brand:hover .brand-name {
     max-width: calc(100% - 32px);
     text-align: center;
   }
-  /* The Build/Objects/Edit bar stays over the canvas in walk mode (about 70 px
-     with its margin); keep the whole joystick ring above it. */
-  .walk-joystick {
-    bottom: calc(96px + env(safe-area-inset-bottom));
-  }
 }
 
 /* On-screen walk controls (touch): a move joystick (bottom-left) and a
@@ -4343,6 +4338,15 @@ button.brand:hover .brand-name {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   will-change: transform;
   pointer-events: none;
+}
+
+/* Phones: the Build/Objects/Edit bar stays over the canvas in walk mode
+   (about 70 px with its margin); keep the whole joystick ring above it.
+   After the base rule so it wins the cascade. */
+@media (max-width: 600px) {
+  .walk-joystick {
+    bottom: calc(96px + env(safe-area-inset-bottom));
+  }
 }
 
 /* ---------- First-run coach marks ---------- */
