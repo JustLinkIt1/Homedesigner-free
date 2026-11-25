@@ -2211,7 +2211,21 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
             // size. Wrapping plus a modest shrink actually fits the longest word.
             const wantW = measureTextPx(nameText, 13 / zoom, true);
             const fit = wantW > 0 ? avail / wantW : 1;
-            const nameFs = (13 / zoom) * (fit >= 1 ? 1 : fit >= 0.75 ? fit : 0.78);
+            let nameFs = (13 / zoom) * (fit >= 1 ? 1 : fit >= 0.75 ? fit : 0.78);
+            // Greedy word wrap, the way Konva's wrap="word" lays the name out. The old check
+            // ("wider than one line → 2 lines") missed names that need THREE lines at this width:
+            // "Cozinha e sala de jantar" printed its third line over its own area figure.
+            const wrappedLines = (fs: number): number => {
+              let lines = 1;
+              let line = '';
+              for (const word of nameText.split(/\s+/)) {
+                const next = line ? `${line} ${word}` : word;
+                if (line && measureTextPx(next, fs, true) > avail) { lines += 1; line = word; } else line = next;
+              }
+              return lines;
+            };
+            // Two lines at most: shrink a little (to 0.7 of the normal size) before giving up.
+            while (wrappedLines(nameFs) > 2 && nameFs > (13 / zoom) * 0.7) nameFs *= 0.95;
             // Konva falls back to breaking mid-WORD when a single word is wider
             // than the box, which turns a 2.4m hallway into "Hal / lwa / y". If
             // the longest word cannot fit, no honest label exists at this zoom —
@@ -2220,7 +2234,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
               ...nameText.split(/\s+/).map((w) => measureTextPx(w, nameFs, true)),
             );
             if (longestWordW > avail) return null;
-            const nameLines = measureTextPx(nameText, nameFs, true) > avail ? 2 : 1;
+            const nameLines = Math.min(2, wrappedLines(nameFs));
             // Same rule for the area line: a truncated "1…" says nothing, so it
             // is shown only when it fits whole.
             const areaW = showArea ? measureTextPx(areaText, areaFs) : 0;
@@ -2255,6 +2269,7 @@ export default function Canvas2D({ onEditSelection }: { onEditSelection?: () => 
                   align="center"
                   text={nameText}
                   fontSize={nameFs}
+                  height={nameH}
                   lineHeight={NAME_LINE_H}
                   fill={C.labelInk}
                   fontStyle="bold"
