@@ -173,3 +173,12 @@ export function planOpacity(tl: BuildTimeline, t: number): number {
   if (t <= tl.fadeOut) return PLAN_OPACITY;
   return PLAN_OPACITY * (1 - (t - tl.fadeOut) / Math.max(1, tl.duration - tl.fadeOut));
 }
+
+/**
+ * What a value should be when the animation lets go of it: its resting value
+ * if it still holds what the animation last wrote, otherwise whatever someone
+ * else set since (React re-applying a changed prop, a drag), left alone.
+ */
+export function restoreIfUntouched<T>(current: T, lastWritten: T, rest: T): T {
+  return Object.is(current, lastWritten) ? rest : current;
+}

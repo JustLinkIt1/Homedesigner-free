@@ -1,4 +1,4 @@
-// "Watch your plan build itself": the timeline, and when it plays.
+// "Watch your plan build itself": the timeline, when it plays, and how it lets go.
 //
 // The animation is one pure function of (scene counts, time), so it can be
 // checked without a renderer: parts appear and land in order, the length is
@@ -26,7 +26,7 @@ try {
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
-const { buildTimeline, partPose, planOpacity, PLAN_OPACITY } = tl;
+const { buildTimeline, partPose, planOpacity, PLAN_OPACITY, restoreIfUntouched } = tl;
 const { shouldAutoBuild } = play;
 
 let failures = 0;
@@ -166,6 +166,16 @@ for (const [name, desc] of [['small', small], ['two storeys', twoStorey], ['huge
   check('?build=off: no', auto({ override: 'off' }) === false);
   check('?build=on beats played, reduced motion, automation and storage',
     auto({ override: 'on', played: null, reducedMotion: true, webdriver: true, projectId: null }) === true);
+}
+
+// --- letting go at the end -------------------------------------------------
+{
+  check('a value still as the animation left it goes back to rest', restoreIfUntouched(2.2, 2.2, 0) === 0);
+  check('a value someone else set since is left alone', restoreIfUntouched(1.5, 2.2, 0) === 1.5);
+  check('...including a new resting value React re-applied mid-way', restoreIfUntouched(0.3, 0.8, 0) === 0.3);
+  check('visibility: hidden by the animation comes back', restoreIfUntouched(false, false, true) === true);
+  check('visibility: hidden by someone else stays hidden', restoreIfUntouched(false, true, true) === false);
+  check('restoring twice changes nothing', restoreIfUntouched(restoreIfUntouched(2.2, 2.2, 0), 0, 0) === 0);
 }
 
 console.log(failures === 0 ? '\nBUILD ANIMATION: all green' : `\nBUILD ANIMATION: ${failures} FAILED`);

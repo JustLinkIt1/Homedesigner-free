@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { useDesign } from '../../store/designStore';
 import type { BackgroundPlan, FloorInfo } from '../../types';
 import {
-  buildTimeline, partPose, planOpacity,
+  buildTimeline, partPose, planOpacity, restoreIfUntouched,
   type BuildSceneDesc, type BuildTimeline, type PartKind,
 } from '../../lib/buildTimeline';
 
@@ -21,6 +21,10 @@ interface Resting {
   obj: THREE.Object3D;
   y: number;
   visible: boolean;
+  /** What the animation last wrote, so the end can tell whether anyone else
+   *  has set the object since. */
+  wy: number;
+  wv: boolean;
 }
 
 export interface BuildPart extends Resting {
@@ -43,9 +47,9 @@ function collectParts(scene: THREE.Scene): { parts: BuildPart[]; held: Resting[]
   // Scene3D's `build-hold` groups (the baked low-tier wall shadows) stay hidden
   // until the very end.
   const held = scene.children.filter((o) => o.name === 'build-hold')
-    .map((obj) => ({ obj, y: obj.position.y, visible: obj.visible }));
+    .map((obj) => ({ obj, y: obj.position.y, visible: obj.visible, wy: obj.position.y, wv: obj.visible }));
   const add = (obj: THREE.Object3D | undefined, kind: PartKind, storey: number, index: number) => {
-    if (obj) parts.push({ obj, kind, storey, index, y: obj.position.y, visible: obj.visible });
+    if (obj) parts.push({ obj, kind, storey, index, y: obj.position.y, visible: obj.visible, wy: obj.position.y, wv: obj.visible });
   };
   const storeyCounts = storeys.map((s, si) => {
     const group = (name: string) => s.children.find((c) => c.name === name);
@@ -76,8 +80,8 @@ function collectParts(scene: THREE.Scene): { parts: BuildPart[]; held: Resting[]
 export function applyBuildFrame(parts: BuildPart[], tl: BuildTimeline, t: number): void {
   for (const p of parts) {
     const pose = partPose(tl, p.kind, p.storey, p.index, t);
-    p.obj.position.y = p.y + pose.dy;
-    p.obj.visible = p.visible && pose.visible;
+    p.obj.position.y = p.wy = p.y + pose.dy;
+    p.obj.visible = p.wv = p.visible && pose.visible;
   }
 }
 
@@ -168,11 +172,12 @@ export default function BuildAnimation({ lite, finishRef, onDone }: {
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
-  /** Every part back at exactly its own resting values. Safe to repeat. */
+  /** Every part back at exactly its own resting values, unless something
+   *  else has set it since the animation last did. Safe to repeat. */
   const restore = () => {
     for (const p of [...(run.current?.parts ?? []), ...(run.current?.held ?? [])]) {
-      p.obj.position.y = p.y;
-      p.obj.visible = p.visible;
+      p.obj.position.y = p.wy = restoreIfUntouched(p.obj.position.y, p.wy, p.y);
+      p.obj.visible = p.wv = restoreIfUntouched(p.obj.visible, p.wv, p.visible);
     }
     // A tap that skips lands in the same event: raycasts must see the walls
     // where they now are, not where the last frame drew them.
@@ -197,6 +202,13 @@ export default function BuildAnimation({ lite, finishRef, onDone }: {
       latest.current.restore();
     };
   }, [finishRef]);
+  // The design changed under it (undo, a sync landing, an edit): end at once
+  // rather than animate stale parts. Not restarted.
+  useEffect(() => useDesign.subscribe((s, prev) => {
+    if (s.floors !== prev.floors || s.floorGeom !== prev.floorGeom || s.walls !== prev.walls || s.furniture !== prev.furniture) {
+      latest.current.finish();
+    }
+  }), []);
 
   useFrame(() => {
     if (done.current) return;
@@ -217,7 +229,7 @@ export default function BuildAnimation({ lite, finishRef, onDone }: {
     if (r.start === null && (!useProgress.getState().active || now - r.foundAt > LOAD_WAIT_MS)) r.start = now;
     const t = r.start === null ? 0 : now - r.start;
     applyBuildFrame(r.parts, r.tl, t);
-    for (const h of r.held) h.obj.visible = false;
+    for (const h of r.held) h.obj.visible = h.wv = false;
     if (planMaterial.current) planMaterial.current.opacity = planOpacity(r.tl, t);
     if (t >= r.tl.duration) finish();
     else invalidate();
