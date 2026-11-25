@@ -178,6 +178,9 @@ export function trackEvent(event: HdEventName, detail?: string, opts: { once?: b
 
 /** One step of the web Pro checkout funnel. Web only: the Android purchase path never calls this. */
 export function trackProCheckout(stage: ProCheckoutStage): void {
+  // Web only (EXEC cycle 130): a 'paid' step tied to the install id inside the Android app could
+  // count as Play's Purchase history data type, which the Data safety form doesn't declare.
+  if (Capacitor.isNativePlatform()) return;
   trackEvent('pro_checkout', stage);
 }
 

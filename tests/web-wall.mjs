@@ -329,6 +329,40 @@ const stagesOf = (events) => events.map((e) => e.detail).join();
   check('signed-in path: checkout_open, paid', stagesOf(await drain()) === 'checkout_open,paid' && rc.purchases[0].user === 'google:sub-9');
 }
 
+// ---- One plan on sale (live today: Lifetime only) -----------------------------
+{
+  console.log('single plan');
+  const rc = globalThis.__rc;
+  const lifetimeOnly = { ...offeringsBody, offerings: [{ ...offeringsBody.offerings[0], packages: [{ identifier: '$rc_lifetime', platform_product_identifier: 'prod_l' }] }] };
+  const one = await loadSignedOutWebPlans(async (url) => String(url).includes('/offerings')
+    ? { ok: true, status: 200, json: async () => lifetimeOnly }
+    : { ok: true, status: 200, json: async () => productBodies.prod_l });
+  check('a Lifetime-only catalogue yields exactly one plan with its price', one.length === 1 && one[0].id === 'lifetime' && /69[.,]99/.test(one[0].priceLabel));
+  const input = { native: false, webBilling: true, signedIn: false, handoff: false, plans: [], signedOutPlans: one };
+  check('the wall gets that one plan (price + Continue button), not an empty list', wallPlans(input).length === 1 && isSignedOutPlanWall(input));
+  const modal = readFileSync(join(root, 'src/components/ProUpsellModal.tsx'), 'utf8');
+  check('the sheet shows Continue for one signed-out plan, a grid only for two or more',
+    modal.includes('shownPlans.length === 1 && (!signedIn || checkoutHandoff)') && modal.includes('shownPlans.length > 1')
+    && modal.includes('showContinue && selectedPlan') && modal.includes('!showSingleSignedOutPlan && ('));
+  check('zero plans keeps the plain sign-in button', wallPlans({ ...input, signedOutPlans: [] }).length === 0);
+
+  rc.configs.length = 0; rc.purchases.length = 0; rc.owned = false; rc.next = 'pay';
+  setProProvider(new WebRevenueCatProvider());
+  useProStore.setState({ isPro: false, busy: false, plans: [], signedOutPlans: one, pendingPlanID: null, checkoutHandoff: false, upsellOpen: true });
+  const acct = { subject: 'sub-1p', email: null, name: null, imageUrl: null };
+  useAuthStore.setState({ account: null, busy: false, purchasesLinked: false, signIn: async () => {
+    useAuthStore.setState({ account: acct });
+    await useProStore.getState().linkAccount({ appUserID: 'google:sub-1p', email: null, displayName: null });
+    useAuthStore.setState({ purchasesLinked: true });
+  } });
+  await drain();
+  await continueWithPlan(one[0].id);
+  check('after sign-in the single plan is bought for google:<sub>, never the placeholder id',
+    rc.purchases.length === 1 && rc.purchases[0].user === 'google:sub-1p' && rc.purchases[0].pkg === 'l'
+    && !rc.configs.includes('homedesignerapp-web-pricing'), JSON.stringify(rc));
+  check('funnel stages are the same as for the grid', stagesOf(await drain()) === 'signin_click,signin_ok,checkout_open,paid');
+}
+
 // ---- pro_checkout carries a stage and nothing else ---------------------------
 {
   console.log('pro_checkout payload');
@@ -355,6 +389,10 @@ const stagesOf = (events) => events.map((e) => e.detail).join();
   const playStart = pro.indexOf('class DirectPlayProvider');
   const webStart = pro.indexOf('class WebRevenueCatProvider');
   check('the Android purchase path never fires pro_checkout', !/trackProCheckout/.test(pro.slice(playStart, webStart)));
+  const ev = readFileSync(join(root, 'src/lib/events.ts'), 'utf8');
+  const fn = ev.slice(ev.indexOf('export function trackProCheckout'), ev.indexOf('export function initEvents'));
+  check('trackProCheckout returns on a native platform before sending (EXEC cycle 130, web only)',
+    /if \(Capacitor\.isNativePlatform\(\)\) return;/.test(fn) && fn.indexOf('isNativePlatform') < fn.indexOf("trackEvent('pro_checkout'"));
 }
 
 rmSync(dir, { recursive: true, force: true });

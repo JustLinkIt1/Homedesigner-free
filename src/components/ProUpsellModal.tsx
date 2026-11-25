@@ -180,16 +180,20 @@ export default function ProUpsellModal() {
   // subscriptions are not live in, or a build predating them — still gets the
   // single "Unlock Pro — <price>" button rather than a grid of one.
   const showPlanChoices = (native || webBilling) && shownPlans.length > 1;
+  // Signed-out web with exactly one plan on sale (today: Lifetime): no grid of one,
+  // but the same Continue button with its price, so the price is seen before sign-in.
+  const showSingleSignedOutPlan = !native && webBilling && shownPlans.length === 1 && (!signedIn || checkoutHandoff);
+  const showContinue = showPlanChoices || showSingleSignedOutPlan;
   const [selectedPlanID, setSelectedPlanID] = useState<'monthly' | 'yearly' | 'lifetime' | null>(null);
   useEffect(() => {
-    if (!showPlanChoices) return;
+    if (!showContinue) return;
     setSelectedPlanID((current) => shownPlans.some((plan) => plan.id === current)
       ? current
       : shownPlans.find((plan) => plan.id === pendingPlanID)?.id ??
         shownPlans.find((plan) => plan.id === 'yearly')?.id ??
         shownPlans.find((plan) => plan.id === 'lifetime')?.id ??
         shownPlans[0]?.id ?? null);
-  }, [shownPlans, showPlanChoices, pendingPlanID]);
+  }, [shownPlans, showContinue, pendingPlanID]);
   const selectedPlan = shownPlans.find((plan) => plan.id === selectedPlanID) ?? null;
   // "Best value" has to be true at the prices the store actually returns.
   // Lifetime wins once it costs no more than two years of Yearly — at the
@@ -261,7 +265,7 @@ export default function ProUpsellModal() {
   const benefits = [
     ...matched,
     ...benefitList.filter((b) => !matched.includes(b)),
-    webBilling || shownPlans.length > 1
+    (webBilling && !showSingleSignedOutPlan) || shownPlans.length > 1
       ? { icon: CalendarCheck, label: 'Monthly, yearly or lifetime — your choice' }
       : { icon: BadgeCheck, label: 'One-time purchase — no subscription' },
   ];
@@ -352,7 +356,7 @@ export default function ProUpsellModal() {
                 </button>
               ))}
             </div>
-          ) : (
+          ) : !showSingleSignedOutPlan && (
             <button className="btn primary pro-buy" onClick={() => onPrimaryAction()} disabled={actionBusy}>
               {actionBusy ? (
                 <span className="spin" />
@@ -364,7 +368,7 @@ export default function ProUpsellModal() {
               )}
             </button>
           )}
-          {showPlanChoices && selectedPlan && (
+          {showContinue && selectedPlan && (
             <>
               <button
                 className="btn primary pro-buy pro-continue"
