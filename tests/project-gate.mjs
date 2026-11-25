@@ -35,7 +35,7 @@ try {
 } finally {
   rmSync(entry, { force: true });
 }
-const { createProject, countOwnProjects, listProjects, deleteProject, noteSampleSave, isSample, sampleContentKey } = mod;
+const { nextProjectNeedsPro, createProject, countOwnProjects, listProjects, deleteProject, noteSampleSave, isSample, sampleContentKey } = mod;
 
 let fails = 0;
 const check = (name, ok, detail = '') => {
@@ -49,8 +49,10 @@ createProject('Family house', { sample: true });
 check('opened samples are listed but not counted', listProjects().length === 2 && countOwnProjects() === 0);
 // The gate in ProjectsScreen is `countOwnProjects() >= 1 && !isPro`.
 check('a sample never trips the wall (first own project is free)', !(countOwnProjects() >= 1));
+check('import with 0 own projects opens straight away (no Pro wall)', nextProjectNeedsPro() === false);
 const own = createProject('My home');
 check('first own project is counted', countOwnProjects() === 1);
+check('import with 1 own project opens the Pro wall', nextProjectNeedsPro() === true);
 check('the user\'s 2nd own project hits the wall', countOwnProjects() >= 1);
 check('samples still do not count beside an own project', listProjects().length === 3 && countOwnProjects() === 1);
 deleteProject(own);
@@ -86,6 +88,10 @@ check('deleting an unclaimed sample drops its recorded key', !(gone in JSON.pars
 
 const src = readFileSync(join(root, 'src/components/ProjectsScreen.tsx'), 'utf8');
 check('openSample no longer calls requirePro', !/projects:sample'\)/.test(src) && !/openSample[\s\S]{0,300}requirePro/.test(src));
+const importCard = src.slice(src.indexOf("key: '__import'"), src.indexOf("key: '__import'") + 700);
+const importGate = importCard.indexOf("if (projects.nextProjectNeedsPro() && !requirePro('projects', 'projects:import')) return;");
+check('an import is gated like New, before its project is made',
+  importGate > 0 && importGate < importCard.indexOf("projects.createProject('Imported plan')"));
 check('new project is gated on the own-project count', /countOwnProjects\(\) >= 1 && !requirePro\('projects', 'projects:new'\)/.test(src));
 
 rmSync(dir, { recursive: true, force: true });

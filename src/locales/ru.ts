@@ -599,6 +599,10 @@ export const RU: Record<string, string> = {
   'That file could not be read as a HomeDesigner project.': 'Не удалось прочитать файл как проект HomeDesigner.',
   'Could not convert this DWG file. Try exporting it as DXF from your CAD app.': 'Не удалось преобразовать этот файл DWG. Экспортируйте его как DXF из вашей CAD-программы.',
   'Could not read that file.': 'Не удалось прочитать файл.',
+  'iPhone photo format: save it as JPG and try again.': 'Формат фото iPhone: сохраните его в JPG и повторите попытку.',
+  'Page': 'Страница',
+  'Previous page': 'Предыдущая страница',
+  'Next page': 'Следующая страница',
   'No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.': 'Стены не обнаружены — отключите Авто и уменьшите мин. длину или повысьте чувствительность.',
   'Drop a file here': 'Перетащите файл сюда',
   'or click to browse': 'или нажмите, чтобы выбрать',
@@ -1066,4 +1070,8 @@ export const RU: Record<string, string> = {
   'Outer side': "Внешняя сторона",
   'This is the ceiling. Turn Dollhouse on to look inside.': "Это потолок. Включите «Кукольный дом», чтобы заглянуть внутрь.",
   'Turn on': "Включить",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': 'Левый джойстик — движение · проведите справа — обзор · «Завершить» — выход',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Щелчок — обзор · WASD / стрелки — движение · Shift — бег · Esc — выход',
+  'Exit walk': 'Завершить прогулку',
 };

@@ -599,6 +599,10 @@ export const JA: Record<string, string> = {
   'That file could not be read as a HomeDesigner project.': 'このファイルはHomeDesignerのプロジェクトとして読み込めませんでした。',
   'Could not convert this DWG file. Try exporting it as DXF from your CAD app.': 'このDWGファイルを変換できませんでした。CADアプリからDXFとして書き出してください。',
   'Could not read that file.': 'ファイルを読み込めませんでした。',
+  'iPhone photo format: save it as JPG and try again.': 'iPhoneの写真形式です。JPGで保存してから再試行してください。',
+  'Page': 'ページ',
+  'Previous page': '前のページ',
+  'Next page': '次のページ',
   'No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.': '壁が検出されません — 自動をオフにして最小長を下げるか、感度を上げてください。',
   'Drop a file here': 'ここにファイルをドロップ',
   'or click to browse': 'またはクリックして選択',
@@ -1066,4 +1070,8 @@ export const JA: Record<string, string> = {
   'Outer side': "外側",
   'This is the ceiling. Turn Dollhouse on to look inside.': "これは天井です。中を見るにはドールハウスをオンにしてください。",
   'Turn on': "オンにする",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': '左スティックで移動・右側をドラッグで見回す・「終了」で戻る',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'クリックで見回す・WASD／矢印キーで移動・Shiftで走る・Escで終了',
+  'Exit walk': 'ウォークスルーを終了',
 };

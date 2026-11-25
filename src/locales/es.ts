@@ -664,6 +664,10 @@ export const ES: Record<string, string> = {
   'That file could not be read as a HomeDesigner project.': 'Ese archivo no se pudo leer como proyecto de HomeDesigner.',
   'Could not convert this DWG file. Try exporting it as DXF from your CAD app.': 'No se pudo convertir este archivo DWG. Intenta exportarlo como DXF desde tu aplicación CAD.',
   'Could not read that file.': 'No se pudo leer ese archivo.',
+  'iPhone photo format: save it as JPG and try again.': 'Formato de foto de iPhone: guárdala como JPG e inténtalo de nuevo.',
+  'Page': 'Página',
+  'Previous page': 'Página anterior',
+  'Next page': 'Página siguiente',
   'No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.': 'No se detectaron muros — desactiva Auto y baja la longitud mínima, o sube la sensibilidad.',
   'Drop a file here': 'Suelta un archivo aquí',
   'or click to browse': 'o haz clic para explorar',
@@ -1131,4 +1135,8 @@ export const ES: Record<string, string> = {
   'Outer side': "Lado exterior",
   'This is the ceiling. Turn Dollhouse on to look inside.': "Este es el techo. Activa Casa de muñecas para mirar dentro.",
   'Turn on': "Activar",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': 'Joystick izquierdo para moverte · arrastra a la derecha para mirar · Salir para terminar',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Clic para mirar · WASD / flechas para moverte · Mayús para correr · Esc para salir',
+  'Exit walk': 'Salir del recorrido',
 };

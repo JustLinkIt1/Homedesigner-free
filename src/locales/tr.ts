@@ -664,6 +664,10 @@ export const TR: Record<string, string> = {
   'That file could not be read as a HomeDesigner project.': 'Bu dosya bir HomeDesigner projesi olarak okunamadı.',
   'Could not convert this DWG file. Try exporting it as DXF from your CAD app.': 'Bu DWG dosyası dönüştürülemedi. CAD uygulamanızdan DXF olarak dışa aktarmayı deneyin.',
   'Could not read that file.': 'Bu dosya okunamadı.',
+  'iPhone photo format: save it as JPG and try again.': 'iPhone fotoğraf biçimi: JPG olarak kaydedip tekrar deneyin.',
+  'Page': 'Sayfa',
+  'Previous page': 'Önceki sayfa',
+  'Next page': 'Sonraki sayfa',
   'No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.': 'Duvar algılanamadı — Otomatiği kapatıp Min uzunluğu düşürün veya hassasiyeti artırın.',
   'Drop a file here': 'Dosyayı buraya bırakın',
   'or click to browse': 'veya göz atmak için tıklayın',
@@ -1131,4 +1135,8 @@ export const TR: Record<string, string> = {
   'Outer side': "Dış taraf",
   'This is the ceiling. Turn Dollhouse on to look inside.': "Bu tavan. İçeriye bakmak için Oyuncak evi açın.",
   'Turn on': "Aç",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': 'Sol çubukla yürüyün · sağ tarafı sürükleyerek bakının · çıkmak için Çık',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Bakmak için tıklayın · WASD / oklarla yürüyün · Shift ile koşun · Esc ile çıkın',
+  'Exit walk': 'Gezintiden çık',
 };

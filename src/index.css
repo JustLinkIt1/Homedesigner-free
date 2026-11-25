@@ -2554,6 +2554,40 @@ button.brand:hover .brand-name {
   background: var(--surface-2);
 }
 
+/* Import dialog footer on phones (25 Nov 2026): the shared row is flex-end without
+   wrapping, which cut Cancel off the left edge and squeezed labels to 3 lines at 360 px.
+   Below 600 px (the one-row footer needs ~450 px in en, more in de/pl) the actions take the
+   full width, primary first; Cancel is a text link unless it is the only button (no X in this dialog). */
+/* Wider screens: labels never wrap inside a button; a row that does not fit (de) wraps instead. */
+.modal-foot.import-foot {
+  flex-wrap: wrap;
+}
+.modal-foot.import-foot .btn {
+  white-space: nowrap;
+}
+@media (max-width: 599px) {
+  .modal-foot.import-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .modal-foot.import-foot .btn {
+    width: 100%;
+    white-space: nowrap;
+  }
+  .modal-foot.import-foot .btn.primary {
+    order: -1;
+  }
+  .modal-foot.import-foot .btn.import-cancel:not(:only-child) {
+    order: 1;
+    height: 40px;
+    background: none;
+    border-color: transparent;
+    color: var(--text-2);
+    font-weight: 600;
+  }
+}
+
 .webgl-missing {
   max-width: 380px;
   margin: 0 auto;
@@ -4262,7 +4296,7 @@ button.brand:hover .brand-name {
   top: calc(16px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--surface);
   color: var(--text);
   padding: 9px 16px;
   border-radius: 999px;
@@ -4278,12 +4312,24 @@ button.brand:hover .brand-name {
   height: 38px;
   padding: 0 16px;
   border-radius: var(--r);
+  /* Inverse of the page in both themes (it was white on near-white in dark). */
   background: var(--text);
-  color: #fff;
+  color: var(--surface);
   font-weight: 700;
   font-size: 13px;
   z-index: 8;
   box-shadow: var(--shadow-md);
+}
+
+/* Phones: the hint wraps to two or three lines and ran under the Exit walk
+   pill (13 px at 412 px wide). Below the pill instead (pill: top 14 + 38 high). */
+@media (max-width: 600px) {
+  .walk-hint {
+    top: calc(62px + env(safe-area-inset-top));
+    width: max-content; /* lets max-width apply, so the hint fits on two lines */
+    max-width: calc(100% - 32px);
+    text-align: center;
+  }
 }
 
 /* On-screen walk controls (touch): a move joystick (bottom-left) and a
@@ -4326,6 +4372,15 @@ button.brand:hover .brand-name {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   will-change: transform;
   pointer-events: none;
+}
+
+/* Phones: the Build/Objects/Edit bar stays over the canvas in walk mode
+   (about 70 px with its margin); keep the whole joystick ring above it.
+   After the base rule so it wins the cascade. */
+@media (max-width: 600px) {
+  .walk-joystick {
+    bottom: calc(96px + env(safe-area-inset-bottom));
+  }
 }
 
 /* ---------- First-run coach marks ---------- */

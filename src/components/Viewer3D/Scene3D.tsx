@@ -293,6 +293,17 @@ function makeAnchorTexture(): THREE.CanvasTexture {
   return t;
 }
 
+/** The camera anchor stays fully shown this long after the view last moved. */
+export const ANCHOR_HOLD_MS = 2500;
+/** ...then fades out over this long. */
+export const ANCHOR_FADE_MS = 400;
+/** Anchor opacity for a given idle time (ms since the view last moved). */
+export const anchorAlpha = (idleMs: number): number => {
+  if (idleMs <= ANCHOR_HOLD_MS) return 0.92;
+  const t = (idleMs - ANCHOR_HOLD_MS) / ANCHOR_FADE_MS;
+  return t >= 1 ? 0 : 0.92 * (1 - t);
+};
+
 /**
  * Movable camera anchor (IKEA-kitchen-planner style): a puck lying on the floor
  * at the orbit target. Dragging it pans camera + target together, so orbit and
@@ -317,6 +328,7 @@ function FocusAnchor() {
     if (!m) return;
     const base = m.raycast.bind(m);
     m.raycast = (rc: THREE.Raycaster, hits: THREE.Intersection[]) => {
+      if (!(materialRef.current && materialRef.current.opacity > 0)) return;
       const tmp: THREE.Intersection[] = [];
       base(rc, tmp);
       for (const h of tmp) {
@@ -325,6 +337,41 @@ function FocusAnchor() {
       }
     };
   }, []);
+  // Shown while the view is being moved and for a moment after, then faded out:
+  // a puck parked in the middle of the room read as a stray control in still
+  // views (store screenshots, promo video, a user just looking). It comes back
+  // on the first touch, so it stays discoverable and grabbable while orbiting.
+  const materialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const lastActive = useRef(performance.now());
+  /** A finger (or mouse button) is down on the orbit controls. */
+  const held = useRef(false);
+  const firstFrame = useRef(false);
+  const fadeTimer = useRef<number | undefined>(undefined);
+  // The orbit view renders on demand, so nothing would draw the fade: one
+  // render is asked for when the hold ends, and the fade frames ask for the rest.
+  const scheduleFade = () => {
+    window.clearTimeout(fadeTimer.current);
+    fadeTimer.current = window.setTimeout(() => invalidate(), ANCHOR_HOLD_MS + 20);
+  };
+  const wake = () => { lastActive.current = performance.now(); scheduleFade(); invalidate(); };
+  useEffect(() => {
+    if (!controls) return;
+    // Only real touches wake it: 'change' also fires from damping and our own renders,
+    // which would keep it shown and the demand loop rendering forever.
+    const press = () => { held.current = true; wake(); };
+    const release = () => { held.current = false; wake(); };
+    controls.addEventListener('start' as never, press);
+    controls.addEventListener('end' as never, release);
+    return () => {
+      controls.removeEventListener('start' as never, press);
+      controls.removeEventListener('end' as never, release);
+    };
+  }, [controls, invalidate]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Shown on entering 3D too, then the same hold and fade.
+  useEffect(() => {
+    scheduleFade();
+    return () => window.clearTimeout(fadeTimer.current);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const FLOOR = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
   const drag = useRef<{
@@ -358,6 +405,18 @@ function FocusAnchor() {
     g.position.set(controls.target.x, 0.02, controls.target.z);
     const s = Math.min(1.8, Math.max(0.55, camera.position.distanceTo(controls.target) * 0.075));
     g.scale.setScalar(s);
+    // Fade: full while moving and ANCHOR_HOLD_MS after, then out over ANCHOR_FADE_MS.
+    // The hold starts at the first frame actually drawn, not at mount: a cold 3D
+    // load can take seconds, and the puck was gone before the scene appeared.
+    if (!firstFrame.current) { firstFrame.current = true; lastActive.current = performance.now(); scheduleFade(); }
+    if (drag.current || held.current) lastActive.current = performance.now();
+    const idle = performance.now() - lastActive.current;
+    const alpha = anchorAlpha(idle);
+    const mat = materialRef.current;
+    if (mat && mat.opacity !== alpha) mat.opacity = alpha;
+    g.visible = alpha > 0;
+    // Only the 0.4 s fade itself renders frame after frame; the hold costs nothing.
+    if (alpha > 0 && idle > ANCHOR_HOLD_MS) invalidate();
   });
 
   // Intersections use a camera FROZEN at pointer-down: the live camera pans
@@ -402,6 +461,8 @@ function FocusAnchor() {
     if (!drag.current) return;
     e.stopPropagation();
     drag.current = null;
+    held.current = false; // orbit is paused during an anchor drag, so its end event may not come
+    wake();
     if (controls) controls.enabled = true;
     invalidate();
   };
@@ -421,7 +482,7 @@ function FocusAnchor() {
         onClick={(e) => e.stopPropagation()}
       >
         <circleGeometry args={[0.5, 24]} />
-        <meshBasicMaterial map={texture} transparent depthWrite={false} depthTest={false} opacity={0.92} />
+        <meshBasicMaterial ref={materialRef} map={texture} transparent depthWrite={false} depthTest={false} opacity={0.92} />
       </mesh>
     </group>
   );
@@ -1393,11 +1454,11 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       <>
         <div className="walk-hint">
           {IS_TOUCH
-            ? 'Left stick to move · drag the right side to look · Exit to leave'
-            : 'Click to look · WASD / arrows to move · Shift to run · Esc to exit'}
+            ? t3('Left stick to move · drag the right side to look · Exit to leave')
+            : t3('Click to look · WASD / arrows to move · Shift to run · Esc to exit')}
         </div>
         <button className="walk-exit" onClick={() => setWalkMode(false)}>
-          ✕ Exit walk
+          ✕ {t3('Exit walk')}
         </button>
         {IS_TOUCH && <WalkTouchControls moveRef={moveRef} lookRef={lookRef} />}
       </>

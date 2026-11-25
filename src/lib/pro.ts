@@ -22,7 +22,7 @@ export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects' | '
  * the headline and blurb in ProUpsellModal, and is what a future
  * `pro_wall_shown` event should report. */
 export type ProTrigger =
-  | 'projects:new' | 'projects:sample' | 'projects:duplicate'
+  | 'projects:new' | 'projects:import' | 'projects:sample' | 'projects:duplicate'
   | 'multiFloor:add' | 'multiFloor:clone' | 'multiFloor:aiPlan'
   | 'pdfExport:pdf' | 'pdfExport:dxf'
   | 'catalog:item' | 'catalog:opening' | 'catalog:appliance' | 'catalog:uppers' | 'catalog:corner'
@@ -874,7 +874,9 @@ class WebRevenueCatProvider implements ProProvider {
     const result = await purchases.purchase({
       rcPackage: pkg,
       customerEmail: this.email ?? undefined,
-      selectedLocale: document.documentElement.lang || undefined,
+      // The checkout follows the app's language (<html lang>, set by i18n.ts); RevenueCat falls back
+      // to defaultLocale for languages it doesn't have. Checked in en/de/es/fr/pt, EXEC 28c/29.
+      selectedLocale: document.documentElement.lang || 'en',
       defaultLocale: 'en',
       showDiscountCodeField: true,
       discountCode: initialWebDiscountCode(),

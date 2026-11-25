@@ -599,6 +599,10 @@ export const NL: Record<string, string> = {
   'That file could not be read as a HomeDesigner project.': 'Dat bestand kon niet als HomeDesigner-project worden gelezen.',
   'Could not convert this DWG file. Try exporting it as DXF from your CAD app.': 'Kan dit DWG-bestand niet converteren. Exporteer het als DXF vanuit je CAD-app.',
   'Could not read that file.': 'Kan dat bestand niet lezen.',
+  'iPhone photo format: save it as JPG and try again.': 'iPhone-fotoformaat: sla het op als JPG en probeer opnieuw.',
+  'Page': 'Pagina',
+  'Previous page': 'Vorige pagina',
+  'Next page': 'Volgende pagina',
   'No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.': 'Geen muren gedetecteerd — zet Auto uit en verlaag de minimale lengte, of verhoog de gevoeligheid.',
   'Drop a file here': 'Sleep hier een bestand',
   'or click to browse': 'of klik om te bladeren',
@@ -1066,4 +1070,8 @@ export const NL: Record<string, string> = {
   'Outer side': "Buitenkant",
   'This is the ceiling. Turn Dollhouse on to look inside.': "Dit is het plafond. Zet Poppenhuis aan om naar binnen te kijken.",
   'Turn on': "Aanzetten",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': 'Linkerstick om te bewegen · sleep rechts om rond te kijken · Stoppen om te verlaten',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Klik om rond te kijken · WASD / pijltjes om te bewegen · Shift om te rennen · Esc om te stoppen',
+  'Exit walk': 'Rondlopen stoppen',
 };

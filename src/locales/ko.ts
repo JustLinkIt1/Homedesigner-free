@@ -599,6 +599,10 @@ export const KO: Record<string, string> = {
   'That file could not be read as a HomeDesigner project.': '해당 파일을 HomeDesigner 프로젝트로 읽을 수 없습니다.',
   'Could not convert this DWG file. Try exporting it as DXF from your CAD app.': '이 DWG 파일을 변환할 수 없습니다. CAD 앱에서 DXF로 내보내세요.',
   'Could not read that file.': '파일을 읽을 수 없습니다.',
+  'iPhone photo format: save it as JPG and try again.': 'iPhone 사진 형식입니다. JPG로 저장한 후 다시 시도하세요.',
+  'Page': '페이지',
+  'Previous page': '이전 페이지',
+  'Next page': '다음 페이지',
   'No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.': '벽이 감지되지 않음 — 자동을 끄고 최소 길이를 낮추거나 감도를 높이세요.',
   'Drop a file here': '여기에 파일을 놓으세요',
   'or click to browse': '또는 클릭하여 찾아보기',
@@ -1066,4 +1070,8 @@ export const KO: Record<string, string> = {
   'Outer side': "바깥쪽",
   'This is the ceiling. Turn Dollhouse on to look inside.': "천장입니다. 내부를 보려면 돌하우스를 켜세요.",
   'Turn on': "켜기",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': '왼쪽 스틱으로 이동 · 오른쪽을 드래그해 둘러보기 · 종료를 눌러 나가기',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': '클릭해 둘러보기 · WASD / 방향키로 이동 · Shift로 달리기 · Esc로 종료',
+  'Exit walk': '워크스루 종료',
 };

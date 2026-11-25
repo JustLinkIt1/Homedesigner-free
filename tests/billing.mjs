@@ -705,7 +705,7 @@ const reset = (isPro) => {
   const entry = new RegExp(String.raw`'([^']+)': \{ title: '${q}', blurb: '${q}' \}`, 'g');
   const copy = new Map([...block.matchAll(entry)].map((m) => [m[1], { title: unq(m[2]), blurb: unq(m[3]) }]));
   check('trigger copy: every ProTrigger key has a headline and blurb',
-    keys.length === 15 && keys.every((k) => copy.has(k)), keys.filter((k) => !copy.has(k)).join(', '));
+    keys.length === 16 && keys.every((k) => copy.has(k)), keys.filter((k) => !copy.has(k)).join(', '));
   for (const lang of ['es', 'pt', 'pl', 'tr']) {
     const src = readFileSync(join(root, 'src/locales', lang + '.ts'), 'utf8');
     const missing = [...copy.values()].flatMap((c) => [c.title, c.blurb])

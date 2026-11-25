@@ -57,6 +57,8 @@ const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blur
  * English string as the key, English shown where a locale has no entry. */
 export const TRIGGER_COPY: Record<ProTrigger, { title: string; blurb: string }> = {
   'projects:new': { title: 'Start a second design', blurb: 'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.' },
+  // Importing a plan starts a second design, so it says the same as New (no new strings).
+  'projects:import': { title: 'Start a second design', blurb: 'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.' },
   'projects:sample': { title: 'Keep this design and your own', blurb: 'Your change is saved. Free keeps one project. Pro keeps every design, samples included.' },
   'projects:duplicate': { title: 'Duplicate this design', blurb: 'Try a second layout without touching the first. Pro keeps as many copies as you like.' },
   'multiFloor:add': { title: 'Add another floor', blurb: 'Add upper floors or a basement, switch between them, and see the whole home stacked in 3D.' },

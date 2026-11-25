@@ -599,6 +599,10 @@ export const ZH: Record<string, string> = {
   'That file could not be read as a HomeDesigner project.': '无法将该文件读取为 HomeDesigner 项目。',
   'Could not convert this DWG file. Try exporting it as DXF from your CAD app.': '无法转换此 DWG 文件。请在 CAD 软件中将其导出为 DXF。',
   'Could not read that file.': '无法读取该文件。',
+  'iPhone photo format: save it as JPG and try again.': 'iPhone 照片格式：请另存为 JPG 后重试。',
+  'Page': '页面',
+  'Previous page': '上一页',
+  'Next page': '下一页',
   'No walls detected — try turning off Auto and lowering Min length, or raise Sensitivity.': '未检测到墙 — 请关闭自动并降低最小长度，或提高灵敏度。',
   'Drop a file here': '将文件拖放到此处',
   'or click to browse': '或点击浏览',
@@ -1066,4 +1070,8 @@ export const ZH: Record<string, string> = {
   'Outer side': "外侧",
   'This is the ceiling. Turn Dollhouse on to look inside.': "这是天花板。打开娃娃屋模式即可查看内部。",
   'Turn on': "打开",
+  // Walk mode HUD (Scene3D walk-hint / walk-exit)
+  'Left stick to move · drag the right side to look · Exit to leave': '左摇杆移动 · 拖动右侧环顾 · 点“退出”离开',
+  'Click to look · WASD / arrows to move · Shift to run · Esc to exit': '点击环顾 · WASD / 方向键移动 · Shift 奔跑 · Esc 退出',
+  'Exit walk': '退出漫游',
 };

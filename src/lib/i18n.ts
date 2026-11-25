@@ -70,6 +70,14 @@ export const useLang = create<LangState>((set) => ({
   },
 }));
 
+/** Keep <html lang> on the language the UI is in (screen readers, browser
+ *  translate prompts, hyphenation); it stayed "en" in every language before. */
+const syncHtmlLang = (lang: Lang) => {
+  try { document.documentElement.lang = lang; } catch { /* no DOM (tests) */ }
+};
+syncHtmlLang(useLang.getState().lang);
+useLang.subscribe((s) => syncHtmlLang(s.lang));
+
 /** Translate now (non-React call sites: toasts, menus built in data files). */
 export function t(en: string): string {
   const lang = useLang.getState().lang;
