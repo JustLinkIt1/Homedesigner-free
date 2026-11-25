@@ -160,9 +160,8 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
         });
         setStage('dxf');
       } else {
-        // Chrome and Android cannot decode HEIC, so say what to do instead of
-        // failing generically.
-        if (isHeic(file)) throw new Error(HEIC_MESSAGE);
+        // HEIC is not refused up front: Safari can decode it. Where decoding fails,
+        // the catch below names the format (EXEC cycle 77).
         setStage('busy');
         const r = await renderPlanFile(file, 1);
         setPlanFile(file);
@@ -183,12 +182,14 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
       }
     } catch (err) {
       console.error(err);
-      trackEvent('import_result', 'fail');
+      // HEIC failures are counted on their own: HEIC conversion is built in only if
+      // they reach 10% of import attempts over 28 days (EXEC cycle 77).
+      trackEvent('import_result', isHeic(file) ? 'fail_heic' : 'fail');
       setError(
-        err instanceof Error
-          ? err.message
-          : isHeic(file)
-            ? HEIC_MESSAGE
+        isHeic(file)
+          ? HEIC_MESSAGE
+          : err instanceof Error
+            ? err.message
             : t('Could not read that file.'),
       );
       setStage('pick');
