@@ -11,6 +11,7 @@ import {
   Check,
   Download,
   Ruler,
+  Building2,
   FileImage,
   FileText,
   ClipboardList,
@@ -25,11 +26,12 @@ import {
 } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { exportProject, openProjectFile } from '../lib/projectIO';
-import { exportPlanPNG, exportPlanPDF, exportPlanDXF } from '../lib/planExport';
+import { exportPlanPNG, exportPlanPDF, exportPlanDXF, exportPlanIFC } from '../lib/planExport';
 import { toast } from '../lib/ui';
 import { isNative } from '../lib/native';
 import { APP_NAME, APP_TAGLINE } from '../lib/appInfo';
 import { requirePro } from '../lib/pro';
+import { trackEvent } from '../lib/events';
 import { useProStore } from '../store/proStore';
 import { useI18n } from '../lib/i18n';
 import { useAiCapabilities } from '../lib/aiCapabilities';
@@ -171,10 +173,10 @@ export default function Toolbar({
     }
   };
 
-  const runExport = async (kind: 'png' | 'pdf' | 'dxf') => {
+  const runExport = async (kind: 'png' | 'pdf' | 'dxf' | 'ifc') => {
     setExportOpen(false);
-    // PDF export is a Pro feature (PNG stays free).
-    if ((kind === 'pdf' || kind === 'dxf') && !requirePro('pdfExport', kind === 'dxf' ? 'pdfExport:dxf' : 'pdfExport:pdf')) return;
+    // PDF, DXF and IFC export are Pro features (PNG stays free).
+    if ((kind === 'pdf' || kind === 'dxf' || kind === 'ifc') && !requirePro('pdfExport', kind === 'pdf' ? 'pdfExport:pdf' : kind === 'dxf' ? 'pdfExport:dxf' : undefined)) return;
     // Clear selection so editing handles don't appear in the export, then let
     // React drop those nodes before we rasterise the stage.
     s.clearSelection();
@@ -182,17 +184,23 @@ export default function Toolbar({
     try {
       if (kind === 'png') {
         const ok = await exportPlanPNG(s.projectName);
-        if (ok) toast.success(t('Plan exported as PNG'));
+        if (ok) { toast.success(t('Plan exported as PNG')); trackEvent('export', 'png'); }
         else toast.info(t('Nothing to export yet — add walls or rooms first'));
       } else if (kind === 'dxf') {
         const ok = await exportPlanDXF(s.projectName);
-        if (ok) toast.success(t('Plan exported as a layered DXF drawing'));
+        if (ok) { toast.success(t('Plan exported as a layered DXF drawing')); trackEvent('export', 'dxf'); }
+        else toast.info(t('Nothing to export yet — add walls or rooms first'));
+      } else if (kind === 'ifc') {
+        const ok = await exportPlanIFC(s.projectName);
+        if (ok) { toast.success(t('Plan exported as an IFC model')); trackEvent('export', 'ifc'); }
         else toast.info(t('Nothing to export yet — add walls or rooms first'));
       } else {
         const pages = await exportPlanPDF(s.projectName);
-        if (pages > 1) toast.success(`${t('PDF exported — one page per floor')} (${pages})`);
-        else if (pages === 1) toast.success(t('Plan exported as PDF'));
-        else toast.info(t('Nothing to export yet — add walls or rooms first'));
+        if (pages > 0) {
+          if (pages > 1) toast.success(`${t('PDF exported — one page per floor')} (${pages})`);
+          else toast.success(t('Plan exported as PDF'));
+          trackEvent('export', 'pdf');
+        } else toast.info(t('Nothing to export yet — add walls or rooms first'));
       }
     } catch {
       toast.error(t('Export failed'));
@@ -244,8 +252,8 @@ export default function Toolbar({
           <div className="export-wrap export-btn-wrap" ref={exportRef}>
             <button
               className="tbtn ghost"
-              data-tip={t('Export the 2D plan as PNG or PDF')}
-              aria-label={t('Export the 2D plan as PNG or PDF')}
+              data-tip={t('Export the plan as PNG, PDF, DXF or IFC')}
+              aria-label={t('Export the plan as PNG, PDF, DXF or IFC')}
               aria-haspopup="menu"
               aria-expanded={exportOpen}
               onClick={() => setExportOpen((o) => !o)}
@@ -264,6 +272,10 @@ export default function Toolbar({
                 </button>
                 <button role="menuitem" onClick={() => runExport('dxf')}>
                   <Ruler className="icon" /> {t('DXF for CAD')}
+                  {!isPro && <span className="pro-tag">PRO</span>}
+                </button>
+                <button role="menuitem" onClick={() => runExport('ifc')}>
+                  <Building2 className="icon" /> {t('IFC for BIM')}
                   {!isPro && <span className="pro-tag">PRO</span>}
                 </button>
                 <button

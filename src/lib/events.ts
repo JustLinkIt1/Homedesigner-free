@@ -2,7 +2,7 @@
 //
 // What is sent: a random install id this module makes for itself on first run,
 // the app version, where the install came from (Play campaign / organic / web)
-// and one of six fixed event names with a short slug. What is NEVER used: the
+// and one of seven fixed event names with a short slug. What is NEVER used: the
 // Android ID, the advertising ID, an account id or an email.
 //
 // Everything here is fire-and-forget: `trackEvent` never throws, never awaits
@@ -13,7 +13,7 @@ import { APP_VERSION } from './appInfo';
 
 export type HdEventName =
   | 'app_first_open' | 'template_chosen' | 'editor_opened'
-  | 'view_3d_opened' | 'pro_wall_shown' | 'import_result';
+  | 'view_3d_opened' | 'pro_wall_shown' | 'import_result' | 'export';
 
 const BASE = (import.meta.env.VITE_CLOUD_SYNC_URL ?? '').replace(/\/$/, '');
 const INSTALL_KEY = 'homedesigner.install.v1';
