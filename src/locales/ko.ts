@@ -827,9 +827,9 @@ export const KO: Record<string, string> = {
   /* ---------- Added after the previous translation pass ---------- */
   'Exact length': '정확한 길이',
   'Finish room': '방 완성',
-  'Tap a floor to place': '바닥을 탭하여 배치',
-  'Tap a wall to place': '벽을 탭하여 배치',
-  'Tap the plan to place': '도면을 탭하여 배치',
+  'Tap a floor to place {item}': '바닥을 탭하여 배치: {item}',
+  'Tap a wall to place {item}': '벽을 탭하여 배치: {item}',
+  'Tap the plan to place {item}': '도면을 탭하여 배치: {item}',
   'Cancel placement': '배치 취소',
   'Rendering…': '렌더링 중…',
   'Plans and Pro access sync across your signed-in devices.': '도면과 Pro 이용권이 로그인된 모든 기기에서 동기화됩니다.',

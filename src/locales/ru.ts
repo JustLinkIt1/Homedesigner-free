@@ -827,9 +827,9 @@ export const RU: Record<string, string> = {
   /* ---------- Added after the previous translation pass ---------- */
   'Exact length': 'Точная длина',
   'Finish room': 'Завершить комнату',
-  'Tap a floor to place': 'Коснитесь пола, чтобы разместить',
-  'Tap a wall to place': 'Коснитесь стены, чтобы разместить',
-  'Tap the plan to place': 'Коснитесь плана, чтобы разместить',
+  'Tap a floor to place {item}': 'Коснитесь пола, чтобы разместить: {item}',
+  'Tap a wall to place {item}': 'Коснитесь стены, чтобы разместить: {item}',
+  'Tap the plan to place {item}': 'Коснитесь плана, чтобы разместить: {item}',
   'Cancel placement': 'Отменить размещение',
   'Rendering…': 'Рендеринг…',
   'Plans and Pro access sync across your signed-in devices.': 'Планы и доступ Pro синхронизируются на всех устройствах с вашим аккаунтом.',

@@ -827,9 +827,9 @@ export const JA: Record<string, string> = {
   /* ---------- Added after the previous translation pass ---------- */
   'Exact length': '正確な長さ',
   'Finish room': '部屋を完成',
-  'Tap a floor to place': '床をタップして配置',
-  'Tap a wall to place': '壁をタップして配置',
-  'Tap the plan to place': '図面をタップして配置',
+  'Tap a floor to place {item}': '床をタップして{item}を配置',
+  'Tap a wall to place {item}': '壁をタップして{item}を配置',
+  'Tap the plan to place {item}': '図面をタップして{item}を配置',
   'Cancel placement': '配置をキャンセル',
   'Rendering…': 'レンダリング中…',
   'Plans and Pro access sync across your signed-in devices.': '間取りとPro権限は、サインイン済みのすべての端末で同期されます。',

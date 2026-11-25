@@ -892,9 +892,9 @@ export const PL: Record<string, string> = {
   /* ---------- Added after the previous translation pass ---------- */
   'Exact length': 'Dokładna długość',
   'Finish room': 'Zakończ pomieszczenie',
-  'Tap a floor to place': 'Dotknij podłogi, aby umieścić',
-  'Tap a wall to place': 'Dotknij ściany, aby umieścić',
-  'Tap the plan to place': 'Dotknij planu, aby umieścić',
+  'Tap a floor to place {item}': 'Dotknij podłogi, aby umieścić: {item}',
+  'Tap a wall to place {item}': 'Dotknij ściany, aby umieścić: {item}',
+  'Tap the plan to place {item}': 'Dotknij planu, aby umieścić: {item}',
   'Cancel placement': 'Anuluj umieszczanie',
   'Rendering…': 'Renderowanie…',
   'Plans and Pro access sync across your signed-in devices.': 'Plany i dostęp Pro synchronizują się na wszystkich zalogowanych urządzeniach.',

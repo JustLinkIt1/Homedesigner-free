@@ -892,9 +892,9 @@ export const TR: Record<string, string> = {
   /* ---------- Added after the previous translation pass ---------- */
   'Exact length': 'Tam uzunluk',
   'Finish room': 'Odayı tamamla',
-  'Tap a floor to place': 'Yerleştirmek için zemine dokunun',
-  'Tap a wall to place': 'Yerleştirmek için duvara dokunun',
-  'Tap the plan to place': 'Yerleştirmek için plana dokunun',
+  'Tap a floor to place {item}': 'Yerleştirmek için zemine dokunun: {item}',
+  'Tap a wall to place {item}': 'Yerleştirmek için duvara dokunun: {item}',
+  'Tap the plan to place {item}': 'Yerleştirmek için plana dokunun: {item}',
   'Cancel placement': 'Yerleştirmeyi iptal et',
   'Rendering…': 'Oluşturuluyor…',
   'Plans and Pro access sync across your signed-in devices.': 'Planlarınız ve Pro erişiminiz oturum açtığınız tüm cihazlarda eşitlenir.',

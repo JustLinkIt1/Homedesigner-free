@@ -827,9 +827,9 @@ export const ZH: Record<string, string> = {
   /* ---------- Added after the previous translation pass ---------- */
   'Exact length': '精确长度',
   'Finish room': '完成房间',
-  'Tap a floor to place': '点击地面进行放置',
-  'Tap a wall to place': '点击墙面进行放置',
-  'Tap the plan to place': '点击平面图进行放置',
+  'Tap a floor to place {item}': '点击地面放置{item}',
+  'Tap a wall to place {item}': '点击墙面放置{item}',
+  'Tap the plan to place {item}': '点击平面图放置{item}',
   'Cancel placement': '取消放置',
   'Rendering…': '正在渲染…',
   'Plans and Pro access sync across your signed-in devices.': '户型图与 Pro 权限会在所有已登录设备间同步。',

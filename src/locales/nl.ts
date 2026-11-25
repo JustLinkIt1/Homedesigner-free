@@ -827,9 +827,9 @@ export const NL: Record<string, string> = {
   /* ---------- Added after the previous translation pass ---------- */
   'Exact length': 'Exacte lengte',
   'Finish room': 'Ruimte voltooien',
-  'Tap a floor to place': 'Tik op een vloer om te plaatsen',
-  'Tap a wall to place': 'Tik op een muur om te plaatsen',
-  'Tap the plan to place': 'Tik op de plattegrond om te plaatsen',
+  'Tap a floor to place {item}': 'Tik op een vloer om te plaatsen: {item}',
+  'Tap a wall to place {item}': 'Tik op een muur om te plaatsen: {item}',
+  'Tap the plan to place {item}': 'Tik op de plattegrond om te plaatsen: {item}',
   'Cancel placement': 'Plaatsing annuleren',
   'Rendering…': 'Renderen…',
   'Plans and Pro access sync across your signed-in devices.': 'Plattegronden en Pro-toegang synchroniseren op al je aangemelde apparaten.',

@@ -827,9 +827,9 @@ export const DE: Record<string, string> = {
   /* ---------- Added after the previous translation pass ---------- */
   'Exact length': 'Genaue Länge',
   'Finish room': 'Raum abschließen',
-  'Tap a floor to place': 'Boden antippen zum Platzieren',
-  'Tap a wall to place': 'Wand antippen zum Platzieren',
-  'Tap the plan to place': 'Plan antippen zum Platzieren',
+  'Tap a floor to place {item}': 'Boden antippen zum Platzieren: {item}',
+  'Tap a wall to place {item}': 'Wand antippen zum Platzieren: {item}',
+  'Tap the plan to place {item}': 'Plan antippen zum Platzieren: {item}',
   'Cancel placement': 'Platzierung abbrechen',
   'Rendering…': 'Wird gerendert…',
   'Plans and Pro access sync across your signed-in devices.': 'Pläne und Pro-Zugang werden auf allen angemeldeten Geräten synchronisiert.',

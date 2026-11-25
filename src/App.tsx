@@ -772,10 +772,10 @@ export default function App() {
               <Sofa className="icon" />
               <span>
                 {view === '3d'
-                  ? `${t('Tap a floor to place')} ${t(pendingEntry.name)}`
+                  ? t('Tap a floor to place {item}').replace('{item}', t(pendingEntry.name))
                   : pendingEntry.opening
-                    ? `${t('Tap a wall to place')} ${t(pendingEntry.name)}`
-                    : `${t('Tap the plan to place')} ${t(pendingEntry.name)}`}
+                    ? t('Tap a wall to place {item}').replace('{item}', t(pendingEntry.name))
+                    : t('Tap the plan to place {item}').replace('{item}', t(pendingEntry.name))}
               </span>
               <button onClick={cancelPlacement} aria-label={t('Cancel placement')} data-tip={t('Cancel placement')}>
                 <X className="icon" />
