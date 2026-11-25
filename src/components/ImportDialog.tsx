@@ -15,10 +15,6 @@ import Modal from './Modal';
 
 type Stage = 'pick' | 'raster' | 'dxf' | 'busy';
 
-/** Import dialog footer: wraps on narrow screens instead of overflowing (25 Nov 2026). */
-const FOOT_STYLE: React.CSSProperties = { flexWrap: 'wrap' };
-const FOOT_BTN: React.CSSProperties = { whiteSpace: 'nowrap' };
-
 export default function ImportDialog({ onClose }: { onClose: () => void }) {
   // Narrow selection: this dialog only needs defaults + actions, so it must
   // not re-render on every design edit (it used to subscribe to everything).
@@ -486,25 +482,22 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {/* On a phone the three buttons do not fit one row: the shared .modal-foot is
-            flex-end without wrapping, so it pushed Cancel off the left edge and squeezed
-            the labels to three lines. Here the row wraps and labels stay on one line. */}
-        <div className="modal-foot" style={FOOT_STYLE}>
-          <button className="btn" style={FOOT_BTN} onClick={onClose}>
+        <div className="modal-foot">
+          <button className="btn" onClick={onClose}>
             {t('Cancel')}
           </button>
           {stage === 'raster' && (
             <>
-              <button className="btn" style={FOOT_BTN} onClick={() => { recalibrate(); onClose(); }}>
+              <button className="btn" onClick={() => { recalibrate(); onClose(); }}>
                 {t('Use as tracing background')}
               </button>
-              <button className="btn primary" style={FOOT_BTN} onClick={() => runTrace(true)} disabled={previewCount === 0}>
+              <button className="btn primary" onClick={() => runTrace(true)} disabled={previewCount === 0}>
                 {previewCount > 0 ? `${t('Trace')} ${previewCount} ${t('walls')}` : t('Auto-trace walls')}
               </button>
             </>
           )}
           {stage === 'dxf' && (
-            <button className="btn primary" style={FOOT_BTN} onClick={importDxfWalls} disabled={!dxfInfo?.count}>
+            <button className="btn primary" onClick={importDxfWalls} disabled={!dxfInfo?.count}>
               {t('Import')} {dxfInfo?.count ?? 0} {t('walls')}
             </button>
           )}
