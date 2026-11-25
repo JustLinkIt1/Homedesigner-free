@@ -865,7 +865,7 @@ export default function App() {
                     <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
                     <FurnitureLockIcon style={{ width: 15, height: 15 }} /> {t('Lock')}
                   </label>
-                  {buildAnimationAllowed() && (
+                  {walls.length > 0 && buildAnimationAllowed() && (
                     <button className="toggle" onClick={() => buildReplay.current?.()} data-tip={t('Watch it build')} aria-label={t('Watch it build')}>
                       <Play className="icon" style={{ width: 15, height: 15 }} />
                     </button>
@@ -955,7 +955,7 @@ export default function App() {
                       >
                         <Footprints className="icon" style={{ width: 16, height: 16 }} /> {t('Walk through')}
                       </button>
-                      {buildAnimationAllowed() && (
+                      {walls.length > 0 && buildAnimationAllowed() && (
                         <button
                           className="toggle"
                           onClick={() => { setViewOpen(false); buildReplay.current?.(); }}

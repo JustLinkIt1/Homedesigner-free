@@ -1064,12 +1064,17 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
   // "Watch your plan build itself": once per project on this device (see
   // buildPlay), again from the toolbar's replay button. `buildRun` re-keys it
   // so a replay starts from the beginning.
-  const [buildOn, setBuildOn] = useState(() => autoBuildDue(getActiveId()));
+  const [autoBuild] = useState(() => {
+    const geom = Object.values(useDesign.getState().floorGeom);
+    return autoBuildDue(getActiveId(), geom.reduce((n, g) => n + (g?.walls.length ?? 0), 0));
+  });
+  const [buildOn, setBuildOn] = useState(autoBuild);
   const [buildRun, setBuildRun] = useState(0);
   const buildFinish = useRef<(() => void) | null>(null);
+  // Only an automatic play uses up the project's one play; a replay does not.
   useEffect(() => {
-    if (buildOn) markBuildPlayed(getActiveId());
-  }, [buildOn]);
+    if (autoBuild) markBuildPlayed(getActiveId());
+  }, [autoBuild]);
   useEffect(() => {
     if (walkMode) setBuildOn(false);
   }, [walkMode]);

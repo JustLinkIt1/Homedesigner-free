@@ -1,4 +1,4 @@
-// "Watch your plan build itself": the timeline.
+// "Watch your plan build itself": the timeline, and when it plays.
 //
 // The animation is one pure function of (scene counts, time), so it can be
 // checked without a renderer: parts appear and land in order, the length is
@@ -14,14 +14,20 @@ import { pathToFileURL } from 'node:url';
 
 const dir = mkdtempSync(join(tmpdir(), 'hdbuild-'));
 let tl;
+let play;
 try {
-  const outfile = join(dir, 'buildTimeline.mjs');
-  await build({ entryPoints: ['src/lib/buildTimeline.ts'], bundle: true, format: 'esm', platform: 'node', outfile, logLevel: 'silent' });
-  tl = await import(pathToFileURL(outfile).href);
+  const bundle = async (entry, name) => {
+    const outfile = join(dir, name);
+    await build({ entryPoints: [entry], bundle: true, format: 'esm', platform: 'node', outfile, logLevel: 'silent' });
+    return import(pathToFileURL(outfile).href);
+  };
+  tl = await bundle('src/lib/buildTimeline.ts', 'buildTimeline.mjs');
+  play = await bundle('src/lib/buildPlay.ts', 'buildPlay.mjs');
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
 const { buildTimeline, partPose, planOpacity, PLAN_OPACITY } = tl;
+const { shouldAutoBuild } = play;
 
 let failures = 0;
 const check = (name, ok, detail = '') => {
@@ -142,6 +148,24 @@ for (const [name, desc] of [['small', small], ['two storeys', twoStorey], ['huge
   check('the plan shows at full strength mid-build', Math.abs(peak - PLAN_OPACITY) < 1e-9);
   check('the plan is there before the first floor lands', planOpacity(t, t.floors[0].start) > 0.5);
   check('the plan is still there while the walls drop', planOpacity(t, t.walls[0].start + 100) === PLAN_OPACITY);
+}
+
+// --- when it plays by itself -----------------------------------------------
+{
+  const base = { projectId: 'p1', wallCount: 4, played: [], reducedMotion: false, webdriver: false, override: null };
+  const auto = (patch) => shouldAutoBuild({ ...base, ...patch });
+  check('a project with walls, never played here: plays', auto({}) === true);
+  check('an empty project does not play (and so keeps its one play)', auto({ wallCount: 0 }) === false);
+  check('...not even with ?build=on', auto({ wallCount: 0, override: 'on' }) === false);
+  check('already played for this project: no', auto({ played: ['p0', 'p1'] }) === false);
+  check('played for other projects only: yes', auto({ played: ['p0', 'p2'] }) === true);
+  check('OS reduced motion: no', auto({ reducedMotion: true }) === false);
+  check('automation (navigator.webdriver): no', auto({ webdriver: true }) === false);
+  check('no project id: no', auto({ projectId: null }) === false);
+  check('storage unreadable: no (else it would play on every open)', auto({ played: null }) === false);
+  check('?build=off: no', auto({ override: 'off' }) === false);
+  check('?build=on beats played, reduced motion, automation and storage',
+    auto({ override: 'on', played: null, reducedMotion: true, webdriver: true, projectId: null }) === true);
 }
 
 console.log(failures === 0 ? '\nBUILD ANIMATION: all green' : `\nBUILD ANIMATION: ${failures} FAILED`);
