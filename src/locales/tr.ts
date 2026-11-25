@@ -204,6 +204,7 @@ export const TR: Record<string, string> = {
   Processing: 'İşleniyor',
   'Continue with {plan} — {price}': 'Devam et: {plan} — {price}',
   'Processing {plan}…': 'İşleniyor: {plan}…',
+  'Sign in with Google to pay by card. Pro then works on web and Android.': "Kartla ödemek için Google ile giriş yapın. Pro sonra web'de ve Android'de çalışır.",
   'One-time payment. No subscription.': 'Tek seferlik ödeme. Abonelik yok.',
   'Subscription renews automatically until cancelled.': 'Abonelik iptal edilene kadar otomatik yenilenir.',
   Open: 'Aç',

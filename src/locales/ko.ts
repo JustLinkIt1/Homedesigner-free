@@ -204,6 +204,7 @@ export const KO: Record<string, string> = {
   Processing: '처리 중',
   'Continue with {plan} — {price}': '계속: {plan} — {price}',
   'Processing {plan}…': '처리 중: {plan}…',
+  'Sign in with Google to pay by card. Pro then works on web and Android.': 'Google로 로그인하고 카드로 결제하세요. Pro는 웹과 Android에서 쓸 수 있습니다.',
   'One-time payment. No subscription.': '일회 결제. 구독이 아닙니다.',
   'Subscription renews automatically until cancelled.': '취소할 때까지 구독이 자동 갱신됩니다.',
   Open: '열기',

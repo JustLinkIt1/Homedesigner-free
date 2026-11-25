@@ -204,6 +204,7 @@ export const PL: Record<string, string> = {
   Processing: 'Przetwarzanie',
   'Continue with {plan} — {price}': 'Dalej: {plan} — {price}',
   'Processing {plan}…': 'Przetwarzanie: {plan}…',
+  'Sign in with Google to pay by card. Pro then works on web and Android.': 'Zaloguj się przez Google i zapłać kartą. Pro działa w przeglądarce i na Androidzie.',
   'One-time payment. No subscription.': 'Jednorazowa płatność. Bez subskrypcji.',
   'Subscription renews automatically until cancelled.': 'Subskrypcja odnawia się automatycznie do momentu anulowania.',
   Open: 'Otwórz',

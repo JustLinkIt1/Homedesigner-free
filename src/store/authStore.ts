@@ -108,6 +108,9 @@ interface AuthState {
   ready: boolean;
   busy: boolean;
   restoreSession: () => Promise<void>;
+  /** True when the LAST sign-in also linked the account's purchases, so whether
+   *  it already owns Pro is known. The signed-out checkout waits on it. */
+  purchasesLinked: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   /** Deletes the account's cloud data on the server, then signs out here. */
@@ -120,6 +123,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   configured: isGoogleSignInConfigured(),
   ready: false,
   busy: false,
+  purchasesLinked: false,
 
   restoreSession: async () => {
     const cached = readAccount();
@@ -151,7 +155,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signIn: async () => {
     if (get().busy || !get().configured) return;
-    set({ busy: true });
+    set({ busy: true, purchasesLinked: false });
     try {
       const account = await bounded(signInWithGoogle(), INTERACTIVE_TIMEOUT_MS);
       // Null means the picker never came back. Fail the sign-in rather than
@@ -163,6 +167,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         Promise.allSettled([linkPurchases(account), syncAccountData()]), SYNC_TIMEOUT_MS);
       const purchases = settled?.[0];
       const plans = settled?.[1];
+      set({ purchasesLinked: purchases?.status === 'fulfilled' });
       if (purchases?.status === 'fulfilled' && plans?.status === 'fulfilled') {
         const imported = plans.value;
         toast.success(imported

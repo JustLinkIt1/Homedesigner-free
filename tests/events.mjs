@@ -113,4 +113,16 @@ for (let i = 0; i < 50; i++) trackEvent('import_result', 'ok');
 await flush();
 await new Promise((resolve) => setTimeout(resolve, 3_400)); // the pending 2 s flush, then the re-armed one
 check(sent.reduce((n, r) => n + r.body.events.length, 0) === 50, 'a long queue drains on its own');
+// The Pro checkout funnel: one event name, the stage as the detail, nothing else.
+sent.length = 0;
+const { trackProCheckout, PRO_CHECKOUT_STAGES } = mod;
+for (const stage of PRO_CHECKOUT_STAGES) trackProCheckout(stage);
+trackEvent('pro_checkout', 'yearly');
+trackEvent('pro_checkout', '9.99-eur');
+trackEvent('pro_checkout', 'google:12345');
+trackEvent('pro_checkout');
+await flush();
+const funnel = sent.flatMap((r) => r.body.events).filter((e) => e.event === 'pro_checkout');
+check(funnel.map((e) => e.detail).join() === 'signin_click,signin_ok,checkout_open,paid,cancel', 'pro_checkout sends the five stages and drops anything else');
+check(funnel.every((e) => Object.keys(e).sort().join() === 'detail,event'), 'a pro_checkout event is only { event, detail }');
 console.log(`events: ${checks} checks passed`);

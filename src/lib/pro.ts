@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { useProStore } from '../store/proStore';
 import { APP_VERSION, PLAY_STORE_URL } from './appInfo';
 import { getCloudProEntitlement, linkPlayPurchases, verifyPlayPurchase } from './cloudSync';
+import { trackProCheckout } from './events';
 import {
   PlayBilling,
   PLAY_PRO_PLANS,
@@ -75,6 +76,9 @@ export interface ProProvider {
   isEntitled(): Promise<boolean>;
   getPrice(): Promise<string | null>;
   getPlans(): Promise<ProPlan[]>;
+  /** Web only: the price ladder for a visitor who has not signed in. READ-ONLY
+   *  catalogue data. It never configures the purchase SDK and can never buy. */
+  getSignedOutPlans?(): Promise<ProPlan[]>;
   /** Returns true if the user completed the purchase. */
   purchase(planID?: ProPlanID): Promise<boolean>;
   /** Returns true if a previous purchase was restored. */
@@ -803,10 +807,112 @@ class DirectPlayProvider implements ProProvider {
   }
 }
 
+/** The only customer id a web purchase may be made for: `google:<sub>`, the id
+ * Android and the sync Worker use too. Anything else (the anonymous catalogue
+ * id below, an empty string) must never reach the purchase SDK. */
+export function isGoogleCustomerId(appUserID: string | null | undefined): appUserID is string {
+  return typeof appUserID === 'string' && /^google:.+/.test(appUserID);
+}
+
+/** A single fixed placeholder customer id, used ONLY to read the public price
+ * catalogue signed out. It is the same one the /buy page uses. It is never
+ * passed to the purchase SDK, so it can neither buy nor own an entitlement. */
+const WEB_PRICING_USER = 'homedesignerapp-web-pricing';
+const RC_API = 'https://api.revenuecat.com';
+const SIGNED_OUT_PLAN_PACKAGES: Record<string, ProPlanID> = {
+  $rc_monthly: 'monthly',
+  $rc_annual: 'yearly',
+  $rc_lifetime: 'lifetime',
+};
+
+function catalogPrice(details: any): { amount_micros: number; currency: string } | null {
+  if (!details) return null;
+  if (details.current_price) return details.current_price;
+  const options = details.purchase_options ?? {};
+  const chosen = options[details.default_purchase_option_id] ?? options.base_option ?? options[Object.keys(options)[0]];
+  return chosen?.base_price ?? null;
+}
+
+function formatCatalogPrice(price: { amount_micros: number; currency: string }): string {
+  const amount = price.amount_micros / 1e6;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: price.currency,
+      minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    }).format(amount);
+  } catch {
+    return `${price.currency} ${amount.toFixed(2)}`;
+  }
+}
+
+/** The offering /buy and checkout sell from: the current one, else the first. */
+function catalogueOffering(offeringsResponse: any): any | undefined {
+  const list: any[] = offeringsResponse?.offerings ?? [];
+  return list.find((o) => o?.identifier === offeringsResponse?.current_offering_id) ?? list[0];
+}
+
+/** Plans from RevenueCat's public catalogue (the same two REST reads the /buy
+ * page makes). `productsByID` maps a package's platform product id to that
+ * product's `/products?id=` response. A rung without a price is left out. */
+export function webPlansFromCatalogue(offeringsResponse: any, productsByID: Record<string, any>): ProPlan[] {
+  const packages: any[] = catalogueOffering(offeringsResponse)?.packages ?? [];
+  const plans: ProPlan[] = [];
+  for (const definition of WEB_PLAN_DEFINITIONS) {
+    const pkg = packages.find((p) => SIGNED_OUT_PLAN_PACKAGES[p?.identifier] === definition.id);
+    if (!pkg) continue;
+    const price = catalogPrice(productsByID[pkg.platform_product_identifier]?.product_details?.[0]);
+    if (!price || typeof price.amount_micros !== 'number' || !price.currency) continue;
+    plans.push({
+      id: definition.id,
+      label: definition.label,
+      priceLabel: formatCatalogPrice(price),
+      priceMicros: price.amount_micros,
+      currency: price.currency,
+    });
+  }
+  return plans;
+}
+
+/** Load the signed-out ladder with plain public GETs, like /buy: no SDK, so no
+ * customer is configured. Rejects on failure so the caller falls back. */
+export async function loadSignedOutWebPlans(
+  fetchImpl: typeof fetch = (...args) => fetch(...args),
+  timeoutMs = 8000,
+): Promise<ProPlan[]> {
+  const headers = { Authorization: `Bearer ${REVENUECAT_WEB_KEY}`, 'X-Platform': 'web' };
+  const getJSON = async (url: string): Promise<any> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetchImpl(url, { headers, signal: controller.signal });
+      if (!response.ok) throw new Error(`catalogue ${response.status}`);
+      return await response.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const offerings = await getJSON(`${RC_API}/v1/subscribers/${WEB_PRICING_USER}/offerings`);
+  const ids = new Set<string>();
+  for (const pkg of catalogueOffering(offerings)?.packages ?? []) {
+    if (SIGNED_OUT_PLAN_PACKAGES[pkg?.identifier] && typeof pkg.platform_product_identifier === 'string') {
+      ids.add(pkg.platform_product_identifier);
+    }
+  }
+  const productsByID: Record<string, any> = {};
+  await Promise.all([...ids].map(async (id) => {
+    try {
+      productsByID[id] = await getJSON(
+        `${RC_API}/rcbilling/v1/subscribers/${WEB_PRICING_USER}/products?id=${encodeURIComponent(id)}`);
+    } catch { /* that rung is simply not listed */ }
+  }));
+  return webPlansFromCatalogue(offerings, productsByID);
+}
+
 /** Desktop RevenueCat Web Billing provider. It uses the same stable
  * `google:<subject>` customer ID as Android and the sync Worker, so a single
  * entitlement follows the signed-in customer across platforms. */
-class WebRevenueCatProvider implements ProProvider {
+export class WebRevenueCatProvider implements ProProvider {
   private purchases: import('@revenuecat/purchases-js').Purchases | null = null;
   private appUserID: string | null = null;
   private email: string | null = null;
@@ -815,7 +921,9 @@ class WebRevenueCatProvider implements ProProvider {
     if (!isWebBillingConfigured()) {
       throw new Error('Desktop billing is not configured yet.');
     }
-    if (!appUserID) {
+    // Signed in means a `google:<sub>` id. The anonymous catalogue id (or any
+    // other string) never reaches the purchase SDK.
+    if (!isGoogleCustomerId(appUserID)) {
       throw new Error('Sign in with Google before buying Pro.');
     }
     if (!this.purchases) {
@@ -854,6 +962,11 @@ class WebRevenueCatProvider implements ProProvider {
     return webPlansFromOfferings(offerings);
   }
 
+  async getSignedOutPlans(): Promise<ProPlan[]> {
+    if (!isWebBillingConfigured()) return [];
+    return loadSignedOutWebPlans();
+  }
+
   async purchase(planID?: ProPlanID): Promise<boolean> {
     // Keep older/unconfigured deployments useful until the Web Billing
     // provider and public key are enabled in RevenueCat.
@@ -871,17 +984,30 @@ class WebRevenueCatProvider implements ProProvider {
       ? webPackageForPlan(offerings, planID)
       : webPackageForPlan(offerings, 'lifetime') ?? firstAvailablePackage(offerings);
     if (!pkg) throw new Error('Pro upgrade is not available right now. Please try again later.');
-    const result = await purchases.purchase({
-      rcPackage: pkg,
-      customerEmail: this.email ?? undefined,
-      // The checkout follows the app's language (<html lang>, set by i18n.ts); RevenueCat falls back
-      // to defaultLocale for languages it doesn't have. Checked in en/de/es/fr/pt, EXEC 28c/29.
-      selectedLocale: document.documentElement.lang || 'en',
-      defaultLocale: 'en',
-      showDiscountCodeField: true,
-      discountCode: initialWebDiscountCode(),
-    });
-    return hasProEntitlement(result.customerInfo);
+    // The checkout sheet mounts inside purchases.purchase(). Funnel events
+    // carry the stage only: no plan, price, id or account (see events.ts).
+    trackProCheckout('checkout_open');
+    let result;
+    try {
+      result = await purchases.purchase({
+        rcPackage: pkg,
+        customerEmail: this.email ?? undefined,
+        // The checkout follows the app's language (<html lang>, set by i18n.ts); RevenueCat falls back
+        // to defaultLocale for languages it doesn't have. Checked in en/de/es/fr/pt, EXEC 28c/29.
+        selectedLocale: document.documentElement.lang || 'en',
+        defaultLocale: 'en',
+        showDiscountCodeField: true,
+        discountCode: initialWebDiscountCode(),
+      });
+    } catch (err) {
+      // purchases-js reports a closed sheet as ErrorCode.UserCancelledError (1).
+      const e = err as { errorCode?: unknown; message?: unknown } | null;
+      if (e?.errorCode === 1 || /cancel/i.test(String(e?.message ?? ''))) trackProCheckout('cancel');
+      throw err;
+    }
+    const paid = hasProEntitlement(result.customerInfo);
+    if (paid) trackProCheckout('paid');
+    return paid;
   }
 
   async restore(): Promise<boolean> {
@@ -889,6 +1015,7 @@ class WebRevenueCatProvider implements ProProvider {
   }
 
   async identify(appUserID: string, email: string | null, displayName: string | null): Promise<boolean> {
+    if (!isGoogleCustomerId(appUserID)) throw new Error('Sign in with Google before buying Pro.');
     this.appUserID = appUserID;
     this.email = email;
     if (isWebBillingConfigured()) {

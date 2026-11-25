@@ -204,6 +204,7 @@ export const ZH: Record<string, string> = {
   Processing: '处理中',
   'Continue with {plan} — {price}': '继续：{plan} — {price}',
   'Processing {plan}…': '正在处理：{plan}…',
+  'Sign in with Google to pay by card. Pro then works on web and Android.': '使用 Google 登录后即可刷卡付款。Pro 可在网页版和 Android 上使用。',
   'One-time payment. No subscription.': '一次性付款，无订阅。',
   'Subscription renews automatically until cancelled.': '订阅会自动续订，直至取消。',
   Open: '打开',

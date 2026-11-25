@@ -2955,6 +2955,13 @@ button.brand:hover .brand-name {
   width: 100%;
   margin-top: 10px;
 }
+.pro-signin-note {
+  margin: 8px 4px 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
 .pro-billing-terms {
   margin: 8px 4px 0;
   color: var(--text-3);

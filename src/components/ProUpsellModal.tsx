@@ -11,6 +11,7 @@ import { APP_NAME } from '../lib/appInfo';
 import { useI18n, useLang } from '../lib/i18n';
 import { toast } from '../lib/ui';
 import { trackEvent } from '../lib/events';
+import { continueWithPlan, isSignedOutPlanWall, signInFromWall, wallPlans } from '../lib/webCheckout';
 import Modal from './Modal';
 
 const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blurb: string }> = {
@@ -118,7 +119,7 @@ function benefitIsFor(b: { feature?: ProFeature; label: string }, feature: ProFe
 /** Feature-triggered Pro purchase sheet (Play Billing on Android, Stripe-backed
  * RevenueCat Web Billing on configured desktop builds). */
 export default function ProUpsellModal() {
-  const { upsellFeature, upsellTrigger, upsellOpen, closeUpsell, purchase, restore, busy, priceLabel, plans, isPro } = useProStore();
+  const { upsellFeature, upsellTrigger, upsellOpen, closeUpsell, purchase, restore, busy, priceLabel, plans, signedOutPlans, pendingPlanID, checkoutHandoff, loadSignedOutPlans, isPro } = useProStore();
   const account = useAuthStore((s) => s.account);
   const authBusy = useAuthStore((s) => s.busy);
   const signIn = useAuthStore((s) => s.signIn);
@@ -160,30 +161,43 @@ export default function ProUpsellModal() {
   // pressed nothing: the button was already spinning when the sheet opened.
   // Each flag now gates only the action it actually describes — sign-in waits
   // on auth, buying and restoring wait on the Pro store.
-  const actionBusy = needsAccount ? authBusy : busy;
+  // A signed-out Continue tap stays busy through sign-in AND the checkout that follows.
+  const actionBusy = checkoutHandoff || (needsAccount ? authBusy : busy);
+  // Signed-out web shows the real prices before sign-in. They come from the
+  // public catalogue and are only ever read; if they cannot load, `shownPlans`
+  // stays empty and the wall is today's plain "Sign in with Google" button.
+  useEffect(() => {
+    if (open && webBilling && !account) void loadSignedOutPlans();
+  }, [open, webBilling, account, loadSignedOutPlans]);
+  const signedIn = !!account;
+  const shownPlans = useMemo(
+    () => wallPlans({ native, webBilling, signedIn, handoff: checkoutHandoff, plans, signedOutPlans }),
+    [native, webBilling, signedIn, checkoutHandoff, plans, signedOutPlans]);
+  const signedOutWall = isSignedOutPlanWall({ native, webBilling, signedIn });
   // Android sells the same monthly/yearly/lifetime ladder as the web build, so
   // the choice grid is no longer web-only. Gated on more than ONE plan so a
   // store that currently offers only the lifetime unlock — a country the
   // subscriptions are not live in, or a build predating them — still gets the
   // single "Unlock Pro — <price>" button rather than a grid of one.
-  const showPlanChoices = (native || (webBilling && !!account)) && plans.length > 1;
+  const showPlanChoices = (native || webBilling) && shownPlans.length > 1;
   const [selectedPlanID, setSelectedPlanID] = useState<'monthly' | 'yearly' | 'lifetime' | null>(null);
   useEffect(() => {
     if (!showPlanChoices) return;
-    setSelectedPlanID((current) => plans.some((plan) => plan.id === current)
+    setSelectedPlanID((current) => shownPlans.some((plan) => plan.id === current)
       ? current
-      : plans.find((plan) => plan.id === 'yearly')?.id ??
-        plans.find((plan) => plan.id === 'lifetime')?.id ??
-        plans[0]?.id ?? null);
-  }, [plans, showPlanChoices]);
-  const selectedPlan = plans.find((plan) => plan.id === selectedPlanID) ?? null;
+      : shownPlans.find((plan) => plan.id === pendingPlanID)?.id ??
+        shownPlans.find((plan) => plan.id === 'yearly')?.id ??
+        shownPlans.find((plan) => plan.id === 'lifetime')?.id ??
+        shownPlans[0]?.id ?? null);
+  }, [shownPlans, showPlanChoices, pendingPlanID]);
+  const selectedPlan = shownPlans.find((plan) => plan.id === selectedPlanID) ?? null;
   // "Best value" has to be true at the prices the store actually returns.
   // Lifetime wins once it costs no more than two years of Yearly — at the
   // current Play prices (€4.99 a year, €6.99 lifetime) it pays for itself in
   // well under two years, and a badge on Yearly would mislead.
   const bestValueID = useMemo(() => {
-    const yearly = plans.find((plan) => plan.id === 'yearly');
-    const lifetime = plans.find((plan) => plan.id === 'lifetime');
+    const yearly = shownPlans.find((plan) => plan.id === 'yearly');
+    const lifetime = shownPlans.find((plan) => plan.id === 'lifetime');
     if (
       yearly?.priceMicros && lifetime?.priceMicros && yearly.currency &&
       yearly.currency === lifetime.currency && lifetime.priceMicros <= yearly.priceMicros * 2
@@ -191,10 +205,10 @@ export default function ProUpsellModal() {
       return 'lifetime';
     }
     return yearly ? 'yearly' : null;
-  }, [plans]);
+  }, [shownPlans]);
   const comparison = useMemo(() => {
-    const monthly = plans.find((plan) => plan.id === 'monthly');
-    const yearly = plans.find((plan) => plan.id === 'yearly');
+    const monthly = shownPlans.find((plan) => plan.id === 'monthly');
+    const yearly = shownPlans.find((plan) => plan.id === 'yearly');
     if (!monthly?.priceMicros || !yearly?.priceMicros || !monthly.currency || monthly.currency !== yearly.currency) {
       return null;
     }
@@ -207,7 +221,7 @@ export default function ProUpsellModal() {
       maximumFractionDigits: 2,
     }).format(yearly.priceMicros / 12 / 1_000_000);
     return { saving, monthlyEquivalent };
-  }, [plans]);
+  }, [shownPlans]);
   const lang = useLang((s) => s.lang);
   const shown = (en: string) => lang === 'en' || t(en) !== en;
   const copy = resolveUpsellCopy(feature, trigger, shown);
@@ -229,11 +243,11 @@ export default function ProUpsellModal() {
       );
     }
   };
-  const onPrimaryAction = needsAccount ? signIn : purchaseAndOfferLink;
+  const onPrimaryAction = needsAccount ? signInFromWall : purchaseAndOfferLink;
   // A plan only carries `originalPriceLabel` when a discount is genuinely
   // applied to the price beside it, so the struck-through price disappears by
   // itself when the offer ends rather than needing a second edit here.
-  const offerPlan = plans.find((plan) => plan.originalPriceLabel);
+  const offerPlan = shownPlans.find((plan) => plan.originalPriceLabel);
   // Web knows its ladder before sign-in; native only learns it from the store,
   // so fall back to the one-time claim until the plans are actually loaded.
   // Only claimed once the server has said it can record one for this account.
@@ -247,7 +261,7 @@ export default function ProUpsellModal() {
   const benefits = [
     ...matched,
     ...benefitList.filter((b) => !matched.includes(b)),
-    webBilling || plans.length > 1
+    webBilling || shownPlans.length > 1
       ? { icon: CalendarCheck, label: 'Monthly, yearly or lifetime — your choice' }
       : { icon: BadgeCheck, label: 'One-time purchase — no subscription' },
   ];
@@ -312,7 +326,7 @@ export default function ProUpsellModal() {
         <div className="pro-actions">
           {showPlanChoices ? (
             <div className="pro-plan-grid" aria-label="Choose a Pro plan">
-              {plans.map((plan) => (
+              {shownPlans.map((plan) => (
                 <button
                   key={plan.id}
                   className={`pro-plan${plan.id === bestValueID ? ' recommended' : ''}${selectedPlanID === plan.id ? ' selected' : ''}`}
@@ -354,7 +368,7 @@ export default function ProUpsellModal() {
             <>
               <button
                 className="btn primary pro-buy pro-continue"
-                onClick={() => purchaseAndOfferLink(selectedPlan.id)}
+                onClick={() => (signedOutWall ? continueWithPlan(selectedPlan.id) : purchaseAndOfferLink(selectedPlan.id))}
                 disabled={actionBusy}
               >
                 {actionBusy ? <span className="spin" /> : <Sparkles className="icon" />}
@@ -362,6 +376,11 @@ export default function ProUpsellModal() {
                   ? t('Processing {plan}…').replace('{plan}', t(selectedPlan.label))
                   : t('Continue with {plan} — {price}').replace('{plan}', t(selectedPlan.label)).replace('{price}', selectedPlan.priceLabel)}
               </button>
+              {signedOutWall && (
+                <p className="pro-signin-note">
+                  {t('Sign in with Google to pay by card. Pro then works on web and Android.')}
+                </p>
+              )}
               <p className="pro-billing-terms">
                 {selectedPlan.id === 'lifetime'
                   ? t('One-time payment. No subscription.')

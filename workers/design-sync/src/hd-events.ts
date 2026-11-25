@@ -10,6 +10,7 @@ export const HD_EVENT_NAMES = new Set([
   'pro_wall_shown',
   'import_result',
   'export',
+  'pro_checkout',
 ]);
 export const HD_EVENTS_PER_REQUEST = 20;
 export const HD_EVENTS_PER_INSTALL_PER_DAY = 60;
