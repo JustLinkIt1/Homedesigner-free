@@ -453,6 +453,12 @@ button.brand:hover .brand-name {
   width: 100%;
   transition: background 0.12s, color 0.12s;
 }
+/* Desktop: menu rows stay on one line (PDF/DXF/IFC + PRO tag wrapped at 176 px; phones have their own layout). */
+@media (min-width: 1000px) {
+  .export-menu button {
+    white-space: nowrap;
+  }
+}
 .export-menu button:hover {
   background: var(--brand-soft);
   color: var(--brand-600);
@@ -2948,6 +2954,14 @@ button.brand:hover .brand-name {
 .pro-continue {
   width: 100%;
   margin-top: 10px;
+  text-wrap: balance; /* no dangling '—' when the price wraps (Fable 25 Nov) */
+}
+.pro-signin-note {
+  margin: 8px 4px 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
 }
 .pro-billing-terms {
   margin: 8px 4px 0;

@@ -18,6 +18,7 @@ const PRO_CACHE_KEY = 'homedesigner.pro.v1';
  *  near the user's perception of "instant". */
 const RECHECK_INTERVAL_MS = 60_000;
 let lastRecheck = 0;
+let signedOutLoad: Promise<void> | null = null;
 
 /** How long a resume waits for an in-flight Play call to settle on its own
  *  before deciding it was stranded. Long enough not to race a purchase that is
@@ -56,6 +57,16 @@ interface ProState {
   isPro: boolean;
   priceLabel: string | null;
   plans: ProPlan[];
+  /** Web only: the price ladder shown to a visitor who has not signed in
+   *  (read-only catalogue data, see `loadSignedOutWebPlans`). Empty until it
+   *  loads, and stays empty if it cannot, which is the old sign-in-only wall. */
+  signedOutPlans: ProPlan[];
+  /** The plan the visitor chose before signing in. Survives a failed or
+   *  closed sign-in so the sheet still shows it chosen. */
+  pendingPlanID: ProPlanID | null;
+  /** True from the signed-out Continue tap until sign-in and checkout have
+   *  both finished, so the sheet does not flicker between its two layouts. */
+  checkoutHandoff: boolean;
   busy: boolean;
   upsellFeature: ProFeature | null;
   /** Which specific wall opened the sheet (null for a direct open or a wall
@@ -66,6 +77,11 @@ interface ProState {
    *  no feature to frame it, in which case it shows the plain Pro pitch. */
   upsellOpen: boolean;
   refresh: () => Promise<void>;
+  /** Web only. Loads (once per page, retried after a failure) the signed-out
+   *  price ladder. Never throws; leaves `signedOutPlans` empty on failure. */
+  loadSignedOutPlans: () => Promise<void>;
+  setPendingPlan: (planID: ProPlanID | null) => void;
+  setCheckoutHandoff: (active: boolean) => void;
   /** Silent re-check for an entitlement granted outside the app (Play promo
    *  code). Resolves true only when it flipped a non-Pro user to Pro. */
   recheck: () => Promise<boolean>;
@@ -89,6 +105,9 @@ export const useProStore = create<ProState>((set, get) => ({
   isPro: readCache() || isReferralRedeemed(),
   priceLabel: null,
   plans: [],
+  signedOutPlans: [],
+  pendingPlanID: null,
+  checkoutHandoff: false,
   busy: false,
   upsellFeature: null,
   upsellTrigger: null,
@@ -132,6 +151,24 @@ export const useProStore = create<ProState>((set, get) => ({
       /* plan choices are cosmetic until checkout */
     }
   },
+
+  loadSignedOutPlans: async () => {
+    if (Capacitor.isNativePlatform() || get().signedOutPlans.length > 0) return;
+    const run = signedOutLoad ?? (async () => {
+      try {
+        const provider = getProProvider();
+        const loaded = provider.getSignedOutPlans ? await provider.getSignedOutPlans() : [];
+        set({ signedOutPlans: loaded });
+      } catch {
+        /* no prices signed out: the wall keeps its plain sign-in button */
+      }
+    })();
+    signedOutLoad = run;
+    try { await run; } finally { if (signedOutLoad === run) signedOutLoad = null; }
+  },
+
+  setPendingPlan: (planID) => set({ pendingPlanID: planID }),
+  setCheckoutHandoff: (active) => set({ checkoutHandoff: active }),
 
   recheck: async () => {
     // Nothing to find: a Pro user is already Pro, and this must never be able
@@ -292,5 +329,5 @@ export const useProStore = create<ProState>((set, get) => ({
   },
 
   openUpsell: (f = null, trigger = null) => set({ upsellFeature: f, upsellTrigger: trigger, upsellOpen: true }),
-  closeUpsell: () => set({ upsellFeature: null, upsellTrigger: null, upsellOpen: false }),
+  closeUpsell: () => set({ upsellFeature: null, upsellTrigger: null, upsellOpen: false, pendingPlanID: null }),
 }));

@@ -65,6 +65,7 @@ trackEvent('view_3d_opened', undefined, { once: true });
 trackEvent('import_result', 'ok');
 trackEvent('pro_wall_shown', 'projects:new');
 trackEvent('pro_wall_shown', 'projects:new');
+for (const kind of ['png', 'pdf', 'dxf', 'ifc']) trackEvent('export', kind);
 await flush();
 check(sent.length === 1, 'one batched request');
 const body = sent[0].body;
@@ -72,7 +73,8 @@ check(sent[0].url === 'https://sync.example.test/v1/events', 'posts to the worke
 check(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(body.install) && body.install === store.get('homedesigner.install.v1'), 'v4 install id, stored');
 check(body.app_version === '1.23.0' && body.source === 'web', 'version and web source');
 const names = body.events.map((e) => e.event);
-check(names.join() === 'app_first_open,template_chosen,editor_opened,view_3d_opened,import_result,pro_wall_shown,pro_wall_shown', 'once-per-session steps fire once; import/pro wall are not deduped');
+check(names.join() === 'app_first_open,template_chosen,editor_opened,view_3d_opened,import_result,pro_wall_shown,pro_wall_shown,export,export,export,export', 'once-per-session steps fire once; import/pro wall/export are not deduped');
+check(body.events.slice(-4).map((e) => e.detail).join() === 'png,pdf,dxf,ifc', 'export carries its kind as the detail');
 check(body.events[1].detail === 'open-plan', 'detail is slugged');
 check(Object.keys(body).sort().join() === 'app_version,events,install,source', 'body carries nothing else');
 
@@ -111,4 +113,16 @@ for (let i = 0; i < 50; i++) trackEvent('import_result', 'ok');
 await flush();
 await new Promise((resolve) => setTimeout(resolve, 3_400)); // the pending 2 s flush, then the re-armed one
 check(sent.reduce((n, r) => n + r.body.events.length, 0) === 50, 'a long queue drains on its own');
+// The Pro checkout funnel: one event name, the stage as the detail, nothing else.
+sent.length = 0;
+const { trackProCheckout, PRO_CHECKOUT_STAGES } = mod;
+for (const stage of PRO_CHECKOUT_STAGES) trackProCheckout(stage);
+trackEvent('pro_checkout', 'yearly');
+trackEvent('pro_checkout', '9.99-eur');
+trackEvent('pro_checkout', 'google:12345');
+trackEvent('pro_checkout');
+await flush();
+const funnel = sent.flatMap((r) => r.body.events).filter((e) => e.event === 'pro_checkout');
+check(funnel.map((e) => e.detail).join() === 'signin_click,signin_ok,checkout_open,paid,cancel', 'pro_checkout sends the five stages and drops anything else');
+check(funnel.every((e) => Object.keys(e).sort().join() === 'detail,event'), 'a pro_checkout event is only { event, detail }');
 console.log(`events: ${checks} checks passed`);

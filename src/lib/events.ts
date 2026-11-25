@@ -2,7 +2,7 @@
 //
 // What is sent: a random install id this module makes for itself on first run,
 // the app version, where the install came from (Play campaign / organic / web)
-// and one of six fixed event names with a short slug. What is NEVER used: the
+// and one of eight fixed event names with a short slug. What is NEVER used: the
 // Android ID, the advertising ID, an account id or an email.
 //
 // Everything here is fire-and-forget: `trackEvent` never throws, never awaits
@@ -13,7 +13,12 @@ import { APP_VERSION } from './appInfo';
 
 export type HdEventName =
   | 'app_first_open' | 'template_chosen' | 'editor_opened'
-  | 'view_3d_opened' | 'pro_wall_shown' | 'import_result';
+  | 'view_3d_opened' | 'pro_wall_shown' | 'import_result' | 'export' | 'pro_checkout';
+
+/** The only details `pro_checkout` may carry: the step reached on the web Pro
+ * checkout, never a price, plan, id, email or account. */
+export const PRO_CHECKOUT_STAGES = ['signin_click', 'signin_ok', 'checkout_open', 'paid', 'cancel'] as const;
+export type ProCheckoutStage = typeof PRO_CHECKOUT_STAGES[number];
 
 const BASE = (import.meta.env.VITE_CLOUD_SYNC_URL ?? '').replace(/\/$/, '');
 const INSTALL_KEY = 'homedesigner.install.v1';
@@ -156,6 +161,8 @@ export async function flush(keepalive = false): Promise<void> {
 export function trackEvent(event: HdEventName, detail?: string, opts: { once?: boolean } = {}): void {
   try {
     if (!/^https:\/\//.test(BASE)) return;
+    // Belt and braces for the privacy promise: nothing but a stage name may ride on pro_checkout.
+    if (event === 'pro_checkout' && !(PRO_CHECKOUT_STAGES as readonly string[]).includes(detail ?? '')) return;
     if (opts.once) {
       if (firedThisSession.has(event)) return;
       firedThisSession.add(event);
@@ -167,6 +174,14 @@ export function trackEvent(event: HdEventName, detail?: string, opts: { once?: b
   } catch {
     /* analytics must never break the app */
   }
+}
+
+/** One step of the web Pro checkout funnel. Web only: the Android purchase path never calls this. */
+export function trackProCheckout(stage: ProCheckoutStage): void {
+  // Web only (EXEC cycle 130): a 'paid' step tied to the install id inside the Android app could
+  // count as Play's Purchase history data type, which the Data safety form doesn't declare.
+  if (Capacitor.isNativePlatform()) return;
+  trackEvent('pro_checkout', stage);
 }
 
 /** Call once at startup: records the first launch and wires background flushes. */
