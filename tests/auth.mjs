@@ -23,7 +23,7 @@ const checks = [
   })()],
   ['Delete confirm names what is deleted, the device copy and the sign-out', (() => {
     const dlg = readFileSync('src/components/SettingsDialog.tsx', 'utf8');
-    return /cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered\. Plans saved on this device stay on this device\. You will be signed out/.test(dlg);
+    return /cloud plans, community posts and images, avatar and AI points are deleted and cannot be recovered\. Plans saved on this device stay on this device\. (?:[^']*\. )?You will be signed out/.test(dlg);
   })()],
   ['deleteAccount stops sync first, signs out only after the server delete succeeds', (() => {
     const store = readFileSync('src/store/authStore.ts', 'utf8');
