@@ -600,6 +600,7 @@ export const TR: Record<string, string> = {
   /* ---------- Lock, kitchen tool & room names (v1.0.53) ---------- */
   'Lock': 'Kilit',
   'Lock objects': 'Nesneleri kilitle',
+  'Watch it build': 'Yapılışını izle',
   'Lock objects so they cannot be moved': 'Nesneleri taşınamamaları için kilitle',
   'Kitchen run': 'Mutfak hattı',
   'Wall cabinets': 'Üst dolaplar',

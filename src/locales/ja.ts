@@ -535,6 +535,7 @@ export const JA: Record<string, string> = {
   /* ---------- Lock, kitchen tool & room names (v1.0.53) ---------- */
   'Lock': 'ロック',
   'Lock objects': 'オブジェクトをロック',
+  'Watch it build': '組み立てを見る',
   'Lock objects so they cannot be moved': 'オブジェクトを固定して動かせないようにする',
   'Kitchen run': 'キッチンライン',
   'Wall cabinets': '吊り戸棚',

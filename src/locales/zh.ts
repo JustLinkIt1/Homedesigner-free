@@ -535,6 +535,7 @@ export const ZH: Record<string, string> = {
   /* ---------- Lock, kitchen tool & room names (v1.0.53) ---------- */
   'Lock': '锁定',
   'Lock objects': '锁定对象',
+  'Watch it build': '观看搭建过程',
   'Lock objects so they cannot be moved': '锁定对象，防止被移动',
   'Kitchen run': '橱柜排布',
   'Wall cabinets': '吊柜',

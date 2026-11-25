@@ -23,6 +23,7 @@ import {
   Sparkles,
   RotateCcw,
   RotateCw,
+  Play,
 } from 'lucide-react';
 import Toolbar from './components/Toolbar';
 import ToolDock from './components/ToolDock';
@@ -63,7 +64,8 @@ import { initNative } from './lib/native';
 import { noteAppOpened } from './lib/appReview';
 import { loadAiCapabilities } from './lib/aiCapabilities';
 import { isWebGLAvailable } from './lib/webgl';
-import { orbitZoom } from './lib/renderBridge';
+import { orbitZoom, buildReplay } from './lib/renderBridge';
+import { buildAnimationAllowed } from './lib/buildPlay';
 import { useI18n, t as translate } from './lib/i18n';
 import { trackEvent } from './lib/events';
 
@@ -863,6 +865,11 @@ export default function App() {
                     <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
                     <FurnitureLockIcon style={{ width: 15, height: 15 }} /> {t('Lock')}
                   </label>
+                  {buildAnimationAllowed() && (
+                    <button className="toggle" onClick={() => buildReplay.current?.()} data-tip={t('Watch it build')} aria-label={t('Watch it build')}>
+                      <Play className="icon" style={{ width: 15, height: 15 }} />
+                    </button>
+                  )}
                 </div>
                 {/* Lighting folds the lamps toggle + time-of-day slider into a
                     popover so the HUD stays compact on phones (it used to run
@@ -948,6 +955,14 @@ export default function App() {
                       >
                         <Footprints className="icon" style={{ width: 16, height: 16 }} /> {t('Walk through')}
                       </button>
+                      {buildAnimationAllowed() && (
+                        <button
+                          className="toggle"
+                          onClick={() => { setViewOpen(false); buildReplay.current?.(); }}
+                        >
+                          <Play className="icon" style={{ width: 15, height: 15 }} /> {t('Watch it build')}
+                        </button>
+                      )}
                       <div className="view-menu-sep" />
                       {/* Rotating the plan lives in Properties, which in 3D on a
                           phone is behind the Edit tab AND only shows with

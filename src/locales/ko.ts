@@ -535,6 +535,7 @@ export const KO: Record<string, string> = {
   /* ---------- Lock, kitchen tool & room names (v1.0.53) ---------- */
   'Lock': '잠금',
   'Lock objects': '객체 잠금',
+  'Watch it build': '지어지는 과정 보기',
   'Lock objects so they cannot be moved': '객체가 움직이지 않도록 잠급니다',
   'Kitchen run': '주방 라인',
   'Wall cabinets': '상부장',
