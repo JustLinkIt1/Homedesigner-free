@@ -24,7 +24,7 @@ export type ProFeature = 'multiFloor' | 'pdfExport' | 'catalog' | 'projects' | '
 export type ProTrigger =
   | 'projects:new' | 'projects:import' | 'projects:sample' | 'projects:duplicate'
   | 'multiFloor:add' | 'multiFloor:clone' | 'multiFloor:aiPlan'
-  | 'pdfExport:pdf' | 'pdfExport:dxf'
+  | 'pdfExport:pdf' | 'pdfExport:dxf' | 'pdfExport:ifc'
   | 'catalog:item' | 'catalog:opening' | 'catalog:appliance' | 'catalog:uppers' | 'catalog:corner'
   | 'cleanExport:saved' | 'cleanExport:render';
 export type ProPlanID = 'monthly' | 'yearly' | 'lifetime';

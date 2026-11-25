@@ -14,6 +14,7 @@ import { formatArea, formatLength, type Units } from './units';
 import { buildFloorSchedules, buildOpeningSchedule } from './planSchedule';
 import { buildBom } from './bom';
 import { buildDxf } from './dxfExport';
+import { buildIfc } from './ifcExport';
 import { t, useLang } from './i18n';
 
 /** Capture the current design as a framed PNG data URL (null if empty). */
@@ -324,5 +325,26 @@ export async function exportPlanDXF(projectName: string): Promise<boolean> {
   if (!anything) return false;
   const dxf = buildDxf({ projectName, floors: s.floors, geom });
   await saveText(dxf, `${slug(projectName)}.dxf`, 'application/dxf');
+  return true;
+}
+
+/**
+ * Save the design as an IFC4 building model: storeys, walls with their doors
+ * and windows cut in, and a space per indoor room. Returns false when there is
+ * nothing to export.
+ */
+export async function exportPlanIFC(projectName: string): Promise<boolean> {
+  const s = useDesign.getState();
+  const geom: Parameters<typeof buildIfc>[0]['geom'] = {};
+  let anything = false;
+  for (const f of s.floors) {
+    const g = s.floorGeom[f.id];
+    if (!g) continue;
+    if (g.walls.length || g.rooms.length) anything = true;
+    geom[f.id] = { walls: g.walls, rooms: g.rooms, openings: g.openings };
+  }
+  if (!anything) return false;
+  const ifc = buildIfc({ projectName, floors: s.floors, geom });
+  await saveText(ifc, `${slug(projectName)}.ifc`, 'application/x-step');
   return true;
 }

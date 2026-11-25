@@ -9,6 +9,7 @@ export const HD_EVENT_NAMES = new Set([
   'view_3d_opened',
   'pro_wall_shown',
   'import_result',
+  'export',
 ]);
 export const HD_EVENTS_PER_REQUEST = 20;
 export const HD_EVENTS_PER_INSTALL_PER_DAY = 60;

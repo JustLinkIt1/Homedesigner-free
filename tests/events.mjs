@@ -65,6 +65,7 @@ trackEvent('view_3d_opened', undefined, { once: true });
 trackEvent('import_result', 'ok');
 trackEvent('pro_wall_shown', 'projects:new');
 trackEvent('pro_wall_shown', 'projects:new');
+for (const kind of ['png', 'pdf', 'dxf', 'ifc']) trackEvent('export', kind);
 await flush();
 check(sent.length === 1, 'one batched request');
 const body = sent[0].body;
@@ -72,7 +73,8 @@ check(sent[0].url === 'https://sync.example.test/v1/events', 'posts to the worke
 check(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(body.install) && body.install === store.get('homedesigner.install.v1'), 'v4 install id, stored');
 check(body.app_version === '1.23.0' && body.source === 'web', 'version and web source');
 const names = body.events.map((e) => e.event);
-check(names.join() === 'app_first_open,template_chosen,editor_opened,view_3d_opened,import_result,pro_wall_shown,pro_wall_shown', 'once-per-session steps fire once; import/pro wall are not deduped');
+check(names.join() === 'app_first_open,template_chosen,editor_opened,view_3d_opened,import_result,pro_wall_shown,pro_wall_shown,export,export,export,export', 'once-per-session steps fire once; import/pro wall/export are not deduped');
+check(body.events.slice(-4).map((e) => e.detail).join() === 'png,pdf,dxf,ifc', 'export carries its kind as the detail');
 check(body.events[1].detail === 'open-plan', 'detail is slugged');
 check(Object.keys(body).sort().join() === 'app_version,events,install,source', 'body carries nothing else');
 
