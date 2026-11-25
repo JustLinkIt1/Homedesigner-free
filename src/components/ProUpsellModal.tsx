@@ -265,9 +265,13 @@ export default function ProUpsellModal() {
   const benefits = [
     ...matched,
     ...benefitList.filter((b) => !matched.includes(b)),
-    (webBilling && !showSingleSignedOutPlan) || shownPlans.length > 1
-      ? { icon: CalendarCheck, label: 'Monthly, yearly or lifetime — your choice' }
-      : { icon: BadgeCheck, label: 'One-time purchase — no subscription' },
+    // Only claim what is on sale (Fable 25 Nov): several plans -> the choice; one Lifetime plan, or
+    // native with its one-time unlock -> one-time; a single subscription or no prices -> no claim.
+    ...(shownPlans.length > 1
+      ? [{ icon: CalendarCheck, label: 'Monthly, yearly or lifetime — your choice' }]
+      : (shownPlans.length === 1 ? shownPlans[0].id === 'lifetime' : native)
+        ? [{ icon: BadgeCheck, label: 'One-time purchase — no subscription' }]
+        : []),
   ];
   // The new label when this locale has it, else its translation of the old one.
   const benefitText = (b: { label: string; legacy?: string }) => {

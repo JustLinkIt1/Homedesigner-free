@@ -2954,6 +2954,7 @@ button.brand:hover .brand-name {
 .pro-continue {
   width: 100%;
   margin-top: 10px;
+  text-wrap: balance; /* no dangling '—' when the price wraps (Fable 25 Nov) */
 }
 .pro-signin-note {
   margin: 8px 4px 0;
