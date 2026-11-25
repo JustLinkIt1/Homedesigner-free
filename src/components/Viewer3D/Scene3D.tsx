@@ -14,7 +14,10 @@ import { drawBridge, useDraw } from '../../lib/ui';
 import type { Point } from '../../types';
 import WalkControls, { WalkTouchControls } from './WalkControls';
 import * as THREE from 'three';
-import { sceneCapture, sceneSnapshot, sceneView, orbitZoom, orbitFocus } from '../../lib/renderBridge';
+import { sceneCapture, sceneSnapshot, sceneView, orbitZoom, orbitFocus, buildReplay } from '../../lib/renderBridge';
+import BuildAnimation from './BuildAnimation';
+import { autoBuildDue, markBuildPlayed } from '../../lib/buildPlay';
+import { getActiveId } from '../../lib/projects';
 import { renderViewOf } from '../../lib/renderView';
 import { captureRenderer } from '../../lib/renderCapture';
 import { saveImage } from '../../lib/native';
@@ -873,10 +876,15 @@ class PostFXBoundary extends Component<{ onFail: () => void; children: ReactNode
 }
 
 /** Registers a high-resolution PNG capture function for the toolbar button. */
-function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<any> }) {
+function CaptureBridge({ composerRef, buildFinish }: {
+  composerRef: React.MutableRefObject<any>;
+  buildFinish: React.MutableRefObject<(() => void) | null>;
+}) {
   const { gl, size, scene, camera, invalidate } = useThree();
   useEffect(() => {
     const capture = (scale: number, mobile: boolean, format: 'image/png' | 'image/jpeg' = 'image/png') => {
+      // Never a half-built house: a capture during the build animation ends it first.
+      buildFinish.current?.();
       // A saved picture shows the design, not the editor: the view anchor, wall
       // handles, drawing guides and the selection box are taken out for it.
       const hidden: THREE.Object3D[] = [];
@@ -907,7 +915,7 @@ function CaptureBridge({ composerRef }: { composerRef: React.MutableRefObject<an
       sceneSnapshot.current = null;
       sceneView.current = null;
     };
-  }, [gl, size, scene, camera, composerRef, invalidate]);
+  }, [gl, size, scene, camera, composerRef, buildFinish, invalidate]);
   return null;
 }
 
@@ -1053,6 +1061,30 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
     if (walkMode) setPaintTap(null);
   }, [walkMode]);
 
+  // "Watch your plan build itself": once per project on this device (see
+  // buildPlay), again from the toolbar's replay button. `buildRun` re-keys it
+  // so a replay starts from the beginning.
+  const [buildOn, setBuildOn] = useState(() => autoBuildDue(getActiveId()));
+  const [buildRun, setBuildRun] = useState(0);
+  const buildFinish = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (buildOn) markBuildPlayed(getActiveId());
+  }, [buildOn]);
+  useEffect(() => {
+    if (walkMode) setBuildOn(false);
+  }, [walkMode]);
+  useEffect(() => {
+    buildReplay.current = () => {
+      if (useDesign.getState().walkMode) return;
+      buildFinish.current?.();
+      setBuildRun((n) => n + 1);
+      setBuildOn(true);
+    };
+    return () => {
+      buildReplay.current = null;
+    };
+  }, []);
+
   // Close the paint palette as soon as the selection moves off the surface it
   // belongs to. Tapping furniture goes through a different path than
   // handleSurfaceTap, so a floor's palette used to stay open over an unrelated
@@ -1196,7 +1228,11 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
   return (
     <div
       style={{ position: 'absolute', inset: 0 }}
-      onPointerDownCapture={beginInteract}
+      onPointerDownCapture={() => {
+        // A tap or click anywhere on the 3D view skips the build animation.
+        buildFinish.current?.();
+        beginInteract();
+      }}
       onPointerUpCapture={scheduleInteractEnd}
       onPointerCancelCapture={scheduleInteractEnd}
       onWheelCapture={() => {
@@ -1378,6 +1414,14 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         dollhouse={walkMode ? false : dollhouse}
         onSurfaceTap={walkMode ? undefined : handleSurfaceTap}
       />
+      {buildOn && !walkMode && (
+        <BuildAnimation
+          key={buildRun}
+          lite={caps.tier === 'low'}
+          finishRef={buildFinish}
+          onDone={() => setBuildOn(false)}
+        />
+      )}
 
       {/* Touch selection actions over the selected object. Suppressed while
           walking or while a draw tool is armed — both own the tap surface.
@@ -1397,7 +1441,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         </PostFXBoundary>
       )}
 
-      <CaptureBridge composerRef={composerRef} />
+      <CaptureBridge composerRef={composerRef} buildFinish={buildFinish} />
       {!walkMode && <ZoomBridge />}
       <PortraitLift enabled={!walkMode} />
       <group userData={{ overlay: true }}>

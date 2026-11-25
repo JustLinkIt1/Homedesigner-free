@@ -32,3 +32,7 @@ export const orbitZoom: { current: ZoomFn | null } = { current: null };
 // invoked on double-tapping a floor.
 type FocusFn = (x: number, z: number) => void;
 export const orbitFocus: { current: FocusFn | null } = { current: null };
+
+// "Watch your plan build itself": the 3D toolbar's replay button. Registered
+// by Scene3D while the 3D view is open.
+export const buildReplay: { current: (() => void) | null } = { current: null };
