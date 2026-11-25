@@ -2378,6 +2378,17 @@ button.brand:hover .brand-name {
     top: calc(60px + env(safe-area-inset-top));
     max-width: calc(100vw - 24px);
     min-height: 46px;
+    /* Phones: the item name sits at the END of the phrase ('… to place: {item}'), so a one-line
+       pill cut the name itself in nl/ru/tr. Two lines, then ellipsis (Fable, 25 Nov). */
+    white-space: normal;
+    border-radius: 24px;
+  }
+  .placement-affordance span {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.25;
+    min-width: 0;
   }
 }
 
