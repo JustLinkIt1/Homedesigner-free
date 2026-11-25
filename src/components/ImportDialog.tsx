@@ -493,13 +493,13 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
                 {t('Use as tracing background')}
               </button>
               <button className="btn primary" onClick={() => runTrace(true)} disabled={previewCount === 0}>
-                {previewCount > 0 ? `${t('Trace')} ${previewCount} ${t('walls')}` : t('Auto-trace walls')}
+                {previewCount > 0 ? t('Trace {n} walls').replace('{n}', String(previewCount)) : t('Auto-trace walls')}
               </button>
             </>
           )}
           {stage === 'dxf' && (
             <button className="btn primary" onClick={importDxfWalls} disabled={!dxfInfo?.count}>
-              {t('Import')} {dxfInfo?.count ?? 0} {t('walls')}
+              {t('Import {n} walls').replace('{n}', String(dxfInfo?.count ?? 0))}
             </button>
           )}
         </div>
