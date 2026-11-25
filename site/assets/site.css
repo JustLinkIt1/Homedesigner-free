@@ -44,6 +44,7 @@ header {
 }
 /* The English pages carry seven links (DXF to 3D, 25 Nov 2026): the header row gets a little more width than the content. */
 header .wrap { max-width: 1200px; }
+footer .wrap { max-width: 1200px; }
 .nav { display: flex; align-items: center; gap: 14px; height: 64px; }
 .nav .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; letter-spacing: -0.02em; }
 .nav .logo img { width: 32px; height: 32px; border-radius: 9px; }
@@ -105,6 +106,8 @@ p.lead { color: var(--text-2); font-size: 17px; max-width: 680px; margin-top: 14
 .faq details p { color: var(--text-2); margin-top: 10px; font-size: 15.5px; }
 
 .more { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-top: 30px; }
+/* Six cards fall 3 + 3 instead of leaving one alone on a row (25 Nov). */
+@media (min-width: 761px) { .more:has(> :nth-child(6):last-child) { grid-template-columns: repeat(3, 1fr); } }
 .more a { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; transition: transform 0.2s, border-color 0.2s; }
 .more a:hover { transform: translateY(-3px); border-color: #31405c; }
 .more b { display: block; font-size: 16.5px; letter-spacing: -0.01em; }

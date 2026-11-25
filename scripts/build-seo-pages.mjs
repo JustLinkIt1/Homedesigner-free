@@ -1260,6 +1260,79 @@ const TOPICS = [
       card: ['DXF to 3D', 'Import a DXF or DWG floor plan and walk through it in 3D.', 'A floor plan drawing with an import arrow'],
     },
   },
+  {
+    // English only (EXEC cycles 72/75). Copy: drafts/hd-pdf-floor-plan-to-3d-copy-2026-11-25.md with EXEC's two FAQ fixes;
+    // claims from research/hd-pdf-import-claims-2026-11-25.md §3 only.
+    only: ['en'],
+    // Not in the top nav: an 8th English link overflows the header at 1011 px and from 1200 px (25 Nov). Footer and More only.
+    inHeader: false,
+    hero: { src: 'plan-2d.webp', w: 1280, h: 823 },
+    shots: [
+      { src: 'import.webp', w: 640, h: 640 },
+      { src: 'phone-2-plan2d.webp', w: 720, h: 1560, phone: true },
+      { src: 'house-3d.webp', w: 1101, h: 782 },
+    ],
+    cardImg: { src: 'import.webp', w: 640, h: 640 },
+    en: {
+      slug: 'pdf-floor-plan-to-3d',
+      nav: 'PDF plan to 3D',
+      title: 'PDF Floor Plan to 3D Online, Free | HomeDesigner',
+      description:
+        'Import a PDF, scan or image of your floor plan. HomeDesigner detects the walls and creates the rooms, then you walk through it in 3D. Free.',
+      h1: ['PDF floor plan to 3D', 'free, in your browser'],
+      sub: 'Bring in the PDF or a clear, straight-on photo of your plan. HomeDesigner finds the walls for you, builds the rooms, and then you can walk through it in 3D.',
+      heroAlt: 'A floor plan with walls, rooms and dimensions in the HomeDesigner 2D editor',
+      kicker: 'PDF and image import',
+      heading: 'From the plan you already have to a home you can walk through',
+      lead: 'No need to redraw a plan line by line. Import it, check the walls HomeDesigner found, and start editing. No account needed to import, and no credits.',
+      rows: [
+        {
+          alt: 'A floor plan drawing with an import arrow',
+          h: 'Walls detected automatically',
+          p: 'Choose a PDF, PNG or JPG of your floor plan. HomeDesigner traces the walls, at any angle, not just straight up-and-down, and shows them over your plan before anything is placed.',
+          list: [
+            ['Scanned or exported PDFs', 'both work, as do PNG and JPG images'],
+            ['Preview first', 'see every wall it found before you import'],
+            ['Adjust if needed', 'change the sensitivity for faint or busy plans'],
+          ],
+        },
+        {
+          alt: 'A floor plan with rooms in the 2D editor on a phone',
+          h: 'Rooms and scale, ready to edit',
+          p: 'Set the real width of the plan and the dimensions come out to scale. Rooms are created from the walls automatically, so you can start moving walls, adding doors and windows, and furnishing right away.',
+          list: [
+            ['To scale', 'set the plan width once, everything follows'],
+            ['Rooms built for you', 'from the walls that were found'],
+            ['Faint plan', 'keep it as a tracing background and draw over it'],
+          ],
+        },
+        {
+          alt: 'A floor plan shown as a furnished 3D house',
+          h: 'Then walk through it in 3D',
+          p: 'After the import you are in the 2D editor. Switch to 3D, walk through the rooms, and try furniture to scale before anything is built or bought.',
+          list: [
+            ['Walk-through 3D', 'on your phone or in the browser'],
+            ['Private tracing', 'the plan is traced in your browser; it is not sent to a server for tracing'],
+            ['Export', 'PNG for free, PDF and DXF export in HomeDesigner Pro'],
+          ],
+        },
+      ],
+      steps: [
+        ['Open HomeDesigner', 'Start the web app in your browser, or the Android app.'],
+        ['Import your plan', 'Tap "Import a 2D plan" and pick your PDF or image.'],
+        ['Set the scale and check', 'Enter the plan\'s real width, look over the walls found, then import.'],
+        ['Switch to 3D', 'Your plan is in the 2D editor; one tap takes you to the 3D walk-through.'],
+      ],
+      faq: [
+        ['Is importing a PDF floor plan free?', 'Yes. Importing and tracing are free, use no credits, and need no account. Your first project is free whichever way you start it; a second project needs HomeDesigner Pro, which also adds PDF and DXF export.'],
+        ['Can I use a photo of a paper plan?', 'Yes, if it is a clear, straight-on photo or scan with even light. Photos taken at an angle give slanted walls. iPhone photos saved as HEIC need to be saved as JPG first.'],
+        ['My PDF has several pages. Which one is imported?', 'The first page. If your floor plan is on a later page, save that page as its own PDF or image and import that.'],
+        ['Are doors, windows and room names imported?', 'From a PDF or image, HomeDesigner imports the walls and builds the rooms; you add doors, windows and names in the editor. If you have the plan as a DXF (or DWG in the browser), import that instead: it brings in exact geometry with doors, windows and room names.'],
+        ['Is my plan sent to a server for tracing?', 'The plan is traced in your browser; it is not sent to a server for tracing.'],
+      ],
+      card: ['PDF plan to 3D', 'Import a PDF or a straight-on photo of your plan and walk through it in 3D.', 'A floor plan drawing with an import arrow'],
+    },
+  },
 ];
 
 // French puts a space before : ; ? ! and a line must never break there, so the
@@ -1330,7 +1403,7 @@ function header(code, current) {
     <div class="wrap nav">
       <a class="logo" href="${homePath(code)}"><img src="/assets/brand-icon.png" alt="" width="32" height="32" />HomeDesigner</a>
       <nav class="links">
-        ${topicsIn(code).map((t) => `<a href="${topicPath(t, code)}"${t === current ? ' aria-current="page"' : ''}>${esc(t[code].nav)}</a>`).join('\n        ')}
+        ${topicsIn(code).filter((t) => t.inHeader !== false).map((t) => `<a href="${topicPath(t, code)}"${t === current ? ' aria-current="page"' : ''}>${esc(t[code].nav)}</a>`).join('\n        ')}
         <a href="/buy/">Pro</a>
       </nav>
       <span class="spacer"></span>
