@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Ruler, UploadCloud, Wand2, SlidersHorizontal } from 'lucide-react';
+import { Ruler, UploadCloud, Wand2, SlidersHorizontal, Minus, Plus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useDesign } from '../store/designStore';
 import { useI18n } from '../lib/i18n';
-import { renderPlanFile, type RenderedPlan } from '../lib/pdfImport';
+import { renderPlanFile, isHeic, type RenderedPlan } from '../lib/pdfImport';
 import { importDxf } from '../lib/dxfImport';
 import { pointInPolygon } from '../lib/geometry';
 import { autoThreshold, type PixelSegment } from '../lib/autoTrace';
@@ -47,6 +47,10 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
   const [previewSegs, setPreviewSegs] = useState<PixelSegment[]>([]);
   const [previewCount, setPreviewCount] = useState(0);
   const [tracing, setTracing] = useState(false);
+  // Multi-page PDF: which page is shown (1-based) and the file to re-render.
+  const [planFile, setPlanFile] = useState<File | null>(null);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageBusy, setPageBusy] = useState(false);
 
   // dxf state
   const [dxfText, setDxfText] = useState<string | null>(null);
@@ -89,6 +93,38 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, rendered, effThreshold, minLenCm, realWidthM]);
 
+  const HEIC_MESSAGE = t('iPhone photo format: save it as JPG and try again.');
+
+  // Show another page of a multi-page PDF. The background and the preview both
+  // come from the new render, so scale (cm/px) is recomputed from its width.
+  const changePage = async (next: number) => {
+    if (!planFile || !rendered?.pageCount || pageBusy) return;
+    const n = Math.min(Math.max(1, next), rendered.pageCount);
+    if (n === pageNo) return;
+    setPageBusy(true);
+    try {
+      const r = await renderPlanFile(planFile, n);
+      setPageNo(n);
+      setPreviewSegs([]);
+      setRendered(r);
+      s.setBackground({
+        src: r.src,
+        imgWidth: r.width,
+        imgHeight: r.height,
+        x: 0,
+        y: 0,
+        scale: (realWidthM * 100) / r.width,
+        rotation: 0,
+        opacity: 0.5,
+      });
+    } catch (err) {
+      console.error(err);
+      setTraceInfo(t('Could not read that file.'));
+    } finally {
+      setPageBusy(false);
+    }
+  };
+
   const handleFile = async (file: File) => {
     setError(null);
     const isDxf = /\.dxf$/i.test(file.name);
@@ -124,8 +160,13 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
         });
         setStage('dxf');
       } else {
+        // Chrome and Android cannot decode HEIC, so say what to do instead of
+        // failing generically.
+        if (isHeic(file)) throw new Error(HEIC_MESSAGE);
         setStage('busy');
-        const r = await renderPlanFile(file);
+        const r = await renderPlanFile(file, 1);
+        setPlanFile(file);
+        setPageNo(1);
         setRendered(r);
         // Default placement & calibration.
         s.setBackground({
@@ -143,7 +184,13 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     } catch (err) {
       console.error(err);
       trackEvent('import_result', 'fail');
-      setError(err instanceof Error ? err.message : t('Could not read that file.'));
+      setError(
+        err instanceof Error
+          ? err.message
+          : isHeic(file)
+            ? HEIC_MESSAGE
+            : t('Could not read that file.'),
+      );
       setStage('pick');
     }
   };
@@ -283,6 +330,29 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
             <>
               {/* Preview with detected walls overlaid so the result is visible
                   before committing — the trace re-runs live as inputs change. */}
+              {rendered.pageCount && rendered.pageCount > 1 && (
+                <div className="ai-plan-row" style={{ marginBottom: 8 }}>
+                  <span>{t('Page')} {pageNo}/{rendered.pageCount}</span>
+                  <div className="ai-stepper">
+                    <button
+                      className="btn"
+                      aria-label={t('Previous page')}
+                      disabled={pageNo <= 1 || pageBusy}
+                      onClick={() => changePage(pageNo - 1)}
+                    >
+                      <Minus className="icon" />
+                    </button>
+                    <button
+                      className="btn"
+                      aria-label={t('Next page')}
+                      disabled={pageNo >= rendered.pageCount || pageBusy}
+                      onClick={() => changePage(pageNo + 1)}
+                    >
+                      <Plus className="icon" />
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="trace-preview">
                 <img className="preview-img" src={rendered.src} alt={t('plan preview')} />
                 <svg
