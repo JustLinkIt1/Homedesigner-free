@@ -202,7 +202,7 @@ export const ZH: Record<string, string> = {
   month: '月',
   Save: '节省',
   Processing: '处理中',
-  'Continue with': '继续选择',
+  'Continue with {plan} — {price}': '继续：{plan} — {price}',
   'One-time payment. No subscription.': '一次性付款，无订阅。',
   'Subscription renews automatically until cancelled.': '订阅会自动续订，直至取消。',
   Open: '打开',

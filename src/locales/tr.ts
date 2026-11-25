@@ -202,7 +202,7 @@ export const TR: Record<string, string> = {
   month: 'ay',
   Save: 'Tasarruf',
   Processing: 'İşleniyor',
-  'Continue with': 'Şununla devam et:',
+  'Continue with {plan} — {price}': 'Devam et: {plan} — {price}',
   'One-time payment. No subscription.': 'Tek seferlik ödeme. Abonelik yok.',
   'Subscription renews automatically until cancelled.': 'Abonelik iptal edilene kadar otomatik yenilenir.',
   Open: 'Aç',

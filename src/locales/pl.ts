@@ -202,7 +202,7 @@ export const PL: Record<string, string> = {
   month: 'miesiąc',
   Save: 'Oszczędź',
   Processing: 'Przetwarzanie',
-  'Continue with': 'Kontynuuj z',
+  'Continue with {plan} — {price}': 'Dalej: {plan} — {price}',
   'One-time payment. No subscription.': 'Jednorazowa płatność. Bez subskrypcji.',
   'Subscription renews automatically until cancelled.': 'Subskrypcja odnawia się automatycznie do momentu anulowania.',
   Open: 'Otwórz',
