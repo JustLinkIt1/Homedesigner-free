@@ -138,9 +138,6 @@ function PlanUnderlay({ plan, elevation, maxPx, materialRef }: {
           opacity={0}
           depthWrite={false}
           toneMapped={false}
-          polygonOffset
-          polygonOffsetFactor={-1}
-          polygonOffsetUnits={-1}
         />
       </mesh>
     </group>
