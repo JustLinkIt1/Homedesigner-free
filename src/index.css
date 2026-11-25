@@ -453,6 +453,12 @@ button.brand:hover .brand-name {
   width: 100%;
   transition: background 0.12s, color 0.12s;
 }
+/* Desktop: menu rows stay on one line (PDF/DXF/IFC + PRO tag wrapped at 176 px; phones have their own layout). */
+@media (min-width: 1000px) {
+  .export-menu button {
+    white-space: nowrap;
+  }
+}
 .export-menu button:hover {
   background: var(--brand-soft);
   color: var(--brand-600);
@@ -4554,7 +4560,7 @@ button.brand:hover .brand-name {
 /* ---------- Mobile / responsive ---------- */
 /* Desktop: the catalog docks in only during furniture mode, so building
    gets the full canvas (Planner-style mode separation). */
-@media (min-width: 881px) {
+@media (min-width: 1000px) {
   .sidebar:not(.right) {
     margin-left: -281px; /* width + border */
     /*
@@ -4771,7 +4777,7 @@ button.brand:hover .brand-name {
   color: #fff;
 }
 
-@media (min-width: 881px) {
+@media (min-width: 1000px) {
   /* No Build tab on desktop — the left tool dock plays this role. */
   .build-sheet {
     display: none;
