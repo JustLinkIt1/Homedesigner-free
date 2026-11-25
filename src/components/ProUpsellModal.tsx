@@ -65,6 +65,8 @@ export const TRIGGER_COPY: Record<ProTrigger, { title: string; blurb: string }> 
   'multiFloor:clone': { title: 'Copy this floor up or down', blurb: 'Start the next storey from this one instead of drawing it again.' },
   'multiFloor:aiPlan': { title: 'Plan a home with more than one floor', blurb: 'With Pro, the AI plan lays out every storey. Your answers so far are saved.' },
   'pdfExport:pdf': { title: 'Export this plan as a PDF', blurb: 'A titled, print-ready PDF for builders, landlords and permits. PNG export stays free.' },
+  // IFC reuses the generic Pro export copy (no new strings); the trigger exists so pro_wall_shown can tell an IFC tap apart.
+  'pdfExport:ifc': { title: 'Export print-ready PDFs', blurb: 'Turn your plan into a titled PDF document — ideal for builders, landlords and permits.' },
   'pdfExport:dxf': { title: 'Export this plan as DXF', blurb: 'Open your plan in CAD software. PNG export stays free.' },
   'catalog:item': { title: 'Place this piece', blurb: 'It\'s one of the premium 3D models. Pro unlocks every furniture piece and fixture in the catalog.' },
   'catalog:opening': { title: 'Use this door or window style', blurb: 'Pro unlocks every door and window style, in 2D and 3D.' },

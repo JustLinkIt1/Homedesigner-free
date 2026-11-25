@@ -77,6 +77,7 @@ try {
   check(sql.prepare('SELECT COUNT(*) AS n FROM hd_events WHERE day < ?').get(day - 396).n === 0, 'nothing older than 396 days remains');
   check(sql.prepare('SELECT COUNT(*) AS n FROM hd_events WHERE day = ?').get(day - 396).n === 1, 'the 396-day boundary row is kept');
   check(sql.prepare('SELECT COUNT(*) AS n FROM hd_events WHERE day = ?').get(day).n > 0, 'recent rows are kept');
+  check((await post({ ...good, events: [{ event: 'pro_wall_shown', detail: 'pdfExport:ifc' }] }, T + 5 * 86400000)).status === 202, 'pro_wall_shown detail pdfExport:ifc is accepted');
   for (const kind of ['png', 'pdf', 'dxf', 'ifc']) {
     const n = count();
     check((await post({ ...good, install: '5c0e7d2a-91b4-4f6e-b3a8-2d7e4f1a6c90', events: [{ event: 'export', detail: kind }] }, T)).status === 202 && count() === n + 1, `export event with detail ${kind} is stored`);

@@ -176,7 +176,7 @@ export default function Toolbar({
   const runExport = async (kind: 'png' | 'pdf' | 'dxf' | 'ifc') => {
     setExportOpen(false);
     // PDF, DXF and IFC export are Pro features (PNG stays free).
-    if ((kind === 'pdf' || kind === 'dxf' || kind === 'ifc') && !requirePro('pdfExport', kind === 'pdf' ? 'pdfExport:pdf' : kind === 'dxf' ? 'pdfExport:dxf' : undefined)) return;
+    if ((kind === 'pdf' || kind === 'dxf' || kind === 'ifc') && !requirePro('pdfExport', kind === 'pdf' ? 'pdfExport:pdf' : kind === 'dxf' ? 'pdfExport:dxf' : 'pdfExport:ifc')) return;
     // Clear selection so editing handles don't appear in the export, then let
     // React drop those nodes before we rasterise the stage.
     s.clearSelection();
