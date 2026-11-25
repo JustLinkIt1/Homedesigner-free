@@ -11,7 +11,7 @@ import {
 
 /** cm -> m, matching DesignScene's M. */
 const M = 0.01;
-/** Most time to wait for furniture models and textures still downloading. */
+/** Most time to wait for furniture models, textures and the plan image. */
 const LOAD_WAIT_MS = 1000;
 /** Give up quietly if DesignScene's storeys never show up. */
 const FIND_WAIT_MS = 3000;
@@ -121,13 +121,12 @@ const lowest = (floors: FloorInfo[]): FloorInfo | undefined =>
  * corner at (x, y), turned `rotation` degrees about that corner, `scale` cm per
  * image pixel. A hair below the floors, a hair above the lawn.
  */
-function PlanUnderlay({ plan, elevation, maxPx, materialRef }: {
+function PlanUnderlay({ plan, texture, elevation, materialRef }: {
   plan: BackgroundPlan;
+  texture: THREE.Texture | null;
   elevation: number;
-  maxPx: number;
   materialRef: React.RefObject<THREE.MeshBasicMaterial>;
 }) {
-  const texture = usePlanTexture(plan.src, maxPx);
   const w = plan.imgWidth * plan.scale * M;
   const h = plan.imgHeight * plan.scale * M;
   if (!texture || !(w > 0) || !(h > 0)) return null;
@@ -166,6 +165,9 @@ export default function BuildAnimation({ lite, finishRef, onDone }: {
   const plan = useDesign((s) => (ground ? s.floorGeom[ground.id]?.background ?? null : null));
   const planMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const planGroup = useRef<THREE.Group>(null);
+  const planTexture = usePlanTexture(plan && ground ? plan.src : undefined, lite ? 1024 : 2048);
+  const planTextureRef = useRef(planTexture);
+  planTextureRef.current = planTexture;
   const run = useRef<{ parts: BuildPart[]; held: Resting[]; tl: BuildTimeline; foundAt: number; start: number | null } | null>(null);
   const mountedAt = useRef(performance.now());
   const done = useRef(false);
@@ -223,10 +225,16 @@ export default function BuildAnimation({ lite, finishRef, onDone }: {
       }
       r = run.current = { ...found, tl: buildTimeline(found.desc, lite), foundAt: now, start: null };
     }
-    // Hold everything off (the empty lawn) while models are still arriving, up
-    // to LOAD_WAIT_MS, so furniture drops in as itself rather than as the
-    // stand-in shape that a model replaces in place once it loads.
-    if (r.start === null && (!useProgress.getState().active || now - r.foundAt > LOAD_WAIT_MS)) r.start = now;
+    // Hold everything off (the empty lawn) while models and the plan image are
+    // still arriving, up to LOAD_WAIT_MS, so furniture drops in as itself
+    // rather than as the stand-in shape a model replaces in place once it
+    // loads. A plan that is not ready by then stays off for this run, rather
+    // than popping in part-way through.
+    const planWaiting = !!plan && !!ground && !planTextureRef.current;
+    if (r.start === null && ((!useProgress.getState().active && !planWaiting) || now - r.foundAt > LOAD_WAIT_MS)) {
+      r.start = now;
+      if (planWaiting && planGroup.current) planGroup.current.visible = false;
+    }
     const t = r.start === null ? 0 : now - r.start;
     applyBuildFrame(r.parts, r.tl, t);
     for (const h of r.held) h.obj.visible = h.wv = false;
@@ -237,7 +245,7 @@ export default function BuildAnimation({ lite, finishRef, onDone }: {
 
   return (
     <group ref={planGroup}>
-      {plan && ground && <PlanUnderlay plan={plan} elevation={ground.elevation} maxPx={lite ? 1024 : 2048} materialRef={planMaterial} />}
+      {plan && ground && <PlanUnderlay plan={plan} texture={planTexture} elevation={ground.elevation} materialRef={planMaterial} />}
     </group>
   );
 }
