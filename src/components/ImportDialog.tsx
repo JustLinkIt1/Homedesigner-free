@@ -482,7 +482,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {/* import-foot: below 480 px the actions go full width and Cancel becomes a text link (index.css). */}
+        {/* import-foot: below 600 px the actions go full width and Cancel becomes a text link (index.css). */}
         <div className="modal-foot import-foot">
           <button className="btn import-cancel" onClick={onClose}>
             {t('Cancel')}

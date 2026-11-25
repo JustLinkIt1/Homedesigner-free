@@ -2556,8 +2556,16 @@ button.brand:hover .brand-name {
 
 /* Import dialog footer on phones (25 Nov 2026): the shared row is flex-end without
    wrapping, which cut Cancel off the left edge and squeezed labels to 3 lines at 360 px.
-   Below 480 px the actions take the full width (primary first) and Cancel is a text link. */
-@media (max-width: 479px) {
+   Below 600 px (the one-row footer needs ~450 px in en, more in de/pl) the actions take the
+   full width, primary first; Cancel is a text link unless it is the only button (no X in this dialog). */
+/* Wider screens: labels never wrap inside a button; a row that does not fit (de) wraps instead. */
+.modal-foot.import-foot {
+  flex-wrap: wrap;
+}
+.modal-foot.import-foot .btn {
+  white-space: nowrap;
+}
+@media (max-width: 599px) {
   .modal-foot.import-foot {
     flex-direction: column;
     align-items: stretch;
@@ -2570,7 +2578,7 @@ button.brand:hover .brand-name {
   .modal-foot.import-foot .btn.primary {
     order: -1;
   }
-  .modal-foot.import-foot .btn.import-cancel {
+  .modal-foot.import-foot .btn.import-cancel:not(:only-child) {
     order: 1;
     height: 40px;
     background: none;
