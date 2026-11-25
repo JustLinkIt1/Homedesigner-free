@@ -203,6 +203,7 @@ export const TR: Record<string, string> = {
   Save: 'Tasarruf',
   Processing: 'İşleniyor',
   'Continue with {plan} — {price}': 'Devam et: {plan} — {price}',
+  'Processing {plan}…': 'İşleniyor: {plan}…',
   'One-time payment. No subscription.': 'Tek seferlik ödeme. Abonelik yok.',
   'Subscription renews automatically until cancelled.': 'Abonelik iptal edilene kadar otomatik yenilenir.',
   Open: 'Aç',

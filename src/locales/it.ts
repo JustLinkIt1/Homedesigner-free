@@ -203,6 +203,7 @@ export const IT: Record<string, string> = {
   Save: 'Risparmia',
   Processing: 'Elaborazione',
   'Continue with {plan} — {price}': 'Continua: {plan} — {price}',
+  'Processing {plan}…': 'Elaborazione: {plan}…',
   'One-time payment. No subscription.': 'Pagamento unico. Nessun abbonamento.',
   'Subscription renews automatically until cancelled.': 'L’abbonamento si rinnova automaticamente fino alla cancellazione.',
   Open: 'Apri',

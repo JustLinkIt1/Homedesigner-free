@@ -203,6 +203,7 @@ export const NL: Record<string, string> = {
   Save: 'Bespaar',
   Processing: 'Verwerken',
   'Continue with {plan} — {price}': 'Doorgaan: {plan} — {price}',
+  'Processing {plan}…': 'Verwerken: {plan}…',
   'One-time payment. No subscription.': 'Eenmalige betaling. Geen abonnement.',
   'Subscription renews automatically until cancelled.': 'Het abonnement wordt automatisch verlengd totdat je opzegt.',
   Open: 'Openen',

@@ -203,6 +203,7 @@ export const KO: Record<string, string> = {
   Save: '절약',
   Processing: '처리 중',
   'Continue with {plan} — {price}': '계속: {plan} — {price}',
+  'Processing {plan}…': '처리 중: {plan}…',
   'One-time payment. No subscription.': '일회 결제. 구독이 아닙니다.',
   'Subscription renews automatically until cancelled.': '취소할 때까지 구독이 자동 갱신됩니다.',
   Open: '열기',

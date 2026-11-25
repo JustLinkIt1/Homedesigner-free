@@ -203,6 +203,7 @@ export const JA: Record<string, string> = {
   Save: '割引',
   Processing: '処理中',
   'Continue with {plan} — {price}': '{plan}で続行 — {price}',
+  'Processing {plan}…': '{plan}を処理中…',
   'One-time payment. No subscription.': '一回払い。サブスクリプションではありません。',
   'Subscription renews automatically until cancelled.': 'キャンセルするまで自動更新されます。',
   Open: '開く',
