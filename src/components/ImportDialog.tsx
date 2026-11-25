@@ -482,8 +482,9 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div className="modal-foot">
-          <button className="btn" onClick={onClose}>
+        {/* import-foot: below 480 px the actions go full width and Cancel becomes a text link (index.css). */}
+        <div className="modal-foot import-foot">
+          <button className="btn import-cancel" onClick={onClose}>
             {t('Cancel')}
           </button>
           {stage === 'raster' && (

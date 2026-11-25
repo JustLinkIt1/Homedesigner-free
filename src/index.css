@@ -2554,6 +2554,32 @@ button.brand:hover .brand-name {
   background: var(--surface-2);
 }
 
+/* Import dialog footer on phones (25 Nov 2026): the shared row is flex-end without
+   wrapping, which cut Cancel off the left edge and squeezed labels to 3 lines at 360 px.
+   Below 480 px the actions take the full width (primary first) and Cancel is a text link. */
+@media (max-width: 479px) {
+  .modal-foot.import-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .modal-foot.import-foot .btn {
+    width: 100%;
+    white-space: nowrap;
+  }
+  .modal-foot.import-foot .btn.primary {
+    order: -1;
+  }
+  .modal-foot.import-foot .btn.import-cancel {
+    order: 1;
+    height: 40px;
+    background: none;
+    border-color: transparent;
+    color: var(--text-2);
+    font-weight: 600;
+  }
+}
+
 .webgl-missing {
   max-width: 380px;
   margin: 0 auto;
