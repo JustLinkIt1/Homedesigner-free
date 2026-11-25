@@ -16,14 +16,17 @@ const LOAD_WAIT_MS = 1000;
 /** Give up quietly if DesignScene's storeys never show up. */
 const FIND_WAIT_MS = 3000;
 
-export interface BuildPart {
+/** An object's own resting values, put back exactly at the end. */
+interface Resting {
   obj: THREE.Object3D;
+  y: number;
+  visible: boolean;
+}
+
+export interface BuildPart extends Resting {
   kind: PartKind;
   storey: number;
   index: number;
-  /** The object's own resting values, put back exactly at the end. */
-  y: number;
-  visible: boolean;
 }
 
 /**
@@ -33,10 +36,14 @@ export interface BuildPart {
  * slabs, ceilings and the roof move as whole groups. Doors and windows are
  * inside their wall, so they ride with it.
  */
-function collectParts(scene: THREE.Scene): { parts: BuildPart[]; desc: BuildSceneDesc } | null {
+function collectParts(scene: THREE.Scene): { parts: BuildPart[]; held: Resting[]; desc: BuildSceneDesc } | null {
   const storeys = scene.children.filter((o) => o.name === 'storey').sort((a, b) => a.position.y - b.position.y);
   if (!storeys.length) return null;
   const parts: BuildPart[] = [];
+  // Scene3D's `build-hold` groups (the baked low-tier wall shadows) stay hidden
+  // until the very end.
+  const held = scene.children.filter((o) => o.name === 'build-hold')
+    .map((obj) => ({ obj, y: obj.position.y, visible: obj.visible }));
   const add = (obj: THREE.Object3D | undefined, kind: PartKind, storey: number, index: number) => {
     if (obj) parts.push({ obj, kind, storey, index, y: obj.position.y, visible: obj.visible });
   };
@@ -57,7 +64,7 @@ function collectParts(scene: THREE.Scene): { parts: BuildPart[]; desc: BuildScen
       roofs: count('roof'),
     };
   });
-  return { parts, desc: { storeys: storeyCounts } };
+  return { parts, held, desc: { storeys: storeyCounts } };
 }
 
 /**
@@ -158,7 +165,7 @@ export default function BuildAnimation({ lite, finishRef, onDone }: {
   const plan = useDesign((s) => (ground ? s.floorGeom[ground.id]?.background ?? null : null));
   const planMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const planGroup = useRef<THREE.Group>(null);
-  const run = useRef<{ parts: BuildPart[]; tl: BuildTimeline; foundAt: number; start: number | null } | null>(null);
+  const run = useRef<{ parts: BuildPart[]; held: Resting[]; tl: BuildTimeline; foundAt: number; start: number | null } | null>(null);
   const mountedAt = useRef(performance.now());
   const done = useRef(false);
   const onDoneRef = useRef(onDone);
@@ -166,7 +173,7 @@ export default function BuildAnimation({ lite, finishRef, onDone }: {
 
   /** Every part back at exactly its own resting values. Safe to repeat. */
   const restore = () => {
-    for (const p of run.current?.parts ?? []) {
+    for (const p of [...(run.current?.parts ?? []), ...(run.current?.held ?? [])]) {
       p.obj.position.y = p.y;
       p.obj.visible = p.visible;
     }
@@ -213,6 +220,7 @@ export default function BuildAnimation({ lite, finishRef, onDone }: {
     if (r.start === null && (!useProgress.getState().active || now - r.foundAt > LOAD_WAIT_MS)) r.start = now;
     const t = r.start === null ? 0 : now - r.start;
     applyBuildFrame(r.parts, r.tl, t);
+    for (const h of r.held) h.obj.visible = false;
     if (planMaterial.current) planMaterial.current.opacity = planOpacity(r.tl, t);
     if (t >= r.tl.duration) finish();
     else invalidate();

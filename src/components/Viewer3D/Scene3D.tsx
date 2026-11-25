@@ -1360,7 +1360,11 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       {/* Battery saver tier: the walls' sun shadows, baked on the CPU into one
           small texture on one quad (no shadow map, no extra pass). */}
       {!caps.shadows && !caps.contactShadows && (
-        <SunShade center={center} radius={radius} dir={sun.dir} strength={0.5 * shadeStrength(sun.sunIntensity, sun.dir[1])} />
+        // Baked from the plan, not the scene, so it would show the walls'
+        // shadows before the walls: held back while the build animation plays.
+        <group name="build-hold">
+          <SunShade center={center} radius={radius} dir={sun.dir} strength={0.5 * shadeStrength(sun.sunIntensity, sun.dir[1])} />
+        </group>
       )}
 
       {/* Ground + grid */}
