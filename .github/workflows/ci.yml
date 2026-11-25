@@ -13,9 +13,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22, not 20: tests/points, point-routes, hd-events and render use node:sqlite (Node 22.5+).
+          node-version: 22
           cache: npm
       - run: npm ci
+      # tests/point-routes bundles the design-sync worker, which needs its own dependencies (jose).
+      - run: npm ci --prefix workers/design-sync
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
