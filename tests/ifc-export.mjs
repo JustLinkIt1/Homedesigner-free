@@ -148,7 +148,7 @@ function verify(name, built, extra) {
   eq(countOf(model, WebIFC.IFCRELVOIDSELEMENT), doors + windows, `${name}: IfcRelVoidsElement`);
   eq(countOf(model, WebIFC.IFCRELFILLSELEMENT), doors + windows, `${name}: IfcRelFillsElement`);
   eq(countOf(model, WebIFC.IFCSPACE), spaces, `${name}: IfcSpace = indoor rooms`);
-  eq(countOf(model, WebIFC.IFCSLAB), 0, `${name}: no slabs in v1`);
+  eq(countOf(model, WebIFC.IFCSLAB), floors.length, `${name}: IfcSlab = storeys`);
 
   // Storey elevations (metres) match the floors, in order.
   const elevs = ids(model, WebIFC.IFCBUILDINGSTOREY).map((id) => api.GetLine(model, id).Elevation.value).sort((a, b) => a - b);
@@ -163,11 +163,17 @@ function verify(name, built, extra) {
   check(guids.every((g) => /^[0-3][0-9A-Za-z_$]{21}$/.test(g)), `${name}: GlobalIds are 22-char IFC base64`);
   eq(new Set(guids).size, guids.length, `${name}: GlobalIds unique`);
 
+  // Slab tops sit at the storey elevations; slabs are 0.22 m thick.
+  const slabIds = ids(model, WebIFC.IFCSLAB);
+  const tops = slabIds.map((id) => meshInfo(model, id).max[2]).sort((a, b) => a - b);
+  check(tops.every((z, i) => Math.abs(z - wantElevs[i]) < 0.01), `${name}: slab tops at storey elevations`);
+  check(slabIds.every((id) => { const m = meshInfo(model, id); return Math.abs(m.max[2] - m.min[2] - 0.22) < 0.01; }), `${name}: slabs are 0.22 m thick`);
+
   // Every wall, door, window and space produces geometry; walls with openings
   // are cut (a plain 4-point prism is 12 triangles).
   const withHoles = new Set(openings.map((o) => o.wallId));
   let meshed = 0;
-  for (const type of [WebIFC.IFCWALL, WebIFC.IFCDOOR, WebIFC.IFCWINDOW, WebIFC.IFCSPACE]) {
+  for (const type of [WebIFC.IFCWALL, WebIFC.IFCDOOR, WebIFC.IFCWINDOW, WebIFC.IFCSPACE, WebIFC.IFCSLAB]) {
     for (const id of ids(model, type)) {
       const info = meshInfo(model, id);
       check(info.parts > 0 && info.tris >= 12, `${name}: express #${id} has geometry`);

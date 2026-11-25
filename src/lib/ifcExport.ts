@@ -15,8 +15,9 @@ import { polygonArea } from './geometry';
  * per floor; an IfcWall per non-fence wall (the same mitred outline the DXF and
  * 3D view use, extruded to the wall height); an IfcOpeningElement per door and
  * window, cut into its wall (IfcRelVoidsElement) and filled by an IfcDoor or
- * IfcWindow (IfcRelFillsElement); and an IfcSpace per indoor room. Not in v1:
- * furniture, stairs, roofs, slabs, materials, curved or bay openings (they come
+ * IfcWindow (IfcRelFillsElement); an IfcSpace per indoor room; and one floor
+ * IfcSlab per storey (an extrusion per indoor room, top at the storey). Not in v1:
+ * furniture, stairs, roofs, materials, curved or bay openings (they come
  * out as plain rectangles).
  *
  * Units and axes. HD stores centimetres with plan-y pointing DOWN the screen;
@@ -124,6 +125,8 @@ class Step {
 // ---- geometry helpers ------------------------------------------------------
 
 const M = 0.01; // cm -> m
+/** Floor slab thickness, m: the 3D view's SLAB_T. */
+const SLAB_T = 0.22;
 /** HD plan point (cm, y down) to IFC world XY (m, y up). */
 const toIfc = (p: Point): Point => ({ x: p.x * M, y: -p.y * M });
 
@@ -192,11 +195,11 @@ export function buildIfc(input: IfcExportInput): string {
   st.add(`IFCRELAGGREGATES(${guid('rel|site-building')},$,$,$,${site},${list([building])})`);
 
   /** Sweep a closed 2D outline (metres, already CCW) up by `depth`. */
-  const prism = (ring: Point[], depth: number): string => {
+  const prism = (ring: Point[], depth: number, position = axisWorld): string => {
     const pts = [...ring, ring[0]].map((p) => st.add(`IFCCARTESIANPOINT((${num(p.x)},${num(p.y)}))`));
     const curve = st.add(`IFCPOLYLINE(${list(pts)})`);
     const profile = st.add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${curve})`);
-    return st.add(`IFCEXTRUDEDAREASOLID(${profile},${axisWorld},${dirZ},${num(depth)})`);
+    return st.add(`IFCEXTRUDEDAREASOLID(${profile},${position},${dirZ},${num(depth)})`);
   };
   /** A box w x d centred on the local origin line, starting at the local origin
    *  in x (so it spans 0..w along the wall) and rising by `h`. */
@@ -206,8 +209,8 @@ export function buildIfc(input: IfcExportInput): string {
     const profile = st.add(`IFCRECTANGLEPROFILEDEF(.AREA.,$,${pos},${num(w)},${num(d)})`);
     return st.add(`IFCEXTRUDEDAREASOLID(${profile},${axisWorld},${dirZ},${num(h)})`);
   };
-  const shape = (solid: string): string => {
-    const rep = st.add(`IFCSHAPEREPRESENTATION(${body},'Body','SweptSolid',${list([solid])})`);
+  const shape = (...solids: string[]): string => {
+    const rep = st.add(`IFCSHAPEREPRESENTATION(${body},'Body','SweptSolid',${list(solids)})`);
     return st.add(`IFCPRODUCTDEFINITIONSHAPE($,$,${list([rep])})`);
   };
 
@@ -299,6 +302,24 @@ export function buildIfc(input: IfcExportInput): string {
         `IFCELEMENTQUANTITY(${guid(`qto|${room.id}`)},$,'Qto_SpaceBaseQuantities',$,$,${list([area])})`,
       );
       st.add(`IFCRELDEFINESBYPROPERTIES(${guid(`qrel|${room.id}`)},$,$,$,${list([space])},${qto})`);
+    }
+
+    // Floor slab: one IfcSlab per storey, its top at the storey elevation. The
+    // body is one extrusion per indoor room (their union, without a boolean
+    // that could fail on odd outlines); a storey with no indoor room falls
+    // back to the wall outlines. Same thickness as the 3D view's SLAB_T.
+    const slabRings = g.rooms.filter((r) => !r.outdoor && r.points.length >= 3).map((r) => cleanRing(r.points.map(toIfc)));
+    const footprints = slabRings.length ? slabRings : walls.flatMap((w) => {
+      const poly = polys.get(w.id);
+      return poly ? [cleanRing(poly.map(toIfc))] : [];
+    });
+    const slabSolids = footprints.filter((r) => r.length >= 3 && Math.abs(polygonArea(r)) > 1e-6)
+      .map((r) => prism(r, SLAB_T, axis3(0, 0, -SLAB_T)));
+    if (slabSolids.length) {
+      const slab = st.add(
+        `IFCSLAB(${guid(`slab|${floor.id}`)},$,${str('Floor slab')},$,$,${placement(storeyPl, axisWorld)},${shape(...slabSolids)},$,.FLOOR.)`,
+      );
+      contained.push(slab);
     }
 
     if (spaces.length) st.add(`IFCRELAGGREGATES(${guid(`rel|storey-spaces|${floor.id}`)},$,$,$,${storey},${list(spaces)})`);
