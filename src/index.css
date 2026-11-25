@@ -4560,7 +4560,7 @@ button.brand:hover .brand-name {
 /* ---------- Mobile / responsive ---------- */
 /* Desktop: the catalog docks in only during furniture mode, so building
    gets the full canvas (Planner-style mode separation). */
-@media (min-width: 1000px) {
+@media (min-width: 881px) {
   .sidebar:not(.right) {
     margin-left: -281px; /* width + border */
     /*
@@ -4777,7 +4777,7 @@ button.brand:hover .brand-name {
   color: #fff;
 }
 
-@media (min-width: 1000px) {
+@media (min-width: 881px) {
   /* No Build tab on desktop — the left tool dock plays this role. */
   .build-sheet {
     display: none;
