@@ -357,8 +357,8 @@ export default function ProUpsellModal() {
               >
                 {actionBusy ? <span className="spin" /> : <Sparkles className="icon" />}
                 {actionBusy
-                  ? `${t('Processing')} ${t(selectedPlan.label)}…`
-                  : `${t('Continue with')} ${t(selectedPlan.label)} — ${selectedPlan.priceLabel}`}
+                  ? t('Processing {plan}…').replace('{plan}', t(selectedPlan.label))
+                  : t('Continue with {plan} — {price}').replace('{plan}', t(selectedPlan.label)).replace('{price}', selectedPlan.priceLabel)}
               </button>
               <p className="pro-billing-terms">
                 {selectedPlan.id === 'lifetime'
