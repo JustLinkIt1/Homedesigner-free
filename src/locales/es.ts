@@ -600,7 +600,7 @@ export const ES: Record<string, string> = {
   /* ---------- Lock, kitchen tool & room names (v1.0.53) ---------- */
   'Lock': 'Bloqueo',
   'Lock objects': 'Bloquear objetos',
-  'Watch it build': 'Ver cómo se construye',
+  'Watch it build': 'Ver construcción',
   'Lock objects so they cannot be moved': 'Bloquear los objetos para que no se muevan',
   'Kitchen run': 'Línea de cocina',
   'Wall cabinets': 'Muebles altos',
