@@ -11,6 +11,7 @@ import { traceWallsV2, traceWallsAuto } from '../lib/wallTrace';
 import { segmentsToWalls } from '../lib/wallBuilder';
 import { toast } from '../lib/ui';
 import { trackEvent } from '../lib/events';
+import { openFirst3DAfterImport } from '../lib/first3d';
 import Modal from './Modal';
 
 type Stage = 'pick' | 'raster' | 'dxf' | 'busy';
@@ -227,7 +228,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     s.importWalls(walls, replace);
     s.detectRoomsFromWalls(); // auto-create floors from the traced walls
     s.requestFit();
-    s.setView('2d');
+    s.setView(openFirst3DAfterImport(useDesign.getState().walls.length) ? '3d' : '2d');
     trackEvent('import_result', 'ok');
     onClose();
   };
@@ -265,7 +266,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
       toast.success(`${t('Imported')} ${storeys.length} ${t('floors')}`);
     }
     s.requestFit();
-    s.setView('2d');
+    s.setView(openFirst3DAfterImport(useDesign.getState().walls.length) ? '3d' : '2d');
     trackEvent('import_result', 'ok');
     onClose();
   };
