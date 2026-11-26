@@ -1666,8 +1666,8 @@ const entries = [
   ['/buy/', '0.6', UPDATED_OTHER],
   ['/community/', '0.5', UPDATED_OTHER],
   ['/terms/', '0.2', UPDATED_OTHER],
-  // The account deletion page Google Play links to (written by hand, 22 Nov 2026).
-  ['/delete-account/', '0.2', '2026-11-22'],
+  // Not /delete-account/: Google Play links to it directly, and it is no search
+  // result. Google crawled it and left it out of the index (Search Console, 26 Nov 2026).
 ];
 await writeFile(
   resolve(site, 'sitemap.xml'),
