@@ -63,6 +63,18 @@ const browser = await chromium.launch({
 // reduced-motion path. Animation itself is asserted separately, in a second
 // context that leaves motion on — otherwise "all green" would be compatible with
 // having shipped no animation at all.
+// Every page gets the same longer budget: with 3D views open under SwiftShader the
+// whole browser runs at a few frames a second, and both clicks (which wait for a
+// stable target) and navigations need more than the 30 s default (cycle 184).
+{
+  const openPage = browser.newPage.bind(browser);
+  browser.newPage = async (options) => {
+    const p = await openPage(options);
+    p.setDefaultTimeout(60000);
+    p.setDefaultNavigationTimeout(120000);
+    return p;
+  };
+}
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
@@ -962,6 +974,7 @@ if (process.env.SMOKE_SKIP_3D) {
     // by subpixels forever and never satisfy Playwright's "stable" heuristic.
     // Visibility and non-overlap are asserted above; dispatch to that exact
     // visible control without waiting for a static bounding box.
+    await settleFrames();
     await page.locator('.sel-ring button[aria-label^="Rotate"]').click({ force: true });
     await page.waitForTimeout(250);
     const r1 = await store(() => window.useDesign.getState().furniture[0].rotation);
