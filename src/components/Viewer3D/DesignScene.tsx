@@ -18,7 +18,7 @@ import { bayParts, isBay } from '../../lib/bayWindow';
 import { isFence, isHalfWall, structuralWalls, fenceRunBoxes, METAL_FENCES } from '../../lib/fence';
 import { buildStoreyRoof, type RoofLight } from '../../lib/roofGeometry';
 import { facadeOf, roofOf } from '../../lib/roof';
-import { ceilingHeightAt, roofEaveHeight, roomCeilingHeights, storeyTop } from '../../lib/ceilings';
+import { canopyTop, ceilingHeightAt, roofEaveHeight, roomCeilingHeights, storeyTop } from '../../lib/ceilings';
 import { toast } from '../../lib/ui';
 import { t as translate } from '../../lib/i18n';
 import { offsetPolygon } from '../../lib/polygonOffset';
@@ -1711,10 +1711,10 @@ function FloorContent({
         <RoofMesh walls={geom.walls} rooms={geom.rooms} roof={roof} eaveY={eaveY} aboveWalls={above?.walls} riseTo={riseTo} />
       )}
       {!dollhouse && geom.rooms.filter((r) => r.covered && r.points.length >= 3).map((r) => {
-        // As thick as the main roof, and a hair lower so the two never fight
-        // where a covered room also sits under a flat roof.
-        const depth = (roof?.thickness ?? 14) * M;
-        return <CanopyRoof key={`canopy-${r.id}`} room={r} top={ceilingHeight + depth - 0.003} depth={depth} />;
+        // On the main roof's eave, as thick as it, and a hair lower so the two
+        // never fight where a covered room also sits under a flat roof.
+        const thickness = roof?.thickness ?? 14;
+        return <CanopyRoof key={`canopy-${r.id}`} room={r} top={canopyTop(geom.walls, thickness) * M} depth={thickness * M} />;
       })}
       {riseTo != null && openWings.map((r) => (
         <WingRoof key={`wing-${r.id}`} room={r} top={riseTo * M + 0.1} />

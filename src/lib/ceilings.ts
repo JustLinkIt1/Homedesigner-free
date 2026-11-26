@@ -69,6 +69,17 @@ export function roofEaveHeight(walls: Wall[]): number {
 }
 
 /**
+ * Top (cm) of the flat canopy over a covered porch: on the same eave as the
+ * main roof (roofEaveHeight), as thick as that roof and a hair (3 mm) lower so
+ * the two never fight where they meet. It used to sit on the tallest wall
+ * (storeyTop), so one tall wall lifted it above the main roof.
+ */
+export const CANOPY_DROP_CM = 0.3;
+export function canopyTop(walls: Wall[], thicknessCm: number): number {
+  return roofEaveHeight(walls) + thicknessCm - CANOPY_DROP_CM;
+}
+
+/**
  * Height (cm) of the flat ceiling over each indoor room of a storey.
  *
  * Every ceiling used to sit at the tallest wall of the whole storey. Raise one
