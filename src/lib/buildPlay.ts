@@ -39,6 +39,13 @@ function prefersReducedMotion(): boolean {
  */
 export const BUILD_ON_ANDROID = false;
 
+/**
+ * Off everywhere in 1.22.48 (EXEC cycle 188): soft marks of unbuilt parts still
+ * showed on the first replay frame on a desktop GPU. The code stays; it comes
+ * back in 1.22.49 once that is fixed. `?build=on` still forces it for testing.
+ */
+export const BUILD_ANIMATION_ON = false;
+
 function nativeApp(): boolean {
   try {
     return Capacitor.isNativePlatform();
@@ -50,6 +57,7 @@ function nativeApp(): boolean {
 export function buildAnimationAllowed(): boolean {
   const o = override();
   if (o) return o === 'on';
+  if (!BUILD_ANIMATION_ON) return false;
   if (nativeApp() && !BUILD_ON_ANDROID) return false;
   return !prefersReducedMotion();
 }
@@ -75,6 +83,8 @@ export interface AutoBuildInputs {
   override: Override;
   /** Running inside the Android app (Capacitor); off there unless BUILD_ON_ANDROID. */
   native?: boolean;
+  /** The release switch (BUILD_ANIMATION_ON); false turns it off unless ?build=on. */
+  enabled?: boolean;
 }
 
 /**
@@ -85,6 +95,7 @@ export interface AutoBuildInputs {
 export function shouldAutoBuild(i: AutoBuildInputs): boolean {
   if (i.wallCount < 1) return false;
   if (i.override) return i.override === 'on';
+  if (i.enabled === false) return false;
   if (i.native && !BUILD_ON_ANDROID) return false;
   if (!i.projectId || i.reducedMotion || i.webdriver || !i.played) return false;
   return !i.played.includes(i.projectId);
@@ -100,6 +111,7 @@ export function autoBuildDue(projectId: string | null, wallCount: number): boole
     webdriver: typeof navigator !== 'undefined' && !!navigator.webdriver,
     override: override(),
     native: nativeApp(),
+    enabled: BUILD_ANIMATION_ON,
   });
 }
 
