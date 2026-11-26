@@ -10,6 +10,7 @@
 // (50 at most, oldest dropped) and go out on the next flush.
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { APP_VERSION } from './appInfo';
+import { initFirst3D } from './first3d';
 
 export type HdEventName =
   | 'app_first_open' | 'template_chosen' | 'editor_opened'
@@ -196,6 +197,7 @@ export function initEvents(): void {
         first = !upgrade;
       }
     } catch { /* no storage: never claim a first open we cannot remember */ }
+    initFirst3D(first); // only the launch that creates an install may get first-project-in-3D
     if (first) trackEvent('app_first_open');
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') void flush(true);
