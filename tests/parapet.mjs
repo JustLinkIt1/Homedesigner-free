@@ -15,15 +15,19 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const dir = mkdtempSync(join(tmpdir(), 'hdparapet-'));
-let roofs;
+let roofs, ceil;
 try {
   const outfile = join(dir, 'roofs.mjs');
   await build({ entryPoints: ['src/lib/roofGeometry.ts'], bundle: true, format: 'esm', platform: 'node', outfile, logLevel: 'silent' });
   roofs = await import(pathToFileURL(outfile).href);
+  const ceilFile = join(dir, 'ceilings.mjs');
+  await build({ entryPoints: ['src/lib/ceilings.ts'], bundle: true, format: 'esm', platform: 'node', outfile: ceilFile, logLevel: 'silent' });
+  ceil = await import(pathToFileURL(ceilFile).href);
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
-const { buildRoofGeometry, parapetSegments, roofOutlines } = roofs;
+const { buildRoofGeometry, parapetSegments, roofOutlines, roofParapetContext } = roofs;
+const { roofEaveHeight, storeyTop } = ceil;
 
 let failures = 0;
 const check = (name, ok, detail = '') => {
@@ -254,6 +258,31 @@ const roofWalls = [...house(25), ...porch(10)];
   const segs = parapetSegments(o.wall, EAVE, { blockers: full });
   check('a wall along a whole edge removes that edge', !segs.some((s) => s.edge === 2));
   check('its neighbours stop at the wall', segs.filter((s) => s.edge === 1 || s.edge === 3).every((s) => near(s.outer1.y, 590, 1e-6) || near(s.outer0.y, 590, 1e-6) || s.cut1 || s.cut0));
+}
+
+{
+  // Row 49: the roof sits on the common wall height, and the parapet stops at a
+  // wall of the same storey that rises past it. The front is two walls; the
+  // left half is raised to 400.
+  const walls = [
+    wall('fa', 0, 0, 400, 0, { height: 400 }),
+    wall('fb', 400, 0, 800, 0),
+    wall('r', 800, 0, 800, 600),
+    wall('b', 800, 600, 0, 600),
+    wall('l', 0, 600, 0, 0),
+  ];
+  const eave = roofEaveHeight(walls);
+  check('clamp: the eave is the common height (270), not the tall wall (400)', eave === 270, String(eave));
+  const o = roofOutlines(walls, 15, false);
+  const segs = parapetSegments(o.wall, eave / 100, roofParapetContext(walls));
+  const front = segs.filter((s) => near(s.outer0.y, -10, 1e-6) && near(s.outer1.y, -10, 1e-6));
+  const tallRect = wallRect(walls[0]);
+  check('clamp: no parapet run overlaps the tall wall', segs.every((s) => overlap(footprint(s), tallRect) < 1), segs.map((s) => overlap(footprint(s), tallRect).toFixed(1)).join(','));
+  check('clamp: the front parapet stops square at the tall wall\'s end', front.some((s) => (s.cut0 && near(s.outer0.x, 400, 1e-6) && near(s.outer1.x, 810, 1e-6)) || (s.cut1 && near(s.outer1.x, 400, 1e-6) && near(s.outer0.x, 810, 1e-6))), JSON.stringify(front.map((s) => [s.outer0, s.outer1, s.cut0, s.cut1])));
+  check('clamp: every edge keeps some parapet', new Set(segs.map((s) => s.edge)).size === 4);
+  // Before: the roof sat on the tallest wall, so nothing on the storey blocked it.
+  const before = parapetSegments(o.wall, storeyTop(walls) / 100, roofParapetContext(walls));
+  check('clamp: at the old eave (400) the parapet did not stop there', before.length === 4 && before.every((s) => !s.cut0 && !s.cut1));
 }
 
 if (failures) {

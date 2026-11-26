@@ -151,8 +151,9 @@ export interface ParapetCarrier { start: Point; end: Point; thickness: number }
 /**
  * A wall that already stands where a parapet would go and rises past the
  * parapet's foot, so the parapet has to stop at its face. `top` is metres above
- * the storey origin, like `eaveY`. Walls of the roof's own storey top out at
- * the eave and never qualify; the storey above, or anything taller, does.
+ * the storey origin, like `eaveY`. The roof sits on the height most of its
+ * storey's walls are built to, so those never qualify; a taller wall on the
+ * same storey, or the storey above, does.
  */
 export interface ParapetBlocker extends ParapetCarrier { top: number }
 
@@ -342,14 +343,20 @@ export function parapetSegments(wall: Point[], y0: number, ctx: ParapetContext =
       const at = (s: number): Point => ({ x: o0.x + u.x * s, y: o0.y + u.y * s });
       const pa = cut0 ? at(s0) : o0;
       const pb = cut1 ? at(s1) : o1;
+      const in0 = cut0 ? { x: pa.x + nIn.x * PARAPET_THICK, y: pa.y + nIn.y * PARAPET_THICK } : innerAt[i];
+      const in1 = cut1 ? { x: pb.x + nIn.x * PARAPET_THICK, y: pb.y + nIn.y * PARAPET_THICK } : innerAt[j];
+      // A stub between a corner and a wall standing just past it, shorter than
+      // the corner's mitre: its inner face would run backwards, a twisted
+      // sliver poking into that wall. The wall's own corner covers it; drop it.
+      if ((in1.x - in0.x) * u.x + (in1.y - in0.y) * u.y < 1) continue;
       out.push({
         edge: i,
         s0,
         s1,
         outer0: pa,
         outer1: pb,
-        inner0: cut0 ? { x: pa.x + nIn.x * PARAPET_THICK, y: pa.y + nIn.y * PARAPET_THICK } : innerAt[i],
-        inner1: cut1 ? { x: pb.x + nIn.x * PARAPET_THICK, y: pb.y + nIn.y * PARAPET_THICK } : innerAt[j],
+        inner0: in0,
+        inner1: in1,
         cut0,
         cut1,
       });

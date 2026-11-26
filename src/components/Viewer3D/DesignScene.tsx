@@ -18,7 +18,7 @@ import { bayParts, isBay } from '../../lib/bayWindow';
 import { isFence, isHalfWall, structuralWalls, fenceRunBoxes, METAL_FENCES } from '../../lib/fence';
 import { buildStoreyRoof, type RoofLight } from '../../lib/roofGeometry';
 import { facadeOf, roofOf } from '../../lib/roof';
-import { ceilingHeightAt, roomCeilingHeights, storeyTop } from '../../lib/ceilings';
+import { ceilingHeightAt, roofEaveHeight, roomCeilingHeights, storeyTop } from '../../lib/ceilings';
 import { toast } from '../../lib/ui';
 import { t as translate } from '../../lib/i18n';
 import { offsetPolygon } from '../../lib/polygonOffset';
@@ -1668,6 +1668,9 @@ function FloorContent({
   // Ceiling only matters for the top storey (lower storeys get the slab of
   // the storey above); hidden in dollhouse so you can look inside from above.
   const ceilingHeight = storeyTop(geom.walls) * M;
+  // The roof and its parapet sit on the height most of the walls are built to;
+  // a taller wall rises through the roof (EXEC cycle 213).
+  const eaveY = useMemo(() => roofEaveHeight(geom.walls) * M, [geom.walls]);
   // Each room's ceiling sits on that room's own walls, so raising one wall
   // does not lift every ceiling in the house off the rest.
   const roomCeilings = useMemo(() => roomCeilingHeights(geom.rooms, geom.walls), [geom.rooms, geom.walls]);
@@ -1705,7 +1708,7 @@ function FloorContent({
       </group>
       <group name="roof">
       {roof && !dollhouse && (
-        <RoofMesh walls={geom.walls} rooms={geom.rooms} roof={roof} eaveY={ceilingHeight} aboveWalls={above?.walls} riseTo={riseTo} />
+        <RoofMesh walls={geom.walls} rooms={geom.rooms} roof={roof} eaveY={eaveY} aboveWalls={above?.walls} riseTo={riseTo} />
       )}
       {!dollhouse && geom.rooms.filter((r) => r.covered && r.points.length >= 3).map((r) => {
         // As thick as the main roof, and a hair lower so the two never fight

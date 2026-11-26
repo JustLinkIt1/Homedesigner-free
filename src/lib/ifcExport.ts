@@ -2,7 +2,7 @@ import type { FloorInfo, Opening, Point, Room, Wall } from '../types';
 import { computeWallPolygons } from './wallGeometry';
 import { isFence } from './fence';
 import { polygonArea } from './geometry';
-import { storeyTop } from './ceilings';
+import { roofEaveHeight } from './ceilings';
 import { buildStoreyRoof, parapetSegments } from './roofGeometry';
 
 /**
@@ -355,8 +355,8 @@ export function buildIfc(input: IfcExportInput): string {
   // ---- roofs (v2): written after everything v1 writes ----------------------
   for (const r of roofed) {
     const roof = r.floor.roof!;
-    // Where the 3D view puts it.
-    const eaveY = storeyTop(r.walls) * M;
+    // Where the 3D view puts it: on the height most of the walls are built to.
+    const eaveY = roofEaveHeight(r.walls) * M;
     const made = buildStoreyRoof(r.walls, roof, eaveY, r.above, r.riseTo);
     if (!made) continue;
     const { outlines, type, built } = made;

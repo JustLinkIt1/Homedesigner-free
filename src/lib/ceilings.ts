@@ -8,9 +8,37 @@ const PROBE_MARGIN = 5;
 const SAMPLES = [0.1, 0.3, 0.5, 0.7, 0.9];
 const DEFAULT_HEIGHT = 270;
 
-/** Height of the tallest wall on a storey (cm): where its roof sits. */
+/** Height of the tallest wall on a storey (cm). */
 export function storeyTop(walls: Wall[]): number {
   return walls.reduce((m, w) => Math.max(m, w.height), 0) || DEFAULT_HEIGHT;
+}
+
+/**
+ * Where a storey's roof sits (cm): the wall height that most of the storey's
+ * wall length is built to, the lower one on a tie. Fences and half walls carry
+ * no roof and are not counted.
+ *
+ * The roof used to sit on the tallest wall, so raising one wall (a feature
+ * wall, a gable end, a chimney breast) lifted the whole roof off every other
+ * wall, with daylight under it. Now that one wall rises through the roof, and
+ * the parapet stops at it.
+ */
+export function roofEaveHeight(walls: Wall[]): number {
+  const byHeight = new Map<number, number>();
+  for (const w of walls) {
+    if (isFence(w) || isHalfWall(w) || !(w.height > 0)) continue;
+    const len = Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
+    byHeight.set(w.height, (byHeight.get(w.height) ?? 0) + len);
+  }
+  let best = 0;
+  let bestLen = -1;
+  for (const [h, len] of byHeight) {
+    if (len > bestLen + 1e-6 || (Math.abs(len - bestLen) <= 1e-6 && h < best)) {
+      best = h;
+      bestLen = len;
+    }
+  }
+  return best > 0 ? best : storeyTop(walls);
 }
 
 /**

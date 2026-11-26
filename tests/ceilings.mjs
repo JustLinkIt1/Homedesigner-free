@@ -31,7 +31,7 @@ try {
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
-const { roomCeilingHeights, storeyTop, ceilingHeightAt } = ceil;
+const { roomCeilingHeights, storeyTop, ceilingHeightAt, roofEaveHeight } = ceil;
 const { stairPlan, stairRailsFor } = stairs;
 const { pointInPolygon } = geo;
 
@@ -40,6 +40,22 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : ` -- ${detail}`}`);
   if (!ok) failures++;
 };
+// ---- roof eave: the height most of the wall length is built to ----------------
+{
+  const W = (id, ax, ay, bx, by, height, extra = {}) => ({ id, start: { x: ax, y: ay }, end: { x: bx, y: by }, thickness: 20, height, color: '#fff', ...extra });
+  const boxAt = (h0, h1 = h0, h2 = h0, h3 = h0) => [W('a', 0, 0, 800, 0, h0), W('b', 800, 0, 800, 600, h1), W('c', 800, 600, 0, 600, h2), W('d', 0, 600, 0, 0, h3)];
+  const same = boxAt(270);
+  check('eave: all walls the same height -> that height, as before', roofEaveHeight(same) === 270 && roofEaveHeight(same) === storeyTop(same));
+  const tall = boxAt(270, 400);
+  check('eave: one tall wall -> the common height, not the tall one', roofEaveHeight(tall) === 270, String(roofEaveHeight(tall)));
+  // 800 + 600 at 300 against 600 + 800 at 260: a tie in length.
+  const tie = boxAt(300, 300, 260, 260);
+  check('eave: a tie in length -> the lower height', roofEaveHeight(tie) === 260, String(roofEaveHeight(tie)));
+  const extras = [...boxAt(270), W('f', 0, 900, 3000, 900, 180, { kind: 'fence' }), W('h', 100, 100, 700, 100, 105, { halfWall: true }), W('h2', 100, 200, 700, 200, 105, { halfWall: true })];
+  check('eave: fences and half walls are not counted', roofEaveHeight(extras) === 270, String(roofEaveHeight(extras)));
+  check('eave: no walls -> the default storey height', roofEaveHeight([]) === storeyTop([]));
+}
+
 const rect = (id, x, y, w, h, extra = {}) => ({
   id, name: id, floorMaterial: 'oak', color: '#fff',
   points: [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }], ...extra,

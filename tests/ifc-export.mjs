@@ -316,6 +316,20 @@ const near = (a, b, eps = 0.01) => Math.abs(a - b) <= eps;
   summary.push(`roof-gable: ${JSON.stringify(r.counts)} ${r.text.length} bytes (v1 ${r.bare.length}, roof +${r.text.length - r.bare.length})`);
 }
 
+{
+  // Row 49: one wall raised to 4 m; the roof stays on the common 2.7 m and the
+  // parapet stops at the tall wall, which covers a whole edge.
+  const built = roofProject({ ...ROOF, type: 'flat', parapet: 94 });
+  built.floorGeom.f1.walls[0].height = 400;
+  const r = verify('roof-clamp', built, true);
+  const { model } = r;
+  const slab = ids(model, WebIFC.IFCSLAB).find((id) => api.GetLine(model, id).PredefinedType.value === 'ROOF');
+  const s = meshInfo(model, slab);
+  check(near(s.min[2], 2.7), `clamp: IFC roof on the common wall height, not the 4 m wall (z ${s.min[2].toFixed(3)})`);
+  check(r.counts.parapets === 3, `clamp: the tall wall's edge gets no parapet (${r.counts.parapets} runs)`);
+  api.CloseModel(model);
+}
+
 // ---- text escaping ------------------------------------------------------------
 {
   const { built } = angledProject();
