@@ -13,6 +13,23 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
+// Every page of every browser this suite launches gets a longer budget: with 3D
+// views open under SwiftShader the browser runs at a few frames a second, and both
+// clicks (which wait for a stable target) and navigations need more than the 30 s
+// default (EXEC cycle 184; the base 338a488 stalls the same way). Test only.
+const launchChromium = chromium.launch.bind(chromium);
+chromium.launch = async (options) => {
+  const b = await launchChromium(options);
+  const openPage = b.newPage.bind(b);
+  b.newPage = async (pageOptions) => {
+    const p = await openPage(pageOptions);
+    p.setDefaultTimeout(60000);
+    p.setDefaultNavigationTimeout(120000);
+    return p;
+  };
+  return b;
+};
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4599;
 const BASE = `http://localhost:${PORT}/`;
@@ -63,18 +80,6 @@ const browser = await chromium.launch({
 // reduced-motion path. Animation itself is asserted separately, in a second
 // context that leaves motion on — otherwise "all green" would be compatible with
 // having shipped no animation at all.
-// Every page gets the same longer budget: with 3D views open under SwiftShader the
-// whole browser runs at a few frames a second, and both clicks (which wait for a
-// stable target) and navigations need more than the 30 s default (cycle 184).
-{
-  const openPage = browser.newPage.bind(browser);
-  browser.newPage = async (options) => {
-    const p = await openPage(options);
-    p.setDefaultTimeout(60000);
-    p.setDefaultNavigationTimeout(120000);
-    return p;
-  };
-}
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
