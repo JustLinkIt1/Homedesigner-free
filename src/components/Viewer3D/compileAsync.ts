@@ -50,14 +50,10 @@ export function useCompileBeforeDraw(node: THREE.Object3D, tag: string): void {
   useLayoutEffect(() => {
     if (!canCompileAsync(gl)) return;
     let live = true;
-    const t0 = performance.now();
     node.visible = false;
     const show = () => { node.visible = true; if (live) invalidate(); };
     try {
-      compileAsync(gl, node, camera, rootScene).then(
-        () => { console.warn('[3d] late model compile ms:', Math.round(performance.now() - t0), tag); },
-        () => { /* shown below */ },
-      ).finally(show);
+      compileAsync(gl, node, camera, rootScene).catch(() => { /* shown below */ }).finally(show);
     } catch { show(); }
     return () => { live = false; node.visible = true; };
   }, [node, gl, camera, rootScene, invalidate, tag]);

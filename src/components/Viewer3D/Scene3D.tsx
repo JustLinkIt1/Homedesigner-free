@@ -945,9 +945,6 @@ function CompileGate({ ready, onReady, composited }: { ready: boolean; onReady: 
     let live = true;
     const done = () => { if (live) onReady(); };
     const t0 = performance.now();
-    let ext = false;
-    try { ext = !!gl.getContext().getExtension('KHR_parallel_shader_compile'); } catch { /* ignore */ }
-    console.warn('[3d] KHR_parallel_shader_compile:', ext);
     setComposited(gl, composited);
     if (!canCompileAsync(gl)) { done(); return; }
     // Compile only once the scene has settled: a lamp's stand-in light goes
@@ -962,13 +959,9 @@ function CompileGate({ ready, onReady, composited }: { ready: boolean; onReady: 
       if (quiet < 400 && performance.now() - t0 < 12000) return;
       clearInterval(poll);
       if (!live) return;
-      console.warn('[3d] settled after ms:', Math.round(performance.now() - t0));
       let job: Promise<unknown>;
       try { job = compileAsync(gl, scene, camera); } catch { job = Promise.reject(new Error('compile')); }
-      job.then(
-        () => { console.warn('[3d] compileAsync done ms:', Math.round(performance.now() - t0)); },
-        () => { /* fall back to a normal first render */ },
-      ).finally(() => { clearTimeout(timer); done(); });
+      job.catch(() => { /* fall back to a normal first render */ }).finally(() => { clearTimeout(timer); done(); });
     }, 100);
     return () => { live = false; clearTimeout(timer); clearInterval(poll); };
   }, [gl, scene, camera, onReady, composited]);
