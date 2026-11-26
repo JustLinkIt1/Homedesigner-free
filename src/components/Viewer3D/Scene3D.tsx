@@ -1,6 +1,6 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { AdaptiveDpr, OrbitControls, Grid, SoftShadows, Environment, Lightformer, ContactShadows, Stars, Html } from '@react-three/drei';
+import { AdaptiveDpr, OrbitControls, Grid, Environment, Lightformer, ContactShadows, Stars, Html } from '@react-three/drei';
 import { EffectComposer, N8AO, Bloom, ToneMapping, Vignette } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
@@ -1266,7 +1266,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       // DPR — the biggest GPU costs — to keep 3D navigation smooth on Android.
       // (High-res photo/plan exports are separate and stay full quality.)
       flat={!noPost} // when post is dropped, let three apply its own tone mapping
-      shadows={caps.shadows}
+      shadows={caps.softShadows ? 'soft' : caps.shadows}
       frameloop={walkMode || interacting ? 'always' : 'demand'}
       // MSAA + a higher DPR ceiling are the real fix for the mobile "jaggies":
       // the light tier used to ship with antialias off and DPR capped at 1.25,
@@ -1309,7 +1309,9 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
           out washed the whole model to the fog colour ("fades to white"). */}
       <fog attach="fog" args={[sky.horizon, radius * 8 + 15, radius * 18 + 80]} />
       {sun.moon > 0.3 && <Stars radius={260} depth={50} count={caps.post ? 1600 : 700} factor={7} saturation={0} fade speed={0} />}
-      {caps.softShadows && <SoftShadows size={24} samples={12} />}
+      {/* drei <SoftShadows> (PCSS) is gone (1.22.49): it patched the shadow code of every material and
+          forced a full gl.compile, ~21 s of frozen first 3D on an Intel HD 530. Soft shadows now come from
+          three's own PCFSoftShadowMap via the Canvas `shadows="soft"` prop above. */}
 
       {/* Airier interiors: lifted ambient/hemisphere + softened shadows so
           rooms behind walls read bright and clean instead of murky. */}
