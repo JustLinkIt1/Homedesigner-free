@@ -164,6 +164,8 @@ for (const [name, desc] of [['small', small], ['two storeys', twoStorey], ['huge
   check('no project id: no', auto({ projectId: null }) === false);
   check('storage unreadable: no (else it would play on every open)', auto({ played: null }) === false);
   check('?build=off: no', auto({ override: 'off' }) === false);
+  check('Android app (1.22.48, no low-tier phone run yet): no', auto({ native: true }) === false);
+  check('...unless ?build=on', auto({ native: true, override: 'on' }) === true);
   check('?build=on beats played, reduced motion, automation and storage',
     auto({ override: 'on', played: null, reducedMotion: true, webdriver: true, projectId: null }) === true);
 }

@@ -11,6 +11,8 @@
  * it and hides the replay button.
  */
 
+import { Capacitor } from '@capacitor/core';
+
 /** Ids of the projects that have already played it here, oldest first. */
 const PLAYED_KEY = 'homedesigner.buildPlayed.v1';
 const MAX_REMEMBERED = 200;
@@ -31,9 +33,24 @@ function prefersReducedMotion(): boolean {
 }
 
 /** May it play at all (also decides whether the replay button shows)? */
+/**
+ * Off in the Android app until a real low-tier phone has run it (EXEC cycle 171,
+ * condition 1; no device was available for 1.22.48). The web keeps it. `?build=on` still forces it.
+ */
+export const BUILD_ON_ANDROID = false;
+
+function nativeApp(): boolean {
+  try {
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
+
 export function buildAnimationAllowed(): boolean {
   const o = override();
   if (o) return o === 'on';
+  if (nativeApp() && !BUILD_ON_ANDROID) return false;
   return !prefersReducedMotion();
 }
 
@@ -56,6 +73,8 @@ export interface AutoBuildInputs {
   reducedMotion: boolean;
   webdriver: boolean;
   override: Override;
+  /** Running inside the Android app (Capacitor); off there unless BUILD_ON_ANDROID. */
+  native?: boolean;
 }
 
 /**
@@ -66,6 +85,7 @@ export interface AutoBuildInputs {
 export function shouldAutoBuild(i: AutoBuildInputs): boolean {
   if (i.wallCount < 1) return false;
   if (i.override) return i.override === 'on';
+  if (i.native && !BUILD_ON_ANDROID) return false;
   if (!i.projectId || i.reducedMotion || i.webdriver || !i.played) return false;
   return !i.played.includes(i.projectId);
 }
@@ -79,6 +99,7 @@ export function autoBuildDue(projectId: string | null, wallCount: number): boole
     reducedMotion: prefersReducedMotion(),
     webdriver: typeof navigator !== 'undefined' && !!navigator.webdriver,
     override: override(),
+    native: nativeApp(),
   });
 }
 
