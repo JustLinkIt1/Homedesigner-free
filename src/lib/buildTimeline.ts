@@ -145,6 +145,15 @@ export function buildTimeline(desc: BuildSceneDesc, lite = false): BuildTimeline
   };
 }
 
+/**
+ * A part that has not started yet is hidden AND parked this far below the
+ * ground. Hiding alone left faint furniture footprints on the floor and lawn on
+ * some GPUs at the high tier (Fable, 1.22.48 replay); parked out of every
+ * shadow and depth pass, a waiting part can leave no trace. It is back at
+ * exactly dy 0 the moment it starts falling.
+ */
+export const PARK_DY = -1000;
+
 const easeOutCubic = (u: number) => 1 - (1 - u) ** 3;
 
 /** Where part `index` of `kind` on storey `storey` is at time `t` (ms). */
@@ -155,7 +164,7 @@ export function partPose(tl: BuildTimeline, kind: PartKind, storey: number, inde
   // the end everything is exactly at rest.
   if (!st || t >= tl.duration) return { dy: 0, visible: true };
   const start = st.start + index * st.step;
-  if (t < start) return { dy: 0, visible: false };
+  if (t < start) return { dy: PARK_DY, visible: false };
   const u = (t - start) / st.dur;
   if (u >= 1) return { dy: 0, visible: true };
   const drop = DROP[kind];

@@ -107,15 +107,16 @@ for (const [name, desc] of [['small', small], ['two storeys', twoStorey], ['huge
         if (p.visible) shown.add(n);
         if (landed.has(n) && p.dy > 0) reappeared = true; // landed parts never lift off again
         if (p.visible && Math.abs(p.dy) < 1e-12 && at > 0) landed.add(n);
-        if (p.dy < -0.021) below = true;
+        if (p.visible && p.dy < -0.021) below = true; // a waiting part is hidden and parked far below (PARK_DY)
       });
       if (visible < prevVisible) shrank = true;
       prevVisible = visible;
     }
     check(`${name}${lite ? ' (lite)' : ''}: parts only ever appear, never vanish`, !shrank && !reappeared);
     check(`${name}${lite ? ' (lite)' : ''}: the settle dips 2 cm at most`, !below);
+    check(`${name}${lite ? ' (lite)' : ''}: a part that has not started is hidden and parked below the ground`, parts.every((part) => { const q = partPose(t, ...part, -1); return !q.visible && q.dy <= -100; }));
     if (lite) {
-      const dips = parts.some((part) => Array.from({ length: 200 }, (_, j) => partPose(t, ...part, (j / 200) * t.duration).dy).some((dy) => dy < 0));
+      const dips = parts.some((part) => Array.from({ length: 200 }, (_, j) => partPose(t, ...part, (j / 200) * t.duration)).some((q) => q.visible && q.dy < 0));
       check(`${name} (lite): no settle dip`, !dips);
     }
     check(`${name}${lite ? ' (lite)' : ''}: nothing shows before time 0`, parts.every((part) => !partPose(t, ...part, -1).visible));
