@@ -1,5 +1,6 @@
 import { Component, Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
+import { useCompileBeforeDraw } from './compileAsync';
 import { invalidate } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { FurnitureItem } from '../../types';
@@ -180,6 +181,7 @@ function FittingModel({ id }: { id: FittingId }) {
     });
     return clone;
   }, [scene]);
+  useCompileBeforeDraw(node, id);
   return <primitive object={node} />;
 }
 

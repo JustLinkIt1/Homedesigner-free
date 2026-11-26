@@ -1,4 +1,5 @@
 import { Component, Suspense, useMemo, type ReactNode } from 'react';
+import { useCompileBeforeDraw } from './compileAsync';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { FurnitureItem } from '../../types';
@@ -123,6 +124,8 @@ export default function GltfFurniture({ item, preferRender = false }: { item: Fu
     });
     return clone;
   }, [scene, item.width, item.depth, item.height, def.fit, def.offsetY, def.yaw]);
+
+  useCompileBeforeDraw(node, def.url);
 
   return (
     <group rotation={[0, def.yaw ?? 0, 0]}>

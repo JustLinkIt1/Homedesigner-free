@@ -1,6 +1,7 @@
-import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { canCompileAsync, compileAsync, setComposited } from './compileAsync';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { AdaptiveDpr, OrbitControls, Grid, Environment, Lightformer, ContactShadows, Stars, Html } from '@react-three/drei';
+import { AdaptiveDpr, OrbitControls, Grid, Environment, Lightformer, ContactShadows, Stars, Html, useProgress } from '@react-three/drei';
 import { EffectComposer, N8AO, Bloom, ToneMapping, Vignette } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import { Paintbrush, X } from 'lucide-react';
@@ -930,6 +931,51 @@ function CaptureBridge({ composerRef, buildFinish }: {
   return null;
 }
 
+/**
+ * First-3D freeze fix (1.22.49): three compiles each material's shader
+ * synchronously inside the first frame (getProgramInfoLog blocks the main
+ * thread ~28 s on an Intel HD 530). Canvas frameloop is held at 'never' until
+ * `gl.compileAsync` has compiled the assembled scene on the GPU process
+ * (KHR_parallel_shader_compile), so the page stays responsive meanwhile.
+ * Falls back to rendering normally if compileAsync is missing or rejects.
+ */
+function CompileGate({ ready, onReady, composited }: { ready: boolean; onReady: () => void; composited: boolean }) {
+  const { gl, scene, camera, invalidate } = useThree();
+  useEffect(() => {
+    let live = true;
+    const done = () => { if (live) onReady(); };
+    const t0 = performance.now();
+    let ext = false;
+    try { ext = !!gl.getContext().getExtension('KHR_parallel_shader_compile'); } catch { /* ignore */ }
+    console.warn('[3d] KHR_parallel_shader_compile:', ext);
+    setComposited(gl, composited);
+    if (!canCompileAsync(gl)) { done(); return; }
+    // Compile only once the scene has settled: a lamp's stand-in light goes
+    // when its model arrives, and any change in the light count changes every
+    // material's program, which would throw the compile away. So wait until
+    // the model/texture loads have been quiet for 400 ms (at most 12 s).
+    // Safety net: never hold the view longer than 60 s in total.
+    const timer = setTimeout(done, 60000);
+    let quiet = 0;
+    const poll = setInterval(() => {
+      quiet = useProgress.getState().active ? 0 : quiet + 100;
+      if (quiet < 400 && performance.now() - t0 < 12000) return;
+      clearInterval(poll);
+      if (!live) return;
+      console.warn('[3d] settled after ms:', Math.round(performance.now() - t0));
+      let job: Promise<unknown>;
+      try { job = compileAsync(gl, scene, camera); } catch { job = Promise.reject(new Error('compile')); }
+      job.then(
+        () => { console.warn('[3d] compileAsync done ms:', Math.round(performance.now() - t0)); },
+        () => { /* fall back to a normal first render */ },
+      ).finally(() => { clearTimeout(timer); done(); });
+    }, 100);
+    return () => { live = false; clearTimeout(timer); clearInterval(poll); };
+  }, [gl, scene, camera, onReady, composited]);
+  useEffect(() => { if (ready) invalidate(); }, [ready, invalidate]);
+  return null;
+}
+
 export default function Scene3D({ onEditSelection }: { onEditSelection?: () => void } = {}) {
   const { center, radius } = useDesignBounds();
   const composerRef = useRef<any>(null);
@@ -1053,6 +1099,10 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
   const t3 = useI18n();
   const [contextLost, setContextLost] = useState(false);
   const [canvasKey, setCanvasKey] = useState(0);
+  // The canvas key whose shaders are compiled (-1: none). Holds the first draw back.
+  const [compiledKey, setCompiledKey] = useState(-1);
+  const compiled = compiledKey === canvasKey;
+  const markCompiled = useCallback(() => setCompiledKey(canvasKey), [canvasKey]);
   // Graded device capability (+ user override) instead of a bare touch check, so
   // capable phones keep shadows instead of losing every effect at once.
   const caps = useMemo(() => tierCaps(activeTier(), IS_TOUCH), []);
@@ -1267,7 +1317,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       // (High-res photo/plan exports are separate and stay full quality.)
       flat={!noPost} // when post is dropped, let three apply its own tone mapping
       shadows={caps.softShadows ? 'soft' : caps.shadows}
-      frameloop={walkMode || interacting ? 'always' : 'demand'}
+      frameloop={!compiled ? 'never' : walkMode || interacting ? 'always' : 'demand'}
       // MSAA + a higher DPR ceiling are the real fix for the mobile "jaggies":
       // the light tier used to ship with antialias off and DPR capped at 1.25,
       // so every wall/furniture edge stair-stepped. MSAA is cheap on modern
@@ -1295,7 +1345,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       {/* Demand rendering keeps 120 Hz phones from redrawing an idle scene;
           AdaptiveDpr lowers interaction cost further if a frame budget slips. */}
       <ContextLossGuard
-        onLost={() => setContextLost(true)}
+        onLost={() => { setCompiledKey(-1); setContextLost(true); }}
         onRestored={() => setContextLost(false)}
       />
       <AdaptiveDpr pixelated={false} />
@@ -1463,6 +1513,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         </PostFXBoundary>
       )}
 
+      <CompileGate ready={compiled} onReady={markCompiled} composited={!noPost} />
       <CaptureBridge composerRef={composerRef} buildFinish={buildFinish} />
       <RenderedBeacon />
       {!walkMode && <ZoomBridge />}
@@ -1494,6 +1545,10 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
         />
       )}
     </Canvas>
+    )}
+
+    {!contextLost && !compiled && (
+      <div className="stage-loading" style={{ background: 'var(--bg, #fff)' }}><span className="spin" /> {t3('Loading 3D…')}</div>
     )}
 
     {/* Decorate popover, anchored at the tapped surface. */}

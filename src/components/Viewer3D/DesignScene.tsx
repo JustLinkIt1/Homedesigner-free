@@ -1,6 +1,7 @@
 import { Component, Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
+import { useCompileBeforeDraw } from './compileAsync';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { useDesign } from '../../store/designStore';
@@ -681,6 +682,7 @@ function FrontDoorModel({ file, w, h, outSide }: { file: string; w: number; h: n
     });
     return copy;
   }, [scene]);
+  useCompileBeforeDraw(model, file);
   // The models face +Z outdoors; turn the door round when outdoors is -Z.
   return (
     <group rotation={[0, outSide === 1 ? 0 : Math.PI, 0]} scale={[w / DOOR_MODEL_W, h / DOOR_MODEL_H, 1]}>
