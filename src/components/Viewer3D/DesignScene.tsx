@@ -16,7 +16,7 @@ import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
 import { exteriorFaces, exteriorRanges, exteriorSideAt } from '../../lib/exteriorFaces';
 import { bayParts, isBay } from '../../lib/bayWindow';
 import { isFence, isHalfWall, structuralWalls, fenceRunBoxes, METAL_FENCES } from '../../lib/fence';
-import { buildRoofGeometry, roofOutlines, type ParapetContext, type RoofLight } from '../../lib/roofGeometry';
+import { buildStoreyRoof, type RoofLight } from '../../lib/roofGeometry';
 import { facadeOf, roofOf } from '../../lib/roof';
 import { ceilingHeightAt, roomCeilingHeights, storeyTop } from '../../lib/ceilings';
 import { toast } from '../../lib/ui';
@@ -1332,26 +1332,10 @@ function RoofWindow({ light }: { light: RoofLight }) {
 
 function RoofMesh({ walls, rooms, roof, eaveY, aboveWalls, riseTo }: { walls: Wall[]; rooms: Room[]; roof: Roof; eaveY: number; aboveWalls?: Wall[]; riseTo?: number }) {
   const built = useMemo(() => {
-    // Fences carry no roof, and a fence running off the plot would otherwise
-    // drag the eave outline out with it.
-    // A pitched roof needs square corners, so walls a touch out of square are
-    // straightened for it. A flat or shed roof follows the walls as drawn.
-    const o = roofOutlines(structuralWalls(walls), roof.overhang, roof.type === 'gable' || roof.type === 'hip');
-    if (!o) return null;
-    // The parapet stops at any wall that already stands on its line and rises
-    // past the roof (the storey above, or anything taller), and sits on each
-    // wall's own face rather than on the thickest wall's.
-    const structural = structuralWalls(walls);
-    const asBlocker = (w: Wall, base: number) => ({ start: w.start, end: w.end, thickness: w.thickness, top: base + w.height * M });
-    const parapet: ParapetContext = {
-      carriers: structural,
-      half: (structural.reduce((m, w) => Math.max(m, w.thickness), 0) || 10) / 2,
-      blockers: [
-        ...structural.map((w) => asBlocker(w, 0)),
-        ...structuralWalls(aboveWalls ?? []).map((w) => asBlocker(w, (riseTo ?? 0) * M)),
-      ],
-    };
-    return buildRoofGeometry(o.eave, o.wall, roof, eaveY, parapet);
+    // The outlines and the parapet's walls (it stops at any wall on its line
+    // that rises past the roof, and sits on each wall's own face) are worked
+    // out in roofGeometry, so the IFC export builds exactly this roof.
+    return buildStoreyRoof(walls, roof, eaveY, aboveWalls, riseTo)?.built ?? null;
   }, [walls, roof, eaveY, aboveWalls, riseTo]);
 
   // The gable end is part of the OUTSIDE of the building, so it has to match

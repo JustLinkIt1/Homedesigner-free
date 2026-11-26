@@ -2,6 +2,8 @@ import type { FloorInfo, Opening, Point, Room, Wall } from '../types';
 import { computeWallPolygons } from './wallGeometry';
 import { isFence } from './fence';
 import { polygonArea } from './geometry';
+import { storeyTop } from './ceilings';
+import { buildStoreyRoof, parapetSegments } from './roofGeometry';
 
 /**
  * Write the design as an IFC4 building model (ISO 10303-21 text, one file, all
@@ -16,9 +18,19 @@ import { polygonArea } from './geometry';
  * 3D view use, extruded to the wall height); an IfcOpeningElement per door and
  * window, cut into its wall (IfcRelVoidsElement) and filled by an IfcDoor or
  * IfcWindow (IfcRelFillsElement); an IfcSpace per indoor room; and one floor
- * IfcSlab per storey (an extrusion per indoor room, top at the storey). Not in v1:
- * furniture, stairs, roofs, materials, curved or bay openings (they come
- * out as plain rectangles).
+ * IfcSlab per storey (an extrusion per indoor room, top at the storey).
+ *
+ * Roofs (v2). Every storey with a roof gets an IfcRoof aggregating one IfcSlab
+ * .ROOF., built by the same `buildStoreyRoof` the 3D view uses: a flat roof is
+ * the eave outline extruded by the roof thickness; a shed, gable or hip roof is
+ * the 3D mesh written as an IfcTriangulatedFaceSet (gable-end infill included).
+ * A flat roof's parapet is one IfcWall .PARAPET. per run from
+ * `parapetSegments`, cut at the same walls the 3D parapet stops at. All roof
+ * entities are written AFTER everything v1 writes, so a project's walls,
+ * openings, spaces and floor slabs come out line for line as they did in v1.
+ *
+ * Not written: furniture, stairs, roof windows, materials, curved or bay
+ * openings (they come out as plain rectangles).
  *
  * Units and axes. HD stores centimetres with plan-y pointing DOWN the screen;
  * IFC is metres with y pointing up. We write x/100 and -y/100, which keeps the
@@ -209,12 +221,14 @@ export function buildIfc(input: IfcExportInput): string {
     const profile = st.add(`IFCRECTANGLEPROFILEDEF(.AREA.,$,${pos},${num(w)},${num(d)})`);
     return st.add(`IFCEXTRUDEDAREASOLID(${profile},${axisWorld},${dirZ},${num(h)})`);
   };
-  const shape = (...solids: string[]): string => {
-    const rep = st.add(`IFCSHAPEREPRESENTATION(${body},'Body','SweptSolid',${list(solids)})`);
+  const shape = (...solids: string[]): string => shapeOf('SweptSolid', solids);
+  const shapeOf = (kind: string, items: string[]): string => {
+    const rep = st.add(`IFCSHAPEREPRESENTATION(${body},'Body',${str(kind)},${list(items)})`);
     return st.add(`IFCPRODUCTDEFINITIONSHAPE($,$,${list([rep])})`);
   };
 
   const storeys: string[] = [];
+  const roofed: { floor: FloorInfo; storey: string; storeyPl: string; walls: Wall[]; above?: Wall[]; riseTo?: number }[] = [];
   const ordered = [...input.floors].sort((a, b) => a.elevation - b.elevation);
   ordered.forEach((floor, fi) => {
     const g = input.geom[floor.id] ?? { walls: [], rooms: [], openings: [] };
@@ -327,9 +341,92 @@ export function buildIfc(input: IfcExportInput): string {
       st.add(`IFCRELCONTAINEDINSPATIALSTRUCTURE(${guid(`rel|storey-elements|${floor.id}`)},$,$,$,${list(contained)},${storey})`);
     }
     storeys.push(storey);
+    if (floor.roof) {
+      roofed.push({
+        floor, storey, storeyPl, walls: g.walls,
+        above: next ? input.geom[next.id]?.walls : undefined,
+        riseTo: next ? next.elevation - floor.elevation : undefined,
+      });
+    }
   });
 
   if (storeys.length) st.add(`IFCRELAGGREGATES(${guid('rel|building-storeys')},$,$,$,${building},${list(storeys)})`);
+
+  // ---- roofs (v2): written after everything v1 writes ----------------------
+  for (const r of roofed) {
+    const roof = r.floor.roof!;
+    // Where the 3D view puts it.
+    const eaveY = storeyTop(r.walls) * M;
+    const made = buildStoreyRoof(r.walls, roof, eaveY, r.above, r.riseTo);
+    if (!made) continue;
+    const { outlines, type, built } = made;
+    const t = roof.thickness * M;
+    const contained: string[] = [];
+
+    let roofShape: string | null = null;
+    if (type === 'flat') {
+      const ring = cleanRing(outlines.eave.map(toIfc));
+      if (ring.length >= 3 && Math.abs(polygonArea(ring)) > 1e-6) roofShape = shape(prism(ring, t, axis3(0, 0, eaveY)));
+    } else {
+      // three.js is y-up with plan y as z, relative to the storey: (x, y, z) -> (x, -z, y).
+      const sets: string[] = [];
+      for (const geo of [built.geometry, built.infill]) {
+        if (!geo) continue;
+        const pos = geo.getAttribute('position');
+        const index = geo.getIndex();
+        const tri = index ? Array.from(index.array as ArrayLike<number>) : Array.from({ length: pos.count }, (_, i) => i);
+        const keyOf = new Map<string, number>();
+        const coords: string[] = [];
+        const faces: string[] = [];
+        for (let i = 0; i + 2 < tri.length; i += 3) {
+          const f: number[] = [];
+          for (let k = 0; k < 3; k++) {
+            const v = tri[i + k];
+            const c = `(${num(pos.getX(v))},${num(-pos.getZ(v))},${num(pos.getY(v))})`;
+            let n = keyOf.get(c);
+            if (n == null) {
+              coords.push(c);
+              n = coords.length;
+              keyOf.set(c, n);
+            }
+            f.push(n);
+          }
+          // Rounding to 0.1 mm can fold a sliver triangle flat; drop it.
+          if (f[0] === f[1] || f[1] === f[2] || f[0] === f[2]) continue;
+          faces.push(`(${f.join(',')})`);
+        }
+        if (!faces.length) continue;
+        const pts = st.add(`IFCCARTESIANPOINTLIST3D(${list(coords)})`);
+        sets.push(st.add(`IFCTRIANGULATEDFACESET(${pts},$,$,${list(faces)},$)`));
+      }
+      if (sets.length) roofShape = shapeOf('Tessellation', sets);
+    }
+    if (roofShape) {
+      const kind = { flat: 'FLAT_ROOF', shed: 'SHED_ROOF', gable: 'GABLE_ROOF', hip: 'HIP_ROOF' }[type] ?? 'NOTDEFINED';
+      const roofEl = st.add(`IFCROOF(${guid(`roof|${r.floor.id}`)},$,${str('Roof')},$,$,${placement(r.storeyPl, axisWorld)},$,$,.${kind}.)`);
+      const slab = st.add(
+        `IFCSLAB(${guid(`roofslab|${r.floor.id}`)},$,${str('Roof slab')},$,$,${placement(r.storeyPl, axisWorld)},${roofShape},$,.ROOF.)`,
+      );
+      st.add(`IFCRELAGGREGATES(${guid(`rel|roof-slab|${r.floor.id}`)},$,$,$,${roofEl},${list([slab])})`);
+      contained.push(roofEl);
+    }
+
+    // Parapet: one wall per run, from the eave up past the roof deck, the same
+    // runs the 3D view draws (they stop at any wall that rises through them).
+    const rise = Math.max(0, roof.parapet ?? 0) * M;
+    if (type === 'flat' && rise > 0 && outlines.wall.length >= 3) {
+      parapetSegments(outlines.wall, eaveY, made.parapet).forEach((seg, k) => {
+        const ring = cleanRing([seg.outer0, seg.outer1, seg.inner1, seg.inner0].map(toIfc));
+        if (ring.length < 3 || Math.abs(polygonArea(ring)) < 1e-6) return;
+        contained.push(st.add(
+          `IFCWALL(${guid(`parapet|${r.floor.id}|${k}`)},$,${str('Parapet')},$,$,${placement(r.storeyPl, axisWorld)},${shape(prism(ring, t + rise, axis3(0, 0, eaveY)))},$,.PARAPET.)`,
+        ));
+      });
+    }
+    if (contained.length) {
+      st.add(`IFCRELCONTAINEDINSPATIALSTRUCTURE(${guid(`rel|storey-roof|${r.floor.id}`)},$,$,$,${list(contained)},${r.storey})`);
+    }
+  }
 
   const header = [
     'ISO-10303-21;',

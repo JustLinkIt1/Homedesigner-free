@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { orientedBox, boxFillRatio, offsetPolygon } from './polygonOffset';
 import { detectBuildingOutline } from './roomDetection';
 import { coverAt, decompose, kinkLines, maximalRects, planPrisms, rectilinear, squareOutline } from './roofRects';
+import { structuralWalls } from './fence';
 import type { Point, Roof, Wall } from '../types';
 
 const M = 0.01; // cm -> m, matching DesignScene
@@ -801,4 +802,40 @@ export function buildRoofGeometry(
     ridgeHeight: rise + t,
     lights: type === 'gable' ? lightsOn('u', -A, A, 0, B) : [],
   };
+}
+
+/**
+ * The walls round a storey's parapet, as both the 3D view and the IFC export
+ * see them: the storey's own walls carry it (each edge stands on its own
+ * wall's face), and any wall on its line that rises past the parapet's foot
+ * stops it, whether on this storey or the one above (`riseTo` cm up).
+ */
+export function roofParapetContext(walls: Wall[], aboveWalls?: Wall[], riseTo?: number): ParapetContext {
+  const structural = structuralWalls(walls);
+  const asBlocker = (w: Wall, base: number): ParapetBlocker => ({ start: w.start, end: w.end, thickness: w.thickness, top: base + w.height * M });
+  return {
+    carriers: structural,
+    half: (structural.reduce((m, w) => Math.max(m, w.thickness), 0) || 10) / 2,
+    blockers: [
+      ...structural.map((w) => asBlocker(w, 0)),
+      ...structuralWalls(aboveWalls ?? []).map((w) => asBlocker(w, (riseTo ?? 0) * M)),
+    ],
+  };
+}
+
+/**
+ * Everything one storey's roof is built from: its outlines, the parapet's
+ * context and the finished geometry (null when the walls enclose nothing).
+ * Fences carry no roof, and a fence running off the plot would otherwise drag
+ * the eave outline out with it. A pitched roof needs square corners, so walls a
+ * touch out of square are straightened for it; a flat or shed roof follows the
+ * walls as drawn. `eaveY` is metres above the storey.
+ */
+export function buildStoreyRoof(walls: Wall[], roof: Roof, eaveY: number, aboveWalls?: Wall[], riseTo?: number) {
+  const outlines = roofOutlines(structuralWalls(walls), roof.overhang, roof.type === 'gable' || roof.type === 'hip');
+  if (!outlines) return null;
+  const parapet = roofParapetContext(walls, aboveWalls, riseTo);
+  const built = buildRoofGeometry(outlines.eave, outlines.wall, roof, eaveY, parapet);
+  if (!built) return null;
+  return { outlines, parapet, type: effectiveRoofType(roof, outlines.eave), built };
 }
