@@ -1,5 +1,6 @@
-import { pointInPolygon } from './geometry';
-import { isFence, isHalfWall } from './fence';
+import { pointInPolygon, pointToSegment } from './geometry';
+import { isFence, isHalfWall, structuralWalls } from './fence';
+import { detectBuildingOutline } from './roomDetection';
 import type { Room, Wall } from '../types';
 
 /** How far past a wall face to look for the room it borders (cm). */
@@ -14,9 +15,13 @@ export function storeyTop(walls: Wall[]): number {
 }
 
 /**
- * Where a storey's roof sits (cm): the wall height that most of the storey's
- * wall length is built to, the lower one on a tie. Fences and half walls carry
- * no roof and are not counted.
+ * Where a storey's roof sits (cm): the wall height that most of the length of
+ * the walls the roof stands on is built to, the lower one on a tie. The roof
+ * stands on the walls round the building outline (the one `roofOutlines` in
+ * roofGeometry.ts builds the roof from); interior partitions carry nothing, so
+ * a long run of lower partitions cannot pull the roof down through the outer
+ * walls. If the walls enclose nothing, every structural wall counts. Fences
+ * and half walls carry no roof and are never counted.
  *
  * The roof used to sit on the tallest wall, so raising one wall (a feature
  * wall, a gable end, a chimney breast) lifted the whole roof off every other
@@ -24,20 +29,42 @@ export function storeyTop(walls: Wall[]): number {
  * the parapet stops at it.
  */
 export function roofEaveHeight(walls: Wall[]): number {
-  const byHeight = new Map<number, number>();
-  for (const w of walls) {
-    if (isFence(w) || isHalfWall(w) || !(w.height > 0)) continue;
-    const len = Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
-    byHeight.set(w.height, (byHeight.get(w.height) ?? 0) + len);
-  }
-  let best = 0;
-  let bestLen = -1;
-  for (const [h, len] of byHeight) {
-    if (len > bestLen + 1e-6 || (Math.abs(len - bestLen) <= 1e-6 && h < best)) {
-      best = h;
-      bestLen = len;
+  const bearing = walls.filter((w) => !isFence(w) && !isHalfWall(w) && w.height > 0);
+  const outline = detectBuildingOutline(structuralWalls(walls));
+  // Share of a wall's length that lies on the outline (1 when there is none).
+  const onOutline = (w: Wall): number => {
+    if (!outline || outline.length < 3) return 1;
+    const tol = Math.max(w.thickness, 10) / 2 + 2;
+    let hits = 0;
+    for (const f of SAMPLES) {
+      const p = { x: w.start.x + (w.end.x - w.start.x) * f, y: w.start.y + (w.end.y - w.start.y) * f };
+      for (let i = 0; i < outline.length; i++) {
+        if (pointToSegment(p, outline[i], outline[(i + 1) % outline.length]).dist <= tol) {
+          hits++;
+          break;
+        }
+      }
     }
-  }
+    return hits / SAMPLES.length;
+  };
+  const tally = (counted: (w: Wall) => number) => {
+    const byHeight = new Map<number, number>();
+    for (const w of bearing) {
+      const len = Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y) * counted(w);
+      if (len > 0) byHeight.set(w.height, (byHeight.get(w.height) ?? 0) + len);
+    }
+    let best = 0;
+    let bestLen = -1;
+    for (const [h, len] of byHeight) {
+      if (len > bestLen + 1e-6 || (Math.abs(len - bestLen) <= 1e-6 && h < best)) {
+        best = h;
+        bestLen = len;
+      }
+    }
+    return best;
+  };
+  // No wall on the outline (it could not be traced along them): all walls.
+  const best = tally(onOutline) || tally(() => 1);
   return best > 0 ? best : storeyTop(walls);
 }
 

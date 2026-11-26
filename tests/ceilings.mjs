@@ -53,6 +53,12 @@ const check = (name, ok, detail = '') => {
   check('eave: a tie in length -> the lower height', roofEaveHeight(tie) === 260, String(roofEaveHeight(tie)));
   const extras = [...boxAt(270), W('f', 0, 900, 3000, 900, 180, { kind: 'fence' }), W('h', 100, 100, 700, 100, 105, { halfWall: true }), W('h2', 100, 200, 700, 200, 105, { halfWall: true })];
   check('eave: fences and half walls are not counted', roofEaveHeight(extras) === 270, String(roofEaveHeight(extras)));
+  // Outer walls 270 (2800 cm round), interior partitions 240 (4 x 790 = 3160 cm, longer).
+  const parts = [...boxAt(270), W('p1', 200, 0, 200, 600, 240), W('p2', 400, 0, 400, 600, 240), W('p3', 600, 0, 600, 600, 240), W('p4', 0, 300, 800, 300, 240), W('p5', 0, 150, 800, 150, 240)];
+  check('eave: longer run of lower interior partitions -> still the outer walls', roofEaveHeight(parts) === 270, String(roofEaveHeight(parts)));
+  // Open run of walls (encloses nothing): falls back to all structural walls.
+  const open = [W('o1', 0, 0, 800, 0, 250), W('o2', 800, 0, 800, 600, 250), W('o3', 0, 50, 300, 50, 300)];
+  check('eave: no outline -> all structural walls count', roofEaveHeight(open) === 250, String(roofEaveHeight(open)));
   check('eave: no walls -> the default storey height', roofEaveHeight([]) === storeyTop([]));
 }
 
