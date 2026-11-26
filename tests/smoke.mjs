@@ -119,6 +119,20 @@ await page.route('https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/catalog/v1
 );
 
 let failures = 0;
+// Under SwiftShader the 3D view draws only a few frames a second. Playwright's click
+// waits for its target to hold still across animation frames, so right after 3D
+// mounts it can give up before the page has drawn enough of them. Let the page draw
+// a few frames first (at most 60 s), then click with the same 60 s budget. Test
+// timing only: the app is not changed (EXEC cycle 184).
+const settleFrames = (frames = 3, timeout = 60000) => page.evaluate(
+  ({ frames, timeout }) => new Promise((resolve) => {
+    let seen = 0;
+    const stop = setTimeout(resolve, timeout);
+    const tick = () => { seen += 1; if (seen >= frames) { clearTimeout(stop); resolve(); } else requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }),
+  { frames, timeout },
+);
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : ` — ${detail}`}`);
   if (!ok) failures++;
@@ -787,7 +801,8 @@ if (process.env.SMOKE_SKIP_3D) {
   check('3D mounts (no webgl-missing)', !webglMissing);
   const objectsButton = page.locator('.objects3d-btn');
   check('3D Objects entry point appears', await objectsButton.isVisible().catch(() => false));
-  await objectsButton.click();
+  await settleFrames();
+  await objectsButton.click({ timeout: 60000 });
   check('3D object catalog opens', await page.locator('.catalog.docked').isVisible().catch(() => false));
   check(
     'cloud catalog manifest loads',
