@@ -141,39 +141,238 @@ function planarUVs(geo: THREE.BufferGeometry) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
+/** Parapet thickness, cm. */
+const PARAPET_THICK = 15;
+
+/** A wall that holds the roof up: where one outline edge really sits. */
+export interface ParapetCarrier { start: Point; end: Point; thickness: number }
+
 /**
- * A low wall standing on the outer wall line, from `y0` up to `y1` (metres).
- * Each corner of the inner face is mitred, so the wall keeps its thickness
- * round both outside and inside corners.
+ * A wall that already stands where a parapet would go and rises past the
+ * parapet's foot, so the parapet has to stop at its face. `top` is metres above
+ * the storey origin, like `eaveY`. Walls of the roof's own storey top out at
+ * the eave and never qualify; the storey above, or anything taller, does.
  */
-function parapetGeometry(wall: Point[], y0: number, y1: number): THREE.BufferGeometry | null {
+export interface ParapetBlocker extends ParapetCarrier { top: number }
+
+/** What the roof builder knows about the walls round the parapet. */
+export interface ParapetContext {
+  /** The roof storey's walls, to fit the parapet to each wall's own thickness. */
+  carriers?: ParapetCarrier[];
+  /** Half the thickest wall, cm: how far `wallOutline` sits out from the centrelines. */
+  half?: number;
+  /** Taller walls the parapet must not run into. */
+  blockers?: ParapetBlocker[];
+  /** Outline edges that get no parapet (reserved for a per-edge on/off option). */
+  skipEdges?: ReadonlySet<number>;
+}
+
+/**
+ * One run of parapet along one outline edge. The edge index is stable, so a
+ * per-edge on/off option only has to filter on `edge`.
+ */
+export interface ParapetSegment {
+  /** Index of the outline edge (wall[edge] -> wall[edge + 1]). */
+  edge: number;
+  /** Where along the edge it runs, cm from the edge's outer start corner. */
+  s0: number;
+  s1: number;
+  /** Outer (wall side) and inner corners at each end, plan cm. */
+  outer0: Point;
+  outer1: Point;
+  inner0: Point;
+  inner1: Point;
+  /** True where the run was cut short by a wall (needs an end cap) rather than ending in a corner. */
+  cut0: boolean;
+  cut1: boolean;
+}
+
+const lineHit = (p: Point, d: Point, q: Point, e: Point): Point | null => {
+  const den = d.x * e.y - d.y * e.x;
+  if (Math.abs(den) < 1e-9) return null;
+  const t = ((q.x - p.x) * e.y - (q.y - p.y) * e.x) / den;
+  return { x: p.x + d.x * t, y: p.y + d.y * t };
+};
+
+type SD = { s: number; d: number };
+
+/** The part of a convex polygon (s along, d across) with 0 <= d <= max. */
+function clipBand(poly: SD[], max: number): SD[] {
+  const clip = (pts: SD[], keep: (p: SD) => boolean, at: number) => {
+    const out: SD[] = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i];
+      const b = pts[(i + 1) % pts.length];
+      const ka = keep(a);
+      const kb = keep(b);
+      if (ka) out.push(a);
+      if (ka !== kb) {
+        const t = (at - a.d) / (b.d - a.d);
+        out.push({ s: a.s + (b.s - a.s) * t, d: at });
+      }
+    }
+    return out;
+  };
+  return clip(clip(poly, (p) => p.d >= 0, 0), (p) => p.d <= max, max);
+}
+
+/**
+ * The parapet, edge by edge.
+ *
+ * Each outline edge gets a run of wall `PARAPET_THICK` thick along its outer
+ * line. A run is cut wherever one of `ctx.blockers` stands in its footprint
+ * (the cut ends square, on the blocker's face), and an edge sitting on a wall
+ * thinner than the thickest is pulled in to that wall's face. Unblocked edges
+ * keep their mitred corners, so a plain house still gets one closed ring.
+ */
+export function parapetSegments(wall: Point[], y0: number, ctx: ParapetContext = {}): ParapetSegment[] {
   const n = wall.length;
+  if (n < 3) return [];
   const area = wall.reduce((s, p, i) => {
     const q = wall[(i + 1) % n];
     return s + p.x * q.y - q.x * p.y;
   }, 0);
   const turn = area >= 0 ? 1 : -1; // which way is inward
-  const thick = 15; // cm
-  const inner: Point[] = wall.map((p, i) => {
-    const a = wall[(i - 1 + n) % n];
-    const b = wall[(i + 1) % n];
-    const l0 = Math.hypot(p.x - a.x, p.y - a.y) || 1;
-    const l1 = Math.hypot(b.x - p.x, b.y - p.y) || 1;
-    // Inward normals of the edge arriving at this corner and the one leaving it.
-    const n0 = { x: (-(p.y - a.y) / l0) * turn, y: ((p.x - a.x) / l0) * turn };
-    const n1 = { x: (-(b.y - p.y) / l1) * turn, y: ((b.x - p.x) / l1) * turn };
-    const along = 1 + n0.x * n1.x + n0.y * n1.y;
-    // A hairpin corner would send the mitre off to infinity; cap it.
-    const k = thick / Math.max(along, 0.35);
-    return { x: p.x + (n0.x + n1.x) * k, y: p.y + (n0.y + n1.y) * k };
+  const dirs = wall.map((p, i) => {
+    const q = wall[(i + 1) % n];
+    const l = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+    return { x: (q.x - p.x) / l, y: (q.y - p.y) / l };
   });
+  const inward = dirs.map((u) => ({ x: -u.y * turn, y: u.x * turn }));
+
+  // How far each edge sits inside the thickest wall's face: the wall under it
+  // may be thinner, and the parapet should stand on that wall, not hang out.
+  const half = ctx.half ?? 0;
+  const pull = wall.map((p, i) => {
+    const carriers = ctx.carriers;
+    if (!carriers?.length || !half) return 0;
+    const q = wall[(i + 1) % n];
+    const u = dirs[i];
+    const nIn = inward[i];
+    const len = Math.hypot(q.x - p.x, q.y - p.y);
+    let best = 0;
+    for (const w of carriers) {
+      const wl = Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
+      if (wl < 1) continue;
+      const wx = (w.end.x - w.start.x) / wl;
+      const wy = (w.end.y - w.start.y) / wl;
+      if (Math.abs(wx * u.x + wy * u.y) < 0.999) continue; // not parallel
+      // Distance from the edge's centreline (the edge pulled in by `half`) to the wall's.
+      const off = (w.start.x - p.x) * nIn.x + (w.start.y - p.y) * nIn.y - half;
+      if (Math.abs(off) > 6) continue;
+      const a = (w.start.x - p.x) * u.x + (w.start.y - p.y) * u.y;
+      const b = (w.end.x - p.x) * u.x + (w.end.y - p.y) * u.y;
+      const lap = Math.min(Math.max(a, b), len) - Math.max(Math.min(a, b), 0);
+      if (lap < Math.min(len * 0.5, 40)) continue;
+      best = Math.max(best, w.thickness);
+    }
+    return best > 0 ? Math.max(0, half - best / 2) : 0;
+  });
+
+  // Each edge's outer line, pulled in where its wall is thin, then the corner
+  // where neighbouring lines meet (`inset` further in for the inner face).
+  const lineP = wall.map((p, i) => ({ x: p.x + inward[i].x * pull[i], y: p.y + inward[i].y * pull[i] }));
+  const corner = (i: number, inset: number): Point => {
+    const h = (i - 1 + n) % n;
+    const a = { x: lineP[h].x + inward[h].x * inset, y: lineP[h].y + inward[h].y * inset };
+    const b = { x: lineP[i].x + inward[i].x * inset, y: lineP[i].y + inward[i].y * inset };
+    const along = 1 + inward[h].x * inward[i].x + inward[h].y * inward[i].y;
+    // A hairpin corner would send the mitre off to infinity; cap it.
+    const hit = along > 0.35 ? lineHit(a, dirs[h], b, dirs[i]) : null;
+    if (hit) return hit;
+    const k = (Math.max(pull[h], pull[i]) + inset) / Math.max(along, 0.35);
+    return { x: wall[i].x + (inward[h].x + inward[i].x) * k, y: wall[i].y + (inward[h].y + inward[i].y) * k };
+  };
+  const outerAt = wall.map((_, i) => corner(i, 0));
+  const innerAt = wall.map((_, i) => corner(i, PARAPET_THICK));
+
+  const blockers = (ctx.blockers ?? []).filter((b) => b.top > y0 + 0.02);
+  const out: ParapetSegment[] = [];
+  for (let i = 0; i < n; i++) {
+    if (ctx.skipEdges?.has(i)) continue;
+    const j = (i + 1) % n;
+    const o0 = outerAt[i];
+    const o1 = outerAt[j];
+    const u = dirs[i];
+    const nIn = inward[i];
+    const len = (o1.x - o0.x) * u.x + (o1.y - o0.y) * u.y;
+    if (len < 1) continue;
+    // Stretches of this edge that a blocker stands in, as [from, to] along it.
+    const blocked: [number, number][] = [];
+    for (const b of blockers) {
+      const wl = Math.hypot(b.end.x - b.start.x, b.end.y - b.start.y);
+      if (wl < 1) continue;
+      const bn = { x: -(b.end.y - b.start.y) / wl, y: (b.end.x - b.start.x) / wl };
+      const h = b.thickness / 2;
+      const part = clipBand(
+        [
+          { x: b.start.x + bn.x * h, y: b.start.y + bn.y * h },
+          { x: b.end.x + bn.x * h, y: b.end.y + bn.y * h },
+          { x: b.end.x - bn.x * h, y: b.end.y - bn.y * h },
+          { x: b.start.x - bn.x * h, y: b.start.y - bn.y * h },
+        ].map((c) => ({
+          s: (c.x - o0.x) * u.x + (c.y - o0.y) * u.y,
+          d: (c.x - o0.x) * nIn.x + (c.y - o0.y) * nIn.y,
+        })),
+        PARAPET_THICK,
+      );
+      if (part.length < 3) continue;
+      let a2 = 0;
+      for (let k = 0; k < part.length; k++) {
+        const p = part[k];
+        const q = part[(k + 1) % part.length];
+        a2 += p.s * q.d - q.s * p.d;
+      }
+      if (Math.abs(a2) / 2 < 1) continue; // only touching
+      blocked.push([Math.min(...part.map((p) => p.s)), Math.max(...part.map((p) => p.s))]);
+    }
+    blocked.sort((p, q) => p[0] - q[0]);
+    const runs: [number, number][] = [];
+    let from = 0;
+    for (const [b0, b1] of blocked) {
+      if (b0 > from) runs.push([from, Math.min(b0, len)]);
+      from = Math.max(from, b1);
+    }
+    if (from < len) runs.push([from, len]);
+    for (const [s0, s1] of runs) {
+      if (s1 - s0 < 2) continue;
+      const cut0 = s0 > 1e-6;
+      const cut1 = s1 < len - 1e-6;
+      const at = (s: number): Point => ({ x: o0.x + u.x * s, y: o0.y + u.y * s });
+      const pa = cut0 ? at(s0) : o0;
+      const pb = cut1 ? at(s1) : o1;
+      out.push({
+        edge: i,
+        s0,
+        s1,
+        outer0: pa,
+        outer1: pb,
+        inner0: cut0 ? { x: pa.x + nIn.x * PARAPET_THICK, y: pa.y + nIn.y * PARAPET_THICK } : innerAt[i],
+        inner1: cut1 ? { x: pb.x + nIn.x * PARAPET_THICK, y: pb.y + nIn.y * PARAPET_THICK } : innerAt[j],
+        cut0,
+        cut1,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * A low wall standing on the outer wall line, from `y0` up to `y1` (metres),
+ * built from `parapetSegments`: an outside face, an inside face and the coping
+ * for each run, plus a square end where a run stops against a wall.
+ */
+function parapetGeometry(wall: Point[], y0: number, y1: number, ctx: ParapetContext = {}): THREE.BufferGeometry | null {
   const out: number[] = [];
   const at = (p: Point, y: number) => new THREE.Vector3(p.x * M, y, p.y * M);
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    quad(out, at(wall[i], y0), at(wall[j], y0), at(wall[j], y1), at(wall[i], y1)); // outside face
-    quad(out, at(inner[j], y0), at(inner[i], y0), at(inner[i], y1), at(inner[j], y1)); // inside face
-    quad(out, at(wall[i], y1), at(wall[j], y1), at(inner[j], y1), at(inner[i], y1)); // coping
+  for (const s of parapetSegments(wall, y0, ctx)) {
+    // Wound so every face points out of the masonry (the single-ring version had
+    // them all the wrong way round: coping facing down, outside faces facing in).
+    quad(out, at(s.outer0, y0), at(s.outer0, y1), at(s.outer1, y1), at(s.outer1, y0)); // outside face
+    quad(out, at(s.inner1, y0), at(s.inner1, y1), at(s.inner0, y1), at(s.inner0, y0)); // inside face
+    quad(out, at(s.outer0, y1), at(s.inner0, y1), at(s.inner1, y1), at(s.outer1, y1)); // coping
+    if (s.cut0) quad(out, at(s.inner0, y0), at(s.inner0, y1), at(s.outer0, y1), at(s.outer0, y0)); // end against a wall
+    if (s.cut1) quad(out, at(s.outer1, y0), at(s.outer1, y1), at(s.inner1, y1), at(s.inner1, y0));
   }
   if (!out.length) return null;
   const g = new THREE.BufferGeometry();
@@ -196,6 +395,7 @@ export function buildRoofGeometry(
   wallOutline: Point[] | null,
   roof: Roof,
   eaveY: number,
+  parapetWalls: ParapetContext = {},
 ): {
   geometry: THREE.BufferGeometry;
   infill: THREE.BufferGeometry | null;
@@ -227,7 +427,7 @@ export function buildRoofGeometry(
     // does and takes the wall finish.
     const rise = Math.max(0, roof.parapet ?? 0) * M;
     const parapet = rise > 0 && wallOutline && wallOutline.length >= 3
-      ? parapetGeometry(wallOutline, eaveY, eaveY + t + rise)
+      ? parapetGeometry(wallOutline, eaveY, eaveY + t + rise, parapetWalls)
       : null;
     return { geometry: geo, infill: parapet, ridgeHeight: t + (parapet ? rise : 0) };
   }
