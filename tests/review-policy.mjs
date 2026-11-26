@@ -6,7 +6,7 @@
 // as plain functions, and these checks run them directly:
 //
 //   * never in the first session, and not before the app has been opened on
-//     three different days and two things have gone well;
+//     two different days and two things have gone well;
 //   * at most once every 90 days, three times in a lifetime, once per launch;
 //   * nothing on the web, nothing while a paywall is open;
 //   * unreadable storage means "do not ask", never "ask again";
@@ -33,7 +33,7 @@ try {
 
 const {
   REVIEW_COOLDOWN_MS, REVIEW_MAX_REQUESTS, REVIEW_MIN_DAYS, REVIEW_MIN_MOMENTS,
-  createReviewPrompt, legacyReviewState, localDay, parseReviewState, serializeReviewState,
+  createImportMoment, createReviewPrompt, legacyReviewState, localDay, parseReviewState, serializeReviewState,
   shouldRequestReview, withMoment, withOpen, withRequest,
 } = mod;
 
@@ -58,8 +58,8 @@ const engaged = (days, moments) => {
 };
 
 // ---- the numbers themselves -------------------------------------------------
-check('thresholds: 3 days, 2 moments, 90 days apart, 3 in a lifetime',
-  REVIEW_MIN_DAYS === 3 && REVIEW_MIN_MOMENTS === 2 && REVIEW_COOLDOWN_MS === 90 * DAY_MS && REVIEW_MAX_REQUESTS === 3);
+check('thresholds: 2 days, 2 moments, 90 days apart, 3 in a lifetime',
+  REVIEW_MIN_DAYS === 2 && REVIEW_MIN_MOMENTS === 2 && REVIEW_COOLDOWN_MS === 90 * DAY_MS && REVIEW_MAX_REQUESTS === 3);
 check('a calendar day is the local date', localDay(new Date(2026, 2, 5, 23, 59).getTime()) === '2026-03-05'
   && localDay(new Date(2026, 2, 6, 0, 1).getTime()) === '2026-03-06');
 
@@ -70,10 +70,10 @@ check('a calendar day is the local date', localDay(new Date(2026, 2, 5, 23, 59).
   for (let i = 0; i < 10; i++) first = withMoment(first, T0 + i * 60_000);
   check('first session: ten exports on install day never ask', !shouldRequestReview(first, ctx(T0 + 3_600_000)));
 
-  check('too few days: two days with plenty of moments', !shouldRequestReview(engaged(2, 5), ctx(day(1))));
-  check('too few moments: three days, one moment', !shouldRequestReview(engaged(3, 1), ctx(day(2))));
-  check('too few moments: three days, none', !shouldRequestReview(engaged(3, 0), ctx(day(2))));
-  check('three days and two moments ask', shouldRequestReview(engaged(3, 2), ctx(day(2))));
+  check('too few days: one day with plenty of moments', !shouldRequestReview(engaged(1, 5), ctx(day(0))));
+  check('too few moments: two days, one moment', !shouldRequestReview(engaged(2, 1), ctx(day(1))));
+  check('too few moments: two days, none', !shouldRequestReview(engaged(2, 0), ctx(day(1))));
+  check('two days and two moments ask', shouldRequestReview(engaged(2, 2), ctx(day(1))));
 
   let sameDay = fresh();
   for (let i = 0; i < 6; i++) sameDay = withOpen(sameDay, T0 + i * 3_600_000);
@@ -81,33 +81,33 @@ check('a calendar day is the local date', localDay(new Date(2026, 2, 5, 23, 59).
 
   let moments = fresh();
   moments = withMoment(withMoment(moments, day(0)), day(1));
-  moments = withMoment(moments, day(2));
-  check('a moment counts its own day when no open was recorded', moments.days.length === 3 && moments.moments === 3);
+  moments = withMoment(moments, day(1));
+  check('a moment counts its own day when no open was recorded', moments.days.length === 2 && moments.moments === 3);
 
   const many = engaged(40, 2);
-  check('only the first three days are kept', many.days.length === 3 && many.days[0] === localDay(day(0)));
+  check('only the first two days are kept', many.days.length === 2 && many.days[0] === localDay(day(0)));
   check('an open that changes nothing returns the same state', withOpen(many, day(50)) === many);
 }
 
 // ---- where and when it may not ask ------------------------------------------
 {
-  const ready = engaged(3, 2);
-  check('web and other platforms never ask', !shouldRequestReview(ready, ctx(day(2), { android: false })));
-  check('not while a paywall or other dialog is open', !shouldRequestReview(ready, ctx(day(2), { dialogOpen: true })));
-  check('once per app launch', !shouldRequestReview(ready, ctx(day(2), { askedThisSession: true })));
+  const ready = engaged(2, 2);
+  check('web and other platforms never ask', !shouldRequestReview(ready, ctx(day(1), { android: false })));
+  check('not while a paywall or other dialog is open', !shouldRequestReview(ready, ctx(day(1), { dialogOpen: true })));
+  check('once per app launch', !shouldRequestReview(ready, ctx(day(1), { askedThisSession: true })));
 }
 
 // ---- 90-day spacing and the lifetime cap ------------------------------------
 {
-  const asked = withRequest(engaged(3, 2), day(2));
-  check('a request is recorded', asked.requests === 1 && asked.lastRequestAt === day(2));
-  check('89 days later: still too soon', !shouldRequestReview(asked, ctx(day(2) + 89 * DAY_MS)));
-  check('one millisecond short of 90 days: too soon', !shouldRequestReview(asked, ctx(day(2) + REVIEW_COOLDOWN_MS - 1)));
-  check('90 days later: asks again', shouldRequestReview(asked, ctx(day(2) + REVIEW_COOLDOWN_MS)));
-  check('clock moved back before the last request: does not ask', !shouldRequestReview(asked, ctx(day(2) - DAY_MS)));
+  const asked = withRequest(engaged(2, 2), day(1));
+  check('a request is recorded', asked.requests === 1 && asked.lastRequestAt === day(1));
+  check('89 days later: still too soon', !shouldRequestReview(asked, ctx(day(1) + 89 * DAY_MS)));
+  check('one millisecond short of 90 days: too soon', !shouldRequestReview(asked, ctx(day(1) + REVIEW_COOLDOWN_MS - 1)));
+  check('90 days later: asks again', shouldRequestReview(asked, ctx(day(1) + REVIEW_COOLDOWN_MS)));
+  check('clock moved back before the last request: does not ask', !shouldRequestReview(asked, ctx(day(1) - DAY_MS)));
 
-  let state = engaged(3, 2);
-  let now = day(2);
+  let state = engaged(2, 2);
+  let now = day(1);
   let granted = 0;
   for (let i = 0; i < 12; i++) {
     if (shouldRequestReview(state, ctx(now))) { granted += 1; state = withRequest(state, now); }
@@ -119,8 +119,8 @@ check('a calendar day is the local date', localDay(new Date(2026, 2, 5, 23, 59).
 
 // ---- storage ----------------------------------------------------------------
 {
-  const ready = engaged(3, 2);
-  const round = parseReviewState(serializeReviewState(ready), day(2));
+  const ready = engaged(2, 2);
+  const round = parseReviewState(serializeReviewState(ready), day(1));
   check('state survives a round trip', JSON.stringify(round) === JSON.stringify(ready));
 
   for (const empty of [null, undefined, '']) {
@@ -207,44 +207,42 @@ const openOn = (target, n) => { for (let i = 0; i < n; i++) { target.env.now = d
   check('phone, install day: moments are counted but Play is not called',
     !firstDay.some(Boolean) && phone.env.launches === 0 && parseReviewState(phone.env.stored, T0).moments === 3);
 
-  // Day two, then day three: the next good moment is the one that asks.
+  // Day two: opening never asks by itself, the next good moment is the one that asks.
   phone.env.now = day(1); phone.prompt.opened();
-  check('phone, second day: still nothing', !(await phone.prompt.moment()) && phone.env.launches === 0);
-  phone.env.now = day(2); phone.prompt.opened();
   check('opening the app never asks by itself', phone.env.launches === 0);
-  check('phone, third day: the next good moment asks Play', (await phone.prompt.moment()) && phone.env.launches === 1);
-  const after = parseReviewState(phone.env.stored, day(2));
-  check('the request is on record', after.requests === 1 && after.lastRequestAt === day(2));
+  check('phone, second day: the next good moment asks Play', (await phone.prompt.moment()) && phone.env.launches === 1);
+  const after = parseReviewState(phone.env.stored, day(1));
+  check('the request is on record', after.requests === 1 && after.lastRequestAt === day(1));
   check('same launch: no second request', !(await phone.prompt.moment()) && phone.env.launches === 1);
 
   // A new launch the next day reads the same storage.
-  const nextLaunch = device({ stored: phone.env.stored, now: day(3) });
+  const nextLaunch = device({ stored: phone.env.stored, now: day(2) });
   nextLaunch.prompt.opened();
   check('next launch, a day later: too soon', !(await nextLaunch.prompt.moment()) && nextLaunch.env.launches === 0);
-  const muchLater = device({ stored: nextLaunch.env.stored, now: day(2) + REVIEW_COOLDOWN_MS });
+  const muchLater = device({ stored: nextLaunch.env.stored, now: day(1) + REVIEW_COOLDOWN_MS });
   check('a launch 90 days later: asks once more', (await muchLater.prompt.moment()) && muchLater.env.launches === 1);
 }
 {
-  const ready = serializeReviewState(engaged(3, 2));
-  const paywall = device({ stored: ready, now: day(2), dialog: true });
+  const ready = serializeReviewState(engaged(2, 2));
+  const paywall = device({ stored: ready, now: day(1), dialog: true });
   check('paywall open: counted, not asked', !(await paywall.prompt.moment()) && paywall.env.launches === 0
-    && parseReviewState(paywall.env.stored, day(2)).moments === 3);
+    && parseReviewState(paywall.env.stored, day(1)).moments === 3);
   paywall.env.dialog = false;
   check('paywall closed: the next moment asks', (await paywall.prompt.moment()) && paywall.env.launches === 1);
 
-  const playDown = device({ stored: ready, now: day(2), async launch() { playDown.env.launches += 1; throw new Error('Play Store not found'); } });
+  const playDown = device({ stored: ready, now: day(1), async launch() { playDown.env.launches += 1; throw new Error('Play Store not found'); } });
   let threw = false;
   let result;
   try { result = await playDown.prompt.moment(); } catch { threw = true; }
   check('Play unavailable: silent, and the attempt is still on record', !threw && result === true
-    && parseReviewState(playDown.env.stored, day(2)).requests === 1);
+    && parseReviewState(playDown.env.stored, day(1)).requests === 1);
 
-  const noRead = device({ stored: ready, now: day(2), read() { throw new Error('SecurityError'); } });
+  const noRead = device({ stored: ready, now: day(1), read() { throw new Error('SecurityError'); } });
   threw = false;
   try { noRead.prompt.opened(); result = await noRead.prompt.moment(); } catch { threw = true; }
   check('storage cannot be read: silent, Play is not called', !threw && result === false && noRead.env.launches === 0);
 
-  const noWrite = device({ stored: ready, now: day(2), write() { throw new Error('QuotaExceededError'); } });
+  const noWrite = device({ stored: ready, now: day(1), write() { throw new Error('QuotaExceededError'); } });
   threw = false;
   try {
     noWrite.prompt.opened();
@@ -253,12 +251,12 @@ const openOn = (target, n) => { for (let i = 0; i < n; i++) { target.env.now = d
   check('storage cannot be written: silent, Play is not called (it could not be rate limited)',
     !threw && !result.some(Boolean) && noWrite.env.launches === 0);
 
-  const corrupt = device({ stored: '{"days":[', now: day(2) });
+  const corrupt = device({ stored: '{"days":[', now: day(1) });
   corrupt.prompt.opened();
   check('corrupt storage: no request, and it is rewritten readable', !(await corrupt.prompt.moment()) && corrupt.env.launches === 0
-    && parseReviewState(corrupt.env.stored, day(2)).lastRequestAt === day(2));
+    && parseReviewState(corrupt.env.stored, day(1)).lastRequestAt === day(1));
 
-  const brokenProbe = device({ stored: ready, now: day(2), android() { throw new Error('no bridge'); } });
+  const brokenProbe = device({ stored: ready, now: day(1), android() { throw new Error('no bridge'); } });
   threw = false;
   try { brokenProbe.prompt.opened(); result = await brokenProbe.prompt.moment(); } catch { threw = true; }
   check('platform probe throws: silent', !threw && result === false && brokenProbe.env.launches === 0);
@@ -266,3 +264,27 @@ const openOn = (target, n) => { for (let i = 0; i < n; i++) { target.env.now = d
 
 console.log(failures === 0 ? '\nAll review-policy checks passed.' : `\n${failures} review-policy check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);
+
+// ---- an import counts once it has been seen in 3D ---------------------------
+{
+  let moments = 0;
+  const gate = createImportMoment(() => { moments += 1; });
+  check('3D drawn with no import: no moment', gate.rendered3D() === false && moments === 0);
+  gate.imported();
+  check('an import alone is not a moment yet', moments === 0);
+  check('the first 3D frame after it counts', gate.rendered3D() === true && moments === 1);
+  check('later 3D views do not count it again', gate.rendered3D() === false && moments === 1);
+  gate.imported(); gate.imported();
+  gate.rendered3D();
+  check('two imports before one 3D view are one moment', moments === 2);
+  const throwing = createImportMoment(() => { throw new Error('boom'); });
+  throwing.imported();
+  let escaped = false;
+  try { throwing.rendered3D(); } catch { escaped = true; }
+  check('a failing review call never escapes into 3D', !escaped);
+  // Two good moments are still required: one import seen in 3D alone does not ask.
+  let state = withMoment(withOpen(fresh(), day(0)), day(0));
+  state = withOpen(state, day(1));
+  check('two days, one moment (an import in 3D): still no ask', !shouldRequestReview(state, ctx(day(1))));
+  check('two days, import in 3D plus an export: asks', shouldRequestReview(withMoment(state, day(1)), ctx(day(1))));
+}

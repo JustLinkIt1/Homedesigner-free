@@ -9,8 +9,9 @@
 // went, so nothing here may assume it was seen, and the app must not put any
 // question of its own in front of it or behind it.
 
-/** The app has to have been opened on this many different calendar days. */
-export const REVIEW_MIN_DAYS = 3;
+/** The app has to have been opened on this many different calendar days.
+ * Two: most users never reach a third day (EXEC cycle 165). */
+export const REVIEW_MIN_DAYS = 2;
 /** Things that went well (an export saved, an AI render finished), in total. */
 export const REVIEW_MIN_MOMENTS = 2;
 export const REVIEW_COOLDOWN_MS = 90 * 24 * 60 * 60 * 1000;
@@ -132,7 +133,7 @@ export function withRequest(state: ReviewState, now: number): ReviewState {
  */
 export function shouldRequestReview(state: ReviewState, context: ReviewContext): boolean {
   if (!context.android || context.dialogOpen || context.askedThisSession) return false;
-  // Three different days also rules out the first session.
+  // Two different days also rules out the first session.
   if (state.days.length < REVIEW_MIN_DAYS || state.moments < REVIEW_MIN_MOMENTS) return false;
   if (state.requests >= REVIEW_MAX_REQUESTS) return false;
   if (state.lastRequestAt === null) return state.requests === 0;
@@ -189,6 +190,32 @@ export function createReviewPrompt(env: ReviewEnv) {
         await env.launch();
       } catch {
         /* sideloaded, no Play services, or Play's own quota: all normal */
+      }
+      return true;
+    },
+  };
+}
+
+/**
+ * An import counts as a good moment only once its result has been seen in a
+ * rendered 3D view, not when the file is read. `imported()` is called when an
+ * import succeeds, `rendered3D()` when the 3D view has drawn a frame. The
+ * moment is reported once per import, however many 3D views follow.
+ */
+export function createImportMoment(onMoment: () => void) {
+  let pending = false;
+  return {
+    imported(): void {
+      pending = true;
+    },
+    /** Returns whether a moment was reported. Never throws. */
+    rendered3D(): boolean {
+      if (!pending) return false;
+      pending = false;
+      try {
+        onMoment();
+      } catch {
+        /* a review prompt must not break the 3D view */
       }
       return true;
     },

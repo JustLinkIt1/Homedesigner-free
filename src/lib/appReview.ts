@@ -2,7 +2,7 @@
 // The rules live in reviewPolicy.ts; this file only connects them to the
 // device. On the web build both functions do nothing.
 import { Capacitor } from '@capacitor/core';
-import { createReviewPrompt, legacyReviewState } from './reviewPolicy';
+import { createImportMoment, createReviewPrompt, legacyReviewState } from './reviewPolicy';
 import { useConfirm } from './ui';
 import { useProStore } from '../store/proStore';
 import { usePointsStore } from '../store/pointsStore';
@@ -40,4 +40,16 @@ export function noteAppOpened(): void {
  */
 export function notePositiveMoment(): void {
   void prompt.moment();
+}
+
+const importMoment = createImportMoment(() => notePositiveMoment());
+
+/** An import just succeeded. It counts as a good moment once 3D has drawn it. */
+export function noteImportDone(): void {
+  importMoment.imported();
+}
+
+/** The 3D view has drawn its first frame. Counts a waiting import, once. */
+export function noteRendered3D(): void {
+  importMoment.rendered3D();
 }

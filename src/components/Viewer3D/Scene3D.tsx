@@ -21,7 +21,7 @@ import { getActiveId } from '../../lib/projects';
 import { renderViewOf } from '../../lib/renderView';
 import { captureRenderer } from '../../lib/renderCapture';
 import { saveImage } from '../../lib/native';
-import { notePositiveMoment } from '../../lib/appReview';
+import { notePositiveMoment, noteRendered3D } from '../../lib/appReview';
 import { useDesign } from '../../store/designStore';
 import { useProStore } from '../../store/proStore';
 import { applyWatermark } from '../../lib/watermark';
@@ -875,6 +875,17 @@ class PostFXBoundary extends Component<{ onFail: () => void; children: ReactNode
   }
 }
 
+/** Reports the first drawn frame of the 3D view (an import seen in 3D is a good moment). */
+function RenderedBeacon() {
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    done.current = true;
+    noteRendered3D();
+  });
+  return null;
+}
+
 /** Registers a high-resolution PNG capture function for the toolbar button. */
 function CaptureBridge({ composerRef, buildFinish }: {
   composerRef: React.MutableRefObject<any>;
@@ -1451,6 +1462,7 @@ export default function Scene3D({ onEditSelection }: { onEditSelection?: () => v
       )}
 
       <CaptureBridge composerRef={composerRef} buildFinish={buildFinish} />
+      <RenderedBeacon />
       {!walkMode && <ZoomBridge />}
       <PortraitLift enabled={!walkMode} />
       <group userData={{ overlay: true }}>

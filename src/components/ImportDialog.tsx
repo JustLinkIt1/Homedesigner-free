@@ -11,6 +11,7 @@ import { traceWallsV2, traceWallsAuto } from '../lib/wallTrace';
 import { segmentsToWalls } from '../lib/wallBuilder';
 import { toast } from '../lib/ui';
 import { trackEvent } from '../lib/events';
+import { noteImportDone } from '../lib/appReview';
 import { openFirst3DAfterImport } from '../lib/first3d';
 import Modal from './Modal';
 
@@ -230,6 +231,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     s.requestFit();
     s.setView(openFirst3DAfterImport(useDesign.getState().walls.length) ? '3d' : '2d');
     trackEvent('import_result', 'ok');
+    noteImportDone();
     onClose();
   };
 
@@ -268,6 +270,7 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     s.requestFit();
     s.setView(openFirst3DAfterImport(useDesign.getState().walls.length) ? '3d' : '2d');
     trackEvent('import_result', 'ok');
+    noteImportDone();
     onClose();
   };
 
