@@ -37,7 +37,6 @@ import HelpPanel from './components/HelpPanel';
 import SettingsDialog from './components/SettingsDialog';
 import CoachMarks from './components/CoachMarks';
 import View3DNudge, { hasSeen3D, markSeen3D } from './components/View3DNudge';
-import { takeFirst3D, wasAuto3D } from './lib/first3d';
 import { nudgeWatermarkedExport } from './lib/watermarkNudge';
 import WelcomeTour from './components/WelcomeTour';
 import ShoppingList from './components/ShoppingList';
@@ -197,19 +196,8 @@ export default function App() {
   useEffect(() => {
     if (screen === 'editor') trackEvent('editor_opened', undefined, { once: true });
   }, [screen]);
-  // A new install's first project with walls opens in 3D, once (lib/first3d.ts).
-  // Declared before the event below so the flag is set when that one reads it.
   useEffect(() => {
-    if (screen !== 'editor') return;
-    if (takeFirst3D(useDesign.getState().walls.length)) {
-      markSeen3D(); // no "try 3D" nudge for someone who is already there
-      setView('3d');
-    }
-  }, [screen, setView]);
-  useEffect(() => {
-    if (screen === 'editor' && view === '3d') {
-      trackEvent('view_3d_opened', wasAuto3D() ? 'auto' : 'user', { once: true });
-    }
+    if (screen === 'editor' && view === '3d') trackEvent('view_3d_opened', undefined, { once: true });
   }, [screen, view]);
 
   // First-run tour: only on entering the editor with a truly blank project
