@@ -1,5 +1,6 @@
-import { pointInPolygon } from './geometry';
-import { isFence, isHalfWall } from './fence';
+import { pointInPolygon, pointToSegment } from './geometry';
+import { isFence, isHalfWall, structuralWalls } from './fence';
+import { detectBuildingOutline } from './roomDetection';
 import type { Room, Wall } from '../types';
 
 /** How far past a wall face to look for the room it borders (cm). */
@@ -8,9 +9,74 @@ const PROBE_MARGIN = 5;
 const SAMPLES = [0.1, 0.3, 0.5, 0.7, 0.9];
 const DEFAULT_HEIGHT = 270;
 
-/** Height of the tallest wall on a storey (cm): where its roof sits. */
+/** Height of the tallest wall on a storey (cm). */
 export function storeyTop(walls: Wall[]): number {
   return walls.reduce((m, w) => Math.max(m, w.height), 0) || DEFAULT_HEIGHT;
+}
+
+/**
+ * Where a storey's roof sits (cm): the wall height that most of the length of
+ * the walls the roof stands on is built to, the lower one on a tie. The roof
+ * stands on the walls round the building outline (the one `roofOutlines` in
+ * roofGeometry.ts builds the roof from); interior partitions carry nothing, so
+ * a long run of lower partitions cannot pull the roof down through the outer
+ * walls. If the walls enclose nothing, every structural wall counts. Fences
+ * and half walls carry no roof and are never counted.
+ *
+ * The roof used to sit on the tallest wall, so raising one wall (a feature
+ * wall, a gable end, a chimney breast) lifted the whole roof off every other
+ * wall, with daylight under it. Now that one wall rises through the roof, and
+ * the parapet stops at it.
+ */
+export function roofEaveHeight(walls: Wall[]): number {
+  const bearing = walls.filter((w) => !isFence(w) && !isHalfWall(w) && w.height > 0);
+  const outline = detectBuildingOutline(structuralWalls(walls));
+  // Share of a wall's length that lies on the outline (1 when there is none).
+  const onOutline = (w: Wall): number => {
+    if (!outline || outline.length < 3) return 1;
+    const tol = Math.max(w.thickness, 10) / 2 + 2;
+    let hits = 0;
+    for (const f of SAMPLES) {
+      const p = { x: w.start.x + (w.end.x - w.start.x) * f, y: w.start.y + (w.end.y - w.start.y) * f };
+      for (let i = 0; i < outline.length; i++) {
+        if (pointToSegment(p, outline[i], outline[(i + 1) % outline.length]).dist <= tol) {
+          hits++;
+          break;
+        }
+      }
+    }
+    return hits / SAMPLES.length;
+  };
+  const tally = (counted: (w: Wall) => number) => {
+    const byHeight = new Map<number, number>();
+    for (const w of bearing) {
+      const len = Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y) * counted(w);
+      if (len > 0) byHeight.set(w.height, (byHeight.get(w.height) ?? 0) + len);
+    }
+    let best = 0;
+    let bestLen = -1;
+    for (const [h, len] of byHeight) {
+      if (len > bestLen + 1e-6 || (Math.abs(len - bestLen) <= 1e-6 && h < best)) {
+        best = h;
+        bestLen = len;
+      }
+    }
+    return best;
+  };
+  // No wall on the outline (it could not be traced along them): all walls.
+  const best = tally(onOutline) || tally(() => 1);
+  return best > 0 ? best : storeyTop(walls);
+}
+
+/**
+ * Top (cm) of the flat canopy over a covered porch: on the same eave as the
+ * main roof (roofEaveHeight), as thick as that roof and a hair (3 mm) lower so
+ * the two never fight where they meet. It used to sit on the tallest wall
+ * (storeyTop), so one tall wall lifted it above the main roof.
+ */
+export const CANOPY_DROP_CM = 0.3;
+export function canopyTop(walls: Wall[], thicknessCm: number): number {
+  return roofEaveHeight(walls) + thicknessCm - CANOPY_DROP_CM;
 }
 
 /**

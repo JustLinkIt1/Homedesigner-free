@@ -31,7 +31,7 @@ try {
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
-const { roomCeilingHeights, storeyTop, ceilingHeightAt } = ceil;
+const { roomCeilingHeights, storeyTop, ceilingHeightAt, roofEaveHeight, canopyTop } = ceil;
 const { stairPlan, stairRailsFor } = stairs;
 const { pointInPolygon } = geo;
 
@@ -40,6 +40,33 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : ` -- ${detail}`}`);
   if (!ok) failures++;
 };
+// ---- roof eave: the height most of the wall length is built to ----------------
+{
+  const W = (id, ax, ay, bx, by, height, extra = {}) => ({ id, start: { x: ax, y: ay }, end: { x: bx, y: by }, thickness: 20, height, color: '#fff', ...extra });
+  const boxAt = (h0, h1 = h0, h2 = h0, h3 = h0) => [W('a', 0, 0, 800, 0, h0), W('b', 800, 0, 800, 600, h1), W('c', 800, 600, 0, 600, h2), W('d', 0, 600, 0, 0, h3)];
+  const same = boxAt(270);
+  check('eave: all walls the same height -> that height, as before', roofEaveHeight(same) === 270 && roofEaveHeight(same) === storeyTop(same));
+  const tall = boxAt(270, 400);
+  check('eave: one tall wall -> the common height, not the tall one', roofEaveHeight(tall) === 270, String(roofEaveHeight(tall)));
+  // 800 + 600 at 300 against 600 + 800 at 260: a tie in length.
+  const tie = boxAt(300, 300, 260, 260);
+  check('eave: a tie in length -> the lower height', roofEaveHeight(tie) === 260, String(roofEaveHeight(tie)));
+  const extras = [...boxAt(270), W('f', 0, 900, 3000, 900, 180, { kind: 'fence' }), W('h', 100, 100, 700, 100, 105, { halfWall: true }), W('h2', 100, 200, 700, 200, 105, { halfWall: true })];
+  check('eave: fences and half walls are not counted', roofEaveHeight(extras) === 270, String(roofEaveHeight(extras)));
+  // Outer walls 270 (2800 cm round), interior partitions 240 (4 x 790 = 3160 cm, longer).
+  const parts = [...boxAt(270), W('p1', 200, 0, 200, 600, 240), W('p2', 400, 0, 400, 600, 240), W('p3', 600, 0, 600, 600, 240), W('p4', 0, 300, 800, 300, 240), W('p5', 0, 150, 800, 150, 240)];
+  check('eave: longer run of lower interior partitions -> still the outer walls', roofEaveHeight(parts) === 270, String(roofEaveHeight(parts)));
+  // Open run of walls (encloses nothing): falls back to all structural walls.
+  const open = [W('o1', 0, 0, 800, 0, 250), W('o2', 800, 0, 800, 600, 250), W('o3', 0, 50, 300, 50, 300)];
+  check('eave: no outline -> all structural walls count', roofEaveHeight(open) === 250, String(roofEaveHeight(open)));
+  check('eave: no walls -> the default storey height', roofEaveHeight([]) === storeyTop([]));
+  // Covered-porch canopy: on the main roof's eave, a hair under the roof top.
+  const close = (a, b) => Math.abs(a - b) < 1e-9;
+  check('canopy: uniform walls -> exactly where it was (tallest wall + thickness - 3 mm)', close(canopyTop(same, 14), storeyTop(same) + 14 - 0.3), String(canopyTop(same, 14)));
+  check('canopy: one tall wall -> on the eave, not the tall wall', close(canopyTop(tall, 14), 270 + 14 - 0.3), String(canopyTop(tall, 14)));
+  check('canopy: never above the main roof top', canopyTop(tall, 14) < roofEaveHeight(tall) + 14 && canopyTop(same, 20) < roofEaveHeight(same) + 20);
+}
+
 const rect = (id, x, y, w, h, extra = {}) => ({
   id, name: id, floorMaterial: 'oak', color: '#fff',
   points: [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }], ...extra,
