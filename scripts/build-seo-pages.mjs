@@ -1014,7 +1014,7 @@ const TOPICS = [
       sub: 'Describe the home you want in plain words and get a floor plan you can edit. Then turn the 3D view into a picture that looks like a photo.',
       heroAlt: 'An AI render of a furnished house cut open to show the living room, kitchen and bathroom',
       kicker: 'AI tools in the app',
-      heading: 'AI that works on your own plan',
+      heading: 'AI that makes real projects',
       lead: 'The AI tools use the plan you are working on, so the result is a real HomeDesigner project with walls and furniture you can move, not just a picture.',
       rows: [
         {
@@ -1076,7 +1076,7 @@ const TOPICS = [
       sub: 'Beschreibe dein Wunschhaus in eigenen Worten und erhalte einen Grundriss, den du bearbeiten kannst. Verwandle danach die 3D-Ansicht in ein Bild, das wie ein Foto aussieht.',
       heroAlt: 'KI-Rendering eines eingerichteten Hauses im Aufschnitt mit Wohnzimmer, Küche und Bad',
       kicker: 'KI-Werkzeuge in der App',
-      heading: 'KI, die mit deinem eigenen Plan arbeitet',
+      heading: 'KI, die echte Projekte erstellt',
       lead: 'Die KI-Werkzeuge nutzen den Plan, an dem du gerade arbeitest. Das Ergebnis ist deshalb ein echtes HomeDesigner-Projekt mit Wänden und Möbeln, die du verschieben kannst, und nicht bloß ein Bild.',
       rows: [
         {
@@ -1097,7 +1097,7 @@ const TOPICS = [
             ['Bearbeitbares Ergebnis', 'echte Wände, Türen, Fenster und Möbel'],
             ['Überarbeiten', 'beschreibe, was sich ändern soll, und lass den Plan neu erzeugen'],
             ['Designberatung', 'hol dir eine schriftliche Einschätzung zu deinem aktuellen Grundriss'],
-            ['Gesprochene Tour', 'ein vertonter Rundgang durch dein Zuhause (Pro)'],
+            ['Vertonter Rundgang', 'eine gesprochene Führung durch dein Zuhause (Pro)'],
           ],
         },
       ],
@@ -1115,10 +1115,10 @@ const TOPICS = [
         afterAlt: 'Derselbe Grundriss in der 3D-Ansicht von HomeDesigner mit Wänden und Raumböden, von oben gesehen',
         beforeCap: ['Vorher', 'das importierte Grundriss-Bild'],
         afterCap: ['Nachher', 'Wände und Räume in 3D, bereit für Türen, Fenster und Möbel'],
-        note: 'Die Wanderkennung ist Bildanalyse, keine generative KI. Der Import braucht keine Punkte. Türen, Fenster und Möbel fügst du danach selbst hinzu.',
+        note: 'Die Wand-Erkennung ist Bildanalyse, keine generative KI. Der Import braucht keine Punkte. Türen, Fenster und Möbel fügst du danach selbst hinzu.',
       },
       faq: [
-        ['Gibt es in HomeDesigner einen KI-Grundriss-Generator?', 'Ja. Im KI-Planer wählst du Etagen, Schlafzimmer, Bäder und Gesamtgröße, legst fest, ob du Garage und Möbel möchtest, und beschreibst das Haus in eigenen Worten. Du erhältst einen Grundriss mit Wänden, Türen und Fenstern, der sich als normales Projekt öffnet. Das Zeichnen kann bis zu einer Minute dauern.'],
+        ['Gibt es in HomeDesigner einen KI-Grundriss-Generator?', 'Ja. Im KI-Planer wählst du Etagen, Schlafzimmer, Bäder und Gesamtgröße, legst fest, ob du Garage und Möbel möchtest, und beschreibst das Haus in eigenen Worten. Du erhältst einen Grundriss mit Wänden, Türen und Fenstern, der sich als normales Projekt öffnet. Das Erstellen kann bis zu einer Minute dauern.'],
         ['Ist der KI-Hausplaner kostenlos?', 'Der Download der App ist kostenlos, und Zeichnen, Einrichten und Importieren brauchen keine Punkte. Ein KI-Grundriss kostet KI-Punkte. Ein neues Konto mit bestätigter Google-Anmeldung erhält Gratis-Punkte zum Ausprobieren; danach kaufst du Punkte in Paketen in der App. Pläne mit zwei oder drei Etagen brauchen HomeDesigner Pro.'],
         ['Kann die KI meinen eigenen Grundriss als PDF oder Foto umsetzen?', 'Das ist ein anderes Werkzeug. Der KI-Planer geht von deiner Beschreibung aus, nicht von einer Datei. Einen vorhandenen Plan importierst du als PDF, Foto oder Scan: HomeDesigner erkennt die Wände automatisch, du legst den Maßstab über die echte Breite des Plans fest, und daraus werden Räume in 3D. Klare Schwarz-Weiß-Zeichnungen funktionieren am besten; Türen, Fenster und Möbel ergänzt du selbst.'],
         ['Kann ich nach einem KI-Grundriss bauen?', 'Sieh ihn als ersten Entwurf. Die KI ordnet rechteckige Räume nach deinen Angaben an; du kannst Änderungen anfordern oder jede Wand selbst bearbeiten. Er ist keine Bauzeichnung: Lass alles, was du bauen willst, von einem Architekten oder Statiker prüfen.'],
@@ -1139,13 +1139,13 @@ const TOPICS = [
       sub: 'Décrivez la maison que vous voulez avec vos propres mots et obtenez un plan que vous pouvez modifier. Transformez ensuite la vue 3D en une image qui ressemble à une photo.',
       heroAlt: 'Rendu IA d’une maison meublée vue en coupe, avec le salon, la cuisine et la salle de bain',
       kicker: 'Outils IA dans l’appli',
-      heading: 'Une IA qui travaille sur votre propre plan',
+      heading: 'Une IA qui crée de vrais projets',
       lead: 'Les outils IA partent du plan sur lequel vous travaillez. Le résultat est donc un vrai projet HomeDesigner, avec des murs et des meubles que vous pouvez déplacer, et pas seulement une image.',
       rows: [
         {
           alt: 'La vue 3D d’une maison avant le rendu IA',
           h: 'Rendu IA : de la vue 3D à la photo',
-          p: 'Cadrez une vue en 3D et envoyez-la au rendu. En une quinzaine de secondes, vous recevez une image photoréaliste qui conserve votre agencement, avec des matériaux, une lumière et une végétation réalistes. L’image en haut de la page est le rendu de la vue ci-contre.',
+          p: 'Cadrez une vue en 3D et lancez le rendu. En une quinzaine de secondes, vous recevez une image photoréaliste qui conserve votre agencement, avec des matériaux, une lumière et une végétation réalistes. L’image en haut de la page est le rendu de la vue ci-contre.',
           list: [
             ['Tout compte connecté', 'peut lancer un rendu, avec ou sans filigrane'],
             ['Pro', 'les rendus sont toujours sans filigrane'],
@@ -1159,7 +1159,7 @@ const TOPICS = [
           list: [
             ['Résultat modifiable', 'de vrais murs, portes, fenêtres et meubles'],
             ['Révision', 'décrivez ce qu’il faut changer et relancez la génération'],
-            ['Avis d’un designer', 'demandez des conseils écrits sur votre agencement actuel'],
+            ['Avis de design par IA', 'demandez des conseils écrits sur votre agencement actuel'],
             ['Visite commentée', 'une visite de votre maison racontée à voix haute (Pro)'],
           ],
         },
@@ -1181,14 +1181,14 @@ const TOPICS = [
         note: 'La détection des murs est une analyse d’image, pas de l’IA générative. L’import ne demande aucun point. Vous ajoutez ensuite les portes, les fenêtres et les meubles.',
       },
       faq: [
-        ['HomeDesigner a-t-il un générateur de plan de maison par IA ?', 'Oui. Dans le planificateur IA, choisissez le nombre de niveaux, de chambres et de salles de bain et la surface totale, indiquez si vous voulez un garage et des meubles, puis décrivez la maison avec vos mots. Vous obtenez un plan avec murs, portes et fenêtres qui s’ouvre comme un projet normal. Le dessin peut prendre jusqu’à une minute.'],
+        ['HomeDesigner a-t-il un générateur de plan de maison par IA ?', 'Oui. Dans le planificateur IA, choisissez le nombre de niveaux, de chambres et de salles de bain et la surface totale, indiquez si vous voulez un garage et des meubles, puis décrivez la maison avec vos mots. Vous obtenez un plan avec murs, portes et fenêtres qui s’ouvre comme un projet normal. La génération peut prendre jusqu’à une minute.'],
         ['Le plan de maison par IA est-il gratuit ?', 'L’appli se télécharge gratuitement, et dessiner, meubler ou importer un plan ne demande aucun point. Un plan IA coûte des points IA. Un nouveau compte avec une connexion Google vérifiée reçoit des points gratuits pour essayer ; ensuite, les points s’achètent par packs dans l’appli. Les plans à deux ou trois niveaux nécessitent HomeDesigner Pro.'],
-        ['L’IA peut-elle partir de mon propre plan, en PDF ou en photo ?', 'C’est un autre outil. Le planificateur IA part de votre description, pas d’un fichier. Pour utiliser un plan existant, importez un PDF, une photo ou un scan : HomeDesigner détecte les murs automatiquement, vous réglez l’échelle avec la largeur réelle du plan, et il devient des pièces en 3D. Les dessins nets en noir et blanc donnent les meilleurs résultats ; vous ajoutez vous-même portes, fenêtres et meubles.'],
-        ['Peut-on construire à partir d’un plan généré par IA ?', 'Voyez-le comme une première ébauche. L’IA dispose des pièces rectangulaires d’après vos réponses ; vous pouvez demander des modifications ou retoucher chaque mur vous-même. Ce n’est pas un plan d’exécution : faites vérifier tout projet de construction par un architecte ou un ingénieur.'],
+        ['L’IA peut-elle partir de mon propre plan, en PDF ou en photo ?', 'C’est un autre outil. Le planificateur IA part de votre description, pas d’un fichier. Pour utiliser un plan existant, importez un PDF, une photo ou un scan : HomeDesigner détecte les murs automatiquement, vous réglez l’échelle avec la largeur réelle du plan, et il se transforme en pièces 3D. Les dessins nets en noir et blanc donnent les meilleurs résultats ; vous ajoutez vous-même portes, fenêtres et meubles.'],
+        ['Peut-on construire à partir d’un plan généré par IA ?', 'Voyez-le comme une première ébauche. L’IA agence des pièces rectangulaires d’après vos réponses ; vous pouvez demander des modifications ou retoucher chaque mur vous-même. Ce n’est pas un plan d’exécution : faites vérifier tout projet de construction par un architecte ou un ingénieur.'],
         ['Combien coûtent les outils IA ?', 'Ils utilisent des points, qui s’achètent dans l’appli. Tout le reste de HomeDesigner fonctionne sans points.'],
         ['Puis-je modifier un plan créé par l’IA ?', 'Oui. Le résultat est un projet HomeDesigner normal. Vous pouvez déplacer les murs, modifier les pièces, changer les meubles et voir le tout en 3D.'],
         ['Le rendu IA est-il fidèle à mon projet ?', 'Il conserve l’agencement, les murs et les meubles principaux de votre vue 3D et ajoute des matériaux et un éclairage réalistes. Il peut ajouter de petits détails décoratifs : voyez-le comme une impression d’ensemble, pas comme un dessin technique.'],
-        ['Où vont mes images ?', 'Un rendu n’envoie que l’image d’aperçu au service de rendu. Un plan IA envoie vos réponses, et un avis de designer envoie une image du plan. La politique de confidentialité indique les services utilisés.'],
+        ['Où vont mes images ?', 'Un rendu n’envoie que l’image d’aperçu au service de rendu. Un plan IA envoie vos réponses, et un avis de design par IA envoie une image du plan. La politique de confidentialité indique les services utilisés.'],
       ],
       card: ['Plans et rendus IA', 'Décrivez votre maison pour obtenir un plan, puis transformez la vue 3D en image photoréaliste.', 'Rendu IA photoréaliste d’une maison'],
     },
@@ -1202,7 +1202,7 @@ const TOPICS = [
       sub: 'Describe con tus palabras la casa que quieres y obtén un plano que puedes editar. Después convierte la vista 3D en una imagen que parece una foto.',
       heroAlt: 'Render con IA de una casa amueblada vista en sección, con el salón, la cocina y el baño',
       kicker: 'Herramientas de IA en la app',
-      heading: 'IA que trabaja sobre tu propio plano',
+      heading: 'IA que crea proyectos reales',
       lead: 'Las herramientas de IA parten del plano en el que estás trabajando, así que el resultado es un proyecto real de HomeDesigner, con paredes y muebles que puedes mover, y no solo una imagen.',
       rows: [
         {
@@ -1221,8 +1221,8 @@ const TOPICS = [
           p: 'Responde a unas pocas preguntas (plantas, dormitorios, baños, superficie, garaje) y añade lo demás con tus palabras. Obtienes un plano amueblado que se edita como cualquier otro proyecto, y puedes pedir cambios.',
           list: [
             ['Resultado editable', 'paredes, puertas, ventanas y muebles reales'],
-            ['Revísalo', 'describe qué cambiar y vuelve a generarlo'],
-            ['Revisión de un diseñador', 'pide consejos por escrito sobre tu distribución actual'],
+            ['Pide cambios', 'describe qué cambiar y vuelve a generarlo'],
+            ['Revisión de diseño con IA', 'pide consejos por escrito sobre tu distribución actual'],
             ['Visita guiada con voz', 'un recorrido narrado por tu casa (Pro)'],
           ],
         },
@@ -1244,14 +1244,14 @@ const TOPICS = [
         note: 'La detección de paredes es análisis de imagen, no IA generativa. La importación no necesita puntos. Las puertas, las ventanas y los muebles los añades tú después.',
       },
       faq: [
-        ['¿HomeDesigner tiene un generador de planos de casas con IA?', 'Sí. En el planificador con IA eliges plantas, dormitorios, baños y superficie total, indicas si quieres garaje y muebles, y describes la casa con tus palabras. Obtienes un plano con paredes, puertas y ventanas que se abre como un proyecto normal. Dibujarlo puede tardar hasta un minuto.'],
+        ['¿HomeDesigner tiene un generador de planos de casas con IA?', 'Sí. En el planificador con IA eliges plantas, dormitorios, baños y superficie total, indicas si quieres garaje y muebles, y describes la casa con tus palabras. Obtienes un plano con paredes, puertas y ventanas que se abre como un proyecto normal. Generarlo puede tardar hasta un minuto.'],
         ['¿El generador de planos con IA es gratis?', 'La app se descarga gratis, y dibujar, amueblar o importar un plano no necesita puntos. Un plano con IA cuesta puntos de IA. Una cuenta nueva con inicio de sesión de Google verificado recibe puntos gratis para probarlo; después, los puntos se compran en paquetes dentro de la app. Los planos de dos o tres plantas necesitan HomeDesigner Pro.'],
         ['¿Puede la IA partir de mi propio plano, en PDF o en foto?', 'Esa es otra herramienta. El planificador con IA parte de tu descripción, no de un archivo. Para usar un plano que ya tienes, importa un PDF, una foto o un escaneo: HomeDesigner detecta las paredes automáticamente, ajustas la escala con el ancho real del plano y se convierte en habitaciones en 3D. Los dibujos limpios en blanco y negro funcionan mejor; las puertas, las ventanas y los muebles los añades tú.'],
         ['¿Puedo construir con un plano generado por IA?', 'Tómalo como un primer borrador. La IA distribuye habitaciones rectangulares según tus respuestas; puedes pedir cambios o editar cada pared tú mismo. No es un plano de obra: pide a un arquitecto o ingeniero que revise todo lo que vayas a construir.'],
         ['¿Cuánto cuestan las herramientas de IA?', 'Usan puntos, que se pueden comprar en la app. Todo lo demás en HomeDesigner funciona sin puntos.'],
         ['¿Puedo editar un plano hecho por la IA?', 'Sí. El resultado es un proyecto normal de HomeDesigner. Puedes mover paredes, cambiar habitaciones, sustituir muebles y verlo en 3D.'],
         ['¿Cuánto se parece el render con IA a mi diseño?', 'Conserva la distribución, las paredes y los muebles principales de tu vista 3D y añade materiales e iluminación realistas. Puede añadir pequeños detalles decorativos, así que tómalo como una impresión, no como un dibujo técnico.'],
-        ['¿Adónde van mis imágenes?', 'Un render envía solo la imagen de vista previa al servicio de renderizado. Un plano con IA envía tus respuestas, y la revisión de un diseñador envía una imagen del plano. La política de privacidad indica los servicios que se utilizan.'],
+        ['¿Adónde van mis imágenes?', 'Un render envía solo la imagen de vista previa al servicio de renderizado. Un plano con IA envía tus respuestas, y la revisión de diseño con IA envía una imagen del plano. La política de privacidad indica los servicios que se utilizan.'],
       ],
       card: ['Planos y renders con IA', 'Describe tu casa para obtener un plano y convierte la vista 3D en una imagen fotorrealista.', 'Render fotorrealista con IA de una casa'],
     },
