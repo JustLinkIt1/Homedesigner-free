@@ -1,9 +1,12 @@
-import type { FloorInfo, Opening, Point, Room, Wall } from '../types';
+import type { FloorInfo, FurnitureItem, Opening, Point, Room, Wall } from '../types';
 import { computeWallPolygons } from './wallGeometry';
 import { isFence } from './fence';
 import { polygonArea } from './geometry';
 import { roofEaveHeight } from './ceilings';
 import { buildStoreyRoof, parapetSegments } from './roofGeometry';
+import { isStairs, stairPlanFor, stairRailsFor, stairToPlan } from './stairs';
+import { stairCapY, stairHoleCut } from './stairCut';
+import { stairOpeningPoints } from './walkNavigation';
 
 /**
  * Write the design as an IFC4 building model (ISO 10303-21 text, one file, all
@@ -29,7 +32,22 @@ import { buildStoreyRoof, parapetSegments } from './roofGeometry';
  * entities are written AFTER everything v1 writes, so a project's walls,
  * openings, spaces and floor slabs come out line for line as they did in v1.
  *
- * Not written: furniture, stairs, roof windows, materials, curved or bay
+ * Stairs (v2, 1.22.51). Every stair item becomes an IfcStair whose body is
+ * one block per step from `stairPlanFor` (the plan symbol's and the 3D view's
+ * treads: straight, L, U and spiral; a spiral's thin wedges plus its central
+ * post). Each enabled handrail (`stairRailsFor`) is an IfcRailing .HANDRAIL.,
+ * an IfcSweptDiskSolid (r = 2 cm) along the rail line 90 cm above the treads
+ * with a newel at each end, aggregated into its stair. Stair and rails are cut
+ * at `stairCapY` (lib/stairCut.ts), the same height the 3D view clips them at.
+ * Stairs are written after the roofs, so a v1.22.50 file is an exact prefix.
+ *
+ * Stairwells (1.22.51, row 58). Where the 3D view cuts a stairwell in the
+ * floor of the storey above a stair (`stairHoleCut`), the export writes an
+ * IfcOpeningElement of the stair's footprint through that storey's floor slab
+ * and an IfcRelVoidsElement to the slab. These come after the stairs, so the
+ * file without them is an exact prefix.
+ *
+ * Not written: other furniture, roof windows, materials, curved or bay
  * openings (they come out as plain rectangles).
  *
  * Units and axes. HD stores centimetres with plan-y pointing DOWN the screen;
@@ -47,7 +65,8 @@ import { buildStoreyRoof, parapetSegments } from './roofGeometry';
 export interface IfcExportInput {
   projectName: string;
   floors: FloorInfo[];
-  geom: Record<string, { walls: Wall[]; rooms: Room[]; openings: Opening[] }>;
+  /** `furniture` is optional: only its stairs are written. */
+  geom: Record<string, { walls: Wall[]; rooms: Room[]; openings: Opening[]; furniture?: FurnitureItem[] }>;
   /** Written into FILE_NAME. Defaults to a fixed value so the same project
    *  always produces byte-identical output. */
   timestamp?: string;
@@ -230,6 +249,9 @@ export function buildIfc(input: IfcExportInput): string {
   const storeys: string[] = [];
   const roofed: { floor: FloorInfo; storey: string; storeyPl: string; walls: Wall[]; above?: Wall[]; riseTo?: number }[] = [];
   const ordered = [...input.floors].sort((a, b) => a.elevation - b.elevation);
+  const storeyOf = new Map<string, string>();
+  const storeyPlOf = new Map<string, string>();
+  const slabOf = new Map<string, string>();
   ordered.forEach((floor, fi) => {
     const g = input.geom[floor.id] ?? { walls: [], rooms: [], openings: [] };
     const elev = floor.elevation * M;
@@ -334,6 +356,7 @@ export function buildIfc(input: IfcExportInput): string {
         `IFCSLAB(${guid(`slab|${floor.id}`)},$,${str('Floor slab')},$,$,${placement(storeyPl, axisWorld)},${shape(...slabSolids)},$,.FLOOR.)`,
       );
       contained.push(slab);
+      slabOf.set(floor.id, slab);
     }
 
     if (spaces.length) st.add(`IFCRELAGGREGATES(${guid(`rel|storey-spaces|${floor.id}`)},$,$,$,${storey},${list(spaces)})`);
@@ -341,6 +364,8 @@ export function buildIfc(input: IfcExportInput): string {
       st.add(`IFCRELCONTAINEDINSPATIALSTRUCTURE(${guid(`rel|storey-elements|${floor.id}`)},$,$,$,${list(contained)},${storey})`);
     }
     storeys.push(storey);
+    storeyOf.set(floor.id, storey);
+    storeyPlOf.set(floor.id, storeyPl);
     if (floor.roof) {
       roofed.push({
         floor, storey, storeyPl, walls: g.walls,
@@ -427,6 +452,142 @@ export function buildIfc(input: IfcExportInput): string {
       st.add(`IFCRELCONTAINEDINSPATIALSTRUCTURE(${guid(`rel|storey-roof|${r.floor.id}`)},$,$,$,${list(contained)},${r.storey})`);
     }
   }
+
+  // ---- stairs and handrails (v2, 1.22.51): after everything else -----------
+  const STAIR_KIND: Record<string, string> = {
+    stairs: 'STRAIGHT_RUN_STAIR', stairs_l: 'QUARTER_TURN_STAIR', stairs_u: 'HALF_TURN_STAIR', stairs_spiral: 'SPIRAL_STAIR',
+  };
+  const RAIL_HEIGHT = 0.9; // m above the treads, as in the 3D view
+  const RAIL_R = 0.02;
+  type P3 = { x: number; y: number; z: number };
+  ordered.forEach((floor, fi) => {
+    const g = input.geom[floor.id];
+    const stairs = (g?.furniture ?? []).filter(isStairs);
+    const storey = storeyOf.get(floor.id);
+    const storeyPl = storeyPlOf.get(floor.id);
+    if (!g || !stairs.length || !storey || !storeyPl) return;
+    const next = ordered[fi + 1];
+    const contained: string[] = [];
+    for (const item of stairs) {
+      const plan = stairPlanFor(item);
+      const rise = plan.rise * M;
+      const z0 = (item.elevation ?? 0) * M;
+      const cap = stairCapY(item, {
+        walls: g.walls,
+        roof: floor.roof,
+        riseTo: next ? next.elevation - floor.elevation : undefined,
+        roomsAbove: next ? input.geom[next.id]?.rooms : undefined,
+      });
+      const capZ = cap ?? Infinity;
+      const at = (p: Point): Point => toIfc(stairToPlan(item, p));
+      const spiral = !!plan.post;
+      const solids: string[] = [];
+      for (const tread of plan.treads) {
+        const thick = spiral ? Math.min(0.05, rise * 0.4) : rise;
+        const top = Math.min(z0 + tread.level * rise, capZ);
+        const bottom = z0 + tread.level * rise - thick;
+        if (top - bottom < 1e-4) continue;
+        const ring = cleanRing(tread.poly.map(at));
+        if (ring.length < 3 || Math.abs(polygonArea(ring)) < 1e-8) continue;
+        solids.push(prism(ring, top - bottom, axis3(0, 0, bottom)));
+      }
+      if (plan.post) {
+        // The spiral's central post, as the 3D view draws it.
+        const r = plan.post.radius * M * 0.55;
+        const c = at({ x: 0, y: 0 });
+        const h = Math.min(z0 + plan.steps * rise + RAIL_HEIGHT, capZ) - z0;
+        if (r > 0 && h > 1e-4) {
+          const ring = Array.from({ length: 20 }, (_, i) => ({
+            x: c.x + Math.cos((i / 20) * Math.PI * 2) * r,
+            y: c.y + Math.sin((i / 20) * Math.PI * 2) * r,
+          }));
+          solids.push(prism(ring, h, axis3(0, 0, z0)));
+        }
+      }
+      if (!solids.length) continue;
+      const stair = st.add(
+        `IFCSTAIR(${guid(`stair|${item.id}`)},$,${str(item.name || 'Stair')},$,${str(item.type)},${placement(storeyPl, axisWorld)},${shape(...solids)},$,.${STAIR_KIND[item.type] ?? 'NOTDEFINED'}.)`,
+      );
+      contained.push(stair);
+
+      // Handrails: the rail line, cut where it passes capZ, and a newel at each end.
+      const rails: string[] = [];
+      for (const rail of stairRailsFor(plan, item.railing)) {
+        const pts: P3[] = rail.pts.map((p) => {
+          const q = at(p);
+          return { x: q.x, y: q.y, z: z0 + p.level * rise + RAIL_HEIGHT };
+        });
+        const below = (p: P3) => p.z <= capZ + 1e-9;
+        const cross = (a: P3, b: P3): P3 => {
+          const f = (capZ - a.z) / (b.z - a.z);
+          return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, z: capZ };
+        };
+        const runs: P3[][] = [];
+        let run: P3[] = [];
+        pts.forEach((p, i) => {
+          const prev = pts[i - 1];
+          if (prev && below(prev) !== below(p)) run.push(cross(prev, p));
+          if (below(p)) run.push(p);
+          else if (run.length) {
+            runs.push(run);
+            run = [];
+          }
+        });
+        if (run.length) runs.push(run);
+        const items: string[] = [];
+        const tube = (line: P3[]) => {
+          const cps = line.map((p) => st.add(`IFCCARTESIANPOINT((${num(p.x)},${num(p.y)},${num(p.z)}))`));
+          const curve = st.add(`IFCPOLYLINE(${list(cps)})`);
+          items.push(st.add(`IFCSWEPTDISKSOLID(${curve},${num(RAIL_R)},$,$,$)`));
+        };
+        for (const line of runs) {
+          const clean = line.filter((p, i) => i === 0 || Math.hypot(p.x - line[i - 1].x, p.y - line[i - 1].y, p.z - line[i - 1].z) > 1e-4);
+          if (clean.length >= 2) tube(clean);
+        }
+        for (const end of pts.length ? [pts[0], pts[pts.length - 1]] : []) {
+          const foot = end.z - RAIL_HEIGHT;
+          const top = Math.min(end.z, capZ);
+          if (top - foot > 1e-3) tube([{ ...end, z: foot }, { ...end, z: top }]);
+        }
+        if (!items.length) continue;
+        rails.push(st.add(
+          `IFCRAILING(${guid(`rail|${item.id}|${rail.side}`)},$,${str('Handrail')},$,$,${placement(storeyPl, axisWorld)},${shapeOf('AdvancedSweptSolid', items)},$,.HANDRAIL.)`,
+        ));
+      }
+      if (rails.length) st.add(`IFCRELAGGREGATES(${guid(`rel|stair-rails|${item.id}`)},$,$,$,${stair},${list(rails)})`);
+    }
+    if (contained.length) {
+      st.add(`IFCRELCONTAINEDINSPATIALSTRUCTURE(${guid(`rel|storey-stairs|${floor.id}`)},$,$,$,${list(contained)},${storey})`);
+    }
+  });
+
+  // ---- stairwell holes (1.22.51, row 58): after everything else ------------
+  // The storey above a stair gets a hole in its floor slab wherever the 3D
+  // view cuts one (DesignScene roomShape): the stair's footprint
+  // (stairOpeningPoints), in every indoor room that holds it whole
+  // (stairHoleCut). The IFC floor slab is ONE IfcSlab per storey made of one
+  // extrusion per indoor room, so one IfcOpeningElement voiding that slab cuts
+  // exactly the room extrusions the footprint lies in. The opening is the
+  // footprint, unchanged, extruded through the slab (1 cm proud of each face,
+  // as the wall openings are, so the boolean never leaves a skin).
+  const HOLE_PAD = 0.01;
+  ordered.forEach((floor, fi) => {
+    const next = ordered[fi + 1];
+    const stairs = (input.geom[floor.id]?.furniture ?? []).filter(isStairs);
+    const slab = next && slabOf.get(next.id);
+    const storeyPl = next && storeyPlOf.get(next.id);
+    if (!next || !stairs.length || !slab || !storeyPl) return;
+    const indoorAbove = (input.geom[next.id]?.rooms ?? []).filter((r) => !r.outdoor && r.points.length >= 3);
+    for (const item of stairs) {
+      if (!indoorAbove.some((room) => stairHoleCut(item, room))) continue;
+      const ring = cleanRing(stairOpeningPoints(item).map(toIfc));
+      if (ring.length < 3 || Math.abs(polygonArea(ring)) < 1e-6) continue;
+      const opening = st.add(
+        `IFCOPENINGELEMENT(${guid(`stairwell|${item.id}`)},$,${str('Stairwell opening')},$,$,${placement(storeyPl, axisWorld)},${shape(prism(ring, SLAB_T + 2 * HOLE_PAD, axis3(0, 0, -SLAB_T - HOLE_PAD)))},$,.OPENING.)`,
+      );
+      st.add(`IFCRELVOIDSELEMENT(${guid(`void|stairwell|${item.id}`)},$,$,$,${slab},${opening})`);
+    }
+  });
 
   const header = [
     'ISO-10303-21;',

@@ -8,6 +8,7 @@
 // folder). Elsewhere nothing is written.
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -18,11 +19,26 @@ const root = process.cwd();
 const rootImport = root.replaceAll('\\', '/');
 const dir = mkdtempSync(join(tmpdir(), 'hdifc-'));
 const entry = join(root, '.ifc-entry.tmp.ts');
+// Row 58 prefix proof: the writer as committed just before stairwell holes
+// (3c22ec3: 1.22.51 with stairs, no holes), bundled beside the current one.
+// Every file the current writer makes must start with that writer's file.
+const PRE_ROW58_COMMIT = '3c22ec3';
+let PRE_ROW58 = '.ifcExport-pre-row58.tmp.ts';
+try {
+  const src = execFileSync('git', ['show', `${PRE_ROW58_COMMIT}:src/lib/ifcExport.ts`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  writeFileSync(join(root, 'src', 'lib', PRE_ROW58), src);
+} catch {
+  console.log(`ifc-export: NOTE commit ${PRE_ROW58_COMMIT} not available (shallow clone?), pre-hole prefix check skipped`);
+  PRE_ROW58 = null;
+}
 writeFileSync(entry, `
 export { SAMPLES } from '${rootImport}/src/data/samples.ts';
 export { buildIfc } from '${rootImport}/src/lib/ifcExport.ts';
 export { isFence } from '${rootImport}/src/lib/fence.ts';
 export { parapetSegments, roofOutlines, roofParapetContext } from '${rootImport}/src/lib/roofGeometry.ts';
+export { isStairs, stairPlanFor, stairRailsFor } from '${rootImport}/src/lib/stairs.ts';
+export { stairCapY, stairHoleCut } from '${rootImport}/src/lib/stairCut.ts';
+${PRE_ROW58 ? `export { buildIfc as buildIfcPreHoles } from '${rootImport}/src/lib/${PRE_ROW58}';` : ''}
 `);
 const out = join(dir, 'bundle.mjs');
 try {
@@ -32,8 +48,9 @@ try {
   });
 } finally {
   rmSync(entry, { force: true });
+  if (PRE_ROW58) rmSync(join(root, 'src', 'lib', PRE_ROW58), { force: true });
 }
-const { SAMPLES, buildIfc, isFence, parapetSegments, roofOutlines, roofParapetContext } = await import(pathToFileURL(out).href);
+const { SAMPLES, buildIfc, isFence, parapetSegments, roofOutlines, roofParapetContext, isStairs, stairPlanFor, stairRailsFor, stairCapY, stairHoleCut, buildIfcPreHoles } = await import(pathToFileURL(out).href);
 
 let checks = 0;
 const check = (v, label) => { assert.ok(v, label); checks++; };
@@ -51,7 +68,7 @@ function inputOf(name, built) {
   const slim = {};
   for (const f of floors) {
     const g = geom[f.id];
-    slim[f.id] = { walls: g.walls, rooms: g.rooms, openings: g.openings };
+    slim[f.id] = { walls: g.walls, rooms: g.rooms, openings: g.openings, furniture: g.furniture ?? [] };
   }
   return { projectName: name, floors, geom: slim };
 }
@@ -120,6 +137,35 @@ function meshInfo(model, expressID) {
   return { min, max, tris, parts: flat.geometries.size() };
 }
 
+/** Does a horizontal face of this product at height z cover plan point (x, y)?
+ *  (World IFC frame, the same un-flip as meshInfo.) */
+function coversPoint(model, expressID, x, y, z) {
+  const flat = api.GetFlatMesh(model, expressID);
+  let hit = false;
+  for (let i = 0; i < flat.geometries.size() && !hit; i++) {
+    const pg = flat.geometries.get(i);
+    const geo = api.GetGeometry(model, pg.geometryExpressID);
+    const verts = api.GetVertexArray(geo.GetVertexData(), geo.GetVertexDataSize());
+    const idx = api.GetIndexArray(geo.GetIndexData(), geo.GetIndexDataSize());
+    const m = pg.flatTransformation;
+    const w = (k) => {
+      const a = verts[k * 6], b = verts[k * 6 + 1], c = verts[k * 6 + 2];
+      const o = [m[0] * a + m[4] * b + m[8] * c + m[12], m[1] * a + m[5] * b + m[9] * c + m[13], m[2] * a + m[6] * b + m[10] * c + m[14]];
+      return [o[0], -o[2], o[1]];
+    };
+    for (let t = 0; t + 2 < idx.length && !hit; t += 3) {
+      const tri = [w(idx[t]), w(idx[t + 1]), w(idx[t + 2])];
+      if (tri.some((v) => Math.abs(v[2] - z) > 0.005)) continue;
+      const side = (a, b) => (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]);
+      const d = [side(tri[0], tri[1]), side(tri[1], tri[2]), side(tri[2], tri[0])];
+      if (!(d.some((v) => v < 0) && d.some((v) => v > 0))) hit = true;
+    }
+    geo.delete?.();
+  }
+  return hit;
+}
+const slabChanges = [];
+
 function verify(name, built, extra) {
   const input = inputOf(name, built);
   const text = buildIfc(input);
@@ -144,8 +190,19 @@ function verify(name, built, extra) {
   eq(countOf(model, WebIFC.IFCBUILDINGSTOREY), floors.length, `${name}: storeys = floors`);
   eq(countOf(model, WebIFC.IFCDOOR), doors, `${name}: IfcDoor`);
   eq(countOf(model, WebIFC.IFCWINDOW), windows, `${name}: IfcWindow`);
-  eq(countOf(model, WebIFC.IFCOPENINGELEMENT), doors + windows, `${name}: IfcOpeningElement = doors + windows`);
-  eq(countOf(model, WebIFC.IFCRELVOIDSELEMENT), doors + windows, `${name}: IfcRelVoidsElement`);
+  // Stairwell holes (row 58): a stair whose footprint lies whole inside an
+  // indoor room of the storey above (the 3D view's stairHoleCut rule).
+  const byElev = [...floors].sort((a, b) => a.elevation - b.elevation);
+  const holes = byElev.flatMap((f, i) => {
+    const up = byElev[i + 1];
+    if (!up) return [];
+    const indoor = input.geom[up.id].rooms.filter((r) => !r.outdoor && r.points.length >= 3);
+    return (input.geom[f.id].furniture ?? []).filter(isStairs)
+      .filter((it) => indoor.some((room) => stairHoleCut(it, room)))
+      .map((it) => ({ item: it, up }));
+  });
+  eq(countOf(model, WebIFC.IFCOPENINGELEMENT), doors + windows + holes.length, `${name}: IfcOpeningElement = doors + windows + stairwells`);
+  eq(countOf(model, WebIFC.IFCRELVOIDSELEMENT), doors + windows + holes.length, `${name}: IfcRelVoidsElement = doors + windows + stairwells`);
   eq(countOf(model, WebIFC.IFCRELFILLSELEMENT), doors + windows, `${name}: IfcRelFillsElement`);
   eq(countOf(model, WebIFC.IFCSPACE), spaces, `${name}: IfcSpace = indoor rooms`);
   // v1 elements are untouched by the roof (v2): STANDARD walls = the plan's
@@ -160,12 +217,37 @@ function verify(name, built, extra) {
   const parapets = typed(WebIFC.IFCWALL, 'PARAPET').length;
   eq(countOf(model, WebIFC.IFCWALL), solid.length + parapets, `${name}: IfcWall = walls + parapets`);
   eq(countOf(model, WebIFC.IFCSLAB), floors.length + roofed, `${name}: IfcSlab = storeys + roofs`);
+  // Stairs (1.22.51): one IfcStair per stair item, one IfcRailing per enabled rail.
+  const stairItems = floors.flatMap((f) => (input.geom[f.id].furniture ?? []).filter(isStairs));
+  const railCount = stairItems.reduce((n, it) => n + stairRailsFor(stairPlanFor(it), it.railing).length, 0);
+  const stairs = countOf(model, WebIFC.IFCSTAIR);
+  const railings = countOf(model, WebIFC.IFCRAILING);
+  eq(stairs, stairItems.length, `${name}: IfcStair = stair items`);
+  eq(railings, railCount, `${name}: IfcRailing = enabled handrails`);
 
   // Everything v1 wrote comes out line for line: the same project with its
-  // roofs taken off is an exact prefix of the file with them.
-  const bare = buildIfc({ ...input, floors: floors.map(({ roof, ...f }) => f) });
+  // roofs and stairs taken off is an exact prefix of the file with them; and
+  // everything 1.22.50 wrote (roofs, no stairs) is a prefix too.
+  const noFurniture = Object.fromEntries(Object.entries(input.geom).map(([k, g]) => [k, { ...g, furniture: [] }]));
+  const bare = buildIfc({ ...input, floors: floors.map(({ roof, ...f }) => f), geom: noFurniture });
+  const v150 = buildIfc({ ...input, geom: noFurniture });
   const TRAILER = 'ENDSEC;\nEND-ISO-10303-21;\n';
-  check(bare.endsWith(TRAILER) && text.startsWith(bare.slice(0, -TRAILER.length)), `${name}: v1 lines unchanged, roof entities come after them`);
+  check(bare.endsWith(TRAILER) && v150.startsWith(bare.slice(0, -TRAILER.length)), `${name}: v1 lines unchanged, roof entities come after them`);
+  check(v150.endsWith(TRAILER) && text.startsWith(v150.slice(0, -TRAILER.length)), `${name}: 1.22.50 lines unchanged, stair entities come after them`);
+  if (!stairItems.length) eq(text, v150, `${name}: no stairs, same file as 1.22.50`);
+  // Row 58: the file the 1.22.51 pre-hole writer (3c22ec3) makes is an exact
+  // byte prefix; the only lines after it are one opening and one void per hole.
+  let pre = null;
+  if (buildIfcPreHoles) {
+    pre = buildIfcPreHoles(input);
+    check(pre.endsWith(TRAILER) && text.startsWith(pre.slice(0, -TRAILER.length)), `${name}: 1.22.51 pre-hole lines unchanged, stairwells come after them`);
+    check(pre.startsWith(v150.slice(0, -TRAILER.length)), `${name}: 1.22.50 is a prefix of the pre-hole file too`);
+    const added = text.slice(pre.length - TRAILER.length, -TRAILER.length).split('\n').filter(Boolean);
+    check(added.every((l) => /^#\d+=IFC[A-Z0-9]+\(.*\);$/.test(l)), `${name}: added lines are whole entity lines`);
+    eq(added.filter((l) => l.includes('=IFCOPENINGELEMENT(')).length, holes.length, `${name}: one stairwell opening per hole after the prefix`);
+    eq(added.filter((l) => l.includes('=IFCRELVOIDSELEMENT(')).length, holes.length, `${name}: one void per hole after the prefix`);
+    if (!holes.length) eq(text, pre, `${name}: no stairwell, same file as before row 58`);
+  }
 
   // Storey elevations (metres) match the floors, in order.
   const elevs = ids(model, WebIFC.IFCBUILDINGSTOREY).map((id) => api.GetLine(model, id).Elevation.value).sort((a, b) => a - b);
@@ -174,7 +256,7 @@ function verify(name, built, extra) {
 
   // GlobalIds: 22 characters, all different.
   const guids = [];
-  for (const type of [WebIFC.IFCPROJECT, WebIFC.IFCBUILDINGSTOREY, WebIFC.IFCWALL, WebIFC.IFCDOOR, WebIFC.IFCWINDOW, WebIFC.IFCOPENINGELEMENT, WebIFC.IFCSPACE]) {
+  for (const type of [WebIFC.IFCPROJECT, WebIFC.IFCBUILDINGSTOREY, WebIFC.IFCWALL, WebIFC.IFCDOOR, WebIFC.IFCWINDOW, WebIFC.IFCOPENINGELEMENT, WebIFC.IFCSPACE, WebIFC.IFCSTAIR, WebIFC.IFCRAILING]) {
     for (const id of ids(model, type)) guids.push(api.GetLine(model, id).GlobalId.value);
   }
   check(guids.every((g) => /^[0-3][0-9A-Za-z_$]{21}$/.test(g)), `${name}: GlobalIds are 22-char IFC base64`);
@@ -210,8 +292,33 @@ function verify(name, built, extra) {
   for (const id of [...typed(WebIFC.IFCSLAB, 'ROOF'), ...typed(WebIFC.IFCWALL, 'PARAPET')]) {
     check(meshInfo(model, id).tris >= 4, `${name}: roof part #${id} has geometry`);
   }
+  for (const id of [...ids(model, WebIFC.IFCSTAIR), ...ids(model, WebIFC.IFCRAILING)]) {
+    check(meshInfo(model, id).tris >= 4, `${name}: stair/rail #${id} has geometry`);
+  }
+  // The hole is really in web-ifc's slab mesh: at the stair's centre the upper
+  // slab has no top or bottom face (before row 58 it had), and it gained triangles.
+  if (holes.length) {
+    const preModel = pre ? api.OpenModel(new TextEncoder().encode(pre)) : null;
+    const slabAt = (m, z) => ids(m, WebIFC.IFCSLAB)
+      .filter((id) => api.GetLine(m, id).PredefinedType?.value === 'FLOOR')
+      .find((id) => Math.abs(meshInfo(m, id).max[2] - z) < 0.01);
+    for (const { item, up } of holes) {
+      const z = up.elevation / 100;
+      const cx = item.position.x / 100, cy = -item.position.y / 100;
+      const now = slabAt(model, z);
+      check(now != null && !coversPoint(model, now, cx, cy, z) && !coversPoint(model, now, cx, cy, z - 0.22), `${name}: web-ifc cut the stairwell for ${item.id} in the slab at z ${z}`);
+      if (preModel) {
+        const before = slabAt(preModel, z);
+        check(coversPoint(preModel, before, cx, cy, z), `${name}: before row 58 the slab covered ${item.id}`);
+        const tb = meshInfo(preModel, before).tris, ta = meshInfo(model, now).tris;
+        check(ta > tb, `${name}: slab at z ${z} gained triangles (${tb} -> ${ta})`);
+        slabChanges.push(`${name} slab z=${z} ${item.id}: ${tb} -> ${ta} tris`);
+      }
+    }
+    if (preModel) api.CloseModel(preModel);
+  }
   check(text.length < 1024 * 1024, `${name}: file under 1 MB (${text.length} bytes)`);
-  const res = { model, text, bare, input, meshed, counts: { storeys: floors.length, walls: solid.length, doors, windows, spaces, openings: doors + windows, roofs: roofed, parapets } };
+  const res = { model, text, bare, v150, pre, input, meshed, counts: { storeys: floors.length, walls: solid.length, doors, windows, spaces, openings: doors + windows, roofs: roofed, parapets, stairs, railings, stairwells: holes.length } };
   if (!extra) api.CloseModel(model);
   return res;
 }
@@ -220,7 +327,7 @@ function verify(name, built, extra) {
 const summary = [];
 for (const s of SAMPLES) {
   const r = verify(s.id, s.build());
-  summary.push(`${s.id}: ${JSON.stringify(r.counts)} ${r.text.length} bytes (v1 ${r.bare.length}, roof +${r.text.length - r.bare.length})`);
+  summary.push(`${s.id}: ${JSON.stringify(r.counts)} ${r.text.length} bytes (v1 ${r.bare.length}, roof +${r.v150.length - r.bare.length}, stairs+holes +${r.text.length - r.v150.length}${r.pre ? `, holes +${r.text.length - r.pre.length}` : ''})`);
 }
 check(SAMPLES.some((s) => s.id === 'family-house'), 'family-house sample exists');
 
@@ -330,6 +437,106 @@ const near = (a, b, eps = 0.01) => Math.abs(a - b) <= eps;
   api.CloseModel(model);
 }
 
+// ---- stairs and handrails (1.22.51) ----------------------------------------------
+/** Two storeys, 8 x 6 m, 290 apart; one room upstairs over the whole plan
+ *  (so a stair inside gets its stairwell), and the given stairs downstairs.
+ *  `split` puts a room line upstairs at y = 300 instead (no stairwell). */
+function stairProject(stairs, { split = false, roofTop = true, topStairs = [] } = {}) {
+  const P = (x, y) => ({ x, y });
+  const pts = [P(0, 0), P(800, 0), P(800, 600), P(0, 600)];
+  const walls = (pre) => pts.map((p, i) => ({ id: `${pre}w${i}`, start: p, end: pts[(i + 1) % 4], thickness: 20, height: 270, color: '#fff' }));
+  const room = (id, points) => ({ id, name: id, points, floorMaterial: 'x', color: '#fff' });
+  const upRooms = split ? [room('u1', [P(0, 0), P(800, 0), P(800, 300), P(0, 300)]), room('u2', [P(0, 300), P(800, 300), P(800, 600), P(0, 600)])] : [room('u', pts)];
+  const roof = roofTop ? { ...ROOF, type: 'flat', parapet: 94 } : undefined;
+  return {
+    floors: [{ id: 'g', name: 'Ground', elevation: 0 }, { id: 'u', name: 'Upper', elevation: 290, ...(roof ? { roof } : {}) }],
+    floorGeom: {
+      g: { walls: walls('g'), rooms: [room('g', pts)], furniture: stairs, openings: [], background: null },
+      u: { walls: walls('u'), rooms: upRooms, furniture: topStairs, openings: [], background: null },
+    },
+  };
+}
+const stairItem = (id, type, x, y, extra = {}) => ({ id, type, name: 'Stairs', position: { x, y }, rotation: 0, width: 100, depth: 300, height: 290, color: '#fff', railing: 'both', ...extra });
+{
+  // A straight stair and a spiral, both in a proper stairwell: whole, not cut.
+  const straight = stairItem('s-straight', 'stairs', 200, 200, { rotation: 90 });
+  const spiral = stairItem('s-spiral', 'stairs_spiral', 600, 400, { width: 180, depth: 180, railing: 'right' });
+  const r = verify('stairs-straight-spiral', stairProject([straight, spiral]), true);
+  const { model, text } = r;
+  eq(r.counts.stairs, 2, 'stairs: two IfcStair');
+  eq(r.counts.railings, 3, 'stairs: straight has 2 rails, spiral 1');
+  check(text.includes('.STRAIGHT_RUN_STAIR.') && text.includes('.SPIRAL_STAIR.'), 'stairs: predefined types');
+  check(text.includes('IFCSWEPTDISKSOLID('), 'stairs: rails are swept disk solids');
+  const byName = new Map(ids(model, WebIFC.IFCSTAIR).map((id) => [api.GetLine(model, id).ObjectType.value, id]));
+  const sInfo = meshInfo(model, byName.get('stairs'));
+  // 290 cm -> 16 steps of 18.125; rotated 90 deg, footprint 300 x 100 centred at (2, -2).
+  check(near(sInfo.min[2], 0) && near(sInfo.max[2], 2.9), `stairs: straight climbs floor to floor (z ${sInfo.min[2].toFixed(3)}..${sInfo.max[2].toFixed(3)})`);
+  check(near(sInfo.min[0], 0.5) && near(sInfo.max[0], 3.5) && near(sInfo.min[1], -2.5) && near(sInfo.max[1], -1.5), `stairs: straight footprint where the plan puts it (${sInfo.min.map((v) => v.toFixed(2))} .. ${sInfo.max.map((v) => v.toFixed(2))})`);
+  eq(api.GetLine(model, byName.get('stairs')).Representation ? stairPlanFor(straight).treads.length : 0, 16, 'stairs: straight has 16 treads');
+  const pInfo = meshInfo(model, byName.get('stairs_spiral'));
+  check(near(pInfo.min[0], 5.1, 0.02) && near(pInfo.max[0], 6.9, 0.02) && near(pInfo.min[1], -4.9, 0.02) && near(pInfo.max[1], -3.1, 0.02), `stairs: spiral footprint (${pInfo.min.map((v) => v.toFixed(2))} .. ${pInfo.max.map((v) => v.toFixed(2))})`);
+  check(near(pInfo.max[2], 2.9 + 0.9, 0.01), `stairs: spiral post up to the rail top, no cut in a stairwell (z max ${pInfo.max[2].toFixed(3)})`);
+  for (const id of ids(model, WebIFC.IFCRAILING)) {
+    const m = meshInfo(model, id);
+    check(m.max[2] > 2.9 + 0.85 && m.max[2] < 2.9 + 0.9 + 0.2 + 0.03, `stairs: rail #${id} tops out ~0.9 m above the top tread (within a rise) (z ${m.max[2].toFixed(3)})`);
+  }
+  const rel = ids(model, WebIFC.IFCRELAGGREGATES).map((id) => api.GetLine(model, id)).filter((l) => byName.has('stairs') && [...byName.values()].includes(l.RelatingObject.value));
+  eq(rel.reduce((n, l) => n + l.RelatedObjects.length, 0), 3, 'stairs: rails aggregated into their stairs');
+  api.CloseModel(model);
+  summary.push(`stairs-straight-spiral: ${JSON.stringify(r.counts)} ${text.length} bytes (stairs +${text.length - r.v150.length})`);
+}
+{
+  // Every shape, rotated and mirrored, crossing a room line upstairs: cut at the slab underside.
+  const items = ['stairs', 'stairs_l', 'stairs_u', 'stairs_spiral'].map((type, i) =>
+    stairItem(`cut-${type}`, type, 120 + i * 180, 300, { width: 150, depth: 220, rotation: i * 30, mirrored: i % 2 === 1 }));
+  const built = stairProject(items, { split: true });
+  const r = verify('stairs-cut-slab', built, true);
+  const { model } = r;
+  eq(r.counts.stairs, 4, 'cut: four IfcStair');
+  const capZ = 2.9 - 0.22;
+  for (const it of items) eq(stairCapY(it, { walls: built.floorGeom.g.walls, riseTo: 290, roomsAbove: built.floorGeom.u.rooms }), capZ, `cut: ${it.type} capY = slab underside`);
+  for (const id of [...ids(model, WebIFC.IFCSTAIR), ...ids(model, WebIFC.IFCRAILING)]) {
+    const m = meshInfo(model, id);
+    check(m.max[2] <= capZ + 0.021 && m.max[2] > capZ - 0.3, `cut: #${id} stops at the upper slab's underside (z max ${m.max[2].toFixed(3)})`);
+  }
+  api.CloseModel(model);
+  summary.push(`stairs-cut-slab: ${JSON.stringify(r.counts)} ${r.text.length} bytes`);
+}
+{
+  // A stair on the top storey under the flat roof: cut at the eave (2.7 m above that storey).
+  const top = stairItem('s-top', 'stairs', 400, 300, { height: 300 });
+  const built = stairProject([], { topStairs: [top] });
+  const r = verify('stairs-cut-roof', built, true);
+  const { model } = r;
+  const [id] = ids(model, WebIFC.IFCSTAIR);
+  const m = meshInfo(model, id);
+  check(near(m.max[2], 2.9 + 2.7), `roof: top-storey stair cut at the eave (z max ${m.max[2].toFixed(3)})`);
+  for (const rid of ids(model, WebIFC.IFCRAILING)) {
+    check(meshInfo(model, rid).max[2] <= 2.9 + 2.7 + 0.021, `roof: rail #${rid} cut at the eave`);
+  }
+  api.CloseModel(model);
+}
+
+{
+  // Row 58: stairwell in a storey split per room. The stair lies whole inside
+  // the south room upstairs, so that room's slab extrusion is cut and the
+  // north room's stays solid (one IfcSlab, one void).
+  const s = stairItem('s-split', 'stairs', 400, 450, { rotation: 90 });
+  const built = stairProject([s], { split: true });
+  const r = verify('stairs-split-hole', built, true);
+  const { model } = r;
+  eq(r.counts.stairwells, 1, 'split: one stairwell');
+  eq(stairCapY(s, { walls: built.floorGeom.g.walls, riseTo: 290, roomsAbove: built.floorGeom.u.rooms }), undefined, 'split: stair not capped (hole above)');
+  const slab = ids(model, WebIFC.IFCSLAB).filter((id) => api.GetLine(model, id).PredefinedType.value === 'FLOOR').find((id) => near(meshInfo(model, id).max[2], 2.9));
+  check(!coversPoint(model, slab, 4, -4.5, 2.9), 'split: hole at the stair (south room)');
+  check(coversPoint(model, slab, 4, -1.5, 2.9), 'split: north room slab still solid');
+  check(coversPoint(model, slab, 1, -4.5, 2.9), 'split: south room slab solid beside the hole');
+  const voids = ids(model, WebIFC.IFCRELVOIDSELEMENT).map((id) => api.GetLine(model, id)).filter((l) => l.RelatingBuildingElement.value === slab);
+  eq(voids.length, 1, 'split: the upper floor slab hosts the stairwell void');
+  api.CloseModel(model);
+  summary.push(`stairs-split-hole: ${JSON.stringify(r.counts)} ${r.text.length} bytes (holes +${r.pre ? r.text.length - r.pre.length : '?'})`);
+}
+
 // ---- text escaping ------------------------------------------------------------
 {
   const { built } = angledProject();
@@ -343,5 +550,6 @@ const near = (a, b, eps = 0.01) => Math.abs(a - b) <= eps;
 }
 
 console.log(summary.join('\n'));
+console.log(slabChanges.join('\n'));
 console.log(`ifc-export: ${checks} checks passed`);
 rmSync(dir, { recursive: true, force: true });
