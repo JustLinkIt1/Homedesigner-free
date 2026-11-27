@@ -2,7 +2,7 @@
 // On native we save renders/projects to the device and offer a share sheet;
 // on the web we fall back to a normal browser download.
 import { Capacitor } from '@capacitor/core';
-import { APP_NAME, PLAY_STORE_URL } from './appInfo';
+import { APP_NAME, playStoreUrl } from './appInfo';
 import { t } from './i18n';
 
 export const isNative = () => Capacitor.isNativePlatform();
@@ -53,7 +53,7 @@ export async function saveImage(dataUrl: string, filename: string): Promise<bool
     // is not the same in Japanese or Korean as it is in English.
     await Share.share({
       title: `${APP_NAME} render`,
-      text: `${APP_NAME}\n${t('Design your dream home')}\n${PLAY_STORE_URL}`,
+      text: `${APP_NAME}\n${t('Design your dream home')}\n${playStoreUrl('share')}`,
       files: [uri],
     });
   } catch (error) {

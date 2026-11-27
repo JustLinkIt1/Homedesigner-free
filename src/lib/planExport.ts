@@ -324,7 +324,7 @@ export async function exportPlanDXF(projectName: string): Promise<boolean> {
   }
   if (!anything) return false;
   const dxf = buildDxf({ projectName, floors: s.floors, geom });
-  await saveText(dxf, `${slug(projectName)}.dxf`, 'application/dxf');
+  if (await saveText(dxf, `${slug(projectName)}.dxf`, 'application/dxf')) notePositiveMoment();
   return true;
 }
 
@@ -345,6 +345,6 @@ export async function exportPlanIFC(projectName: string): Promise<boolean> {
   }
   if (!anything) return false;
   const ifc = buildIfc({ projectName, floors: s.floors, geom });
-  await saveText(ifc, `${slug(projectName)}.ifc`, 'application/x-step');
+  if (await saveText(ifc, `${slug(projectName)}.ifc`, 'application/x-step')) notePositiveMoment();
   return true;
 }

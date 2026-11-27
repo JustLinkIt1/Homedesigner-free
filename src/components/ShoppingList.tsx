@@ -3,6 +3,7 @@ import { ClipboardList, Copy, Download } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { buildBom, bomToCsv, bomToText } from '../lib/bom';
 import { saveText } from '../lib/native';
+import { notePositiveMoment } from '../lib/appReview';
 import { slugify } from '../lib/appInfo';
 import { formatLength } from '../lib/units';
 import { toast } from '../lib/ui';
@@ -34,7 +35,7 @@ export default function ShoppingList({ open, onClose }: { open: boolean; onClose
 
   const saveCsv = async () => {
     try {
-      await saveText(bomToCsv(rows), `${slugify(projectName)}-shopping-list.csv`, 'text/csv');
+      if (await saveText(bomToCsv(rows), `${slugify(projectName)}-shopping-list.csv`, 'text/csv')) notePositiveMoment();
       toast.success(t('Shopping list saved as CSV'));
     } catch {
       toast.error(t('Save failed'));

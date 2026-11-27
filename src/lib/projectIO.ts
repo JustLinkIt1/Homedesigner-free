@@ -1,5 +1,6 @@
 import type { DesignSnapshot, MaybeFloored } from '../store/designStore';
 import { saveText } from './native';
+import { notePositiveMoment } from './appReview';
 import { toast } from './ui';
 import { t } from './i18n';
 import { slugify } from './appInfo';
@@ -13,7 +14,9 @@ export async function exportProject(snapshot: DesignSnapshot): Promise<string | 
   // (and add a real migration) only if a field is ever renamed/reshaped.
   const data = JSON.stringify({ app: 'homedesigner-free', version: 1, ...snapshot }, null, 2);
   const filename = `${slugify(snapshot.projectName)}.json`;
-  return (await saveText(data, filename)) ? filename : null;
+  if (!(await saveText(data, filename))) return null;
+  notePositiveMoment();
+  return filename;
 }
 
 /** Prompt for a .json project file and parse it into a snapshot. */

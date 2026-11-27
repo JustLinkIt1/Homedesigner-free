@@ -18,6 +18,7 @@ import * as projects from '../lib/projects';
 import ProTag from './ProTag';
 import { useProStore } from '../store/proStore';
 import { trackEvent } from '../lib/events';
+import { noteNotAnImport } from '../lib/appReview';
 import { openCommunityForum } from '../lib/communityAccess';
 
 function timeAgo(ts: number, t: (en: string) => string): string {
@@ -104,6 +105,7 @@ export default function ProjectsScreen({
   const openSample = (sampleId: string, name: string) => {
     // Samples never open the Pro wall and don't count toward the free limit.
     projects.createProject(name, { sample: true });
+    noteNotAnImport(); // a sample's first 3D frame is never a review moment
     loadSample(sampleId);
     onOpenEditor();
   };

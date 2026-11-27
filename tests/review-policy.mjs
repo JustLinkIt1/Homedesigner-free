@@ -5,9 +5,10 @@
 // thing the app controls is WHEN it asks. That lives in src/lib/reviewPolicy.ts
 // as plain functions, and these checks run them directly:
 //
-//   * never in the first session, and not before the app has been opened on
-//     two different days and two things have gone well;
-//   * at most once every 90 days, three times in a lifetime, once per launch;
+//   * right after the first thing that goes well, on the first day (EXEC
+//     cycle 249), but never on a sample's or the first-3D auto-open's frame;
+//   * once in a lifetime: an install with any request on record, including
+//     states from older builds with counts up to 3, is never asked again;
 //   * nothing on the web, nothing while a paywall is open;
 //   * unreadable storage means "do not ask", never "ask again";
 //   * no failure escapes to the export or render that triggered it.
@@ -58,22 +59,21 @@ const engaged = (days, moments) => {
 };
 
 // ---- the numbers themselves -------------------------------------------------
-check('thresholds: 2 days, 2 moments, 90 days apart, 3 in a lifetime',
-  REVIEW_MIN_DAYS === 2 && REVIEW_MIN_MOMENTS === 2 && REVIEW_COOLDOWN_MS === 90 * DAY_MS && REVIEW_MAX_REQUESTS === 3);
+check('thresholds: 1 day, 1 moment, 1 in a lifetime (90-day cooldown kept)',
+  REVIEW_MIN_DAYS === 1 && REVIEW_MIN_MOMENTS === 1 && REVIEW_COOLDOWN_MS === 90 * DAY_MS && REVIEW_MAX_REQUESTS === 1);
 check('a calendar day is the local date', localDay(new Date(2026, 2, 5, 23, 59).getTime()) === '2026-03-05'
   && localDay(new Date(2026, 2, 6, 0, 1).getTime()) === '2026-03-06');
 
 // ---- engagement gates -------------------------------------------------------
 {
-  let first = fresh();
-  first = withOpen(first, T0);
-  for (let i = 0; i < 10; i++) first = withMoment(first, T0 + i * 60_000);
-  check('first session: ten exports on install day never ask', !shouldRequestReview(first, ctx(T0 + 3_600_000)));
-
-  check('too few days: one day with plenty of moments', !shouldRequestReview(engaged(1, 5), ctx(day(0))));
-  check('too few moments: two days, one moment', !shouldRequestReview(engaged(2, 1), ctx(day(1))));
-  check('too few moments: two days, none', !shouldRequestReview(engaged(2, 0), ctx(day(1))));
-  check('two days and two moments ask', shouldRequestReview(engaged(2, 2), ctx(day(1))));
+  const first = withMoment(withOpen(fresh(), T0), T0 + 60_000);
+  check('first day, one moment: asks', shouldRequestReview(first, ctx(T0 + 60_000)));
+  check('first day, opened but nothing went well: does not ask', !shouldRequestReview(withOpen(fresh(), T0), ctx(T0)));
+  check('a moment with no open recorded still counts its day and asks',
+    shouldRequestReview(withMoment(fresh(), T0), ctx(T0)));
+  check('no days, one moment (impossible state): does not ask',
+    !shouldRequestReview({ days: [], moments: 1, requests: 0, lastRequestAt: null }, ctx(T0)));
+  check('two days and two moments still ask', shouldRequestReview(engaged(2, 2), ctx(day(1))));
 
   let sameDay = fresh();
   for (let i = 0; i < 6; i++) sameDay = withOpen(sameDay, T0 + i * 3_600_000);
@@ -82,10 +82,10 @@ check('a calendar day is the local date', localDay(new Date(2026, 2, 5, 23, 59).
   let moments = fresh();
   moments = withMoment(withMoment(moments, day(0)), day(1));
   moments = withMoment(moments, day(1));
-  check('a moment counts its own day when no open was recorded', moments.days.length === 2 && moments.moments === 3);
+  check('a moment counts its own day when no open was recorded', moments.days.length === 1 && moments.moments === 3);
 
   const many = engaged(40, 2);
-  check('only the first two days are kept', many.days.length === 2 && many.days[0] === localDay(day(0)));
+  check('only the first day is kept', many.days.length === 1 && many.days[0] === localDay(day(0)));
   check('an open that changes nothing returns the same state', withOpen(many, day(50)) === many);
 }
 
@@ -97,14 +97,14 @@ check('a calendar day is the local date', localDay(new Date(2026, 2, 5, 23, 59).
   check('once per app launch', !shouldRequestReview(ready, ctx(day(1), { askedThisSession: true })));
 }
 
-// ---- 90-day spacing and the lifetime cap ------------------------------------
+// ---- the lifetime cap: once per install ---------------------------------------
 {
-  const asked = withRequest(engaged(2, 2), day(1));
-  check('a request is recorded', asked.requests === 1 && asked.lastRequestAt === day(1));
-  check('89 days later: still too soon', !shouldRequestReview(asked, ctx(day(1) + 89 * DAY_MS)));
-  check('one millisecond short of 90 days: too soon', !shouldRequestReview(asked, ctx(day(1) + REVIEW_COOLDOWN_MS - 1)));
-  check('90 days later: asks again', shouldRequestReview(asked, ctx(day(1) + REVIEW_COOLDOWN_MS)));
-  check('clock moved back before the last request: does not ask', !shouldRequestReview(asked, ctx(day(1) - DAY_MS)));
+  const asked = withRequest(engaged(1, 1), day(0));
+  check('a request is recorded', asked.requests === 1 && asked.lastRequestAt === day(0));
+  check('already asked once: not the next day', !shouldRequestReview(withMoment(asked, day(1)), ctx(day(1))));
+  check('already asked once: not 90 days later', !shouldRequestReview(asked, ctx(day(0) + REVIEW_COOLDOWN_MS)));
+  check('already asked once: not ten years later', !shouldRequestReview(asked, ctx(day(3650))));
+  check('clock moved back before the last request: does not ask', !shouldRequestReview(asked, ctx(day(0) - DAY_MS)));
 
   let state = engaged(2, 2);
   let now = day(1);
@@ -113,8 +113,22 @@ check('a calendar day is the local date', localDay(new Date(2026, 2, 5, 23, 59).
     if (shouldRequestReview(state, ctx(now))) { granted += 1; state = withRequest(state, now); }
     now += REVIEW_COOLDOWN_MS;
   }
-  check('lifetime cap: three requests over three years of trying', granted === 3 && state.requests === 3, `granted ${granted}`);
+  check('lifetime cap: one request over three years of trying', granted === 1 && state.requests === 1, `granted ${granted}`);
   check('after the cap it never asks, however long it waits', !shouldRequestReview(state, ctx(now + 20 * REVIEW_COOLDOWN_MS)));
+
+  // States written by builds with the old 2-day / 3-request policy.
+  for (const requests of [1, 2, 3]) {
+    const old = parseReviewState(JSON.stringify({
+      v: 1, days: ['2026-01-10', '2026-01-11'], moments: 7, requests, lastRequestAt: day(-400),
+    }), day(0));
+    check(`old state asked ${requests}x a year ago: never asked again`, old.requests === requests
+      && !shouldRequestReview(withMoment(old, day(0)), ctx(day(0))) && !shouldRequestReview(old, ctx(day(3000))));
+  }
+  const oldUnasked = parseReviewState(JSON.stringify({
+    v: 1, days: ['2026-01-10', '2026-01-11'], moments: 1, requests: 0, lastRequestAt: null,
+  }), day(5));
+  check('old state, two days kept, never asked: trimmed to one day, next moment asks',
+    oldUnasked.days.join() === '2026-01-10' && shouldRequestReview(withMoment(oldUnasked, day(5)), ctx(day(5))));
 }
 
 // ---- storage ----------------------------------------------------------------
@@ -143,7 +157,7 @@ check('a calendar day is the local date', localDay(new Date(2026, 2, 5, 23, 59).
     days: ['2026-01-10', '2026-01-10', 'yesterday', 7, null, '2026-01-11'], moments: 'lots', requests: 0, lastRequestAt: null,
   }), T0);
   check('bad fields are dropped, good ones kept',
-    fields.days.join() === '2026-01-10,2026-01-11' && fields.moments === 0 && fields.requests === 0 && fields.lastRequestAt === null);
+    fields.days.join() === '2026-01-10' && fields.moments === 0 && fields.requests === 0 && fields.lastRequestAt === null);
 
   const wrongTypes = parseReviewState(JSON.stringify({ days: 'x', moments: -4, requests: 0 }), T0);
   check('wrong types read as zero engagement', wrongTypes.days.length === 0 && wrongTypes.moments === 0);
@@ -203,30 +217,29 @@ const openOn = (target, n) => { for (let i = 0; i < n; i++) { target.env.now = d
 {
   const phone = device();
   phone.prompt.opened();
-  const firstDay = [await phone.prompt.moment(), await phone.prompt.moment(), await phone.prompt.moment()];
-  check('phone, install day: moments are counted but Play is not called',
-    !firstDay.some(Boolean) && phone.env.launches === 0 && parseReviewState(phone.env.stored, T0).moments === 3);
-
-  // Day two: opening never asks by itself, the next good moment is the one that asks.
-  phone.env.now = day(1); phone.prompt.opened();
   check('opening the app never asks by itself', phone.env.launches === 0);
-  check('phone, second day: the next good moment asks Play', (await phone.prompt.moment()) && phone.env.launches === 1);
-  const after = parseReviewState(phone.env.stored, day(1));
-  check('the request is on record', after.requests === 1 && after.lastRequestAt === day(1));
+  check('phone, install day: the first good moment asks Play', (await phone.prompt.moment()) && phone.env.launches === 1);
+  const after = parseReviewState(phone.env.stored, T0);
+  check('the request is on record', after.requests === 1 && after.lastRequestAt === T0);
   check('same launch: no second request', !(await phone.prompt.moment()) && phone.env.launches === 1);
 
-  // A new launch the next day reads the same storage.
+  // Later launches read the same storage and never ask again.
   const nextLaunch = device({ stored: phone.env.stored, now: day(2) });
   nextLaunch.prompt.opened();
-  check('next launch, a day later: too soon', !(await nextLaunch.prompt.moment()) && nextLaunch.env.launches === 0);
-  const muchLater = device({ stored: nextLaunch.env.stored, now: day(1) + REVIEW_COOLDOWN_MS });
-  check('a launch 90 days later: asks once more', (await muchLater.prompt.moment()) && muchLater.env.launches === 1);
+  check('next launch, two days later: never again', !(await nextLaunch.prompt.moment()) && nextLaunch.env.launches === 0);
+  const muchLater = device({ stored: nextLaunch.env.stored, now: T0 + 2 * REVIEW_COOLDOWN_MS });
+  check('a launch 180 days later: never again', !(await muchLater.prompt.moment()) && muchLater.env.launches === 0);
+
+  // An install the old build already asked three times.
+  const oldInstall = device({ stored: JSON.stringify({ v: 1, days: ['2025-01-01', '2025-01-02'], moments: 9, requests: 3, lastRequestAt: day(-500) }), now: day(0) });
+  oldInstall.prompt.opened();
+  check('old install asked 3x: never again', !(await oldInstall.prompt.moment()) && oldInstall.env.launches === 0);
 }
 {
-  const ready = serializeReviewState(engaged(2, 2));
-  const paywall = device({ stored: ready, now: day(1), dialog: true });
+  const ready = serializeReviewState(engaged(1, 0));
+  const paywall = device({ stored: ready, now: day(0), dialog: true });
   check('paywall open: counted, not asked', !(await paywall.prompt.moment()) && paywall.env.launches === 0
-    && parseReviewState(paywall.env.stored, day(1)).moments === 3);
+    && parseReviewState(paywall.env.stored, day(0)).moments === 1);
   paywall.env.dialog = false;
   check('paywall closed: the next moment asks', (await paywall.prompt.moment()) && paywall.env.launches === 1);
 
@@ -262,9 +275,6 @@ const openOn = (target, n) => { for (let i = 0; i < n; i++) { target.env.now = d
   check('platform probe throws: silent', !threw && result === false && brokenProbe.env.launches === 0);
 }
 
-console.log(failures === 0 ? '\nAll review-policy checks passed.' : `\n${failures} review-policy check(s) FAILED.`);
-process.exit(failures === 0 ? 0 : 1);
-
 // ---- an import counts once it has been seen in 3D ---------------------------
 {
   let moments = 0;
@@ -282,9 +292,33 @@ process.exit(failures === 0 ? 0 : 1);
   let escaped = false;
   try { throwing.rendered3D(); } catch { escaped = true; }
   check('a failing review call never escapes into 3D', !escaped);
-  // Two good moments are still required: one import seen in 3D alone does not ask.
-  let state = withMoment(withOpen(fresh(), day(0)), day(0));
-  state = withOpen(state, day(1));
-  check('two days, one moment (an import in 3D): still no ask', !shouldRequestReview(state, ctx(day(1))));
-  check('two days, import in 3D plus an export: asks', shouldRequestReview(withMoment(state, day(1)), ctx(day(1))));
+  // One import seen in 3D on the first day is enough to ask.
+  const state = withMoment(withOpen(fresh(), day(0)), day(0));
+  check('first day, an import seen in 3D: asks', shouldRequestReview(state, ctx(day(0))));
+
+  // A sample or template opening in 3D (the first-3D auto-open) is never a
+  // moment: appReview.noteNotAnImport() calls discard() before it loads.
+  let sampleMoments = 0;
+  const sample = createImportMoment(() => { sampleMoments += 1; });
+  sample.discard();
+  check('sample opened, first 3D frame: no moment', sample.rendered3D() === false && sampleMoments === 0);
+  sample.imported(); // an import that stayed in 2D...
+  sample.discard(); // ...then a sample (or the first-3D auto-open) is opened
+  check('import left in 2D, then a sample in 3D: the sample frame is not credited',
+    sample.rendered3D() === false && sampleMoments === 0);
+  sample.imported();
+  check('a real import after a sample still counts', sample.rendered3D() === true && sampleMoments === 1);
 }
+
+// The sample guard is wired where samples and the first-3D auto-open happen.
+{
+  const screen = readFileSync('src/components/ProjectsScreen.tsx', 'utf8');
+  const app = readFileSync('src/App.tsx', 'utf8');
+  check('ProjectsScreen.openSample discards before loadSample',
+    /noteNotAnImport\(\);[^]*?loadSample\(sampleId\)/.test(screen.slice(screen.indexOf('const openSample')))
+    && screen.indexOf('noteNotAnImport()', screen.indexOf('const openSample')) < screen.indexOf('loadSample(sampleId)'));
+  check('App first-3D auto-open discards', /if \(takeFirst3D\(.*\)\) \{\s*noteNotAnImport\(\);/.test(app));
+}
+
+console.log(failures === 0 ? '\nAll review-policy checks passed.' : `\n${failures} review-policy check(s) FAILED.`);
+process.exit(failures === 0 ? 0 : 1);
