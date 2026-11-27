@@ -27,6 +27,11 @@ const prompt = createReviewPrompt({
   },
 });
 
+/** Play's review card was asked for during this launch (Android only). */
+export function reviewAskedThisSession(): boolean {
+  return prompt.askedThisSession();
+}
+
 /** The app was opened or came back to the foreground. */
 export function noteAppOpened(): void {
   prompt.opened();

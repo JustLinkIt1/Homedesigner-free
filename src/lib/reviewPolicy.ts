@@ -158,6 +158,10 @@ export interface ReviewEnv {
 export function createReviewPrompt(env: ReviewEnv) {
   let asked = false;
   return {
+    /** Play was asked for its card during this launch (its card may be up). */
+    askedThisSession(): boolean {
+      return asked;
+    },
     /** The app was opened or resumed. Only counts the day. */
     opened(): void {
       try {

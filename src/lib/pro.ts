@@ -27,7 +27,9 @@ export type ProTrigger =
   | 'multiFloor:add' | 'multiFloor:clone' | 'multiFloor:aiPlan'
   | 'pdfExport:pdf' | 'pdfExport:dxf' | 'pdfExport:ifc'
   | 'catalog:item' | 'catalog:opening' | 'catalog:appliance' | 'catalog:uppers' | 'catalog:corner'
-  | 'cleanExport:saved' | 'cleanExport:render';
+  | 'cleanExport:saved' | 'cleanExport:render'
+  /** First exit from 3D (lib/exit3dWall.ts): opened with no feature, so the generic Pro pitch. */
+  | '3d_exit';
 export type ProPlanID = 'monthly' | 'yearly' | 'lifetime';
 
 export interface ProPlan {

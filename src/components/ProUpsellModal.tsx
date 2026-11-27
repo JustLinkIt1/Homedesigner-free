@@ -56,7 +56,7 @@ const FEATURE_COPY: Record<ProFeature, { icon: typeof Crown; title: string; blur
  * from the trigger's feature. A trigger with no entry, or an unset one, falls
  * back to FEATURE_COPY[feature]. Locales translate these like FEATURE_COPY:
  * English string as the key, English shown where a locale has no entry. */
-export const TRIGGER_COPY: Record<ProTrigger, { title: string; blurb: string }> = {
+export const TRIGGER_COPY: Partial<Record<ProTrigger, { title: string; blurb: string }>> = {
   'projects:new': { title: 'Start a second design', blurb: 'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.' },
   // Importing a plan starts a second design, so it says the same as New (no new strings).
   'projects:import': { title: 'Start a second design', blurb: 'Free keeps one project. Pro keeps every design you start on this device, and you can switch between them any time.' },
@@ -76,6 +76,7 @@ export const TRIGGER_COPY: Record<ProTrigger, { title: string; blurb: string }> 
   'catalog:corner': { title: 'Add the corner unit', blurb: 'Corner units are part of the full Pro catalog.' },
   'cleanExport:saved': { title: 'Save it without the watermark', blurb: 'With Pro, every render and photo you save or share has no watermark.' },
   'cleanExport:render': { title: 'AI renders without the watermark', blurb: 'With Pro, every render and photo you save or share has no watermark.' },
+  // '3d_exit' has no entry and opens with no feature: the generic Pro pitch (no new strings).
 };
 
 /** Headline and blurb for a wall: the trigger's copy when it has any, else the
@@ -139,11 +140,13 @@ export default function ProUpsellModal() {
   // keep the last one so the closing frame still renders its copy instead of
   // blanking or crashing on the lookup below.
   const lastFeature = useRef<ProFeature | null>(upsellFeature);
-  if (upsellFeature) lastFeature.current = upsellFeature;
+  // Opened with no feature (/buy, header chip, the 3d_exit wall): forget the
+  // last feature, or a wall seen earlier this session would lend it its copy.
+  if (upsellFeature || upsellOpen) lastFeature.current = upsellFeature;
   const feature = upsellFeature ?? lastFeature.current;
   // Same for the trigger, but only while its feature is the one still showing.
   const lastTrigger = useRef<ProTrigger | null>(upsellTrigger);
-  if (upsellFeature) lastTrigger.current = upsellTrigger;
+  if (upsellFeature || upsellOpen) lastTrigger.current = upsellTrigger;
   const trigger = upsellFeature ? upsellTrigger : lastTrigger.current;
 
   const native = Capacitor.isNativePlatform();

@@ -38,6 +38,10 @@ import { useAiCapabilities } from '../lib/aiCapabilities';
 import { capturePlanThumbnail } from '../lib/thumb';
 import AccountButton from './AccountButton';
 import { useAuthStore } from '../store/authStore';
+import { usePointsStore } from '../store/pointsStore';
+import { useConfirm } from '../lib/ui';
+import { noteLeft3D } from '../lib/exit3dWall';
+import { reviewAskedThisSession } from '../lib/appReview';
 import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
 import { openCommunityForum } from '../lib/communityAccess';
 import FloorSwitcher from './FloorSwitcher';
@@ -359,7 +363,22 @@ export default function Toolbar({
       </div>
 
       <div className="view-toggle">
-        <button className={s.view === '2d' ? 'active' : ''} onClick={() => s.setView('2d')}>
+        <button
+          className={s.view === '2d' ? 'active' : ''}
+          onClick={() => {
+            const from = s.view;
+            s.setView('2d');
+            // First exit from 3D on a free install: the Pro wall, once (lib/exit3dWall.ts).
+            const pro = useProStore.getState();
+            noteLeft3D({
+              from,
+              isPro: pro.isPro,
+              dialogOpen: pro.upsellOpen || usePointsStore.getState().walletOpen || useConfirm.getState().req !== null
+                || !!document.querySelector('[aria-modal="true"]'),
+              reviewAsked: reviewAskedThisSession(),
+            }, () => pro.openUpsell(null, '3d_exit'));
+          }}
+        >
           <Grid3x3 className="icon" />
           <span>{t('2D Plan')}</span>
         </button>
