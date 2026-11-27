@@ -1,0 +1,158 @@
+{
+  "title": "Tiny house, 7.2 x 2.6 m",
+  "notes": "",
+  "widthCm": 720,
+  "depthCm": 260,
+  "furnished": true,
+  "source": null,
+  "exterior": {
+    "color": "#7d5a38",
+    "material": "brown_planks_09"
+  },
+  "roof": {
+    "type": "shed",
+    "pitch": 12,
+    "overhang": 35,
+    "thickness": 18,
+    "covering": "metal",
+    "coveringScaleCm": 150,
+    "color": "#8d9298"
+  },
+  "floors": [
+    {
+      "rooms": [
+        {
+          "id": "kit",
+          "type": "kitchen",
+          "name": "Kitchen",
+          "x": 0,
+          "y": 0,
+          "w": 240,
+          "h": 260
+        },
+        {
+          "id": "liv",
+          "type": "open_living",
+          "name": "Living and Sleeping",
+          "x": 240,
+          "y": 0,
+          "w": 300,
+          "h": 260
+        },
+        {
+          "id": "bath",
+          "type": "bathroom",
+          "name": "Bathroom",
+          "x": 540,
+          "y": 0,
+          "w": 180,
+          "h": 260
+        }
+      ],
+      "openings": [
+        {
+          "kind": "open",
+          "x": 240,
+          "y": 130,
+          "vertical": true,
+          "width": 120,
+          "rooms": [
+            "kit",
+            "liv"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 540,
+          "y": 130,
+          "vertical": true,
+          "width": 80,
+          "rooms": [
+            "liv",
+            "bath"
+          ]
+        },
+        {
+          "kind": "entrance",
+          "x": 390,
+          "y": 0,
+          "vertical": false,
+          "width": 90,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 120,
+          "y": 0,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 120,
+          "y": 260,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 0,
+          "y": 130,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 390,
+          "y": 260,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "small_window",
+          "x": 630,
+          "y": 0,
+          "vertical": false,
+          "width": 60,
+          "rooms": [
+            "bath"
+          ]
+        },
+        {
+          "kind": "small_window",
+          "x": 630,
+          "y": 260,
+          "vertical": false,
+          "width": 60,
+          "rooms": [
+            "bath"
+          ]
+        },
+        {
+          "kind": "small_window",
+          "x": 720,
+          "y": 130,
+          "vertical": true,
+          "width": 60,
+          "rooms": [
+            "bath"
+          ]
+        }
+      ]
+    }
+  ]
+}

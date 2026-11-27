@@ -1,6 +1,9 @@
 // Make a "claim your plan" link from a plan description.
 //
-//   node tools/share-plan.mjs <blueprint.json> [--days 90] [--note "where it is going"]
+//   node tools/share-plan.mjs <blueprint.json> [--days 90] [--note "where it is going"] [--id readableid]
+//
+// --id is only for plans that are public anyway (the /floor-plans/ pages, ids
+// in tools/floor-plans/ids.json). A client's plan keeps the random id.
 //
 // The blueprint is the same file tools/make-plan-sample.mjs renders: the AI
 // plan format (title, widthCm, depthCm, floors with rooms and openings), with
@@ -29,9 +32,10 @@ const flag = (name) => {
 };
 const days = Number(flag('--days') ?? 90);
 const note = flag('--note') ?? '';
+const fixedId = flag('--id');
 const [file] = args;
-if (!file || !Number.isFinite(days) || days < 0) {
-  console.error('usage: node tools/share-plan.mjs <blueprint.json> [--days 90] [--note text]');
+if (!file || !Number.isFinite(days) || days < 0 || (fixedId !== undefined && !/^[a-z0-9]{10,24}$/.test(fixedId))) {
+  console.error('usage: node tools/share-plan.mjs <blueprint.json> [--days 90] [--note text] [--id a-z0-9, 10-24 chars]');
   process.exit(2);
 }
 
@@ -58,7 +62,7 @@ if (payload.length > 60000) {
 // 14 characters from a 36-letter alphabet, drawn from the system's secure
 // source: about 72 bits, so a link cannot be guessed.
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
-const id = Array.from({ length: 14 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('');
+const id = fixedId ?? Array.from({ length: 14 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('');
 
 const quote = (text) => `'${String(text).replace(/'/g, "''")}'`;
 const now = Date.now();

@@ -27,8 +27,10 @@
 // de-DE, fr-FR and es-ES blocks), so the site and the store use the same words.
 // A translation never says more than the English page it translates.
 
+import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { FLOOR_PLANS, FLOOR_PLANS_HUB, FLOOR_PLANS_PATH, floorPlanProblems } from './floor-plans-data.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const site = resolve(root, 'site');
@@ -1699,6 +1701,154 @@ ${footer(code, paths)}
 `;
 }
 
+// The /floor-plans/ pages (TASKS T10b): English only, data in scripts/floor-plans-data.mjs.
+const fpPath = (plan) => `${FLOOR_PLANS_PATH}${plan.slug}/`;
+const fpImg = (i, alt, lazy = true) =>
+  `<img src="${i.src}" alt="${esc(alt)}" width="${i.w}" height="${i.h}"${lazy ? ' loading="lazy"' : ''} />`;
+const fpArea = (p) => `${p.areaM2} m² (${p.areaSqFt.toLocaleString('en-US')} sq ft)`;
+const fpFacts = (p) => [
+  p.beds ? `${p.beds} bedroom${p.beds > 1 ? 's' : ''}` : 'Sleeping area in the living space',
+  `${p.baths} bath${p.baths === 1 ? '' : 's'}`,
+  `${p.storeys} storey${p.storeys > 1 ? 's' : ''}`,
+  `${p.footprint.m} (${p.footprint.ft})`,
+  `${fpArea(p)}${p.storeys > 1 ? ' in total' : ''}`,
+];
+const fpCrumbs = (items) => ({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map(([name, path], i) => ({ '@type': 'ListItem', position: i + 1, name, item: ORIGIN + path })),
+});
+const fpCards = (plans) => `<div class="more">
+          ${plans.map((p) => `<a href="${fpPath(p)}"><b>${esc(p.h1)}</b><span>${esc(`${fpFacts(p).slice(0, 2).join(', ')}, ${fpArea(p)}`)}</span></a>`).join('\n          ')}
+        </div>`;
+const fpParas = (text, cls) => text.split(/\n\s*\n/).map((para) => `        <p class="${cls}">${esc(para.trim())}</p>`).join('\n');
+
+function renderFloorPlan(plan) {
+  const { ui } = LANGS.en;
+  const path = fpPath(plan);
+  const paths = { en: path };
+  const jsonLd = [
+    fpCrumbs([['HomeDesigner', '/'], ['Floor plans', FLOOR_PLANS_PATH], [plan.h1, path]]),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CreativeWork',
+      name: plan.h1,
+      description: plan.description,
+      url: ORIGIN + path,
+      image: [ORIGIN + plan.images.view3d.src, ORIGIN + plan.images.plan.src],
+      inLanguage: 'en',
+      isAccessibleForFree: true,
+      creator: { '@type': 'Organization', name: 'HomeDesigner', url: `${ORIGIN}/` },
+    },
+  ];
+  return `<!doctype html>
+<html lang="en">
+${head('en', { title: plan.title, description: plan.description, paths, jsonLd })}
+<body>
+${header('en', null)}
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <p class="crumbs"><a href="/">HomeDesigner</a> › <a href="${FLOOR_PLANS_PATH}">Floor plans</a> › ${esc(plan.h1)}</p>
+        <h1>${esc(plan.h1)}</h1>
+        <p class="sub">${fpFacts(plan).map(esc).join(' · ')}</p>
+        <div class="ctas">
+          <a class="btn primary" href="${plan.appLink}">Open this plan in HomeDesigner</a>
+          ${playBadge('en', false)}
+        </div>
+        <p class="sub">Free to start, in your browser or on Android.</p>
+        <div class="hero-shot">${fpImg(plan.images.view3d, `${plan.h1}, furnished, in 3D`, false)}</div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <span class="kicker">The plan</span>
+        <h2 class="title">Rooms and sizes</h2>
+${fpParas(plan.body, 'lead')}
+        <div class="split">
+          <div class="pic">${fpImg(plan.images.plan, `${plan.h1}: 2D floor plan`)}</div>
+          <div>
+${plan.floors.map((floor) => `            <h3>${esc(floor.name)}</h3>
+            <table class="plan-rooms">
+              <thead><tr><th>Room</th><th>Metres</th><th>Feet</th><th>Area</th></tr></thead>
+              <tbody>
+                ${floor.rooms.map((r) => `<tr><td>${esc(r.name)}</td><td>${esc(r.m)}</td><td>${esc(r.ft)}</td><td>${r.areaM2} m²</td></tr>`).join('\n                ')}
+              </tbody>
+            </table>`).join('\n')}
+          </div>
+        </div>
+        <div class="ctas">
+          <a class="btn primary" href="${plan.appLink}">Open this plan in HomeDesigner</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" style="padding-top:0">
+      <div class="wrap">
+        <span class="kicker">${esc(ui.more)}</span>
+        ${fpCards(FLOOR_PLANS.filter((p) => p !== plan))}
+      </div>
+    </section>
+
+${getTheApp('en')}
+  </main>
+
+${footer('en', paths)}
+</body>
+</html>
+`;
+}
+
+function renderFloorPlansHub() {
+  const hub = FLOOR_PLANS_HUB;
+  const paths = { en: FLOOR_PLANS_PATH };
+  const jsonLd = [
+    fpCrumbs([['HomeDesigner', '/'], ['Floor plans', FLOOR_PLANS_PATH]]),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      itemListElement: FLOOR_PLANS.map((p, i) => ({ '@type': 'ListItem', position: i + 1, url: ORIGIN + fpPath(p), name: p.h1 })),
+    },
+  ];
+  return `<!doctype html>
+<html lang="en">
+${head('en', { title: hub.title, description: hub.description, paths, jsonLd })}
+<body>
+${header('en', null)}
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <p class="crumbs"><a href="/">HomeDesigner</a> › Floor plans</p>
+        <h1>${esc(hub.h1)}</h1>
+${fpParas(hub.intro, 'sub')}
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+${FLOOR_PLANS.map((p) => `        <div class="split">
+          <div class="pic"><a href="${fpPath(p)}">${fpImg(p.images.view3d, `${p.h1} in 3D`)}</a></div>
+          <div>
+            <h3><a href="${fpPath(p)}">${esc(p.h1)}</a></h3>
+            <p>${fpFacts(p).map(esc).join(' · ')}</p>
+            <div class="ctas"><a class="btn" href="${fpPath(p)}">See the plan</a> <a class="btn primary" href="${p.appLink}">Open in HomeDesigner</a></div>
+          </div>
+        </div>`).join('\n')}
+      </div>
+    </section>
+
+${getTheApp('en')}
+  </main>
+
+${footer('en', paths)}
+</body>
+</html>
+`;
+}
+
 // Search results cut a title at about 65 characters and a description at about
 // 160, and a description under 120 wastes the space. Refuse to write a page
 // that would be cut, so a new translation cannot ship one by accident.
@@ -1715,6 +1865,9 @@ for (const code of CODES) {
     if (page.rows.length !== topic.shots.length) problems.push(`${topicPath(topic, code)}: ${page.rows.length} rows for ${topic.shots.length} pictures`);
   }
 }
+// The /floor-plans/ pages: nothing is written while one is thin, has no
+// pictures or says something it cannot back up (floor-plans-data.mjs).
+problems.push(...floorPlanProblems((src) => existsSync(resolve(site, `.${src}`))));
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
@@ -1736,6 +1889,12 @@ for (const code of CODES) {
     await write(topicPath(topic, code), renderTopic(topic, code));
     written.push(topicPath(topic, code));
   }
+}
+await write(FLOOR_PLANS_PATH, renderFloorPlansHub());
+written.push(FLOOR_PLANS_PATH);
+for (const plan of FLOOR_PLANS) {
+  await write(`${FLOOR_PLANS_PATH}${plan.slug}/`, renderFloorPlan(plan));
+  written.push(`${FLOOR_PLANS_PATH}${plan.slug}/`);
 }
 
 // Every Google Play link on the site carries an install referrer naming the page
@@ -1795,5 +1954,5 @@ ${entries.map(([path, pri, date]) => `  <url><loc>${ORIGIN}${path}</loc><lastmod
 );
 
 console.log(
-  `Wrote ${written.length} pages (${TOPICS.length} topics in ${CODES.length} languages, ${CODES.length - 1} landing pages) and sitemap.xml (${entries.length} URLs) into site/`,
+  `Wrote ${written.length} pages (${TOPICS.length} topics in ${CODES.length} languages, ${CODES.length - 1} landing pages, ${FLOOR_PLANS.length + 1} floor-plan pages) and sitemap.xml (${entries.length} URLs) into site/`,
 );

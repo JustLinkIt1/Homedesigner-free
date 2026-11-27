@@ -160,3 +160,8 @@ footer .langs a[aria-current] { color: var(--text); font-weight: 700; }
   .split:nth-of-type(even) .pic { order: 0; }
   .compare { grid-template-columns: 1fr; gap: 16px; }
 }
+
+/* /floor-plans/ room tables */
+.plan-rooms { width: 100%; border-collapse: collapse; margin: 8px 0 22px; font-size: 14.5px; }
+.plan-rooms th, .plan-rooms td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.plan-rooms th { color: var(--text-2); font-weight: 600; }
