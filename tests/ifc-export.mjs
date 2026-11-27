@@ -37,7 +37,7 @@ export { buildIfc } from '${rootImport}/src/lib/ifcExport.ts';
 export { isFence } from '${rootImport}/src/lib/fence.ts';
 export { parapetSegments, roofOutlines, roofParapetContext } from '${rootImport}/src/lib/roofGeometry.ts';
 export { isStairs, stairPlanFor, stairRailsFor } from '${rootImport}/src/lib/stairs.ts';
-export { stairCapY, stairHoleCut } from '${rootImport}/src/lib/stairCut.ts';
+export { stairCapY, stairHoleCut, stairHoleRooms } from '${rootImport}/src/lib/stairCut.ts';
 ${PRE_ROW58 ? `export { buildIfc as buildIfcPreHoles } from '${rootImport}/src/lib/${PRE_ROW58}';` : ''}
 `);
 const out = join(dir, 'bundle.mjs');
@@ -50,7 +50,7 @@ try {
   rmSync(entry, { force: true });
   if (PRE_ROW58) rmSync(join(root, 'src', 'lib', PRE_ROW58), { force: true });
 }
-const { SAMPLES, buildIfc, isFence, parapetSegments, roofOutlines, roofParapetContext, isStairs, stairPlanFor, stairRailsFor, stairCapY, stairHoleCut, buildIfcPreHoles } = await import(pathToFileURL(out).href);
+const { SAMPLES, buildIfc, isFence, parapetSegments, roofOutlines, roofParapetContext, isStairs, stairPlanFor, stairRailsFor, stairCapY, stairHoleCut, stairHoleRooms, buildIfcPreHoles } = await import(pathToFileURL(out).href);
 
 let checks = 0;
 const check = (v, label) => { assert.ok(v, label); checks++; };
@@ -535,6 +535,48 @@ const stairItem = (id, type, x, y, extra = {}) => ({ id, type, name: 'Stairs', p
   eq(voids.length, 1, 'split: the upper floor slab hosts the stairwell void');
   api.CloseModel(model);
   summary.push(`stairs-split-hole: ${JSON.stringify(r.counts)} ${r.text.length} bytes (holes +${r.pre ? r.text.length - r.pre.length : '?'})`);
+}
+
+{
+  // 1.22.52: overlapping rooms upstairs. Room A covers the whole plan, room B
+  // (x 450..800, y 350..600) overlaps it. The stair (x 250..550, y 400..500)
+  // lies whole inside A and partly inside B. The 3D view cuts the hole in A
+  // only (stairHoleCut per room); the IFC export now writes one slab per room
+  // on that storey and voids A's only, so B's block stays solid. Either room order.
+  const P = (x, y) => ({ x, y });
+  const s = stairItem('s-overlap', 'stairs', 400, 450, { rotation: 90 });
+  for (const order of ['AB', 'BA']) {
+    const built = stairProject([s]);
+    const A = { id: 'uA', name: 'A', points: [P(0, 0), P(800, 0), P(800, 600), P(0, 600)], floorMaterial: 'x', color: '#fff' };
+    const B = { id: 'uB', name: 'B', points: [P(450, 350), P(800, 350), P(800, 600), P(450, 600)], floorMaterial: 'x', color: '#fff' };
+    built.floorGeom.u.rooms = order === 'AB' ? [A, B] : [B, A];
+    const rooms3d = built.floorGeom.u.rooms.filter((r) => stairHoleCut(s, r)).map((r) => r.id);
+    eq(JSON.stringify(rooms3d), '["uA"]', `overlap ${order}: 3D cuts the hole in A only`);
+    eq(JSON.stringify(stairHoleRooms(s, built.floorGeom.u.rooms).map((r) => r.id)), '["uA"]', `overlap ${order}: shared rule picks A`);
+    const input = inputOf(`stairs-overlap-${order}`, built);
+    const text = buildIfc(input);
+    check(buildIfc(input) === text, `overlap ${order}: byte-identical on rebuild`);
+    if (outDir) writeFileSync(join(outDir, `stairs-overlap-${order}.ifc`), text);
+    const model = api.OpenModel(new TextEncoder().encode(text));
+    const upper = ids(model, WebIFC.IFCSLAB).filter((id) => api.GetLine(model, id).PredefinedType.value === 'FLOOR').filter((id) => near(meshInfo(model, id).max[2], 2.9));
+    eq(upper.length, 2, `overlap ${order}: upper storey has one floor slab per room`);
+    const slabA = upper.find((id) => near(meshInfo(model, id).min[0], 0, 0.01));
+    const slabB = upper.find((id) => near(meshInfo(model, id).min[0], 4.5, 0.01));
+    check(slabA && slabB, `overlap ${order}: slabs for A and B found`);
+    const voidsOf = (slab) => ids(model, WebIFC.IFCRELVOIDSELEMENT).map((id) => api.GetLine(model, id)).filter((l) => l.RelatingBuildingElement.value === slab).length;
+    eq(voidsOf(slabA), 1, `overlap ${order}: A's slab hosts the stairwell void`);
+    eq(voidsOf(slabB), 0, `overlap ${order}: B's slab is not voided`);
+    eq(countOf(model, WebIFC.IFCOPENINGELEMENT), 1, `overlap ${order}: one stairwell opening`);
+    check(!coversPoint(model, slabA, 3, -4.5, 2.9), `overlap ${order}: hole in A at the stair`);
+    check(!coversPoint(model, slabA, 5, -4.5, 2.9), `overlap ${order}: hole in A where B overlaps the stair`);
+    check(coversPoint(model, slabB, 5, -4.5, 2.9), `overlap ${order}: B solid over the stair, as in 3D`);
+    check(coversPoint(model, slabA, 1, -1, 2.9), `overlap ${order}: A solid away from the stair`);
+    const ground = ids(model, WebIFC.IFCSLAB).filter((id) => api.GetLine(model, id).PredefinedType.value === 'FLOOR').filter((id) => near(meshInfo(model, id).max[2], 0));
+    eq(ground.length, 1, `overlap ${order}: ground storey keeps its single slab`);
+    eq(stairCapY(s, { walls: built.floorGeom.g.walls, riseTo: 290, roomsAbove: built.floorGeom.u.rooms }), undefined, `overlap ${order}: stair not capped`);
+    api.CloseModel(model);
+    summary.push(`stairs-overlap-${order}: ${text.length} bytes`);
+  }
 }
 
 // ---- text escaping ------------------------------------------------------------

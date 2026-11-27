@@ -5,7 +5,7 @@ import { polygonArea } from './geometry';
 import { roofEaveHeight } from './ceilings';
 import { buildStoreyRoof, parapetSegments } from './roofGeometry';
 import { isStairs, stairPlanFor, stairRailsFor, stairToPlan } from './stairs';
-import { stairCapY, stairHoleCut } from './stairCut';
+import { stairCapY, stairHoleRooms, stairHoleSpillRooms } from './stairCut';
 import { stairOpeningPoints } from './walkNavigation';
 
 /**
@@ -252,6 +252,7 @@ export function buildIfc(input: IfcExportInput): string {
   const storeyOf = new Map<string, string>();
   const storeyPlOf = new Map<string, string>();
   const slabOf = new Map<string, string>();
+  const roomSlabsOf = new Map<string, Map<string, string>>();
   ordered.forEach((floor, fi) => {
     const g = input.geom[floor.id] ?? { walls: [], rooms: [], openings: [] };
     const elev = floor.elevation * M;
@@ -344,12 +345,33 @@ export function buildIfc(input: IfcExportInput): string {
     // body is one extrusion per indoor room (their union, without a boolean
     // that could fail on odd outlines); a storey with no indoor room falls
     // back to the wall outlines. Same thickness as the 3D view's SLAB_T.
-    const slabRings = g.rooms.filter((r) => !r.outdoor && r.points.length >= 3).map((r) => cleanRing(r.points.map(toIfc)));
+    // Overlapping rooms (1.22.52): when a stairwell from the storey below
+    // would reach into a room that does not get the hole (stairHoleSpillRooms,
+    // lib/stairCut.ts), one opening through the shared slab would cut that
+    // room's block too, which the 3D view does not. Such a storey writes one
+    // IfcSlab per indoor room instead, and each hole voids only the slabs of
+    // the rooms that get it (stairHoleRooms). Other storeys are unchanged.
+    const indoorRooms = g.rooms.filter((r) => !r.outdoor && r.points.length >= 3);
+    const stairsBelow = fi > 0 ? (input.geom[ordered[fi - 1].id]?.furniture ?? []).filter(isStairs) : [];
+    if (stairsBelow.some((item) => stairHoleSpillRooms(item, indoorRooms).length)) {
+      const roomSlabs = new Map<string, string>();
+      for (const room of indoorRooms) {
+        const ring = cleanRing(room.points.map(toIfc));
+        if (ring.length < 3 || Math.abs(polygonArea(ring)) <= 1e-6) continue;
+        const slab = st.add(
+          `IFCSLAB(${guid(`slab|${floor.id}|${room.id}`)},$,${str('Floor slab')},$,$,${placement(storeyPl, axisWorld)},${shape(prism(ring, SLAB_T, axis3(0, 0, -SLAB_T)))},$,.FLOOR.)`,
+        );
+        contained.push(slab);
+        roomSlabs.set(room.id, slab);
+      }
+      roomSlabsOf.set(floor.id, roomSlabs);
+    }
+    const slabRings = roomSlabsOf.has(floor.id) ? [] : indoorRooms.map((r) => cleanRing(r.points.map(toIfc)));
     const footprints = slabRings.length ? slabRings : walls.flatMap((w) => {
       const poly = polys.get(w.id);
       return poly ? [cleanRing(poly.map(toIfc))] : [];
     });
-    const slabSolids = footprints.filter((r) => r.length >= 3 && Math.abs(polygonArea(r)) > 1e-6)
+    const slabSolids = roomSlabsOf.has(floor.id) ? [] : footprints.filter((r) => r.length >= 3 && Math.abs(polygonArea(r)) > 1e-6)
       .map((r) => prism(r, SLAB_T, axis3(0, 0, -SLAB_T)));
     if (slabSolids.length) {
       const slab = st.add(
@@ -565,7 +587,7 @@ export function buildIfc(input: IfcExportInput): string {
   // The storey above a stair gets a hole in its floor slab wherever the 3D
   // view cuts one (DesignScene roomShape): the stair's footprint
   // (stairOpeningPoints), in every indoor room that holds it whole
-  // (stairHoleCut). The IFC floor slab is ONE IfcSlab per storey made of one
+  // (stairHoleRooms, lib/stairCut.ts: the one rule both sides use). The IFC floor slab is ONE IfcSlab per storey made of one
   // extrusion per indoor room, so one IfcOpeningElement voiding that slab cuts
   // exactly the room extrusions the footprint lies in. The opening is the
   // footprint, unchanged, extruded through the slab (1 cm proud of each face,
@@ -575,13 +597,29 @@ export function buildIfc(input: IfcExportInput): string {
     const next = ordered[fi + 1];
     const stairs = (input.geom[floor.id]?.furniture ?? []).filter(isStairs);
     const slab = next && slabOf.get(next.id);
+    const roomSlabs = next && roomSlabsOf.get(next.id);
     const storeyPl = next && storeyPlOf.get(next.id);
-    if (!next || !stairs.length || !slab || !storeyPl) return;
+    if (!next || !stairs.length || !(slab || roomSlabs) || !storeyPl) return;
     const indoorAbove = (input.geom[next.id]?.rooms ?? []).filter((r) => !r.outdoor && r.points.length >= 3);
     for (const item of stairs) {
-      if (!indoorAbove.some((room) => stairHoleCut(item, room))) continue;
+      const holeRooms = stairHoleRooms(item, indoorAbove);
+      if (!holeRooms.length) continue;
       const ring = cleanRing(stairOpeningPoints(item).map(toIfc));
       if (ring.length < 3 || Math.abs(polygonArea(ring)) < 1e-6) continue;
+      if (roomSlabs) {
+        // Per-room slabs (overlapping rooms): one opening per room that gets
+        // the hole, voiding that room's slab only.
+        for (const room of holeRooms) {
+          const roomSlab = roomSlabs.get(room.id);
+          if (!roomSlab) continue;
+          const opening = st.add(
+            `IFCOPENINGELEMENT(${guid(`stairwell|${item.id}|${room.id}`)},$,${str('Stairwell opening')},$,$,${placement(storeyPl, axisWorld)},${shape(prism(ring, SLAB_T + 2 * HOLE_PAD, axis3(0, 0, -SLAB_T - HOLE_PAD)))},$,.OPENING.)`,
+          );
+          st.add(`IFCRELVOIDSELEMENT(${guid(`void|stairwell|${item.id}|${room.id}`)},$,$,$,${roomSlab},${opening})`);
+        }
+        continue;
+      }
+      if (!slab) continue;
       const opening = st.add(
         `IFCOPENINGELEMENT(${guid(`stairwell|${item.id}`)},$,${str('Stairwell opening')},$,$,${placement(storeyPl, axisWorld)},${shape(prism(ring, SLAB_T + 2 * HOLE_PAD, axis3(0, 0, -SLAB_T - HOLE_PAD)))},$,.OPENING.)`,
       );

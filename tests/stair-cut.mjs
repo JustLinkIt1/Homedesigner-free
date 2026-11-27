@@ -31,7 +31,7 @@ try {
 } finally {
   rmSync(entry, { force: true });
 }
-const { SAMPLES, SLAB_T, stairHoleCut, stairHoleCutAbove, stairCapY, stairOpeningPoints, pointInPolygon, isStairs } = await import(pathToFileURL(out).href);
+const { SAMPLES, SLAB_T, stairHoleCut, stairHoleCutAbove, stairHoleRooms, stairHoleSpillRooms, stairCapY, stairOpeningPoints, pointInPolygon, isStairs } = await import(pathToFileURL(out).href);
 
 let checks = 0;
 const check = (v, label) => { assert.ok(v, label); checks++; };
@@ -99,6 +99,29 @@ const ground = box(0, 0, 800, 600);
   check(SLAB_T === 0.22, 'slab is 22 cm');
 }
 {
+  // Overlapping rooms above (1.22.52): the stair lies whole inside A and
+  // partly inside B. The one hole rule: the hole goes in every room that holds
+  // the whole footprint (A), whatever the order; B is a spill room the hole
+  // must not cut. DesignScene's per-room stairHoleCut gives the same answer.
+  const s = stair(400, 450, { rotation: 90, width: 100, depth: 300 });
+  const A = { id: 'A', points: ground };
+  const B = { id: 'B', points: box(450, 350, 800, 600) };
+  for (const rooms of [[A, B], [B, A]]) {
+    const order = rooms.map((r) => r.id).join('');
+    const cut = stairHoleRooms(s, rooms);
+    check(cut.length === 1 && cut[0] === A, `overlap ${order}: hole only in A`);
+    check(rooms.filter((r) => stairHoleCut(s, r)).every((r) => cut.includes(r)) && stairHoleCut(s, A) && !stairHoleCut(s, B), `overlap ${order}: same rooms as the 3D per-room test`);
+    const spill = stairHoleSpillRooms(s, rooms);
+    check(spill.length === 1 && spill[0] === B, `overlap ${order}: B is the spill room`);
+    check(stairHoleCutAbove(s, rooms) && stairCapY(s, { walls: wallsOf(ground), riseTo: 290, roomsAbove: rooms }) === undefined, `overlap ${order}: hole cut, stair not clipped`);
+  }
+  // Adjacent (non-overlapping) rooms, stair touching the shared edge: no spill.
+  const t = stair(200, 150, { width: 100, depth: 300 }); // y 0..300, touching y = 300
+  check(stairHoleSpillRooms(t, [{ points: box(0, 0, 800, 300) }, { points: box(0, 300, 800, 600) }]).length === 0, 'adjacent rooms, stair on the shared edge: no spill');
+  // No hole anywhere: no spill either.
+  check(stairHoleSpillRooms(s, [{ points: box(0, 0, 800, 300) }, { points: box(0, 300, 800, 600) }]).length === 0, 'no hole: no spill');
+}
+{
   // Nothing above the stair at all (upper storey is elsewhere), storey carries a roof: eave.
   const s = stair(100, 150);
   const roomsAbove = [{ points: box(400, 0, 800, 600) }];
@@ -119,6 +142,7 @@ for (const sample of SAMPLES) {
     for (const s of g.furniture.filter(isStairs)) {
       const y = stairCapY(s, { walls: g.walls, roof: f.roof, riseTo: next.elevation - f.elevation, roomsAbove: built.floorGeom[next.id].rooms });
       check(y === undefined, `${sample.id}: stair ${s.id} on ${f.name} sits in a stairwell, no clip (got ${y})`);
+      check(stairHoleSpillRooms(s, built.floorGeom[next.id].rooms.filter((r) => !r.outdoor && r.points.length >= 3)).length === 0, `${sample.id}: stair ${s.id}: no overlapping-room spill`);
       sampleStairs++;
     }
   });

@@ -43,7 +43,55 @@ export function stairHoleCut(stair: FurnitureItem, room: Pick<Room, 'points'>): 
 
 /** Was a stairwell hole cut for this stair anywhere on the storey above? */
 export function stairHoleCutAbove(stair: FurnitureItem, roomsAbove: Pick<Room, 'points'>[]): boolean {
-  return roomsAbove.some((room) => stairHoleCut(stair, room));
+  return stairHoleRooms(stair, roomsAbove).length > 0;
+}
+
+/** The rooms of the storey above that get this stair's hole: every room that
+ *  holds the whole footprint (`stairHoleCut`), in the given order. This is the
+ *  one hole rule; DesignScene's roomShape applies it room by room and the IFC
+ *  export voids exactly these rooms' slab blocks (1.22.52). */
+export function stairHoleRooms<R extends Pick<Room, 'points'>>(stair: FurnitureItem, roomsAbove: R[]): R[] {
+  return roomsAbove.filter((room) => stairHoleCut(stair, room));
+}
+
+/** Area (cm²) of `poly` inside the convex polygon `clip` (Sutherland-Hodgman;
+ *  the clipped ring may have degenerate edges but its area is exact). */
+function areaInsideConvex(poly: Point[], clip: Point[]): number {
+  const signed = (r: Point[]) => r.reduce((a, p, i) => { const q = r[(i + 1) % r.length]; return a + p.x * q.y - q.x * p.y; }, 0) / 2;
+  const dir = Math.sign(signed(clip)) || 1;
+  let ring = poly;
+  for (let i = 0; i < clip.length && ring.length; i++) {
+    const a = clip[i];
+    const b = clip[(i + 1) % clip.length];
+    const side = (p: Point) => dir * ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x));
+    const next: Point[] = [];
+    for (let j = 0; j < ring.length; j++) {
+      const p = ring[j];
+      const q = ring[(j + 1) % ring.length];
+      const sp = side(p);
+      const sq = side(q);
+      if (sp >= 0) next.push(p);
+      if ((sp >= 0) !== (sq >= 0)) {
+        const t = sp / (sp - sq);
+        next.push({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t });
+      }
+    }
+    ring = next;
+  }
+  return ring.length >= 3 ? Math.abs(signed(ring)) : 0;
+}
+
+/** Rooms above that the stair's hole must NOT cut although the footprint
+ *  reaches into them: when a hole is cut (some room holds the stair whole),
+ *  every other room whose area overlaps the footprint by more than 1 cm². Only
+ *  overlapping room outlines can produce one (a footprint wholly inside one
+ *  room cannot reach into a room that does not overlap it), so for drawings
+ *  without overlapping rooms this is always empty. */
+export function stairHoleSpillRooms<R extends Pick<Room, 'points'>>(stair: FurnitureItem, roomsAbove: R[]): R[] {
+  const cut = stairHoleRooms(stair, roomsAbove);
+  if (!cut.length) return [];
+  const fp = stairOpeningPoints(stair);
+  return roomsAbove.filter((room) => !cut.includes(room) && room.points.length >= 3 && areaInsideConvex(room.points, fp) > 1);
 }
 
 /** Does the stair's footprint touch any of these rooms at all? */
