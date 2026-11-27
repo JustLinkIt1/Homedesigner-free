@@ -341,7 +341,7 @@ export async function exportPlanIFC(projectName: string): Promise<boolean> {
     const g = s.floorGeom[f.id];
     if (!g) continue;
     if (g.walls.length || g.rooms.length) anything = true;
-    geom[f.id] = { walls: g.walls, rooms: g.rooms, openings: g.openings };
+    geom[f.id] = { walls: g.walls, rooms: g.rooms, openings: g.openings, furniture: g.furniture };
   }
   if (!anything) return false;
   const ifc = buildIfc({ projectName, floors: s.floors, geom });

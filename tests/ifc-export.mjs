@@ -23,6 +23,8 @@ export { SAMPLES } from '${rootImport}/src/data/samples.ts';
 export { buildIfc } from '${rootImport}/src/lib/ifcExport.ts';
 export { isFence } from '${rootImport}/src/lib/fence.ts';
 export { parapetSegments, roofOutlines, roofParapetContext } from '${rootImport}/src/lib/roofGeometry.ts';
+export { isStairs, stairPlanFor, stairRailsFor } from '${rootImport}/src/lib/stairs.ts';
+export { stairCapY } from '${rootImport}/src/lib/stairCut.ts';
 `);
 const out = join(dir, 'bundle.mjs');
 try {
@@ -33,7 +35,7 @@ try {
 } finally {
   rmSync(entry, { force: true });
 }
-const { SAMPLES, buildIfc, isFence, parapetSegments, roofOutlines, roofParapetContext } = await import(pathToFileURL(out).href);
+const { SAMPLES, buildIfc, isFence, parapetSegments, roofOutlines, roofParapetContext, isStairs, stairPlanFor, stairRailsFor, stairCapY } = await import(pathToFileURL(out).href);
 
 let checks = 0;
 const check = (v, label) => { assert.ok(v, label); checks++; };
@@ -51,7 +53,7 @@ function inputOf(name, built) {
   const slim = {};
   for (const f of floors) {
     const g = geom[f.id];
-    slim[f.id] = { walls: g.walls, rooms: g.rooms, openings: g.openings };
+    slim[f.id] = { walls: g.walls, rooms: g.rooms, openings: g.openings, furniture: g.furniture ?? [] };
   }
   return { projectName: name, floors, geom: slim };
 }
@@ -160,12 +162,24 @@ function verify(name, built, extra) {
   const parapets = typed(WebIFC.IFCWALL, 'PARAPET').length;
   eq(countOf(model, WebIFC.IFCWALL), solid.length + parapets, `${name}: IfcWall = walls + parapets`);
   eq(countOf(model, WebIFC.IFCSLAB), floors.length + roofed, `${name}: IfcSlab = storeys + roofs`);
+  // Stairs (1.22.51): one IfcStair per stair item, one IfcRailing per enabled rail.
+  const stairItems = floors.flatMap((f) => (input.geom[f.id].furniture ?? []).filter(isStairs));
+  const railCount = stairItems.reduce((n, it) => n + stairRailsFor(stairPlanFor(it), it.railing).length, 0);
+  const stairs = countOf(model, WebIFC.IFCSTAIR);
+  const railings = countOf(model, WebIFC.IFCRAILING);
+  eq(stairs, stairItems.length, `${name}: IfcStair = stair items`);
+  eq(railings, railCount, `${name}: IfcRailing = enabled handrails`);
 
   // Everything v1 wrote comes out line for line: the same project with its
-  // roofs taken off is an exact prefix of the file with them.
-  const bare = buildIfc({ ...input, floors: floors.map(({ roof, ...f }) => f) });
+  // roofs and stairs taken off is an exact prefix of the file with them; and
+  // everything 1.22.50 wrote (roofs, no stairs) is a prefix too.
+  const noFurniture = Object.fromEntries(Object.entries(input.geom).map(([k, g]) => [k, { ...g, furniture: [] }]));
+  const bare = buildIfc({ ...input, floors: floors.map(({ roof, ...f }) => f), geom: noFurniture });
+  const v150 = buildIfc({ ...input, geom: noFurniture });
   const TRAILER = 'ENDSEC;\nEND-ISO-10303-21;\n';
-  check(bare.endsWith(TRAILER) && text.startsWith(bare.slice(0, -TRAILER.length)), `${name}: v1 lines unchanged, roof entities come after them`);
+  check(bare.endsWith(TRAILER) && v150.startsWith(bare.slice(0, -TRAILER.length)), `${name}: v1 lines unchanged, roof entities come after them`);
+  check(v150.endsWith(TRAILER) && text.startsWith(v150.slice(0, -TRAILER.length)), `${name}: 1.22.50 lines unchanged, stair entities come after them`);
+  if (!stairItems.length) eq(text, v150, `${name}: no stairs, same file as 1.22.50`);
 
   // Storey elevations (metres) match the floors, in order.
   const elevs = ids(model, WebIFC.IFCBUILDINGSTOREY).map((id) => api.GetLine(model, id).Elevation.value).sort((a, b) => a - b);
@@ -174,7 +188,7 @@ function verify(name, built, extra) {
 
   // GlobalIds: 22 characters, all different.
   const guids = [];
-  for (const type of [WebIFC.IFCPROJECT, WebIFC.IFCBUILDINGSTOREY, WebIFC.IFCWALL, WebIFC.IFCDOOR, WebIFC.IFCWINDOW, WebIFC.IFCOPENINGELEMENT, WebIFC.IFCSPACE]) {
+  for (const type of [WebIFC.IFCPROJECT, WebIFC.IFCBUILDINGSTOREY, WebIFC.IFCWALL, WebIFC.IFCDOOR, WebIFC.IFCWINDOW, WebIFC.IFCOPENINGELEMENT, WebIFC.IFCSPACE, WebIFC.IFCSTAIR, WebIFC.IFCRAILING]) {
     for (const id of ids(model, type)) guids.push(api.GetLine(model, id).GlobalId.value);
   }
   check(guids.every((g) => /^[0-3][0-9A-Za-z_$]{21}$/.test(g)), `${name}: GlobalIds are 22-char IFC base64`);
@@ -210,8 +224,11 @@ function verify(name, built, extra) {
   for (const id of [...typed(WebIFC.IFCSLAB, 'ROOF'), ...typed(WebIFC.IFCWALL, 'PARAPET')]) {
     check(meshInfo(model, id).tris >= 4, `${name}: roof part #${id} has geometry`);
   }
+  for (const id of [...ids(model, WebIFC.IFCSTAIR), ...ids(model, WebIFC.IFCRAILING)]) {
+    check(meshInfo(model, id).tris >= 4, `${name}: stair/rail #${id} has geometry`);
+  }
   check(text.length < 1024 * 1024, `${name}: file under 1 MB (${text.length} bytes)`);
-  const res = { model, text, bare, input, meshed, counts: { storeys: floors.length, walls: solid.length, doors, windows, spaces, openings: doors + windows, roofs: roofed, parapets } };
+  const res = { model, text, bare, v150, input, meshed, counts: { storeys: floors.length, walls: solid.length, doors, windows, spaces, openings: doors + windows, roofs: roofed, parapets, stairs, railings } };
   if (!extra) api.CloseModel(model);
   return res;
 }
@@ -220,7 +237,7 @@ function verify(name, built, extra) {
 const summary = [];
 for (const s of SAMPLES) {
   const r = verify(s.id, s.build());
-  summary.push(`${s.id}: ${JSON.stringify(r.counts)} ${r.text.length} bytes (v1 ${r.bare.length}, roof +${r.text.length - r.bare.length})`);
+  summary.push(`${s.id}: ${JSON.stringify(r.counts)} ${r.text.length} bytes (v1 ${r.bare.length}, roof +${r.v150.length - r.bare.length}, stairs +${r.text.length - r.v150.length})`);
 }
 check(SAMPLES.some((s) => s.id === 'family-house'), 'family-house sample exists');
 
@@ -327,6 +344,86 @@ const near = (a, b, eps = 0.01) => Math.abs(a - b) <= eps;
   const s = meshInfo(model, slab);
   check(near(s.min[2], 2.7), `clamp: IFC roof on the common wall height, not the 4 m wall (z ${s.min[2].toFixed(3)})`);
   check(r.counts.parapets === 3, `clamp: the tall wall's edge gets no parapet (${r.counts.parapets} runs)`);
+  api.CloseModel(model);
+}
+
+// ---- stairs and handrails (1.22.51) ----------------------------------------------
+/** Two storeys, 8 x 6 m, 290 apart; one room upstairs over the whole plan
+ *  (so a stair inside gets its stairwell), and the given stairs downstairs.
+ *  `split` puts a room line upstairs at y = 300 instead (no stairwell). */
+function stairProject(stairs, { split = false, roofTop = true, topStairs = [] } = {}) {
+  const P = (x, y) => ({ x, y });
+  const pts = [P(0, 0), P(800, 0), P(800, 600), P(0, 600)];
+  const walls = (pre) => pts.map((p, i) => ({ id: `${pre}w${i}`, start: p, end: pts[(i + 1) % 4], thickness: 20, height: 270, color: '#fff' }));
+  const room = (id, points) => ({ id, name: id, points, floorMaterial: 'x', color: '#fff' });
+  const upRooms = split ? [room('u1', [P(0, 0), P(800, 0), P(800, 300), P(0, 300)]), room('u2', [P(0, 300), P(800, 300), P(800, 600), P(0, 600)])] : [room('u', pts)];
+  const roof = roofTop ? { ...ROOF, type: 'flat', parapet: 94 } : undefined;
+  return {
+    floors: [{ id: 'g', name: 'Ground', elevation: 0 }, { id: 'u', name: 'Upper', elevation: 290, ...(roof ? { roof } : {}) }],
+    floorGeom: {
+      g: { walls: walls('g'), rooms: [room('g', pts)], furniture: stairs, openings: [], background: null },
+      u: { walls: walls('u'), rooms: upRooms, furniture: topStairs, openings: [], background: null },
+    },
+  };
+}
+const stairItem = (id, type, x, y, extra = {}) => ({ id, type, name: 'Stairs', position: { x, y }, rotation: 0, width: 100, depth: 300, height: 290, color: '#fff', railing: 'both', ...extra });
+{
+  // A straight stair and a spiral, both in a proper stairwell: whole, not cut.
+  const straight = stairItem('s-straight', 'stairs', 200, 200, { rotation: 90 });
+  const spiral = stairItem('s-spiral', 'stairs_spiral', 600, 400, { width: 180, depth: 180, railing: 'right' });
+  const r = verify('stairs-straight-spiral', stairProject([straight, spiral]), true);
+  const { model, text } = r;
+  eq(r.counts.stairs, 2, 'stairs: two IfcStair');
+  eq(r.counts.railings, 3, 'stairs: straight has 2 rails, spiral 1');
+  check(text.includes('.STRAIGHT_RUN_STAIR.') && text.includes('.SPIRAL_STAIR.'), 'stairs: predefined types');
+  check(text.includes('IFCSWEPTDISKSOLID('), 'stairs: rails are swept disk solids');
+  const byName = new Map(ids(model, WebIFC.IFCSTAIR).map((id) => [api.GetLine(model, id).ObjectType.value, id]));
+  const sInfo = meshInfo(model, byName.get('stairs'));
+  // 290 cm -> 16 steps of 18.125; rotated 90 deg, footprint 300 x 100 centred at (2, -2).
+  check(near(sInfo.min[2], 0) && near(sInfo.max[2], 2.9), `stairs: straight climbs floor to floor (z ${sInfo.min[2].toFixed(3)}..${sInfo.max[2].toFixed(3)})`);
+  check(near(sInfo.min[0], 0.5) && near(sInfo.max[0], 3.5) && near(sInfo.min[1], -2.5) && near(sInfo.max[1], -1.5), `stairs: straight footprint where the plan puts it (${sInfo.min.map((v) => v.toFixed(2))} .. ${sInfo.max.map((v) => v.toFixed(2))})`);
+  eq(api.GetLine(model, byName.get('stairs')).Representation ? stairPlanFor(straight).treads.length : 0, 16, 'stairs: straight has 16 treads');
+  const pInfo = meshInfo(model, byName.get('stairs_spiral'));
+  check(near(pInfo.min[0], 5.1, 0.02) && near(pInfo.max[0], 6.9, 0.02) && near(pInfo.min[1], -4.9, 0.02) && near(pInfo.max[1], -3.1, 0.02), `stairs: spiral footprint (${pInfo.min.map((v) => v.toFixed(2))} .. ${pInfo.max.map((v) => v.toFixed(2))})`);
+  check(near(pInfo.max[2], 2.9 + 0.9, 0.01), `stairs: spiral post up to the rail top, no cut in a stairwell (z max ${pInfo.max[2].toFixed(3)})`);
+  for (const id of ids(model, WebIFC.IFCRAILING)) {
+    const m = meshInfo(model, id);
+    check(m.max[2] > 2.9 + 0.85 && m.max[2] < 2.9 + 0.9 + 0.2 + 0.03, `stairs: rail #${id} tops out ~0.9 m above the top tread (within a rise) (z ${m.max[2].toFixed(3)})`);
+  }
+  const rel = ids(model, WebIFC.IFCRELAGGREGATES).map((id) => api.GetLine(model, id)).filter((l) => byName.has('stairs') && [...byName.values()].includes(l.RelatingObject.value));
+  eq(rel.reduce((n, l) => n + l.RelatedObjects.length, 0), 3, 'stairs: rails aggregated into their stairs');
+  api.CloseModel(model);
+  summary.push(`stairs-straight-spiral: ${JSON.stringify(r.counts)} ${text.length} bytes (stairs +${text.length - r.v150.length})`);
+}
+{
+  // Every shape, rotated and mirrored, crossing a room line upstairs: cut at the slab underside.
+  const items = ['stairs', 'stairs_l', 'stairs_u', 'stairs_spiral'].map((type, i) =>
+    stairItem(`cut-${type}`, type, 120 + i * 180, 300, { width: 150, depth: 220, rotation: i * 30, mirrored: i % 2 === 1 }));
+  const built = stairProject(items, { split: true });
+  const r = verify('stairs-cut-slab', built, true);
+  const { model } = r;
+  eq(r.counts.stairs, 4, 'cut: four IfcStair');
+  const capZ = 2.9 - 0.22;
+  for (const it of items) eq(stairCapY(it, { walls: built.floorGeom.g.walls, riseTo: 290, roomsAbove: built.floorGeom.u.rooms }), capZ, `cut: ${it.type} capY = slab underside`);
+  for (const id of [...ids(model, WebIFC.IFCSTAIR), ...ids(model, WebIFC.IFCRAILING)]) {
+    const m = meshInfo(model, id);
+    check(m.max[2] <= capZ + 0.021 && m.max[2] > capZ - 0.3, `cut: #${id} stops at the upper slab's underside (z max ${m.max[2].toFixed(3)})`);
+  }
+  api.CloseModel(model);
+  summary.push(`stairs-cut-slab: ${JSON.stringify(r.counts)} ${r.text.length} bytes`);
+}
+{
+  // A stair on the top storey under the flat roof: cut at the eave (2.7 m above that storey).
+  const top = stairItem('s-top', 'stairs', 400, 300, { height: 300 });
+  const built = stairProject([], { topStairs: [top] });
+  const r = verify('stairs-cut-roof', built, true);
+  const { model } = r;
+  const [id] = ids(model, WebIFC.IFCSTAIR);
+  const m = meshInfo(model, id);
+  check(near(m.max[2], 2.9 + 2.7), `roof: top-storey stair cut at the eave (z max ${m.max[2].toFixed(3)})`);
+  for (const rid of ids(model, WebIFC.IFCRAILING)) {
+    check(meshInfo(model, rid).max[2] <= 2.9 + 2.7 + 0.021, `roof: rail #${rid} cut at the eave`);
+  }
   api.CloseModel(model);
 }
 
