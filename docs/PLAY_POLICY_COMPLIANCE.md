@@ -50,12 +50,15 @@ answers are in the Data safety notes for 1.22.43):
 3. **Play purchases** verified server-side (token, order id, product stored);
    RevenueCat is queried with `google:<sub>`; Stripe is used for web points.
 4. **AI features**: Cloudflare Workers AI, Anthropic, ElevenLabs, fal.ai.
-5. **Anonymous usage events** (random install id, eight fixed events, install
+5. **Anonymous usage events** (random install id, nine fixed events, install
    referrer source), kept 13 months. This is app-interaction and device-id data.
    The 7th event, `export` (1.22.47), carries only the format (png/pdf/dxf/ifc).
    The 8th, `pro_checkout` (1.22.47), carries only the checkout stage
    (signin_click/signin_ok/checkout_open/paid/cancel); payment data stays with
    Stripe / Google Play and is never sent to us.
+   The 9th, `photo` (1.22.52), carries only the Photo stage
+   (trace_start/trace_first_sample/trace_timer_fallback/trace_unsupported/
+   trace_lost/raster_start/trace_saved/raster_saved); no image, plan or GPU name.
 6. **Cloud model catalog** (Cloudflare R2): plain GET downloads, no user data.
 7. **Crash/feedback**: `mailto:` links the user sends themselves.
 

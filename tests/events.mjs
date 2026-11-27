@@ -125,4 +125,17 @@ await flush();
 const funnel = sent.flatMap((r) => r.body.events).filter((e) => e.event === 'pro_checkout');
 check(funnel.map((e) => e.detail).join() === 'signin_click,signin_ok,checkout_open,paid,cancel', 'pro_checkout sends the five stages and drops anything else');
 check(funnel.every((e) => Object.keys(e).sort().join() === 'detail,event'), 'a pro_checkout event is only { event, detail }');
+// Photo mode: one event name, the stage as the detail, nothing else.
+sent.length = 0;
+const { trackPhoto, PHOTO_STAGES } = mod;
+check(PHOTO_STAGES.join() === 'trace_start,trace_first_sample,trace_timer_fallback,trace_unsupported,trace_lost,raster_start,trace_saved,raster_saved', 'photo has the eight stages');
+for (const stage of PHOTO_STAGES) trackPhoto(stage);
+trackEvent('photo', 'my-house.png');
+trackEvent('photo', 'intel-hd-graphics-530');
+trackEvent('photo', 'TRACE_START');
+trackEvent('photo');
+await flush();
+const photo = sent.flatMap((r) => r.body.events).filter((e) => e.event === 'photo');
+check(photo.map((e) => e.detail).join() === PHOTO_STAGES.join(), 'photo sends the eight stages and drops anything else');
+check(photo.every((e) => Object.keys(e).sort().join() === 'detail,event'), 'a photo event is only { event, detail }');
 console.log(`events: ${checks} checks passed`);

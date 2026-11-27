@@ -21,6 +21,7 @@ import { notePositiveMoment } from '../../lib/appReview';
 import { captureRenderer } from '../../lib/renderCapture';
 import { toast } from '../../lib/ui';
 import { nudgeWatermarkedExport } from '../../lib/watermarkNudge';
+import { trackPhoto, type PhotoStage } from '../../lib/events';
 
 const MAX_SAMPLES = 200;
 
@@ -48,11 +49,13 @@ function PathtracedContent({
   dollhouse,
   onSamples,
   onUnsupported,
+  onLost,
 }: {
   center: [number, number, number];
   dollhouse: boolean;
   onSamples: (n: number) => void;
   onUnsupported: () => void;
+  onLost: () => void;
 }) {
   const { pathtracer, reset, update } = usePathtracer();
   const { scene, gl } = useThree();
@@ -79,6 +82,19 @@ function PathtracedContent({
       'getExtension' in glCtx ? (glCtx as WebGL2RenderingContext).getExtension('EXT_color_buffer_float') : null;
     if (!ext) onUnsupported();
   }, [gl, onUnsupported]);
+
+  // A GPU driver reset (e.g. a Windows timeout on a slow tile) loses the
+  // context. Same pattern as Scene3D.tsx: preventDefault, then hand over to
+  // the raster photo instead of leaving a dead canvas.
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const lost = (event: Event) => {
+      event.preventDefault();
+      onLost();
+    };
+    canvas.addEventListener('webglcontextlost', lost);
+    return () => canvas.removeEventListener('webglcontextlost', lost);
+  }, [gl, onLost]);
 
   // Offline gradient sky → image-based lighting (no CDN fetch).
   useEffect(() => {
@@ -114,7 +130,7 @@ function PathtracedContent({
 
   return (
     <>
-      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant useRenderModels />
+      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant useRenderModels stairCut="geometry" />
       <OrbitControls
         makeDefault
         target={center}
@@ -228,14 +244,37 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
   const dollhouse = useDesign((s) => s.dollhouse);
   const setDollhouse = useDesign((s) => s.setDollhouse);
 
+  // Anonymous Photo events (lib/events.ts): one stage name each, nothing else.
+  // Every stage but a save is sent at most once per Photo open.
+  const sentStages = useRef(new Set<PhotoStage>());
+  const photoEvent = (stage: PhotoStage) => {
+    if (stage !== 'trace_saved' && stage !== 'raster_saved') {
+      if (sentStages.current.has(stage)) return;
+      sentStages.current.add(stage);
+    }
+    trackPhoto(stage);
+  };
+  useEffect(() => {
+    photoEvent(mode === 'trace' ? 'trace_start' : 'raster_start');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+  useEffect(() => {
+    if (mode === 'trace' && samples > 0) photoEvent('trace_first_sample');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, samples > 0]);
+
   // Safety net: if the tracer probe passed but samples never advance, fall
   // back to the raster beauty view instead of a stalled bar.
   useEffect(() => {
     if (mode !== 'trace' || samples > 0) return;
     const t = window.setTimeout(() => {
-      if (samples === 0) setMode('raster');
+      if (samples === 0) {
+        photoEvent('trace_timer_fallback');
+        setMode('raster');
+      }
     }, 6000);
     return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, samples]);
 
   const done = samples >= MAX_SAMPLES;
@@ -251,6 +290,7 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
     try {
       await new Promise(resolve => setTimeout(resolve, 30));
       await capture();
+      photoEvent(mode === 'trace' ? 'trace_saved' : 'raster_saved');
       nudgeWatermarkedExport();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save the photo.');
@@ -261,6 +301,9 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
     <div className="photo-overlay">
       {mode === 'trace' ? (
         <Canvas
+          // One render pixel per CSS pixel: on a 125-150 % scaled screen R3F's
+          // default [1, 2] costs each tile ~2x the work and risks a GPU timeout.
+          dpr={1}
           gl={{ preserveDrawingBuffer: true, antialias: false }}
           camera={{ position: [center[0] + radius, radius * 1.0, center[2] + radius], fov: 50 }}
           style={{ position: 'absolute', inset: 0 }}
@@ -270,7 +313,8 @@ export default function PhotoMode({ onClose }: { onClose: () => void }) {
               center={center}
               dollhouse={dollhouse}
               onSamples={setSamples}
-              onUnsupported={() => setMode('raster')}
+              onUnsupported={() => { photoEvent('trace_unsupported'); setMode('raster'); }}
+              onLost={() => { photoEvent('trace_lost'); setMode('raster'); }}
             />
           </Pathtracer>
         </Canvas>
