@@ -1657,6 +1657,41 @@ for (const code of CODES) {
   }
 }
 
+// Every Google Play link on the site carries an install referrer naming the page
+// it was on (TASKS T1, 27 Nov 2026). The app reads it once through the Play
+// Install Referrer API and reports `source` = "website:<page>" (src/lib/events.ts
+// sourceFromReferrer: utm_source + ":" + utm_campaign), so site-driven installs
+// stop counting as organic. Only href attributes are tagged, never JSON-LD, and
+// a link that already has a referrer is left alone, so this pass can run on the
+// hand-written pages (/, /buy/, ...) as well as the generated ones and be re-run.
+const PLAY_HREF = /href="(https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.homedesigner\.app(?:&amp;hl=[A-Za-z-]+)?)"/g;
+export const pageCampaign = (path) => path.replace(/^\/+|\/+$/g, '').replace(/\//g, '-').replace(/\.html$/, '') || 'home';
+export const playReferrer = (campaign) =>
+  encodeURIComponent(`utm_source=website&utm_medium=${campaign}&utm_campaign=${campaign}`);
+export const tagPlayLinks = (html, path) =>
+  html.replace(PLAY_HREF, (_, url) => `href="${url}&amp;referrer=${playReferrer(pageCampaign(path))}"`);
+
+{
+  const { readdir, readFile } = await import('node:fs/promises');
+  const pages = async (dir, rel) => {
+    const out = [];
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (entry.name === 'assets' || entry.name === 'app') continue;
+        out.push(...await pages(resolve(dir, entry.name), `${rel}${entry.name}/`));
+      } else if (entry.name === 'index.html') out.push([resolve(dir, entry.name), rel]);
+    }
+    return out;
+  };
+  let tagged = 0;
+  for (const [file, rel] of await pages(site, '/')) {
+    const html = await readFile(file, 'utf8');
+    const next = tagPlayLinks(html, rel);
+    if (next !== html) { await writeFile(file, next); tagged++; }
+  }
+  console.log(`Play links tagged with an install referrer in ${tagged} page(s).`);
+}
+
 // Only pages that should appear in search results. /app/ is listed because
 // people search for an online floor planner and that is the page that is one.
 const entries = [
