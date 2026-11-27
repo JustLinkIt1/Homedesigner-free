@@ -54,6 +54,15 @@ export function noteImportDone(): void {
   importMoment.imported();
 }
 
+/**
+ * A sample or template is being opened, or the first-3D auto-open is about
+ * to show a project that was not just imported. Its first 3D frame must never
+ * count as a moment, so drop any import still waiting for one.
+ */
+export function noteNotAnImport(): void {
+  importMoment.discard();
+}
+
 /** The 3D view has drawn its first frame. Counts a waiting import, once. */
 export function noteRendered3D(): void {
   importMoment.rendered3D();

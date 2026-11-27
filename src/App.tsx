@@ -62,7 +62,7 @@ import { capturePlanThumbnail } from './lib/thumb';
 import { useDraw, drawBridge, useConfirm, confirmDialog, toast } from './lib/ui';
 import * as projects from './lib/projects';
 import { initNative } from './lib/native';
-import { noteAppOpened } from './lib/appReview';
+import { noteAppOpened, noteNotAnImport } from './lib/appReview';
 import { loadAiCapabilities } from './lib/aiCapabilities';
 import { isWebGLAvailable } from './lib/webgl';
 import { orbitZoom, buildReplay } from './lib/renderBridge';
@@ -202,6 +202,7 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'editor') return;
     if (takeFirst3D(useDesign.getState().walls.length)) {
+      noteNotAnImport(); // the first-3D auto-open (a sample, a reopened project) is never a review moment
       markSeen3D(); // no "try 3D" nudge for someone who is already there
       setView('3d');
     }

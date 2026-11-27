@@ -168,7 +168,7 @@ function AiRenderSession({ onClose }: { onClose: () => void }) {
         {pending && <p role="status">{t('Generating your image… You can close this window and reopen AI render to resume.')}</p>}
         <button className="btn primary" disabled={busy || pending || !consent || !source || !allowed || !state?.enabled || cost === undefined || (points?.balance ?? 0) < cost}
           onClick={() => void generate()}>{cost === 0 ? t('Generate my free render') : `${t('Generate')} · ${cost ?? '—'} ${t('AI points')}`}</button>
-        {result && <button className="btn" disabled={busy} onClick={() => void run(async () => { await saveImage(result, `homedesigner-ai-${job?.id}.${result.startsWith('data:image/png') ? 'png' : 'jpg'}`); })}>{t('Save AI image')}</button>}
+        {result && <button className="btn" disabled={busy} onClick={() => void run(async () => { if (await saveImage(result, `homedesigner-ai-${job?.id}.${result.startsWith('data:image/png') ? 'png' : 'jpg'}`)) notePositiveMoment(); })}>{t('Save AI image')}</button>}
         <AiPointPacks points={points} busy={busy} run={action => void run(action)} onRefresh={reload} />
         <button className="btn" disabled={busy} onClick={() => void run(async () => { await reload(); setImageRetry(n => n + 1); })}>{t('Refresh')}</button>
       </>}

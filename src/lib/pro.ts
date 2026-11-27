@@ -5,7 +5,7 @@
 // Builds without a Web Billing key retain the old Play Store link.
 import { Capacitor } from '@capacitor/core';
 import { useProStore } from '../store/proStore';
-import { APP_VERSION, PLAY_STORE_URL } from './appInfo';
+import { APP_VERSION, playStoreUrl } from './appInfo';
 import { getCloudProEntitlement, linkPlayPurchases, verifyPlayPurchase } from './cloudSync';
 import { trackProCheckout } from './events';
 import {
@@ -973,7 +973,7 @@ export class WebRevenueCatProvider implements ProProvider {
     // Keep older/unconfigured deployments useful until the Web Billing
     // provider and public key are enabled in RevenueCat.
     if (!isWebBillingConfigured()) {
-      window.open(PLAY_STORE_URL, '_blank', 'noopener');
+      window.open(playStoreUrl('pro-wall'), '_blank', 'noopener');
       return false;
     }
     const purchases = await this.sdk();

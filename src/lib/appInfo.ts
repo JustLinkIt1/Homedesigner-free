@@ -12,6 +12,19 @@ export const APP_VERSION: string =
 export const PLAY_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.homedesigner.app';
 
+/** Where in the app a Play link was followed from. */
+export type PlayCampaign = 'pro-wall' | 'share';
+
+/**
+ * PLAY_STORE_URL tagged with a Play install referrer, the way the website tags
+ * its links, so the install is attributed: src/lib/events.ts sourceFromReferrer
+ * reads it back as `webapp:<campaign>`. PLAY_STORE_URL itself stays untagged.
+ */
+export function playStoreUrl(campaign: PlayCampaign): string {
+  const referrer = `utm_source=webapp&utm_medium=webapp&utm_campaign=${campaign}`;
+  return `${PLAY_STORE_URL}&referrer=${encodeURIComponent(referrer)}`;
+}
+
 /** The product site. `SITE_DOMAIN` is the bare form used where a full URL would
  *  be visual noise — currently the free-tier export watermark. */
 export const SITE_URL = 'https://homedesignerapp.com';
