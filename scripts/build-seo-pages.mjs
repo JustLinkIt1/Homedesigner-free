@@ -1756,7 +1756,7 @@ ${header('en', null)}
         <h1>${esc(plan.h1)}</h1>
         <p class="sub">${fpFacts(plan).map(esc).join(' · ')}</p>
         <div class="ctas">
-          <a class="btn primary" href="${plan.appLink}">Open this plan in HomeDesigner</a>
+          <a class="btn primary" href="${plan.appLink}">Open this plan in HomeDesigner (free to start)</a>
           ${playBadge('en', false)}
         </div>
         <p class="sub">Free to start, in your browser or on Android.</p>
@@ -1781,8 +1781,9 @@ ${plan.floors.map((floor) => `            <h3>${esc(floor.name)}</h3>
             </table>`).join('\n')}
           </div>
         </div>
+        <p class="lead">${esc(plan.invite)}</p>
         <div class="ctas">
-          <a class="btn primary" href="${plan.appLink}">Open this plan in HomeDesigner</a>
+          <a class="btn primary" href="${plan.appLink}">Open this plan in HomeDesigner (free to start)</a>
         </div>
       </div>
     </section>
