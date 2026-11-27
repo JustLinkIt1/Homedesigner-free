@@ -35,9 +35,9 @@ export const FLOOR_PLANS_PATH = '/floor-plans/';
 /** Hub page words. `intro` is filled by the design manager (40-120 words). */
 export const FLOOR_PLANS_HUB = {
   title: 'Free House Floor Plans to Open and Edit | HomeDesigner',
-  description: 'Ten house floor plans with room sizes in metres and feet: barndominium, ranch, modern, tiny house, ADU and more. Open any of them free and edit it in 3D.',
+  description: "Nine house floor plans with room sizes in metres and feet: barndominium, ranch, modern, ADU, 30x40 and more. Open any of them free and edit it in 3D.",
   h1: 'House floor plans you can open and edit',
-  intro: 'TODO',
+  intro: "Nine house plans we drew in HomeDesigner, each with every room size in metres and feet: a barndominium with a shop, a one-level ranch, a modern two-storey, an 800 sq ft backyard unit, a 30 × 40 plan and more. Each one is a real project, not just a picture. Pick a plan, open it in the app, and you're inside it: walk through it in 3D, move walls and furnish the rooms until it fits your plot and your family. Opening a plan is free to start, in the browser or on Android.",
 };
 
 /**
@@ -78,7 +78,7 @@ const PAGES = [
     title: "Modern 3-Bed House Plan, Two Storeys, 10 × 9 m (33 × 30 ft)",
     description: "A compact two-storey modern house with a flat roof, open-plan ground floor, home office and 3 bedrooms upstairs. 180 m² (1,938 sq ft).",
     beds: 3, baths: 2.5,
-    body: "A modern two-storey house with a flat roof on a small 10 × 9 m (32.8 × 29.5 ft) footprint, 180 m² (1,938 sq ft) over both floors. Downstairs is built for daytime: a 6.0 × 5.5 m (19.7 × 18.0 ft) open living space and a 4.0 × 5.5 m (13.1 × 18.0 ft) kitchen across the front, with the stairs, a toilet and a 4.0 × 3.5 m (13.1 × 11.5 ft) office behind. Upstairs, the largest bedroom is 4.5 × 5.5 m (14.8 × 18.0 ft), the second 3.5 × 5.5 m (11.5 × 18.0 ft) and the third 3.5 × 3.5 m (11.5 × 11.5 ft), with two bathrooms and a storage room. It suits a family on a tight urban plot where one parent works from home.",
+    body: "A modern two-storey house with a flat roof on a small 10 × 9 m (32.8 × 29.5 ft) footprint, 180 m² (1,938 sq ft) over both floors. Downstairs is built for daytime: a 6.0 × 5.5 m (19.7 × 18.0 ft) open living space and a 4.0 × 5.5 m (13.1 × 18.0 ft) kitchen across the front, with the stairs, a toilet and a 4.0 × 3.5 m (13.1 × 11.5 ft) office behind. Upstairs, the largest bedroom is 4.5 × 5.5 m (14.8 × 18.0 ft), the second 3.5 × 5.5 m (11.5 × 18.0 ft) and the third 5.5 × 2.3 m (18.0 × 7.5 ft), with two bathrooms and a storage room. It suits a family on a tight urban plot where one parent works from home.",
     invite: "Open it in 3D, switch between floors, and walk up the stairs.",
   },
   {
@@ -96,7 +96,7 @@ const PAGES = [
     title: "2-Bedroom House Plan with Garage, 12 × 10 m (39 × 33 ft)",
     description: "A one-storey 2-bedroom house with an attached single garage, utility room and storage. 120 m² (1,292 sq ft), sizes in m and ft.",
     beds: 2, baths: 1,
-    body: "A one-storey 2-bedroom house with a tiled gable roof, 12 × 10 m (39.4 × 32.8 ft), 120 m² (1,292 sq ft) including the garage. The front row holds a 3.5 × 5.5 m (11.5 × 18.0 ft) single garage, a 3.5 × 5.5 m (11.5 × 18.0 ft) kitchen and a 5.0 × 5.5 m (16.4 × 18.0 ft) living space. A hallway with a utility room leads to the back, where there are two bedrooms, 4.0 × 3.3 m (13.1 × 10.8 ft) and 3.5 × 3.3 m (11.5 × 10.8 ft), a 2.5 × 3.3 m (8.2 × 10.8 ft) bathroom and a storage room. It suits a couple or a small family who want a garage without the cost of a bigger house.",
+    body: "A one-storey 2-bedroom house with a tiled gable roof, 12 × 10 m (39.4 × 32.8 ft), 120 m² (1,292 sq ft) including the garage. The front row holds a 3.5 × 5.5 m (11.5 × 18.0 ft) single garage, a 3.5 × 5.5 m (11.5 × 18.0 ft) kitchen and a 5.0 × 5.5 m (16.4 × 18.0 ft) living space. A hallway with a utility room leads to the back, where there are two bedrooms, 4.0 × 3.3 m (13.1 × 10.8 ft) and 3.5 × 3.3 m (11.5 × 10.8 ft), a 2.5 × 3.3 m (8.2 × 10.8 ft) bathroom and a storage room. It suits a couple or a small family who want a garage without needing a bigger house.",
     invite: "Open it in 3D and check the garage is wide enough for your car.",
   },
   {
@@ -105,7 +105,7 @@ const PAGES = [
     title: "4-Bedroom House Plan, Two Storeys, 11 × 9 m (36 × 30 ft)",
     description: "A two-storey 4-bedroom house with one bedroom on the ground floor and two bathrooms upstairs. 198 m² (2,131 sq ft), sizes in m and ft.",
     beds: 4, baths: 2.5,
-    body: "A two-storey family house with a tiled gable roof, 11 × 9 m (36.1 × 29.5 ft), 198 m² (2,131 sq ft) over both floors. The ground floor opens with a 6.0 × 5.0 m (19.7 × 16.4 ft) living space and a 5.0 × 5.0 m (16.4 × 16.4 ft) kitchen. Behind them are the stairs, a toilet, a utility room and the fourth bedroom, 3.5 × 4.0 m (11.5 × 13.1 ft), on the ground floor: useful for guests or a parent who'd rather skip the stairs. Upstairs are three bedrooms, 4.5 × 5.0 m (14.8 × 16.4 ft), 4.0 × 5.0 m (13.1 × 16.4 ft) and 4.0 × 4.0 m (13.1 × 13.1 ft), with two bathrooms. It suits a growing family on a standard plot.",
+    body: "A two-storey family house with a tiled gable roof, 11 × 9 m (36.1 × 29.5 ft), 198 m² (2,131 sq ft) over both floors. The ground floor opens with a 6.0 × 5.0 m (19.7 × 16.4 ft) living space and a 5.0 × 5.0 m (16.4 × 16.4 ft) kitchen. Behind them are the stairs, a toilet, a utility room and the fourth bedroom, 4.0 × 2.8 m (13.1 × 9.2 ft), on the ground floor: useful for guests or a parent who'd rather skip the stairs. Upstairs are three bedrooms, 4.5 × 5.0 m (14.8 × 16.4 ft), 4.0 × 5.0 m (13.1 × 16.4 ft) and 4.0 × 2.8 m (13.1 × 9.2 ft), with two bathrooms. It suits a growing family on a standard plot.",
     invite: "Open it in 3D and walk both floors before you pick whose room is whose.",
   },
   {
@@ -132,7 +132,7 @@ const PAGES = [
     title: "30 × 40 House Plan, 3 Bedrooms (9.1 × 12.2 m)",
     description: "A 3-bedroom house on a 30 × 40 ft footprint (1,195 sq ft, 111 m²) with two bathrooms, separate dining and living. Sizes in ft and m.",
     beds: 3, baths: 2,
-    body: "A 3-bedroom, single-storey house on a 30 × 40 ft footprint (9.1 × 12.2 m), 1,195 sq ft (111 m²), with a flat roof. At the front, a 16.7 × 13.8 ft (5.1 × 4.2 m) living room sits beside a 13.1 × 13.8 ft (4.0 × 4.2 m) dining room. The middle row has a 9.8 × 11.8 ft (3.0 × 3.6 m) kitchen, a short hall and the first bedroom, 16.1 × 11.8 ft (4.9 × 3.6 m). At the back are two more bedrooms, 11.8 × 14.4 ft (3.6 × 4.4 m) and 12.1 × 14.4 ft (3.7 × 4.4 m), with two bathrooms between them. It suits a family building on a 30 × 40 plot who want two bathrooms. Check the setbacks on your own plot.",
+    body: "A 3-bedroom, single-storey house on a 30 × 40 ft footprint (9.1 × 12.2 m), 1,195 sq ft (111 m²), with a flat roof. At the front, a 16.7 × 13.8 ft (5.1 × 4.2 m) living room sits beside a 13.1 × 13.8 ft (4.0 × 4.2 m) dining room. The middle row has a 9.8 × 11.8 ft (3.0 × 3.6 m) kitchen, a short hall and the first bedroom, 16.1 × 11.8 ft (4.9 × 3.6 m). A corridor leads to two more bedrooms at the back, 11.8 × 10.5 ft (3.6 × 3.2 m) and 12.1 × 10.5 ft (3.7 × 3.2 m), with two bathrooms between them. It suits a family building on a 30 × 40 plot who want two bathrooms. Check the setbacks on your own plot.",
     invite: "Open it in 3D and walk from the living room to the back bedrooms.",
   },
 ];
@@ -141,7 +141,13 @@ const m = (cm) => (cm / 100).toFixed(2).replace(/0$/, '').replace(/\.0$/, '');
 const ft = (cm) => ((cm / 100) * 3.281).toFixed(1);
 const FLOOR_NAMES = ['Ground floor', 'Upper floor'];
 
-export const FLOOR_PLANS = PAGES.map((page) => {
+/**
+ * Plans built but not published yet. The tiny house (EXEC cycle 266/267) renders with an empty
+ * living room while its text promises a sofa bed; it ships once the plan furnishes that room.
+ */
+export const HELD_BACK = new Set(['tiny-house-floor-plan-7x2-6m']);
+
+export const FLOOR_PLANS = PAGES.filter((page) => !HELD_BACK.has(page.slug)).map((page) => {
   const bp = JSON.parse(readFileSync(resolve(root, `tools/floor-plans/${page.slug}.json`), 'utf8'));
   const storeys = bp.floors.length;
   const areaM2 = (bp.widthCm * bp.depthCm * storeys) / 10000;
