@@ -17,6 +17,7 @@ import { notifyPlacementComplete } from '../../lib/placementFeedback';
 import { stairPlan, stairRailsFor, type StairPlan, type StairRail, type StairRailing, type StairShape } from '../../lib/stairs';
 import { pointInPolygon } from '../../lib/geometry';
 import { METAL_RAILING_COLOR } from '../../lib/fence';
+import { clipGeometryBelowY, stairPostHeight } from '../../lib/stairCut';
 
 const M = 0.01; // cm -> m
 /** Battery saver tier has no shadow maps: floor-standing items carry a soft
@@ -49,6 +50,7 @@ export default function Furniture3D({
   ceilingHeight = 2.7,
   preferRenderModel = false,
   clipY,
+  cutY,
 }: {
   item: FurnitureItem;
   selected: boolean;
@@ -63,6 +65,10 @@ export default function Furniture3D({
   /** Stairs only: world height (m) of the roof or floor above, where the stair
    *  is cut off in the drawing. Undefined = drawn whole. */
   clipY?: number;
+  /** Stairs only, path-traced Photo: the same cut as a height (m) above the
+   *  storey's floor. When set the stair's geometry itself is cut there and no
+   *  clipping planes are used (the tracer ignores them). */
+  cutY?: number;
 }) {
   const w = item.width * M;
   const d = item.depth * M;
@@ -229,7 +235,7 @@ export default function Furniture3D({
         <ResilientGltfFurniture
           item={item}
           preferRender={preferRenderModel}
-          fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={!!item.mirrored} railing={item.railing} clipY={clipY} seed={item.position.x * 0.013 + item.position.y * 0.029} />}
+          fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={!!item.mirrored} railing={item.railing} clipY={clipY} cutY={cutY == null ? undefined : cutY - mountY} seed={item.position.x * 0.013 + item.position.y * 0.029} />}
         />
       )}
     </group>
@@ -301,7 +307,7 @@ function FourLegs({
 }
 
 export function ShapeMesh({
-  shape, w, d, h, color, seed = 0, mirrored = false, railing, clipY,
+  shape, w, d, h, color, seed = 0, mirrored = false, railing, clipY, cutY,
 }: {
   shape: Shape3D; w: number; d: number; h: number; color: string;
   /** Turns otherwise identical garden shapes so two trees never match. */
@@ -312,6 +318,8 @@ export function ShapeMesh({
   railing?: StairRailing;
   /** Stairs: world height (m) to cut the drawing at. */
   clipY?: number;
+  /** Stairs: cut the geometry at this height (m, the stair's own frame) instead. */
+  cutY?: number;
 }) {
   switch (shape) {
     case 'sofa': {
@@ -1203,7 +1211,7 @@ export function ShapeMesh({
     case 'stairs_l':
     case 'stairs_u':
     case 'stairs_spiral':
-      return <StairMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={mirrored} railing={railing} clipY={clipY} />;
+      return <StairMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={mirrored} railing={railing} clipY={clipY} cutY={cutY} />;
     default:
       return <Box w={w} d={d} h={h} y={h * 0.5} color={color} />;
   }
@@ -1303,17 +1311,28 @@ function stairClipPlanes(worldY: number): THREE.Plane[] {
  * spiral's are thin wedges on a central post. Merged into two meshes (the
  * alternating tread colours) whatever the step count.
  */
-function StairMesh({ shape, w, d, h, color, mirrored, railing, clipY }: {
+function StairMesh({ shape, w, d, h, color, mirrored, railing, clipY, cutY }: {
   shape: StairShape; w: number; d: number; h: number; color: string; mirrored: boolean;
   railing?: StairRailing;
   clipY?: number;
+  /** Path-traced Photo: cut the geometry at this local height (m) and use no
+   *  clipping planes, which three-gpu-pathtracer ignores (lib/stairCut.ts). */
+  cutY?: number;
 }) {
   // Undefined planes leave the materials exactly as they were (no clip define).
   // The materials are keyed on the clipped state so three builds the right
   // program when a stair gains or loses its cut.
-  const planes = clipY == null ? undefined : stairClipPlanes(clipY);
+  const planes = clipY == null || cutY != null ? undefined : stairClipPlanes(clipY);
   const clipKey = planes ? 'clip' : 'whole';
   const { even, odd, post, postH, rail } = useMemo(() => {
+    // The part at or below the cut. The helper hands back the same object when
+    // nothing is above it, so the original is disposed only when replaced.
+    const cut = (geo: THREE.BufferGeometry | null) => {
+      if (!geo || cutY == null) return geo;
+      const below = clipGeometryBelowY(geo, cutY);
+      if (below !== geo) geo.dispose();
+      return below;
+    };
     const plan = stairPlan(shape, w / M, d / M, h / M, mirrored);
     const rise = plan.rise * M;
     const spiral = !!plan.post;
@@ -1334,13 +1353,13 @@ function StairMesh({ shape, w, d, h, color, mirrored, railing, clipY }: {
       return merged;
     };
     return {
-      even: merge(parts[0]),
-      odd: merge(parts[1]),
+      even: cut(merge(parts[0])),
+      odd: cut(merge(parts[1])),
       post: plan.post ? plan.post.radius * M : 0,
-      postH: plan.steps * rise + 0.9,
-      rail: stairRailGeometry(plan, stairRailsFor(plan, railing), rise),
+      postH: stairPostHeight(plan.steps * rise + 0.9, cutY),
+      rail: cut(stairRailGeometry(plan, stairRailsFor(plan, railing), rise)),
     };
-  }, [shape, w, d, h, mirrored, railing]);
+  }, [shape, w, d, h, mirrored, railing, cutY]);
   useEffect(() => () => { even?.dispose(); odd?.dispose(); rail?.dispose(); }, [even, odd, rail]);
   return (
     <group>
@@ -1354,7 +1373,7 @@ function StairMesh({ shape, w, d, h, color, mirrored, railing, clipY }: {
           <meshStandardMaterial key={clipKey} color={shade(color, -14)} roughness={0.7} metalness={0.05} {...(planes && { clippingPlanes: planes, clipShadows: true })} />
         </mesh>
       )}
-      {post > 0 && (
+      {post > 0 && postH > 0 && (
         <mesh position={[0, postH / 2, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[post * 0.55, post * 0.55, postH, 20]} />
           <meshStandardMaterial key={clipKey} color={shade(color, -30)} roughness={0.4} metalness={0.5} {...(planes && { clippingPlanes: planes, clipShadows: true })} />

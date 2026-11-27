@@ -114,7 +114,7 @@ function PathtracedContent({
 
   return (
     <>
-      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant useRenderModels />
+      <DesignScene interactive={false} dollhouse={dollhouse} dollhouseInstant useRenderModels stairCut="geometry" />
       <OrbitControls
         makeDefault
         target={center}

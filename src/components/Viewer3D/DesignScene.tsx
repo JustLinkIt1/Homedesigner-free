@@ -1604,6 +1604,7 @@ function FloorContent({
   unregister,
   onSurfaceTap,
   useRenderModels,
+  stairCut,
 }: {
   geom: FloorGeom;
   stairsBelow: FurnitureItem[];
@@ -1630,6 +1631,7 @@ function FloorContent({
   unregister: (id: string) => void;
   onSurfaceTap?: (tap: SurfaceTap) => void;
   useRenderModels: boolean;
+  stairCut: 'planes' | 'geometry';
 }) {
   const selection = useDesign((s) => s.selection);
   const select = useDesign((s) => s.select);
@@ -1806,6 +1808,8 @@ function FloorContent({
           ceilingHeight={fixtureCeilings.get(f.id) ?? ceilingHeight}
           preferRenderModel={useRenderModels}
           clipY={stairClipY?.get(f.id)}
+          // Storey-local height of the same cut, for the path tracer.
+          cutY={stairCut === 'geometry' && stairClipY?.has(f.id) ? stairClipY.get(f.id)! - elevation * M : undefined}
         />
       ))}
       </group>
@@ -1824,6 +1828,7 @@ export default function DesignScene({
   dollhouseInstant = false,
   onSurfaceTap,
   useRenderModels = false,
+  stairCut = 'planes',
 }: {
   interactive?: boolean;
   dollhouse?: boolean;
@@ -1833,6 +1838,10 @@ export default function DesignScene({
   onSurfaceTap?: (tap: SurfaceTap) => void;
   /** Load optional higher-detail catalogue tiers only for explicit renders. */
   useRenderModels?: boolean;
+  /** How a stair is cut off under the roof or the floor above: material
+   *  clipping planes (the 3D view and raster Photo), or its geometry itself
+   *  for the path tracer, which ignores clipping planes. */
+  stairCut?: 'planes' | 'geometry';
 }) {
   // Subscribe once for the entire scene so a cached/fetched cloud manifest can
   // replace procedural fallbacks even if 3D opened before the request finished.
@@ -1964,6 +1973,7 @@ export default function DesignScene({
             register={register}
             unregister={unregister}
             useRenderModels={useRenderModels}
+            stairCut={stairCut}
           />
         );
       })}
