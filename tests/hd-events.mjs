@@ -82,14 +82,25 @@ try {
     const n = count();
     check((await post({ ...good, install: '5c0e7d2a-91b4-4f6e-b3a8-2d7e4f1a6c90', events: [{ event: 'export', detail: kind }] }, T)).status === 202 && count() === n + 1, `export event with detail ${kind} is stored`);
   }
-  // E1: the Pro checkout funnel. Eight names, and pro_checkout's detail is one of five stages.
-  check(HD_EVENT_NAMES.size === 8 && HD_EVENT_NAMES.has('pro_checkout') && HD_EVENT_NAMES.has('export'), 'eight event names, pro_checkout among them');
+  // E1: the Pro checkout funnel. Nine names (photo since 1.22.52), and pro_checkout's detail is one of five stages.
+  check(HD_EVENT_NAMES.size === 9 && HD_EVENT_NAMES.has('pro_checkout') && HD_EVENT_NAMES.has('export'), 'nine event names, pro_checkout among them');
   for (const stage of ['signin_click', 'signin_ok', 'checkout_open', 'paid', 'cancel']) {
     const n = count();
     check((await post({ ...good, install: '9a1d4c7e-2b63-4e08-9f5a-6c3b8d0e7f12', events: [{ event: 'pro_checkout', detail: stage }] }, T)).status === 202 && count() === n + 1, `pro_checkout stage ${stage} is stored`);
   }
   await bad({ ...good, events: [{ event: 'pro_checkout', detail: 'a b' }] }, 'pro_checkout detail with a space is rejected');
   await bad({ ...good, events: [{ event: 'pro_checkoutx', detail: 'paid' }] }, 'a near-miss event name is rejected');
+  // Row 18c: the photo event, its detail one of eight stages.
+  check(HD_EVENT_NAMES.has('photo'), 'photo is an accepted event name');
+  for (const stage of ['trace_start', 'trace_first_sample', 'trace_timer_fallback', 'trace_unsupported', 'trace_lost', 'raster_start', 'trace_saved', 'raster_saved']) {
+    const n = count();
+    check((await post({ ...good, install: '3e8b1f60-7c2d-4a95-8b14-0f6d2c9e5a37', events: [{ event: 'photo', detail: stage }] }, T)).status === 202 && count() === n + 1, `photo stage ${stage} is stored`);
+  }
+  {
+    const n = count();
+    check((await post({ ...good, install: '3e8b1f60-7c2d-4a95-8b14-0f6d2c9e5a37', events: [{ event: 'export', detail: 'png' }, { event: 'photo', detail: 'trace_saved' }] }, T)).status === 202 && count() === n + 2, 'a batch mixing photo with an older event is stored whole');
+  }
+  await bad({ ...good, events: [{ event: 'photos', detail: 'trace_start' }] }, 'a near-miss photo name is rejected');
   console.log(`hd-events: ${checks} checks passed`);
 } finally {
   rmSync(dir, { recursive: true, force: true });

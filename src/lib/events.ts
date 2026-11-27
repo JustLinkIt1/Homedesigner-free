@@ -2,7 +2,7 @@
 //
 // What is sent: a random install id this module makes for itself on first run,
 // the app version, where the install came from (Play campaign / organic / web)
-// and one of eight fixed event names with a short slug. What is NEVER used: the
+// and one of nine fixed event names with a short slug. What is NEVER used: the
 // Android ID, the advertising ID, an account id or an email.
 //
 // Everything here is fire-and-forget: `trackEvent` never throws, never awaits
@@ -14,12 +14,20 @@ import { initFirst3D } from './first3d';
 
 export type HdEventName =
   | 'app_first_open' | 'template_chosen' | 'editor_opened'
-  | 'view_3d_opened' | 'pro_wall_shown' | 'import_result' | 'export' | 'pro_checkout';
+  | 'view_3d_opened' | 'pro_wall_shown' | 'import_result' | 'export' | 'pro_checkout' | 'photo';
 
 /** The only details `pro_checkout` may carry: the step reached on the web Pro
  * checkout, never a price, plan, id, email or account. */
 export const PRO_CHECKOUT_STAGES = ['signin_click', 'signin_ok', 'checkout_open', 'paid', 'cancel'] as const;
 export type ProCheckoutStage = typeof PRO_CHECKOUT_STAGES[number];
+
+/** The only details `photo` may carry: which Photo path started, failed or saved
+ * (path-traced or raster). Never the picture, the plan, the GPU name or a file name. */
+export const PHOTO_STAGES = [
+  'trace_start', 'trace_first_sample', 'trace_timer_fallback', 'trace_unsupported', 'trace_lost',
+  'raster_start', 'trace_saved', 'raster_saved',
+] as const;
+export type PhotoStage = typeof PHOTO_STAGES[number];
 
 const BASE = (import.meta.env.VITE_CLOUD_SYNC_URL ?? '').replace(/\/$/, '');
 const INSTALL_KEY = 'homedesigner.install.v1';
@@ -164,6 +172,8 @@ export function trackEvent(event: HdEventName, detail?: string, opts: { once?: b
     if (!/^https:\/\//.test(BASE)) return;
     // Belt and braces for the privacy promise: nothing but a stage name may ride on pro_checkout.
     if (event === 'pro_checkout' && !(PRO_CHECKOUT_STAGES as readonly string[]).includes(detail ?? '')) return;
+    // Same for photo: only a Photo stage name.
+    if (event === 'photo' && !(PHOTO_STAGES as readonly string[]).includes(detail ?? '')) return;
     if (opts.once) {
       if (firedThisSession.has(event)) return;
       firedThisSession.add(event);
@@ -183,6 +193,11 @@ export function trackProCheckout(stage: ProCheckoutStage): void {
   // count as Play's Purchase history data type, which the Data safety form doesn't declare.
   if (Capacitor.isNativePlatform()) return;
   trackEvent('pro_checkout', stage);
+}
+
+/** One step of Photo mode (path-traced vs raster), on web and Android. */
+export function trackPhoto(stage: PhotoStage): void {
+  trackEvent('photo', stage);
 }
 
 /** Call once at startup: records the first launch and wires background flushes. */
