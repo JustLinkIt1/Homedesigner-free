@@ -94,6 +94,10 @@ const PLANS = [
   {
     slug: 'tiny-house-floor-plan-7x2-6m', title: 'Tiny house, 7.2 x 2.6 m', w: 720, d: 260,
     roof: ROOF.metalShed, exterior: WALL.timber, entrance: 'liv',
+    // Kitchen keeps only its back window: with windows on all three outer
+    // walls the furnisher found no wall for the units, and a front window
+    // still blocks the fridge in the corner, so the run goes on the end wall.
+    noWindow: ['kit:N', 'kit:W'],
     floors: [{
       rooms: [['kit', 'kitchen', 'Kitchen', 0, 0, 240, 260], ['liv', 'open_living', 'Living and Sleeping', 240, 0, 300, 260], ['bath', 'bathroom', 'Bathroom', 540, 0, 180, 260]],
       doors: [['kit', 'liv', 'open'], ['liv', 'bath']],
@@ -194,7 +198,12 @@ function sharedEdge(a, b) {
 
 function build(plan) {
   const floors = plan.floors.map((floor, level) => {
-    const rooms = floor.rooms.map(([id, type, name, x, y, w, h]) => ({ id, type, name, x, y, w, h }));
+    // The furnisher puts a kitchen run in every open_living room, so a floor
+    // with its own kitchen gets a plain living room (the name stays).
+    const hasKitchen = floor.rooms.some(([, type]) => type === 'kitchen');
+    const rooms = floor.rooms.map(([id, type, name, x, y, w, h]) => ({
+      id, type: type === 'open_living' && hasKitchen ? 'living' : type, name, x, y, w, h,
+    }));
     const byId = new Map(rooms.map((r) => [r.id, r]));
     const openings = [];
     for (const [a, b, kind = 'door'] of floor.doors) {
@@ -223,10 +232,11 @@ function build(plan) {
       const small = WET.has(r.type);
       if (!HABITABLE.has(r.type) && !small) continue;
       const edges = [];
-      if (r.y === 0) edges.push({ vertical: false, at: 0, lo: r.x, hi: r.x + r.w });
-      if (r.y + r.h === plan.d) edges.push({ vertical: false, at: plan.d, lo: r.x, hi: r.x + r.w });
-      if (r.x === 0) edges.push({ vertical: true, at: 0, lo: r.y, hi: r.y + r.h });
-      if (r.x + r.w === plan.w) edges.push({ vertical: true, at: plan.w, lo: r.y, hi: r.y + r.h });
+      const skip = (side) => (plan.noWindow ?? []).includes(`${r.id}:${side}`);
+      if (r.y === 0 && !skip('N')) edges.push({ vertical: false, at: 0, lo: r.x, hi: r.x + r.w });
+      if (r.y + r.h === plan.d && !skip('S')) edges.push({ vertical: false, at: plan.d, lo: r.x, hi: r.x + r.w });
+      if (r.x === 0 && !skip('W')) edges.push({ vertical: true, at: 0, lo: r.y, hi: r.y + r.h });
+      if (r.x + r.w === plan.w && !skip('E')) edges.push({ vertical: true, at: plan.w, lo: r.y, hi: r.y + r.h });
       for (const e of edges) {
         const width = small ? 60 : Math.min(140, e.hi - e.lo - 80);
         if (width < 50) continue;

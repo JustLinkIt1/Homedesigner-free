@@ -9,7 +9,8 @@
 // The "Open this plan" link is /app/?plan=<id> with the id from
 // tools/floor-plans/ids.json, which is the id the shared_plans row is written
 // under (tools/share-plan.mjs --id). The pictures are made from the same file:
-// /assets/floor-plans/<slug>-plan.webp (2D) and <slug>-3d.webp.
+// /assets/floor-plans/<slug>-plan.webp (2D) and <slug>-3d.webp; a two-storey
+// plan also has the upper floor, <slug>-plan-2.webp and <slug>-3d-upper.webp.
 //
 // Text rules (T10a §4): no "AI" (these are drawn by us), no PDF download (PDF
 // export is Pro), no building-code, planning or vastu claim, no build cost.
@@ -164,6 +165,11 @@ export const FLOOR_PLANS = PAGES.map((page) => {
     images: {
       plan: { src: `/assets/floor-plans/${page.slug}-plan.webp`, w: 1200, h: 900 },
       view3d: { src: `/assets/floor-plans/${page.slug}-3d.webp`, w: 1600, h: 1000 },
+      // Upper floor of a two-storey plan. In `images` so the missing-picture check covers them.
+      ...(storeys > 1 ? {
+        plan2: { src: `/assets/floor-plans/${page.slug}-plan-2.webp`, w: 1200, h: 900 },
+        view3dUpper: { src: `/assets/floor-plans/${page.slug}-3d-upper.webp`, w: 1600, h: 1000 },
+      } : {}),
     },
     appLink: `/app/?plan=${IDS[page.slug]}`,
   };

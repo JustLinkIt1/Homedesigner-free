@@ -23,7 +23,7 @@
       "rooms": [
         {
           "id": "liv",
-          "type": "open_living",
+          "type": "living",
           "name": "Open Living",
           "x": 0,
           "y": 0,

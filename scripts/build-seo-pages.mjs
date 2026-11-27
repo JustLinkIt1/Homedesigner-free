@@ -1737,7 +1737,7 @@ function renderFloorPlan(plan) {
       name: plan.h1,
       description: plan.description,
       url: ORIGIN + path,
-      image: [ORIGIN + plan.images.view3d.src, ORIGIN + plan.images.plan.src],
+      image: Object.values(plan.images).map((i) => ORIGIN + i.src),
       inLanguage: 'en',
       isAccessibleForFree: true,
       creator: { '@type': 'Organization', name: 'HomeDesigner', url: `${ORIGIN}/` },
@@ -1770,7 +1770,11 @@ ${header('en', null)}
         <h2 class="title">Rooms and sizes</h2>
 ${fpParas(fpText(plan.body), 'lead')}
         <div class="split">
-          <div class="pic">${fpImg(plan.images.plan, `${plan.h1}: 2D floor plan`)}</div>
+          <div class="pic">${plan.images.plan2
+            ? `<figure style="margin:0 0 16px">${fpImg(plan.images.plan, `${plan.h1}: 2D floor plan, ground floor`)}<figcaption>Ground floor</figcaption></figure>
+            <figure style="margin:0 0 16px">${fpImg(plan.images.plan2, `${plan.h1}: 2D floor plan, upper floor`)}<figcaption>Upper floor</figcaption></figure>
+            <figure style="margin:0">${fpImg(plan.images.view3dUpper, `${plan.h1}: upper floor, furnished, in 3D`)}<figcaption>Upper floor in 3D</figcaption></figure>`
+            : fpImg(plan.images.plan, `${plan.h1}: 2D floor plan`)}</div>
           <div>
 ${plan.floors.map((floor) => `            <h3>${esc(floor.name)}</h3>
             <table class="plan-rooms">

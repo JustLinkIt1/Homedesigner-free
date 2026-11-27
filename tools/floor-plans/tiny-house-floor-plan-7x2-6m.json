@@ -32,7 +32,7 @@
         },
         {
           "id": "liv",
-          "type": "open_living",
+          "type": "living",
           "name": "Living and Sleeping",
           "x": 240,
           "y": 0,
@@ -85,28 +85,8 @@
         {
           "kind": "window",
           "x": 120,
-          "y": 0,
-          "vertical": false,
-          "width": 140,
-          "rooms": [
-            "kit"
-          ]
-        },
-        {
-          "kind": "window",
-          "x": 120,
           "y": 260,
           "vertical": false,
-          "width": 140,
-          "rooms": [
-            "kit"
-          ]
-        },
-        {
-          "kind": "window",
-          "x": 0,
-          "y": 130,
-          "vertical": true,
           "width": 140,
           "rooms": [
             "kit"

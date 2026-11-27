@@ -41,7 +41,7 @@
         },
         {
           "id": "liv",
-          "type": "open_living",
+          "type": "living",
           "name": "Open Living",
           "x": 700,
           "y": 0,
