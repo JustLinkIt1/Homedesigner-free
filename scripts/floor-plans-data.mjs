@@ -35,9 +35,9 @@ export const FLOOR_PLANS_PATH = '/floor-plans/';
 /** Hub page words. `intro` is filled by the design manager (40-120 words). */
 export const FLOOR_PLANS_HUB = {
   title: 'Free House Floor Plans to Open and Edit | HomeDesigner',
-  description: "Nine house floor plans with room sizes in metres and feet: barndominium, ranch, modern, ADU, 30x40 and more. Open any of them free and edit it in 3D.",
+  description: "Eight house floor plans with room sizes in metres and feet: barndominium, ranch, modern two-storey, ADU and more. Open any of them free and edit it in 3D.",
   h1: 'House floor plans you can open and edit',
-  intro: "Nine house plans we drew in HomeDesigner, each with every room size in metres and feet: a barndominium with a shop, a one-level ranch, a modern two-storey, an 800 sq ft backyard unit, a 30 × 40 plan and more. Each one is a real project, not just a picture. Pick a plan, open it in the app, and you're inside it: walk through it in 3D, move walls and furnish the rooms until it fits your plot and your family. Opening a plan is free to start, in the browser or on Android.",
+  intro: "Eight house plans we drew in HomeDesigner, each with every room size in metres and feet: a barndominium with a shop, a one-level ranch, a modern two-storey, an 800 sq ft backyard unit and more. Each one is a real project, not just a picture. Pick a plan, open it in the app, and you're inside it: walk through it in 3D, move walls and furnish the rooms until it fits your plot and your family. Opening a plan is free to start, in the browser or on Android.",
 };
 
 /**
@@ -78,7 +78,7 @@ const PAGES = [
     title: "Modern 3-Bed House Plan, Two Storeys, 10 × 9 m (33 × 30 ft)",
     description: "A compact two-storey modern house with a flat roof, open-plan ground floor, home office and 3 bedrooms upstairs. 180 m² (1,938 sq ft).",
     beds: 3, baths: 2.5,
-    body: "A modern two-storey house with a flat roof on a small 10 × 9 m (32.8 × 29.5 ft) footprint, 180 m² (1,938 sq ft) over both floors. Downstairs is built for daytime: a 6.0 × 5.5 m (19.7 × 18.0 ft) open living space and a 4.0 × 5.5 m (13.1 × 18.0 ft) kitchen across the front, with the stairs, a toilet and a 4.0 × 3.5 m (13.1 × 11.5 ft) office behind. Upstairs, the largest bedroom is 4.5 × 5.5 m (14.8 × 18.0 ft), the second 3.5 × 5.5 m (11.5 × 18.0 ft) and the third 5.5 × 2.3 m (18.0 × 7.5 ft), with two bathrooms and a storage room. It suits a family on a tight urban plot where one parent works from home.",
+    body: "A modern two-storey house with a flat roof on a small 10 × 9 m (32.8 × 29.5 ft) footprint, 180 m² (1,938 sq ft) over both floors. Downstairs is built for daytime: a 6.0 × 5.5 m (19.7 × 18.0 ft) open living space and a 4.0 × 5.5 m (13.1 × 18.0 ft) kitchen across the front, with the stairs, a toilet, a storage room and a 4.0 × 3.5 m (13.1 × 11.5 ft) office behind. Upstairs, the largest bedroom is 4.5 × 5.5 m (14.8 × 18.0 ft), the second 3.5 × 5.5 m (11.5 × 18.0 ft) and the third 5.5 × 2.3 m (18.0 × 7.5 ft), with two bathrooms and a walk-in closet. It suits a family on a tight urban plot where one parent works from home.",
     invite: "Open it in 3D, switch between floors, and walk up the stairs.",
   },
   {
@@ -144,8 +144,9 @@ const FLOOR_NAMES = ['Ground floor', 'Upper floor'];
 /**
  * Plans built but not published yet. The tiny house (EXEC cycle 266/267) renders with an empty
  * living room while its text promises a sofa bed; it ships once the plan furnishes that room.
+ * The 30x40 (EXEC cycle 268): its two 1.8 x 1.6 m bathrooms get no shower, so "2 baths" isn't true yet.
  */
-export const HELD_BACK = new Set(['tiny-house-floor-plan-7x2-6m']);
+export const HELD_BACK = new Set(['tiny-house-floor-plan-7x2-6m', '30x40-house-plan-3-bedroom']);
 
 export const FLOOR_PLANS = PAGES.filter((page) => !HELD_BACK.has(page.slug)).map((page) => {
   const bp = JSON.parse(readFileSync(resolve(root, `tools/floor-plans/${page.slug}.json`), 'utf8'));
