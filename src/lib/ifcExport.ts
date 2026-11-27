@@ -5,7 +5,8 @@ import { polygonArea } from './geometry';
 import { roofEaveHeight } from './ceilings';
 import { buildStoreyRoof, parapetSegments } from './roofGeometry';
 import { isStairs, stairPlanFor, stairRailsFor, stairToPlan } from './stairs';
-import { stairCapY } from './stairCut';
+import { stairCapY, stairHoleCut } from './stairCut';
+import { stairOpeningPoints } from './walkNavigation';
 
 /**
  * Write the design as an IFC4 building model (ISO 10303-21 text, one file, all
@@ -39,6 +40,12 @@ import { stairCapY } from './stairCut';
  * with a newel at each end, aggregated into its stair. Stair and rails are cut
  * at `stairCapY` (lib/stairCut.ts), the same height the 3D view clips them at.
  * Stairs are written after the roofs, so a v1.22.50 file is an exact prefix.
+ *
+ * Stairwells (1.22.51, row 58). Where the 3D view cuts a stairwell in the
+ * floor of the storey above a stair (`stairHoleCut`), the export writes an
+ * IfcOpeningElement of the stair's footprint through that storey's floor slab
+ * and an IfcRelVoidsElement to the slab. These come after the stairs, so the
+ * file without them is an exact prefix.
  *
  * Not written: other furniture, roof windows, materials, curved or bay
  * openings (they come out as plain rectangles).
@@ -244,6 +251,7 @@ export function buildIfc(input: IfcExportInput): string {
   const ordered = [...input.floors].sort((a, b) => a.elevation - b.elevation);
   const storeyOf = new Map<string, string>();
   const storeyPlOf = new Map<string, string>();
+  const slabOf = new Map<string, string>();
   ordered.forEach((floor, fi) => {
     const g = input.geom[floor.id] ?? { walls: [], rooms: [], openings: [] };
     const elev = floor.elevation * M;
@@ -348,6 +356,7 @@ export function buildIfc(input: IfcExportInput): string {
         `IFCSLAB(${guid(`slab|${floor.id}`)},$,${str('Floor slab')},$,$,${placement(storeyPl, axisWorld)},${shape(...slabSolids)},$,.FLOOR.)`,
       );
       contained.push(slab);
+      slabOf.set(floor.id, slab);
     }
 
     if (spaces.length) st.add(`IFCRELAGGREGATES(${guid(`rel|storey-spaces|${floor.id}`)},$,$,$,${storey},${list(spaces)})`);
@@ -549,6 +558,34 @@ export function buildIfc(input: IfcExportInput): string {
     }
     if (contained.length) {
       st.add(`IFCRELCONTAINEDINSPATIALSTRUCTURE(${guid(`rel|storey-stairs|${floor.id}`)},$,$,$,${list(contained)},${storey})`);
+    }
+  });
+
+  // ---- stairwell holes (1.22.51, row 58): after everything else ------------
+  // The storey above a stair gets a hole in its floor slab wherever the 3D
+  // view cuts one (DesignScene roomShape): the stair's footprint
+  // (stairOpeningPoints), in every indoor room that holds it whole
+  // (stairHoleCut). The IFC floor slab is ONE IfcSlab per storey made of one
+  // extrusion per indoor room, so one IfcOpeningElement voiding that slab cuts
+  // exactly the room extrusions the footprint lies in. The opening is the
+  // footprint, unchanged, extruded through the slab (1 cm proud of each face,
+  // as the wall openings are, so the boolean never leaves a skin).
+  const HOLE_PAD = 0.01;
+  ordered.forEach((floor, fi) => {
+    const next = ordered[fi + 1];
+    const stairs = (input.geom[floor.id]?.furniture ?? []).filter(isStairs);
+    const slab = next && slabOf.get(next.id);
+    const storeyPl = next && storeyPlOf.get(next.id);
+    if (!next || !stairs.length || !slab || !storeyPl) return;
+    const indoorAbove = (input.geom[next.id]?.rooms ?? []).filter((r) => !r.outdoor && r.points.length >= 3);
+    for (const item of stairs) {
+      if (!indoorAbove.some((room) => stairHoleCut(item, room))) continue;
+      const ring = cleanRing(stairOpeningPoints(item).map(toIfc));
+      if (ring.length < 3 || Math.abs(polygonArea(ring)) < 1e-6) continue;
+      const opening = st.add(
+        `IFCOPENINGELEMENT(${guid(`stairwell|${item.id}`)},$,${str('Stairwell opening')},$,$,${placement(storeyPl, axisWorld)},${shape(prism(ring, SLAB_T + 2 * HOLE_PAD, axis3(0, 0, -SLAB_T - HOLE_PAD)))},$,.OPENING.)`,
+      );
+      st.add(`IFCRELVOIDSELEMENT(${guid(`void|stairwell|${item.id}`)},$,$,$,${slab},${opening})`);
     }
   });
 
