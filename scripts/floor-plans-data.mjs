@@ -17,6 +17,16 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
+
+/**
+ * Draft build (FLOOR_PLANS_DRAFT=1, EXEC cycle 262): the page text comes later
+ * (T10c), so a TODO body or intro is allowed and shown as a marked placeholder,
+ * every floor-plan page carries robots noindex, and none of them enter the
+ * sitemap. A normal build still refuses TODO text, so a draft can never be
+ * regenerated into a deploy by accident.
+ */
+export const FLOOR_PLANS_DRAFT = process.env.FLOOR_PLANS_DRAFT === '1';
+export const DRAFT_PLACEHOLDER = '[Placeholder: the text for this page is being written (T10c). Not for publishing.]';
 const IDS = JSON.parse(readFileSync(resolve(root, 'tools/floor-plans/ids.json'), 'utf8'));
 
 export const FLOOR_PLANS_PATH = '/floor-plans/';
@@ -161,7 +171,8 @@ export function floorPlanProblems(exists) {
     for (const re of BANNED) if (re.test(s)) problems.push(`${at}: ${field} says ${re} (T10a §4)`);
   };
   const hub = FLOOR_PLANS_HUB;
-  if (hub.intro.trim() === 'TODO' || words(hub.intro) < 40 || words(hub.intro) > 120) problems.push(`${where()}: intro is ${hub.intro.trim() === 'TODO' ? 'TODO' : `${words(hub.intro)} words`} (40 to 120)`);
+  const introDraft = FLOOR_PLANS_DRAFT && hub.intro.trim() === 'TODO';
+  if (!introDraft && (hub.intro.trim() === 'TODO' || words(hub.intro) < 40 || words(hub.intro) > 120)) problems.push(`${where()}: intro is ${hub.intro.trim() === 'TODO' ? 'TODO' : `${words(hub.intro)} words`} (40 to 120)`);
   for (const [field, s] of Object.entries(hub)) text(where(), field, s);
   if (hub.title.length > 60) problems.push(`${where()}: meta title is ${hub.title.length} characters (60 at most)`);
   if (hub.description.length < 120 || hub.description.length > 160) problems.push(`${where()}: description is ${hub.description.length} characters (120 to 160)`);
@@ -171,7 +182,8 @@ export function floorPlanProblems(exists) {
     if (!/^[a-z0-9]{10,24}$/.test(p.id ?? '')) problems.push(`${at}: no valid id in tools/floor-plans/ids.json`);
     if (seen.has(p.id)) problems.push(`${at}: id ${p.id} is used twice`);
     seen.add(p.id);
-    if (p.body.trim() === 'TODO') problems.push(`${at}: body is TODO (80 to 150 words)`);
+    if (p.body.trim() === 'TODO' && FLOOR_PLANS_DRAFT) { /* draft: placeholder shown */ }
+    else if (p.body.trim() === 'TODO') problems.push(`${at}: body is TODO (80 to 150 words)`);
     else if (words(p.body) < 80 || words(p.body) > 150) problems.push(`${at}: body is ${words(p.body)} words (80 to 150)`);
     if (p.title.length > 60) problems.push(`${at}: meta title is ${p.title.length} characters (60 at most)`);
     if (p.description.length < 120 || p.description.length > 160) problems.push(`${at}: description is ${p.description.length} characters (120 to 160)`);

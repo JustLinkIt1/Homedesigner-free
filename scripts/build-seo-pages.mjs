@@ -30,7 +30,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { FLOOR_PLANS, FLOOR_PLANS_HUB, FLOOR_PLANS_PATH, floorPlanProblems } from './floor-plans-data.mjs';
+import { FLOOR_PLANS, FLOOR_PLANS_HUB, FLOOR_PLANS_PATH, FLOOR_PLANS_DRAFT, DRAFT_PLACEHOLDER, floorPlanProblems } from './floor-plans-data.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const site = resolve(root, 'site');
@@ -1702,6 +1702,8 @@ ${footer(code, paths)}
 }
 
 // The /floor-plans/ pages (TASKS T10b): English only, data in scripts/floor-plans-data.mjs.
+const fpText = (s) => (FLOOR_PLANS_DRAFT && s.trim() === 'TODO' ? DRAFT_PLACEHOLDER : s);
+const fpDraft = (html) => (FLOOR_PLANS_DRAFT ? html.replace('<head>', '<head>\n  <meta name="robots" content="noindex" />') : html);
 const fpPath = (plan) => `${FLOOR_PLANS_PATH}${plan.slug}/`;
 const fpImg = (i, alt, lazy = true) =>
   `<img src="${i.src}" alt="${esc(alt)}" width="${i.w}" height="${i.h}"${lazy ? ' loading="lazy"' : ''} />`;
@@ -1766,7 +1768,7 @@ ${header('en', null)}
       <div class="wrap">
         <span class="kicker">The plan</span>
         <h2 class="title">Rooms and sizes</h2>
-${fpParas(plan.body, 'lead')}
+${fpParas(fpText(plan.body), 'lead')}
         <div class="split">
           <div class="pic">${fpImg(plan.images.plan, `${plan.h1}: 2D floor plan`)}</div>
           <div>
@@ -1823,7 +1825,7 @@ ${header('en', null)}
       <div class="wrap">
         <p class="crumbs"><a href="/">HomeDesigner</a> › Floor plans</p>
         <h1>${esc(hub.h1)}</h1>
-${fpParas(hub.intro, 'sub')}
+${fpParas(fpText(hub.intro), 'sub')}
       </div>
     </section>
 
@@ -1890,12 +1892,13 @@ for (const code of CODES) {
     written.push(topicPath(topic, code));
   }
 }
-await write(FLOOR_PLANS_PATH, renderFloorPlansHub());
-written.push(FLOOR_PLANS_PATH);
+await write(FLOOR_PLANS_PATH, fpDraft(renderFloorPlansHub()));
+if (!FLOOR_PLANS_DRAFT) written.push(FLOOR_PLANS_PATH);
 for (const plan of FLOOR_PLANS) {
-  await write(`${FLOOR_PLANS_PATH}${plan.slug}/`, renderFloorPlan(plan));
-  written.push(`${FLOOR_PLANS_PATH}${plan.slug}/`);
+  await write(`${FLOOR_PLANS_PATH}${plan.slug}/`, fpDraft(renderFloorPlan(plan)));
+  if (!FLOOR_PLANS_DRAFT) written.push(`${FLOOR_PLANS_PATH}${plan.slug}/`);
 }
+if (FLOOR_PLANS_DRAFT) console.log('DRAFT floor-plan pages: placeholder text, noindex, left out of the sitemap. Do not deploy.');
 
 // Every Google Play link on the site carries an install referrer naming the page
 // it was on (TASKS T1, 27 Nov 2026). The app reads it once through the Play
