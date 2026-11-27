@@ -53,9 +53,9 @@
         {
           "kind": "open",
           "x": 240,
-          "y": 130,
+          "y": 60,
           "vertical": true,
-          "width": 120,
+          "width": 90,
           "rooms": [
             "kit",
             "liv"
@@ -64,7 +64,7 @@
         {
           "kind": "door",
           "x": 540,
-          "y": 130,
+          "y": 60,
           "vertical": true,
           "width": 80,
           "rooms": [

@@ -100,7 +100,10 @@ const PLANS = [
     noWindow: ['kit:N', 'kit:W'],
     floors: [{
       rooms: [['kit', 'kitchen', 'Kitchen', 0, 0, 240, 260], ['liv', 'open_living', 'Living and Sleeping', 240, 0, 300, 260], ['bath', 'bathroom', 'Bathroom', 540, 0, 180, 260]],
-      doors: [['kit', 'liv', 'open'], ['liv', 'bath']],
+      // Both inside doors sit at the front end of their walls, so the back
+      // wall of the living room stays clear for the sofa bed and the
+      // bathroom keeps a corner for the shower.
+      doors: [['kit', 'liv', 'open', { at: 60, width: 90 }], ['liv', 'bath', 'door', { at: 60, width: 80 }]],
     }],
   },
   {
@@ -170,11 +173,13 @@ const PLANS = [
         ['liv', 'living', 'Living Room', 0, 0, 510, 420], ['din', 'dining', 'Dining', 510, 0, 400, 420],
         ['kit', 'kitchen', 'Kitchen', 0, 420, 300, 360], ['hall', 'hallway', 'Hallway', 300, 420, 120, 360], ['bed2', 'bedroom', 'Bedroom 2', 420, 420, 490, 360],
         ['corr', 'hallway', 'Corridor', 0, 780, 910, 120],
-        ['bed1', 'bedroom', 'Bedroom 1', 0, 900, 360, 320], ['bath', 'bathroom', 'Bathroom', 360, 900, 180, 160], ['ens', 'bathroom', 'En-suite', 360, 1060, 180, 160],
-        ['bed3', 'bedroom', 'Bedroom 3', 540, 900, 370, 320],
+        // Bathrooms 2.2 m wide (Bedroom 3 gives up 0.3 m) and the bathroom
+        // door at the west end of its wall: a shower then fits in a corner.
+        ['bed1', 'bedroom', 'Bedroom 1', 0, 900, 360, 320], ['bath', 'bathroom', 'Bathroom', 360, 900, 220, 160], ['ens', 'bathroom', 'En-suite', 360, 1060, 220, 160],
+        ['bed3', 'bedroom', 'Bedroom 3', 580, 900, 330, 320],
       ],
       doors: [['liv', 'din', 'open'], ['liv', 'hall', 'open'], ['liv', 'kit'], ['kit', 'hall'], ['hall', 'bed2'], ['hall', 'corr', 'open'],
-        ['corr', 'bed1'], ['corr', 'bath'], ['bed1', 'ens'], ['corr', 'bed3']],
+        ['corr', 'bed1'], ['corr', 'bath', 'door', { at: 420, width: 80 }], ['bed1', 'ens', 'door', { at: 1110, width: 80 }], ['corr', 'bed3']],
     }],
   },
 ];
@@ -206,12 +211,15 @@ function build(plan) {
     }));
     const byId = new Map(rooms.map((r) => [r.id, r]));
     const openings = [];
-    for (const [a, b, kind = 'door'] of floor.doors) {
+    // Optional 4th element { at, width }: `at` is the door's centre along the
+    // shared wall (cm, plan coordinates) instead of the middle of it.
+    for (const [a, b, kind = 'door', place = {}] of floor.doors) {
       const e = sharedEdge(byId.get(a), byId.get(b));
       if (!e) throw new Error(`${plan.slug}: ${a} and ${b} share no wall`);
       const len = e.hi - e.lo;
-      const width = Math.min(kind === 'open' ? 120 : 80, len - 30);
-      const mid = Math.round((e.lo + e.hi) / 2);
+      const width = place.width ?? Math.min(kind === 'open' ? 120 : 80, len - 30);
+      const mid = place.at ?? Math.round((e.lo + e.hi) / 2);
+      if (mid - width / 2 < e.lo + 5 || mid + width / 2 > e.hi - 5) throw new Error(`${plan.slug}: ${a}-${b} door runs past its wall`);
       openings.push(e.vertical ? { kind, x: e.at, y: mid, vertical: true, width, rooms: [a, b] }
         : { kind, x: mid, y: e.at, vertical: false, width, rooms: [a, b] });
     }

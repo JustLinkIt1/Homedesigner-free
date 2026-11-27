@@ -89,7 +89,7 @@
           "name": "Bathroom",
           "x": 360,
           "y": 900,
-          "w": 180,
+          "w": 220,
           "h": 160
         },
         {
@@ -98,16 +98,16 @@
           "name": "En-suite",
           "x": 360,
           "y": 1060,
-          "w": 180,
+          "w": 220,
           "h": 160
         },
         {
           "id": "bed3",
           "type": "bedroom",
           "name": "Bedroom 3",
-          "x": 540,
+          "x": 580,
           "y": 900,
-          "w": 370,
+          "w": 330,
           "h": 320
         }
       ],
@@ -191,7 +191,7 @@
         },
         {
           "kind": "door",
-          "x": 450,
+          "x": 420,
           "y": 900,
           "vertical": false,
           "width": 80,
@@ -203,7 +203,7 @@
         {
           "kind": "door",
           "x": 360,
-          "y": 1140,
+          "y": 1110,
           "vertical": true,
           "width": 80,
           "rooms": [
@@ -213,7 +213,7 @@
         },
         {
           "kind": "door",
-          "x": 725,
+          "x": 745,
           "y": 900,
           "vertical": false,
           "width": 80,
@@ -314,7 +314,7 @@
         },
         {
           "kind": "small_window",
-          "x": 450,
+          "x": 470,
           "y": 1220,
           "vertical": false,
           "width": 60,
@@ -324,7 +324,7 @@
         },
         {
           "kind": "window",
-          "x": 725,
+          "x": 745,
           "y": 1220,
           "vertical": false,
           "width": 140,
