@@ -163,12 +163,12 @@ export const FLOOR_PLANS = PAGES.map((page) => {
     })),
     // Pixel sizes go in the <img> tags; set them to the real files' sizes when the renders land.
     images: {
-      plan: { src: `/assets/floor-plans/${page.slug}-plan.webp`, w: 1200, h: 900 },
-      view3d: { src: `/assets/floor-plans/${page.slug}-3d.webp`, w: 1600, h: 1000 },
+      plan: { src: `/assets/floor-plans/${page.slug}-plan.webp`, w: 1100, h: 796 },
+      view3d: { src: `/assets/floor-plans/${page.slug}-3d.webp`, w: 1100, h: 747 },
       // Upper floor of a two-storey plan. In `images` so the missing-picture check covers them.
       ...(storeys > 1 ? {
-        plan2: { src: `/assets/floor-plans/${page.slug}-plan-2.webp`, w: 1200, h: 900 },
-        view3dUpper: { src: `/assets/floor-plans/${page.slug}-3d-upper.webp`, w: 1600, h: 1000 },
+        plan2: { src: `/assets/floor-plans/${page.slug}-plan-2.webp`, w: 1100, h: 796 },
+        view3dUpper: { src: `/assets/floor-plans/${page.slug}-3d-upper.webp`, w: 1100, h: 747 },
       } : {}),
     },
     appLink: `/app/?plan=${IDS[page.slug]}`,
