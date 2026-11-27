@@ -48,6 +48,7 @@ export default function Furniture3D({
   draggable = false,
   ceilingHeight = 2.7,
   preferRenderModel = false,
+  clipY,
 }: {
   item: FurnitureItem;
   selected: boolean;
@@ -59,6 +60,9 @@ export default function Furniture3D({
   ceilingHeight?: number;
   /** Load the optional 150k/2048 cloud tier for explicit photo renders. */
   preferRenderModel?: boolean;
+  /** Stairs only: world height (m) of the roof or floor above, where the stair
+   *  is cut off in the drawing. Undefined = drawn whole. */
+  clipY?: number;
 }) {
   const w = item.width * M;
   const d = item.depth * M;
@@ -225,7 +229,7 @@ export default function Furniture3D({
         <ResilientGltfFurniture
           item={item}
           preferRender={preferRenderModel}
-          fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={!!item.mirrored} railing={item.railing} seed={item.position.x * 0.013 + item.position.y * 0.029} />}
+          fallback={<ShapeMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={!!item.mirrored} railing={item.railing} clipY={clipY} seed={item.position.x * 0.013 + item.position.y * 0.029} />}
         />
       )}
     </group>
@@ -297,7 +301,7 @@ function FourLegs({
 }
 
 export function ShapeMesh({
-  shape, w, d, h, color, seed = 0, mirrored = false, railing,
+  shape, w, d, h, color, seed = 0, mirrored = false, railing, clipY,
 }: {
   shape: Shape3D; w: number; d: number; h: number; color: string;
   /** Turns otherwise identical garden shapes so two trees never match. */
@@ -306,6 +310,8 @@ export function ShapeMesh({
   mirrored?: boolean;
   /** Stairs: which sides carry a handrail. */
   railing?: StairRailing;
+  /** Stairs: world height (m) to cut the drawing at. */
+  clipY?: number;
 }) {
   switch (shape) {
     case 'sofa': {
@@ -1197,7 +1203,7 @@ export function ShapeMesh({
     case 'stairs_l':
     case 'stairs_u':
     case 'stairs_spiral':
-      return <StairMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={mirrored} railing={railing} />;
+      return <StairMesh shape={shape} w={w} d={d} h={h} color={color} mirrored={mirrored} railing={railing} clipY={clipY} />;
     default:
       return <Box w={w} d={d} h={h} y={h * 0.5} color={color} />;
   }
@@ -1274,16 +1280,39 @@ function stairRailGeometry(plan: StairPlan, rails: StairRail[], rise: number): T
   return merged;
 }
 
+// Stair cut-off planes (lib/stairCut.ts): one horizontal plane per cut height,
+// in WORLD space (three clips materials in world space), shared by every stair
+// material cut at that height. Keyed by the millimetre, so a house holds one or
+// two of these for its whole life and nothing is allocated per frame.
+const STAIR_CLIP_PLANES = new Map<number, THREE.Plane[]>();
+const DOWN = new THREE.Vector3(0, -1, 0);
+function stairClipPlanes(worldY: number): THREE.Plane[] {
+  const key = Math.round(worldY * 1000);
+  let planes = STAIR_CLIP_PLANES.get(key);
+  if (!planes) {
+    if (STAIR_CLIP_PLANES.size > 64) STAIR_CLIP_PLANES.clear();
+    planes = [new THREE.Plane(DOWN, key / 1000)];
+    STAIR_CLIP_PLANES.set(key, planes);
+  }
+  return planes;
+}
+
 /**
  * Every stair shape, from the same geometry as its plan symbol (lib/stairs.ts).
  * Treads are solid blocks one rise tall, like the original straight stair; a
  * spiral's are thin wedges on a central post. Merged into two meshes (the
  * alternating tread colours) whatever the step count.
  */
-function StairMesh({ shape, w, d, h, color, mirrored, railing }: {
+function StairMesh({ shape, w, d, h, color, mirrored, railing, clipY }: {
   shape: StairShape; w: number; d: number; h: number; color: string; mirrored: boolean;
   railing?: StairRailing;
+  clipY?: number;
 }) {
+  // Undefined planes leave the materials exactly as they were (no clip define).
+  // The materials are keyed on the clipped state so three builds the right
+  // program when a stair gains or loses its cut.
+  const planes = clipY == null ? undefined : stairClipPlanes(clipY);
+  const clipKey = planes ? 'clip' : 'whole';
   const { even, odd, post, postH, rail } = useMemo(() => {
     const plan = stairPlan(shape, w / M, d / M, h / M, mirrored);
     const rise = plan.rise * M;
@@ -1317,24 +1346,24 @@ function StairMesh({ shape, w, d, h, color, mirrored, railing }: {
     <group>
       {even && (
         <mesh geometry={even} castShadow receiveShadow>
-          <meshStandardMaterial color={color} roughness={0.7} metalness={0.05} />
+          <meshStandardMaterial key={clipKey} color={color} roughness={0.7} metalness={0.05} {...(planes && { clippingPlanes: planes, clipShadows: true })} />
         </mesh>
       )}
       {odd && (
         <mesh geometry={odd} castShadow receiveShadow>
-          <meshStandardMaterial color={shade(color, -14)} roughness={0.7} metalness={0.05} />
+          <meshStandardMaterial key={clipKey} color={shade(color, -14)} roughness={0.7} metalness={0.05} {...(planes && { clippingPlanes: planes, clipShadows: true })} />
         </mesh>
       )}
       {post > 0 && (
         <mesh position={[0, postH / 2, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[post * 0.55, post * 0.55, postH, 20]} />
-          <meshStandardMaterial color={shade(color, -30)} roughness={0.4} metalness={0.5} />
+          <meshStandardMaterial key={clipKey} color={shade(color, -30)} roughness={0.4} metalness={0.5} {...(planes && { clippingPlanes: planes, clipShadows: true })} />
         </mesh>
       )}
       {/* Powder-coated steel, the same charcoal as a steel balcony railing. */}
       {rail && (
         <mesh geometry={rail} castShadow receiveShadow>
-          <meshStandardMaterial color={METAL_RAILING_COLOR} roughness={0.4} metalness={0.65} />
+          <meshStandardMaterial key={clipKey} color={METAL_RAILING_COLOR} roughness={0.4} metalness={0.65} {...(planes && { clippingPlanes: planes, clipShadows: true })} />
         </mesh>
       )}
     </group>

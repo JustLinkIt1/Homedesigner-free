@@ -1,5 +1,5 @@
 import { Component, Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { useCompileBeforeDraw } from './compileAsync';
 import * as THREE from 'three';
@@ -12,7 +12,7 @@ import { activeTier, tierCaps } from '../../lib/perfTier';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
 import { isStairs } from '../../lib/stairs';
-import { SLAB_T, stairHoleCut } from '../../lib/stairCut';
+import { SLAB_T, stairCapY, stairHoleCut } from '../../lib/stairCut';
 import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
 import { exteriorFaces, exteriorRanges, exteriorSideAt } from '../../lib/exteriorFaces';
 import { bayParts, isBay } from '../../lib/bayWindow';
@@ -1595,6 +1595,7 @@ function FloorContent({
   isTop,
   riseTo,
   above,
+  nextStorey,
   roof,
   trim,
   dollhouse,
@@ -1613,6 +1614,10 @@ function FloorContent({
   riseTo?: number;
   /** That storey's geometry: what it covers needs no roof of its own here. */
   above?: FloorGeom;
+  /** The storey directly above among ALL storeys, drawn or not (`above` is
+   *  only the next visible one): its rooms and how far up it is (cm). It
+   *  decides where this storey's stairs are cut off. */
+  nextStorey?: { rooms: Room[]; rise: number };
   /** Set only on the storey that carries the roof (the highest one overall —
    *  `isTop` is relative to the currently VISIBLE storeys, which in the
    *  active-floor cutaway would put the roof on the wrong level). */
@@ -1694,6 +1699,21 @@ function FloorContent({
     onSurfaceTap?.(localTap);
   };
   const onTap = interactive ? tapSurface : undefined;
+  // Where each stair on this storey is cut off in the drawing: under the roof,
+  // or under the floor above when that floor has no stairwell for it
+  // (lib/stairCut.ts, the rule the IFC export shares). World metres, because
+  // three clips in world space and the storey group sits at its elevation.
+  // Stairs with a proper stairwell (or open sky) above are not in the map.
+  const stairClipY = useMemo(() => {
+    let map: Map<string, number> | null = null;
+    for (const item of geom.furniture) {
+      if (!isStairs(item)) continue;
+      const capY = stairCapY(item, { walls: geom.walls, roof, riseTo: nextStorey?.rise, roomsAbove: nextStorey?.rooms });
+      if (capY == null) continue;
+      (map ??= new Map()).set(item.id, elevation * M + capY);
+    }
+    return map;
+  }, [geom.furniture, geom.walls, roof, nextStorey, elevation]);
 
   return (
     // The named groups are identity transforms. They only label each kind of
@@ -1785,6 +1805,7 @@ function FloorContent({
           draggable={interactive}
           ceilingHeight={fixtureCeilings.get(f.id) ?? ceilingHeight}
           preferRenderModel={useRenderModels}
+          clipY={stairClipY?.get(f.id)}
         />
       ))}
       </group>
@@ -1889,6 +1910,20 @@ export default function DesignScene({
     });
     return result;
   }, [orderedFloors, floorGeom]);
+  // The storey directly above each storey, among all of them (hidden ones too):
+  // a stair is cut by the floor that is really there, drawn or not.
+  const nextStoreyByFloor = useMemo(() => {
+    const result = new Map<string, { rooms: Room[]; rise: number }>();
+    orderedFloors.forEach((floor, index) => {
+      const next = orderedFloors[index + 1];
+      const rooms = next && floorGeom[next.id]?.rooms;
+      if (rooms) result.set(floor.id, { rooms, rise: next.elevation - floor.elevation });
+    });
+    return result;
+  }, [orderedFloors, floorGeom]);
+  // Stair cut-offs are per-material clipping planes (Furniture3D StairMesh).
+  const gl = useThree((s) => s.gl);
+  useEffect(() => { gl.localClippingEnabled = true; }, [gl]);
   const topElevation = Math.max(...visible.map((x) => x.elevation));
   // Facade trim: the plinth goes round the lowest storey only.
   const facade = facadeOf(floors);
@@ -1918,6 +1953,7 @@ export default function DesignScene({
             isTop={f.elevation >= topElevation}
             riseTo={riseByFloor.get(f.id)}
             above={aboveByFloor.get(f.id)}
+            nextStorey={nextStoreyByFloor.get(f.id)}
             roof={f.roof}
             trim={facade ? { plinth: f.elevation <= groundElevation, band: facade === 'bands' } : undefined}
             // Dollhouse fade cuts open only the storey being edited; the

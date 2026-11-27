@@ -47,3 +47,16 @@ const tall = [
   wall('e', 800, 0, 800, 600), wall('s', 800, 600, 0, 600), wall('w', 0, 600, 0, 0),
 ];
 FIXTURES.tall = snap('tall', { walls: ring('a', box), rooms: [room('r1', box)] }, { walls: tall, rooms: [room('r2', box)] });
+// Customer request D (a stair rail through the roof), all three cases in one house:
+//   top   - a stair on the top storey, under the flat roof: must stop at the roof;
+//   cross - a ground-floor stair whose footprint crosses the room line above
+//           (no stairwell can be cut for it): must stop under the upper floor;
+//   well  - a ground-floor stair wholly inside a room above (a proper stairwell):
+//           must stay whole, top rail included.
+const stairItem = (id, type, x, y, extra = {}) => ({ id, type, name: id, position: { x, y }, rotation: 0, width: 100, depth: 250, height: 280, color: '#9aa0a6', railing: 'both', ...extra });
+const left = [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 600 }, { x: 0, y: 600 }];
+const right = [{ x: 400, y: 0 }, { x: 800, y: 0 }, { x: 800, y: 600 }, { x: 400, y: 600 }];
+FIXTURES.stairs = snap('stairs', { walls: ring('a', box), rooms: [room('r1', box)] }, { walls: ring('b', box), rooms: [room('l2', left), room('r2', right)] });
+FIXTURES.stairs.floorGeom.f1.furniture = [stairItem('cross', 'stairs', 400, 300), stairItem('well', 'stairs', 130, 300)];
+FIXTURES.stairs.floorGeom.f2.furniture = [stairItem('top', 'stairs', 650, 200), stairItem('topspiral', 'stairs_spiral', 650, 470, { width: 160, depth: 160 })];
+FIXTURES.stairs.furniture = FIXTURES.stairs.floorGeom.f2.furniture;
