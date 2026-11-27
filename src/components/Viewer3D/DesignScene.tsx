@@ -12,6 +12,7 @@ import { activeTier, tierCaps } from '../../lib/perfTier';
 import { dist, boundsOf, pointInPolygon } from '../../lib/geometry';
 import { stairOpeningPoints } from '../../lib/walkNavigation';
 import { isStairs } from '../../lib/stairs';
+import { SLAB_T, stairHoleCut } from '../../lib/stairCut';
 import { wallFaceAt, finishForFace } from '../../lib/wallFaces';
 import { exteriorFaces, exteriorRanges, exteriorSideAt } from '../../lib/exteriorFaces';
 import { bayParts, isBay } from '../../lib/bayWindow';
@@ -1142,7 +1143,7 @@ function CanopyRoof({ room, top, depth }: { room: Room; top: number; depth: numb
   );
 }
 
-const SLAB_T = 0.22; // structural slab thickness between storeys (m)
+// SLAB_T: structural slab thickness between storeys (m), from lib/stairCut.ts.
 
 /** Shared shape builder: a room polygon as a THREE.Shape in plan meters. */
 function roomShape(room: Room, stairsBelow: FurnitureItem[] = []): THREE.Shape {
@@ -1153,10 +1154,11 @@ function roomShape(room: Room, stairsBelow: FurnitureItem[] = []): THREE.Shape {
   });
   shape.closePath();
   for (const stair of stairsBelow) {
-    const opening = stairOpeningPoints(stair);
     // A THREE.Shape hole must sit wholly inside this room polygon. Stairs that
-    // cross room boundaries remain solid until a clipped-opening model exists.
-    if (!opening.every((point) => pointInPolygon(point, room.points))) continue;
+    // cross room boundaries remain solid (stairHoleCut, lib/stairCut.ts, which
+    // the stair clip and the IFC export share).
+    if (!stairHoleCut(stair, room)) continue;
+    const opening = stairOpeningPoints(stair);
     const hole = new THREE.Path();
     opening.forEach((point, index) => {
       if (index === 0) hole.moveTo(point.x * M, point.y * M);
