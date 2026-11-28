@@ -18,7 +18,9 @@
 //   --out <path>   where stdout is redirected (required unless stdout is a terminal)
 //   --base <url>   worker base URL (default: VITE_CLOUD_SYNC_URL from .env.production)
 //   --local        read the local wrangler D1 instead of production
+import { Buffer } from 'node:buffer';
 import { createHmac } from 'node:crypto';
+import process from 'node:process';
 import { execFileSync } from 'node:child_process';
 import { existsSync, fstatSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
