@@ -27,6 +27,11 @@ const prompt = createReviewPrompt({
   },
 });
 
+/** Play's review card was asked for during this launch (Android only). */
+export function reviewAskedThisSession(): boolean {
+  return prompt.askedThisSession();
+}
+
 /** The app was opened or came back to the foreground. */
 export function noteAppOpened(): void {
   prompt.opened();
@@ -47,6 +52,15 @@ const importMoment = createImportMoment(() => notePositiveMoment());
 /** An import just succeeded. It counts as a good moment once 3D has drawn it. */
 export function noteImportDone(): void {
   importMoment.imported();
+}
+
+/**
+ * A sample or template is being opened, or the first-3D auto-open is about
+ * to show a project that was not just imported. Its first 3D frame must never
+ * count as a moment, so drop any import still waiting for one.
+ */
+export function noteNotAnImport(): void {
+  importMoment.discard();
 }
 
 /** The 3D view has drawn its first frame. Counts a waiting import, once. */

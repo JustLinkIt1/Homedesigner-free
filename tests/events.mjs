@@ -3,7 +3,7 @@
 //
 //   node tests/events.mjs
 import assert from 'node:assert/strict';
-import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { build } from 'esbuild';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -52,6 +52,20 @@ check(sourceFromReferrer('') === 'organic', 'empty referrer is organic');
 check(sourceFromReferrer('utm_source=google-play&utm_medium=organic') === 'organic', 'Play organic referrer is organic');
 check(sourceFromReferrer('utm_source=google-play&utm_campaign=Spring Sale') === 'google-play:spring-sale', 'source:campaign, slugged');
 check(sourceFromReferrer('utm_source=newsletter') === 'newsletter', 'source alone');
+// In-app Play links (src/lib/appInfo.ts playStoreUrl): Play hands back the
+// decoded `referrer` parameter of the store URL.
+for (const campaign of ['pro-wall', 'share']) {
+  const url = new URL(`https://play.google.com/store/apps/details?id=com.homedesigner.app&referrer=${encodeURIComponent(`utm_source=webapp&utm_medium=webapp&utm_campaign=${campaign}`)}`);
+  check(url.searchParams.get('id') === 'com.homedesigner.app' && sourceFromReferrer(url.searchParams.get('referrer')) === `webapp:${campaign}`,
+    `in-app Play link (${campaign}) is stored as webapp:${campaign}`);
+}
+{
+  const src = readFileSync('src/lib/appInfo.ts', 'utf8');
+  check(src.includes("`${PLAY_STORE_URL}&referrer=${encodeURIComponent(referrer)}`")
+    && src.includes('utm_source=webapp&utm_medium=webapp&utm_campaign=${campaign}'), 'playStoreUrl builds that same URL');
+  check(readFileSync('src/lib/pro.ts', 'utf8').includes("playStoreUrl('pro-wall')")
+    && readFileSync('src/lib/native.ts', 'utf8').includes("playStoreUrl('share')"), 'pro wall and share text use the tagged links');
+}
 check(sourceFromReferrer('utm_source=(not set)&utm_medium=(not set)') === 'organic', '(not set) is organic');
 check(sourceFromReferrer('utm_source=' + 'a'.repeat(200)).length <= 64, 'capped at 64');
 
@@ -72,6 +86,9 @@ const body = sent[0].body;
 check(sent[0].url === 'https://sync.example.test/v1/events', 'posts to the worker base URL');
 check(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(body.install) && body.install === store.get('homedesigner.install.v1'), 'v4 install id, stored');
 check(body.app_version === '1.23.0' && body.source === 'web', 'version and web source');
+check(mod.webSourceFor(false, 'homedesignerapp.com') === 'web', 'production web host reports web');
+check(mod.webSourceFor(false, 'localhost') === 'web-dev' && mod.webSourceFor(false, '127.0.0.1') === 'web-dev', 'local dev hosts report web-dev');
+check(mod.webSourceFor(true, 'homedesignerapp.com') === 'web-dev', 'a Vite dev build reports web-dev');
 const names = body.events.map((e) => e.event);
 check(names.join() === 'app_first_open,template_chosen,editor_opened,view_3d_opened,import_result,pro_wall_shown,pro_wall_shown,export,export,export,export', 'once-per-session steps fire once; import/pro wall/export are not deduped');
 check(body.events.slice(-4).map((e) => e.detail).join() === 'png,pdf,dxf,ifc', 'export carries its kind as the detail');

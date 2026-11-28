@@ -717,8 +717,11 @@ const reset = (isPro) => {
   const q = String.raw`((?:[^'\\]|\\.)*)`;
   const entry = new RegExp(String.raw`'([^']+)': \{ title: '${q}', blurb: '${q}' \}`, 'g');
   const copy = new Map([...block.matchAll(entry)].map((m) => [m[1], { title: unq(m[2]), blurb: unq(m[3]) }]));
+  // Triggers that open with no feature and show the generic Pro pitch on purpose.
+  const generic = ['3d_exit'];
   check('trigger copy: every ProTrigger key has a headline and blurb',
-    keys.length === 17 && keys.every((k) => copy.has(k)), keys.filter((k) => !copy.has(k)).join(', '));
+    keys.length === 18 && keys.every((k) => copy.has(k) || generic.includes(k)), keys.filter((k) => !copy.has(k) && !generic.includes(k)).join(', '));
+  check('trigger copy: generic triggers carry no copy of their own', generic.every((k) => keys.includes(k) && !copy.has(k)));
   for (const lang of ['es', 'pt', 'pl', 'tr']) {
     const src = readFileSync(join(root, 'src/locales', lang + '.ts'), 'utf8');
     const missing = [...copy.values()].flatMap((c) => [c.title, c.blurb])

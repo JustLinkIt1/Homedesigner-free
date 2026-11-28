@@ -5,7 +5,7 @@
 // Builds without a Web Billing key retain the old Play Store link.
 import { Capacitor } from '@capacitor/core';
 import { useProStore } from '../store/proStore';
-import { APP_VERSION, PLAY_STORE_URL } from './appInfo';
+import { APP_VERSION, playStoreUrl } from './appInfo';
 import { getCloudProEntitlement, linkPlayPurchases, verifyPlayPurchase } from './cloudSync';
 import { trackProCheckout } from './events';
 import {
@@ -27,7 +27,9 @@ export type ProTrigger =
   | 'multiFloor:add' | 'multiFloor:clone' | 'multiFloor:aiPlan'
   | 'pdfExport:pdf' | 'pdfExport:dxf' | 'pdfExport:ifc'
   | 'catalog:item' | 'catalog:opening' | 'catalog:appliance' | 'catalog:uppers' | 'catalog:corner'
-  | 'cleanExport:saved' | 'cleanExport:render';
+  | 'cleanExport:saved' | 'cleanExport:render'
+  /** First exit from 3D (lib/exit3dWall.ts): opened with no feature, so the generic Pro pitch. */
+  | '3d_exit';
 export type ProPlanID = 'monthly' | 'yearly' | 'lifetime';
 
 export interface ProPlan {
@@ -971,7 +973,7 @@ export class WebRevenueCatProvider implements ProProvider {
     // Keep older/unconfigured deployments useful until the Web Billing
     // provider and public key are enabled in RevenueCat.
     if (!isWebBillingConfigured()) {
-      window.open(PLAY_STORE_URL, '_blank', 'noopener');
+      window.open(playStoreUrl('pro-wall'), '_blank', 'noopener');
       return false;
     }
     const purchases = await this.sdk();

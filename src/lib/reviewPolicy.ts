@@ -10,13 +10,18 @@
 // question of its own in front of it or behind it.
 
 /** The app has to have been opened on this many different calendar days.
- * Two: most users never reach a third day (EXEC cycle 165). */
-export const REVIEW_MIN_DAYS = 2;
-/** Things that went well (an export saved, an AI render finished), in total. */
-export const REVIEW_MIN_MOMENTS = 2;
+ * One since EXEC cycle 249 (was two): most installs never come back for a
+ * second day, so the first good moment on day one is the chance to ask. */
+export const REVIEW_MIN_DAYS = 1;
+/** Things that went well (an import seen in 3D, a saved photo or render, an
+ * export, an AI render finished), in total. One since EXEC cycle 249. */
+export const REVIEW_MIN_MOMENTS = 1;
 export const REVIEW_COOLDOWN_MS = 90 * 24 * 60 * 60 * 1000;
-/** Lifetime cap on requests. After this the app never asks again. */
-export const REVIEW_MAX_REQUESTS = 3;
+/** Lifetime cap on requests. After this the app never asks again. One per
+ * install since EXEC cycle 249 (was three): any request on record, including
+ * counts of 1 to 3 written by older builds, means never again. The cooldown
+ * above only matters if this cap is ever raised. */
+export const REVIEW_MAX_REQUESTS = 1;
 
 export interface ReviewState {
   /** Distinct local days the app was opened on, oldest first. Only the first
@@ -133,7 +138,6 @@ export function withRequest(state: ReviewState, now: number): ReviewState {
  */
 export function shouldRequestReview(state: ReviewState, context: ReviewContext): boolean {
   if (!context.android || context.dialogOpen || context.askedThisSession) return false;
-  // Two different days also rules out the first session.
   if (state.days.length < REVIEW_MIN_DAYS || state.moments < REVIEW_MIN_MOMENTS) return false;
   if (state.requests >= REVIEW_MAX_REQUESTS) return false;
   if (state.lastRequestAt === null) return state.requests === 0;
@@ -158,6 +162,10 @@ export interface ReviewEnv {
 export function createReviewPrompt(env: ReviewEnv) {
   let asked = false;
   return {
+    /** Play was asked for its card during this launch (its card may be up). */
+    askedThisSession(): boolean {
+      return asked;
+    },
     /** The app was opened or resumed. Only counts the day. */
     opened(): void {
       try {
@@ -207,6 +215,11 @@ export function createImportMoment(onMoment: () => void) {
   return {
     imported(): void {
       pending = true;
+    },
+    /** A sample or template was opened, or the first-3D auto-open fired:
+     * nothing waiting may be credited to the 3D frame that follows. */
+    discard(): void {
+      pending = false;
     },
     /** Returns whether a moment was reported. Never throws. */
     rendered3D(): boolean {
