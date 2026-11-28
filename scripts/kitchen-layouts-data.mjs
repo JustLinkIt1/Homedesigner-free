@@ -81,13 +81,13 @@ export const KITCHEN_HUB = {
   },
   fr: {
     path: '/fr/implantation-cuisine/',
-    title: "Idées d’implantation de cuisine : petite, en L, couloir, en U, îlot",
+    title: 'Implantation de cuisine : petite, en L, couloir, en U, îlot',
     description: 'Cinq implantations de cuisine avec des tailles d\'exemple. Ouvrez une pièce dans le planificateur gratuit et placez les meubles en 2D et 3D.',
     body: "La plupart des cuisines suivent l’une de cinq formes. Une petite cuisine tient sur un ou deux murs. Une cuisine en L occupe deux murs qui se rejoignent dans un angle. Une cuisine en couloir aligne deux rangées face à face. Une cuisine en U fait le tour de trois murs. L’îlot ajoute une rangée au centre de la pièce. Choisissez une implantation ci-dessous pour voir des tailles d’exemple, puis ouvrez une pièce de cette taille dans HomeDesigner. Vous placez les meubles en 2D et faites le tour du résultat en 3D, dans le navigateur ou sur Android. Meubles bas, plans de travail, évier, cuisinière et réfrigérateur sont gratuits.",
   },
   de: {
     path: '/de/kuechenformen/',
-    title: 'Küchenformen planen: kleine Küche, L, zweizeilig, U und Insel',
+    title: 'Küchenformen planen: klein, L, zweizeilig, U und Insel',
     description: 'Fünf Küchenformen mit Beispielmaßen. Öffne einen Raum im kostenlosen Planer und stelle die Schränke in 2D und 3D.',
     body: 'Die meisten Küchen haben eine von fünf Formen. Eine kleine Küche passt an eine oder zwei Wände. Die L-Küche nutzt zwei Wände, die sich in einer Ecke treffen. Die zweizeilige Küche stellt zwei Zeilen gegenüber. Die U-Küche läuft über drei Wände. Eine Insel ergänzt eine freistehende Zeile in der Mitte. Wähle unten eine Form, sieh dir die Beispielmaße an und öffne einen Raum in dieser Größe in HomeDesigner. Du stellst die Schränke in 2D und gehst in 3D durch das Ergebnis, im Browser oder auf Android. Unterschränke, Arbeitsplatten, Spüle, Herd und Kühlschrank sind kostenlos.',
   },
