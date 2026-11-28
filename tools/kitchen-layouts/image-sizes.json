@@ -1,0 +1,42 @@
+{
+ "/assets/kitchen-layouts/small-kitchen-3d.webp": {
+  "w": 1100,
+  "h": 747
+ },
+ "/assets/kitchen-layouts/small-kitchen-plan.webp": {
+  "w": 1100,
+  "h": 796
+ },
+ "/assets/kitchen-layouts/l-shaped-kitchen-3d.webp": {
+  "w": 1100,
+  "h": 747
+ },
+ "/assets/kitchen-layouts/l-shaped-kitchen-plan.webp": {
+  "w": 1100,
+  "h": 796
+ },
+ "/assets/kitchen-layouts/galley-kitchen-3d.webp": {
+  "w": 1100,
+  "h": 747
+ },
+ "/assets/kitchen-layouts/galley-kitchen-plan.webp": {
+  "w": 1100,
+  "h": 796
+ },
+ "/assets/kitchen-layouts/u-shaped-kitchen-3d.webp": {
+  "w": 1100,
+  "h": 747
+ },
+ "/assets/kitchen-layouts/u-shaped-kitchen-plan.webp": {
+  "w": 1100,
+  "h": 796
+ },
+ "/assets/kitchen-layouts/kitchen-island-3d.webp": {
+  "w": 1100,
+  "h": 747
+ },
+ "/assets/kitchen-layouts/kitchen-island-plan.webp": {
+  "w": 1100,
+  "h": 796
+ }
+}
