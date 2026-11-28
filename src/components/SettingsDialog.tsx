@@ -64,6 +64,8 @@ export default function SettingsDialog({
   const setShowGrid = useDesign((s) => s.setShowGrid);
   const showDimensions = useDesign((s) => s.showDimensions);
   const setShowDimensions = useDesign((s) => s.setShowDimensions);
+  const moveLock = useDesign((s) => s.moveLock);
+  const setMoveLock = useDesign((s) => s.setMoveLock);
   const [haptics, setHaptics] = useState(hapticsEnabled);
   const [intro, setIntro] = useState(introEnabled);
   const [quality, setQuality] = useState<QualityPref>(qualityPref);
@@ -244,6 +246,11 @@ export default function SettingsDialog({
                 }}
               />
             </label>
+            <label className="settings-row">
+              <span>{t('Lock objects')}</span>
+              <input type="checkbox" checked={moveLock} onChange={(e) => setMoveLock(e.target.checked)} />
+            </label>
+            <p className="settings-hint">{t('Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.')}</p>
           </section>
 
           <section>

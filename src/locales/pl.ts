@@ -297,6 +297,7 @@ export const PL: Record<string, string> = {
   'Show grid': 'Pokaż siatkę',
   'Show dimensions': 'Pokaż wymiary',
   'Vibration feedback': 'Wibracje',
+  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': 'Blokada obiektów zapobiega ich przypadkowemu przesunięciu podczas przesuwania i powiększania widoku. Pozostaje włączona, dopóki jej nie wyłączysz.',
   Help: 'Pomoc',
   'Replay the intro tour': 'Odtwórz wprowadzenie',
   'Privacy policy': 'Polityka prywatności',

@@ -297,6 +297,7 @@ export const JA: Record<string, string> = {
   'Show grid': 'グリッドを表示',
   'Show dimensions': '寸法を表示',
   'Vibration feedback': '振動',
+  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': '「オブジェクトをロック」をオンにすると、画面の移動やズーム中にオブジェクトを誤って動かすことがなくなります。オフにするまで有効です。',
   Help: 'ヘルプ',
   'Replay the intro tour': 'チュートリアルを再生',
   'Privacy policy': 'プライバシーポリシー',

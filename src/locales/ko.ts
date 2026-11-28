@@ -297,6 +297,7 @@ export const KO: Record<string, string> = {
   'Show grid': '격자 표시',
   'Show dimensions': '치수 표시',
   'Vibration feedback': '진동',
+  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': '객체 잠금을 켜면 화면을 이동하거나 확대/축소할 때 객체가 실수로 움직이지 않습니다. 끌 때까지 켜진 상태로 유지됩니다.',
   Help: '도움말',
   'Replay the intro tour': '소개 다시 보기',
   'Privacy policy': '개인정보 처리방침',

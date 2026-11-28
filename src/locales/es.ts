@@ -297,6 +297,7 @@ export const ES: Record<string, string> = {
   'Show grid': 'Mostrar cuadrícula',
   'Show dimensions': 'Mostrar cotas',
   'Vibration feedback': 'Vibración',
+  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': 'Bloquear objetos evita que los muevas por accidente al desplazar o ampliar la vista. Sigue activado hasta que lo desactives.',
   Help: 'Ayuda',
   'Replay the intro tour': 'Volver a ver el tutorial',
   'Privacy policy': 'Política de privacidad',
