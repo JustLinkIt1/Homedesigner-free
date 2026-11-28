@@ -134,8 +134,8 @@ try {
   const ASK = {
     en: { text: "Unsubscribe from HomeDesigner emails? You'll stop getting product emails from HomeDesigner. Unsubscribe", button: 'Unsubscribe' },
     de: { text: 'Von HomeDesigner-E-Mails abmelden? Du bekommst dann keine Produkt-E-Mails von HomeDesigner mehr. Abmelden', button: 'Abmelden' },
-    fr: { text: "Se désabonner des e-mails HomeDesigner ? Vous ne recevrez plus d'e-mails sur l'app HomeDesigner. Se désabonner", button: 'Se désabonner' },
-    es: { text: '¿Darte de baja de los correos de HomeDesigner? Dejarás de recibir correos de novedades de HomeDesigner. Darme de baja', button: 'Darme de baja' },
+    fr: { text: "Se désabonner des e-mails HomeDesigner ? Vous ne recevrez plus les e-mails d'information de HomeDesigner. Se désabonner", button: 'Se désabonner' },
+    es: { text: '¿Quieres darte de baja de los correos de HomeDesigner? Dejarás de recibir correos de novedades de HomeDesigner. Darme de baja', button: 'Darme de baja' },
   };
   // The confirm form: one POST form back to the same ?t= URL, a hidden confirm=1 and one button.
   const formOf = (body) => {

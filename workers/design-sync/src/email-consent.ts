@@ -233,8 +233,8 @@ const UNSUBSCRIBED_TEXT: Record<string, { title: string; message: string }> = {
 const CONFIRM_TEXT: Record<string, { title: string; message: string; button: string }> = {
   en: { title: 'Unsubscribe from HomeDesigner emails?', message: "You'll stop getting product emails from HomeDesigner.", button: 'Unsubscribe' },
   de: { title: 'Von HomeDesigner-E-Mails abmelden?', message: 'Du bekommst dann keine Produkt-E-Mails von HomeDesigner mehr.', button: 'Abmelden' },
-  fr: { title: 'Se désabonner des e-mails HomeDesigner ?', message: "Vous ne recevrez plus d'e-mails sur l'app HomeDesigner.", button: 'Se désabonner' },
-  es: { title: '¿Darte de baja de los correos de HomeDesigner?', message: 'Dejarás de recibir correos de novedades de HomeDesigner.', button: 'Darme de baja' },
+  fr: { title: 'Se désabonner des e-mails HomeDesigner ?', message: "Vous ne recevrez plus les e-mails d'information de HomeDesigner.", button: 'Se désabonner' },
+  es: { title: '¿Quieres darte de baja de los correos de HomeDesigner?', message: 'Dejarás de recibir correos de novedades de HomeDesigner.', button: 'Darme de baja' },
 };
 
 /** Primary subtag of a stored language tag if there is K4 text for it, otherwise 'en'. */
