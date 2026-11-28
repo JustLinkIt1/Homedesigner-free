@@ -297,7 +297,7 @@ export const ZH: Record<string, string> = {
   'Show grid': '显示网格',
   'Show dimensions': '显示尺寸',
   'Vibration feedback': '振动反馈',
-  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': '锁定对象后，平移或缩放视图时不会误移对象。此设置会一直保持开启，直到你将其关闭。',
+  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': '锁定对象后，平移或缩放视图时不会误移对象。此设置会一直保持开启，直到您将其关闭。',
   Help: '帮助',
   'Replay the intro tour': '重新观看引导',
   'Privacy policy': '隐私政策',
