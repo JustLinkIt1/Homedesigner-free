@@ -31,6 +31,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { FLOOR_PLANS, FLOOR_PLANS_HUB, FLOOR_PLANS_PATH, FLOOR_PLANS_DRAFT, DRAFT_PLACEHOLDER, floorPlanProblems } from './floor-plans-data.mjs';
+import { KITCHEN_HUB, KITCHEN_LAYOUTS, KITCHEN_CODES, KITCHEN_UI, KITCHEN_ALT, KITCHEN_LAYOUTS_DRAFT, kitchenLayoutProblems, kitchenLayoutWarnings } from './kitchen-layouts-data.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const site = resolve(root, 'site');
@@ -1601,7 +1602,8 @@ ${header(code, topic)}
         <span class="kicker">${esc(page.kicker)}</span>
         <h2 class="title">${esc(page.heading)}</h2>
         <p class="lead">${esc(page.lead)}</p>
-${page.rows
+${topic.en.slug === 'kitchen-planner' && KITCHEN_HUB[code] ? `        <p class="lead"><a href="${KITCHEN_HUB[code].path}">${esc(klText(code, KITCHEN_HUB[code]).title)}</a></p>
+` : ''}${page.rows
   .map(
     (r, i) => `        <div class="split">
           <div class="pic${topic.shots[i].phone ? ' phone' : ''}">${img(topic.shots[i], r.alt)}</div>
@@ -1889,6 +1891,127 @@ ${footer('en', paths)}
 `;
 }
 
+// The kitchen-layout pages (SEO S2): a hub and five layouts in en/fr/de, data in
+// scripts/kitchen-layouts-data.mjs. Draft (KITCHEN_LAYOUTS_DRAFT=1): pictures may
+// be missing, the pages carry noindex and stay out of the sitemap.
+const KITCHEN_UPDATED = '2026-11-28';
+/** French texts get the same non-breaking spaces as the topic pages. */
+const klText = (code, v) => (code === 'fr' ? frenchSpacing(v) : v);
+const klDraft = (html) => (KITCHEN_LAYOUTS_DRAFT ? html.replace('<head>', '<head>\n  <meta name="robots" content="noindex" />') : html);
+const klPaths = (pick) => Object.fromEntries(KITCHEN_CODES.map((c) => [c, pick(c).path]));
+const KITCHEN_TOPIC = TOPICS.find((t) => t.en.slug === 'kitchen-planner');
+const klPlannerLink = (code) => `<p><a href="${topicPath(KITCHEN_TOPIC, code)}">${esc(KITCHEN_TOPIC[code].nav)}</a></p>`;
+const klCards = (code, layouts) => `<div class="more">
+          ${layouts.map((l) => { const p = klText(code, l[code]); return `<a href="${p.path}"><b>${esc(p.title)}</b><span>${esc(p.example)}</span></a>`; }).join('\n          ')}
+        </div>`;
+
+function renderKitchenLayout(layout, code) {
+  const ui = klText(code, KITCHEN_UI[code]);
+  const alt = klText(code, KITCHEN_ALT[code]);
+  const page = klText(code, layout[code]);
+  const hub = klText(code, KITCHEN_HUB[code]);
+  const paths = klPaths((c) => layout[c]);
+  const jsonLd = [
+    fpCrumbs([['HomeDesigner', homePath(code)], [ui.back, hub.path], [page.title, page.path]]),
+  ];
+  const label = (b) => (page.buttons.length > 1 ? `${ui.button} (${b.label})` : ui.button);
+  return `<!doctype html>
+<html lang="${code}">
+${head(code, { title: page.title, description: page.description, paths, jsonLd })}
+<body>
+${header(code, null)}
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <p class="crumbs"><a href="${homePath(code)}">HomeDesigner</a> › <a href="${hub.path}">${esc(ui.back)}</a> › ${esc(page.title)}</p>
+        <h1>${esc(page.title)}</h1>
+        <p class="sub">${esc(page.example)}</p>
+        <p class="lead">${esc(page.body)}</p>
+        <div class="ctas">
+          ${page.buttons.map((b) => `<a class="btn primary" href="${b.href}">${esc(label(b))}</a>`).join('\n          ')}
+        </div>
+        <p class="sub">${esc(ui.under)}</p>
+${page.proNote ? `        <p class="sub">${esc(ui.proNote)}</p>\n` : ''}      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <div class="compare">
+          <figure>${fpImg(layout.images.view3d, `${page.title}: ${alt.view3d}`)}<figcaption>${esc(ui.caption)}</figcaption></figure>
+          <figure>${fpImg(layout.images.plan, `${page.title}: ${alt.plan}`)}<figcaption>${esc(ui.caption)}</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" style="padding-top:0">
+      <div class="wrap">
+        <span class="kicker">${esc(LANGS[code].ui.more)}</span>
+        ${klCards(code, KITCHEN_LAYOUTS.filter((l) => l !== layout))}
+        <p><a href="${hub.path}">${esc(ui.back)}</a></p>
+        ${klPlannerLink(code)}
+      </div>
+    </section>
+
+${getTheApp(code)}
+  </main>
+
+${footer(code, paths)}
+</body>
+</html>
+`;
+}
+
+function renderKitchenHub(code) {
+  const hub = klText(code, KITCHEN_HUB[code]);
+  const ui = klText(code, KITCHEN_UI[code]);
+  const alt = klText(code, KITCHEN_ALT[code]);
+  const paths = klPaths((c) => KITCHEN_HUB[c]);
+  const jsonLd = [
+    fpCrumbs([['HomeDesigner', homePath(code)], [ui.back, hub.path]]),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      itemListElement: KITCHEN_LAYOUTS.map((l, i) => ({ '@type': 'ListItem', position: i + 1, url: ORIGIN + l[code].path, name: klText(code, l[code]).title })),
+    },
+  ];
+  return `<!doctype html>
+<html lang="${code}">
+${head(code, { title: hub.title, description: hub.description, paths, jsonLd })}
+<body>
+${header(code, null)}
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <p class="crumbs"><a href="${homePath(code)}">HomeDesigner</a> › ${esc(ui.back)}</p>
+        <h1>${esc(hub.title)}</h1>
+        <p class="sub">${esc(hub.body)}</p>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+${KITCHEN_LAYOUTS.map((l) => { const p = klText(code, l[code]); return `        <div class="split">
+          <div class="pic"><a href="${p.path}">${fpImg(l.images.view3d, `${p.title}: ${alt.view3d}`)}</a></div>
+          <div>
+            <h3><a href="${p.path}">${esc(p.title)}</a></h3>
+            <p>${esc(p.example)}</p>
+          </div>
+        </div>`; }).join('\n')}
+        ${klPlannerLink(code)}
+      </div>
+    </section>
+
+${getTheApp(code)}
+  </main>
+
+${footer(code, paths)}
+</body>
+</html>
+`;
+}
+
 // Search results cut a title at about 65 characters and a description at about
 // 160, and a description under 120 wastes the space. Refuse to write a page
 // that would be cut, so a new translation cannot ship one by accident.
@@ -1908,6 +2031,9 @@ for (const code of CODES) {
 // The /floor-plans/ pages: nothing is written while one is thin, has no
 // pictures or says something it cannot back up (floor-plans-data.mjs).
 problems.push(...floorPlanProblems((src) => existsSync(resolve(site, `.${src}`))));
+// The kitchen-layout pages: the same rules (kitchen-layouts-data.mjs).
+problems.push(...kitchenLayoutProblems((src) => existsSync(resolve(site, `.${src}`))));
+if (kitchenLayoutWarnings.length) console.warn(['DRAFT ONLY, a normal build refuses:', ...kitchenLayoutWarnings].join('\n'));
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
@@ -1937,6 +2063,16 @@ for (const plan of FLOOR_PLANS) {
   if (!FLOOR_PLANS_DRAFT) written.push(`${FLOOR_PLANS_PATH}${plan.slug}/`);
 }
 if (FLOOR_PLANS_DRAFT) console.log('DRAFT floor-plan pages: placeholder text, noindex, left out of the sitemap. Do not deploy.');
+const kitchenWritten = [];
+for (const code of KITCHEN_CODES) {
+  await write(KITCHEN_HUB[code].path, klDraft(renderKitchenHub(code)));
+  kitchenWritten.push(KITCHEN_HUB[code].path);
+  for (const layout of KITCHEN_LAYOUTS) {
+    await write(layout[code].path, klDraft(renderKitchenLayout(layout, code)));
+    kitchenWritten.push(layout[code].path);
+  }
+}
+if (KITCHEN_LAYOUTS_DRAFT) console.log(`DRAFT kitchen-layout pages (${kitchenWritten.length}): pictures may be missing, noindex, left out of the sitemap. Do not deploy.`);
 
 // Every Google Play link on the site carries an install referrer naming the page
 // it was on (TASKS T1, 27 Nov 2026). The app reads it once through the Play
@@ -1978,6 +2114,7 @@ export const tagPlayLinks = (html, path) =>
 const entries = [
   ['/', '1.0', UPDATED],
   ...written.map((path) => [path, '0.9', UPDATED]),
+  ...(KITCHEN_LAYOUTS_DRAFT ? [] : kitchenWritten.map((path) => [path, '0.9', KITCHEN_UPDATED])),
   ['/app/', '0.8', UPDATED_OTHER],
   ['/buy/', '0.6', UPDATED_OTHER],
   ['/community/', '0.5', UPDATED_OTHER],
@@ -1995,5 +2132,5 @@ ${entries.map(([path, pri, date]) => `  <url><loc>${ORIGIN}${path}</loc><lastmod
 );
 
 console.log(
-  `Wrote ${written.length} pages (${TOPICS.length} topics in ${CODES.length} languages, ${CODES.length - 1} landing pages, ${FLOOR_PLANS.length + 1} floor-plan pages) and sitemap.xml (${entries.length} URLs) into site/`,
+  `Wrote ${written.length} pages (${TOPICS.length} topics in ${CODES.length} languages, ${CODES.length - 1} landing pages, ${FLOOR_PLANS.length + 1} floor-plan pages, ${kitchenWritten.length} kitchen-layout pages${KITCHEN_LAYOUTS_DRAFT ? ' (draft: not in the sitemap)' : ''}) and sitemap.xml (${entries.length} URLs) into site/`,
 );
