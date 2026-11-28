@@ -28,6 +28,10 @@ import { stripeSignatureValid } from './stripe';
 import { SHARED_PLAN_PATH, countSharedPlanOpen, readSharedPlan } from './shared-plans';
 import { recordHdEvents, purgeOldHdEvents } from './hd-events';
 import {
+  UNSUBSCRIBE_HEADERS, eraseEmailConsent, getEmailConsent, postEmailConsent,
+  unsubscribeLinkPage, unsubscribeOneClick,
+} from './email-consent';
+import {
   RenderError, validRenderId, validRenderImage, readRender,
   reserveRender, dispatchRender, refreshRender, publicRender, freeRenderAvailable,
   validRenderStyle, validRenderView, RENDER_STYLES, renderAvailable, renderImageUrl,
@@ -77,6 +81,10 @@ interface Env {
   /** `whsec_...`, from the Stripe dashboard endpoint. Without it no webhook is
    *  trusted, so a missing value fails closed rather than crediting freely. */
   STRIPE_WEBHOOK_SECRET?: string;
+  /** HMAC key for the email unsubscribe links (src/email-consent.ts). Set once
+   *  with `wrangler secret put` and never rotated: changing it kills every link
+   *  already sent. Absent means the unsubscribe routes answer 503. */
+  UNSUBSCRIBE_SECRET?: string;
 }
 
 interface AuthIdentity {
@@ -1973,6 +1981,28 @@ export default {
       }
     }
 
+    // Email unsubscribe. Public: the person clicking a link in an email, or
+    // their mail provider (RFC 8058 one-click POST), has no app sign-in. The
+    // signed token is the whole credential, it can only ever unsubscribe, and a
+    // forged one costs one HMAC to reject, so no rate limit: throttling a mail
+    // provider's one-click POSTs would keep mailing people who said stop.
+    if (url.pathname === '/v1/email/unsubscribe' && (request.method === 'GET' || request.method === 'POST')) {
+      try {
+        const result = request.method === 'GET'
+          ? await unsubscribeLinkPage(url, env.COMMUNITY, env.UNSUBSCRIBE_SECRET)
+          : await unsubscribeOneClick(url, env.COMMUNITY, env.UNSUBSCRIBE_SECRET);
+        return new Response(result.body, {
+          status: result.status,
+          headers: { ...UNSUBSCRIBE_HEADERS, 'Content-Type': result.contentType },
+        });
+      } catch {
+        return new Response('Please try again later.', {
+          status: 503,
+          headers: { ...UNSUBSCRIBE_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+      }
+    }
+
     // A shared plan is opened by whoever holds its link, signed in or not: the
     // point of the link is that a newcomer sees their plan before being asked
     // for anything. The id in the path is the only credential.
@@ -2037,6 +2067,12 @@ export default {
       }
       if (request.method === 'POST' && url.pathname === '/v1/play/link') {
         return await linkPlayPurchaseRequest(request, env, identity.subject);
+      }
+      if (url.pathname === '/v1/email-consent' && (request.method === 'GET' || request.method === 'POST')) {
+        const result = request.method === 'GET'
+          ? await getEmailConsent(env.COMMUNITY, identity)
+          : await postEmailConsent(request, env.COMMUNITY, identity);
+        return json(request, result.body, result.status);
       }
       if (request.method === 'GET' && url.pathname === '/v1/points') {
         return await pointsState(request, env, identity);
@@ -2160,6 +2196,9 @@ export default {
         // ids/refs is replaced by a one-way tag. `grant:erased:<tag>` stays as
         // the "already had the free grant" marker.
         await erasePoints(env.COMMUNITY, identity.subject);
+        // The email address and the whole consent history go too. With no
+        // consent row nobody can be emailed, so nothing else is needed.
+        await eraseEmailConsent(env.COMMUNITY, identity.subject);
         return json(request, { deleted: deletedObjects });
       }
 
