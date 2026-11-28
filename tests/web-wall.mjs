@@ -107,7 +107,7 @@ try {
         BASE_URL: '/', DEV: false, PROD: true,
         VITE_REVENUECAT_WEB_KEY: 'rcb_test_key', VITE_CLOUD_SYNC_URL: 'https://sync.example.test',
       }),
-      __APP_VERSION__: '"1.22.54"',
+      __APP_VERSION__: '"1.22.55"',
     },
     plugins: [{
       // The cloud entitlement read needs a real Google token; with none, the cloud says "not Pro".
