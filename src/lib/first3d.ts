@@ -64,6 +64,15 @@ export function takeFirst3D(wallCount: number): boolean {
   return true;
 }
 
+/**
+ * A shared plan link chose to open in 2D (an empty room to arrange, S2b): use
+ * the new install's one auto-open up so the editor entry right after it does
+ * not flip the view to 3D. Leaves 'skip' and 'done' as they are.
+ */
+export function skipFirst3D(): void {
+  if (read() === 'pending') write('done');
+}
+
 /** An import just put walls on the plan of a project the user created. */
 export function openFirst3DAfterImport(wallCount: number): boolean {
   return takeFirst3D(wallCount);

@@ -34,7 +34,7 @@ try {
 let failures = 0;
 const check = (name, ok) => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`); if (!ok) failures += 1; };
 const KEY = 'homedesigner.first3d.v1';
-const { shouldOpenFirst3D, initFirst3D, takeFirst3D, wasAuto3D, openFirst3DAfterImport } = first;
+const { shouldOpenFirst3D, initFirst3D, takeFirst3D, wasAuto3D, openFirst3DAfterImport, skipFirst3D } = first;
 
 check('pending + walls opens', shouldOpenFirst3D('pending', 7, false));
 check('blank project stays 2D', !shouldOpenFirst3D('pending', 0, false));
@@ -62,6 +62,16 @@ check('an import cannot use it twice', openFirst3DAfterImport(9) === false);
 // Import after a blank start
 store.clear(); initFirst3D(true);
 check('import with walls after a blank start opens', openFirst3DAfterImport(9) === true && store.get(KEY) === 'done');
+
+// S2b: a 2D shared-plan link on a new install uses the auto-open up
+store.clear(); initFirst3D(true); skipFirst3D();
+check('S2b: skipFirst3D turns pending into done', store.get(KEY) === 'done');
+check('S2b: the editor entry after it stays 2D', takeFirst3D(7) === false);
+store.clear(); initFirst3D(false); skipFirst3D();
+check('S2b: skipFirst3D leaves skip alone', store.get(KEY) === 'skip');
+const appSrc = readFileSync('src/App.tsx', 'utf8');
+check('S2b: App skips the first-3D auto-open before entering the editor in 2D',
+  /if \(planView === '2d'\) skipFirst3D\(\);[\s\S]{0,400}setView\(planView\);[\s\S]{0,40}setScreen\('editor'\)/.test(appSrc));
 
 // Automation and broken storage
 store.clear(); initFirst3D(true); nav.webdriver = true;

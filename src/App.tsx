@@ -37,7 +37,7 @@ import HelpPanel from './components/HelpPanel';
 import SettingsDialog from './components/SettingsDialog';
 import CoachMarks from './components/CoachMarks';
 import View3DNudge, { hasSeen3D, markSeen3D } from './components/View3DNudge';
-import { takeFirst3D, wasAuto3D } from './lib/first3d';
+import { skipFirst3D, takeFirst3D, wasAuto3D } from './lib/first3d';
 import { nudgeWatermarkedExport } from './lib/watermarkNudge';
 import WelcomeTour from './components/WelcomeTour';
 import ShoppingList from './components/ShoppingList';
@@ -290,7 +290,8 @@ export default function App() {
 
   // A plan handed over by link (`/app/?plan=<id>`): fetch it, build and furnish
   // it the way an AI plan is built, and open it in 3D, which is what the
-  // person was shown. The parameter is dropped once the link has an answer so a
+  // person was shown (an unfurnished plan, an empty room to arrange, opens in
+  // 2D instead: S2b). The parameter is dropped once the link has an answer so a
   // refresh does not ask again; after a network failure it stays, so a refresh
   // retries. The plan code is loaded on demand: most visits carry no link.
   useEffect(() => {
@@ -345,8 +346,12 @@ export default function App() {
       // Furnished plans open in 3D (what the person was shown); empty rooms
       // from the kitchen-layout pages open in 2D, where units are placed.
       // Setting the view here is not a toolbar exit from 3D, so it never
-      // opens the exit-3D Pro wall (lib/exit3dWall.ts).
-      useDesign.getState().setView(sharedPlanView(result.plan));
+      // opens the exit-3D Pro wall (lib/exit3dWall.ts). On a new install the
+      // first-3D auto-open (lib/first3d.ts) would flip a 2D entry back to 3D
+      // when the editor opens below, so it is used up first.
+      const planView = sharedPlanView(result.plan);
+      if (planView === '2d') skipFirst3D();
+      useDesign.getState().setView(planView);
       setScreen('editor');
       toast.success(translate('Your plan is ready to edit'));
     })();
