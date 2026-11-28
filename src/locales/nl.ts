@@ -1079,9 +1079,10 @@ export const NL: Record<string, string> = {
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Klik om rond te kijken · WASD / pijltjes om te bewegen · Shift om te rennen · Esc om te stoppen',
   'Exit walk': 'Rondlopen stoppen',
   // Product-email opt-in: card after sign-in and the Settings switch.
-  'Email updates': 'Updates per e-mail',
-  'Yes, email me': 'Ja, mail mij',
-  'Not now': 'Niet nu',
+  'Product updates by email': 'Nieuws per e-mail',
+  // Consent wording optin-v1-2026-11-28 (L1 switch label, L2 line under it). Changing either needs a new wording id.
+  'Email me about new features and offers': 'Mail me over nieuwe functies en aanbiedingen',
+  'About once a month. Unsubscribe anytime.': 'Ongeveer één keer per maand. Altijd af te melden.',
   'This Google email is not verified, so email cannot be turned on.': 'Dit Google-e-mailadres is niet geverifieerd, dus e-mail kan niet worden ingeschakeld.',
   'Will save when you are back online.': 'Wordt opgeslagen zodra je weer online bent.',
 };

@@ -12,11 +12,17 @@
 import { getGoogleIdToken } from './googleAuth';
 
 /** Version id of the opt-in text the person saw. Bump it when the text changes. */
-export const WORDING_VERSION = 'optin-v1';
+export const WORDING_VERSION = 'optin-v1-2026-11-28';
 
-/** Placeholder English text per wording version (Clawford's E2 strings replace it). */
-export const OPTIN_TEXT: Record<string, string> = {
-  'optin-v1': 'Email me about new features and offers (about once a month). Unsubscribe anytime.',
+/** The consent wording per version id, as English source strings (translated
+ *  through the locale catalogs). `label` (L1) names the switch, `detail` (L2) is
+ *  the line under it; both are shown wherever the switch is, and both are what
+ *  the version id stands for. Old versions stay here when a new one is added. */
+export const OPTIN_TEXT: Record<string, { label: string; detail: string }> = {
+  'optin-v1-2026-11-28': {
+    label: 'Email me about new features and offers',
+    detail: 'About once a month. Unsubscribe anytime.',
+  },
 };
 
 export type EmailConsentSource = 'signin' | 'settings';

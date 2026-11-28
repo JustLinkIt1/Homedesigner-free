@@ -105,7 +105,7 @@ const S = () => useEmailConsentStore.getState();
 const as = (sub) => { globalThis.__optinTest.token = sub; };
 
 try {
-  check(lib.WORDING_VERSION === 'optin-v1', "WORDING_VERSION is 'optin-v1'");
+  check(lib.WORDING_VERSION === 'optin-v1-2026-11-28', "WORDING_VERSION is 'optin-v1-2026-11-28'");
 
   // ---- First sign-in: the card is raised, never pre-ticked, nothing is sent ----
   as('sub-a');
@@ -130,7 +130,7 @@ try {
   check(await S().dismissPrompt() === true, 'Not now resolves true once stored');
   check(S().emailOptinPrompt === false, 'Not now hides the card');
   const b = rows('sub-b');
-  check(b.length === 1 && b[0].opted_in === 0 && b[0].source === 'signin' && b[0].wording === 'optin-v1', 'Not now writes opted_in=0 (source signin, wording optin-v1)');
+  check(b.length === 1 && b[0].opted_in === 0 && b[0].source === 'signin' && b[0].wording === 'optin-v1-2026-11-28', 'Not now writes opted_in=0 (source signin, wording optin-v1-2026-11-28)');
   check(S().optedIn === false && S().pending === null, 'store shows the confirmed "no"');
 
   // ---- Yes on the card, then Settings ----

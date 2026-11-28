@@ -6532,8 +6532,9 @@ input[type='checkbox']:disabled {
 /* Product-email opt-in (spec hd-email-optin, 28 Nov 2026).
    The card after sign-in is not a dialog: no scrim, nothing behind it blocked.
    It sits above dialogs (sign-in often starts inside Settings) and below toasts.
-   The two answers are the same .btn in equal columns on purpose: "Not now" must
-   be exactly as prominent as "Yes, email me". Do not make either one primary. */
+   There is no "Yes" button on purpose: the switch (always off at first) is the
+   only way to opt in, and the one button is a plain neutral .btn that submits
+   whatever the switch says. Do not make it primary or add a second answer. */
 .email-optin-card {
   position: fixed;
   right: calc(20px + env(safe-area-inset-right, 0px));
@@ -6586,25 +6587,20 @@ input[type='checkbox']:disabled {
   width: 16px;
   height: 16px;
 }
-.email-optin-card p {
-  margin: 6px 0 14px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text);
+.email-optin-card .settings-row.email-optin-setting {
+  margin-top: 4px;
+  padding: 4px 0 0;
 }
 .email-optin-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
 }
 .email-optin-actions .btn {
-  height: auto;
+  min-width: 112px;
   min-height: 44px;
-  padding: 6px 10px;
-  white-space: normal;
-  text-align: center;
-  line-height: 1.25;
-  /* Identical for both answers, with a border that reads in both themes. */
+  justify-content: center;
+  /* Neutral, with a border that reads in both themes. */
   border-color: var(--border-strong);
 }
 @keyframes email-optin-in {
@@ -6626,27 +6622,27 @@ input[type='checkbox']:disabled {
   }
 }
 
-/* Settings > Account: the same question as a switch. The whole block is the
-   label, so the full opt-in text is what the switch is named by. Title and
-   switch share the first line; the text gets the full width below, which is
-   what keeps it to two lines at 360 px. */
+/* The opt-in switch, used by the card and by Settings. The whole block is the
+   label, so the consent wording is what the switch is named by. The label (L1)
+   shares the first row with the switch and may wrap to two lines; the line
+   under it (L2) takes the full width. */
 .settings-row.email-optin-setting {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 12px;
-  row-gap: 2px;
-  margin-top: 8px;
+  row-gap: 4px;
   padding: 4px 2px 0;
 }
-.email-optin-setting .email-optin-title {
+.email-optin-setting .email-optin-label {
   font-size: 14px;
   font-weight: 600;
+  line-height: 1.35;
   color: var(--text);
 }
-.email-optin-setting .email-optin-text {
+.email-optin-setting .email-optin-detail {
   grid-column: 1 / -1;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
   color: var(--text-2);

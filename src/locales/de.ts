@@ -1079,9 +1079,10 @@ export const DE: Record<string, string> = {
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Klicken zum Umsehen · WASD / Pfeile zum Bewegen · Shift zum Rennen · Esc zum Beenden',
   'Exit walk': 'Rundgang beenden',
   // Product-email opt-in: card after sign-in and the Settings switch.
-  'Email updates': 'E-Mail-Neuigkeiten',
-  'Yes, email me': 'Ja, per E-Mail',
-  'Not now': 'Jetzt nicht',
+  'Product updates by email': 'Produkt-News per E-Mail',
+  // Consent wording optin-v1-2026-11-28 (L1 switch label, L2 line under it). Changing either needs a new wording id.
+  'Email me about new features and offers': 'Schick mir E-Mails zu neuen Funktionen und Angeboten',
+  'About once a month. Unsubscribe anytime.': 'Etwa einmal im Monat. Jederzeit abbestellbar.',
   'This Google email is not verified, so email cannot be turned on.': 'Diese Google-E-Mail-Adresse ist nicht bestätigt, daher können E-Mails nicht aktiviert werden.',
   'Will save when you are back online.': 'Wird gespeichert, sobald du wieder online bist.',
 };

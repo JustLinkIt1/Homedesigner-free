@@ -1144,9 +1144,10 @@ export const TR: Record<string, string> = {
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Bakmak için tıklayın · WASD / oklarla yürüyün · Shift ile koşun · Esc ile çıkın',
   'Exit walk': 'Gezintiden çık',
   // Product-email opt-in: card after sign-in and the Settings switch.
-  'Email updates': 'E-posta haberleri',
-  'Yes, email me': 'Evet, gönderin',
-  'Not now': 'Şimdi değil',
+  'Product updates by email': 'E-posta ile haberler',
+  // Consent wording optin-v1-2026-11-28 (L1 switch label, L2 line under it). Changing either needs a new wording id.
+  'Email me about new features and offers': 'Yeni özellikler ve fırsatlar hakkında e-posta gönder',
+  'About once a month. Unsubscribe anytime.': 'Ayda yaklaşık bir kez. Her zaman iptal edilebilir.',
   'This Google email is not verified, so email cannot be turned on.': 'Bu Google e-postası doğrulanmamış, bu yüzden e-posta açılamıyor.',
   'Will save when you are back online.': 'Yeniden çevrimiçi olduğunuzda kaydedilecek.',
 };

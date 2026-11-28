@@ -1079,9 +1079,10 @@ export const RU: Record<string, string> = {
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Щелчок — обзор · WASD / стрелки — движение · Shift — бег · Esc — выход',
   'Exit walk': 'Завершить прогулку',
   // Product-email opt-in: card after sign-in and the Settings switch.
-  'Email updates': 'Новости по почте',
-  'Yes, email me': 'Да, пишите',
-  'Not now': 'Не сейчас',
+  'Product updates by email': 'Новости по почте',
+  // Consent wording optin-v1-2026-11-28 (L1 switch label, L2 line under it). Changing either needs a new wording id.
+  'Email me about new features and offers': 'Присылать письма о новых функциях и предложениях',
+  'About once a month. Unsubscribe anytime.': 'Примерно раз в месяц. Отписаться можно в любой момент.',
   'This Google email is not verified, so email cannot be turned on.': 'Этот адрес Google не подтверждён, поэтому письма включить нельзя.',
   'Will save when you are back online.': 'Сохранится, когда вы снова будете в сети.',
 };

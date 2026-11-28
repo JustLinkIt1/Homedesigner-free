@@ -84,6 +84,7 @@ export default function SettingsDialog({
   const emailSaving = useEmailConsentStore((s) => s.saving);
   const emailUnverified = useEmailConsentStore((s) => s.unverified);
   const setEmailOptIn = useEmailConsentStore((s) => s.setOptIn);
+  const emailWording = OPTIN_TEXT[WORDING_VERSION];
   const emailChecked = !emailUnverified && (emailPending ?? emailOptedIn ?? false);
   const accountSubject = account?.subject ?? null;
   useEffect(() => {
@@ -152,28 +153,30 @@ export default function SettingsDialog({
                 </small>
               </div>
             )}
-            {account ? (
-              <>
-                <label className="settings-row email-optin-setting">
-                  <span className="email-optin-title">{t('Email updates')}</span>
-                  <input
-                    type="checkbox"
-                    checked={emailChecked}
-                    aria-busy={emailSaving}
-                    onChange={(e) => void setEmailOptIn(e.target.checked, 'settings')}
-                  />
-                  <span className="email-optin-text">{t(OPTIN_TEXT[WORDING_VERSION])}</span>
-                </label>
-                {emailUnverified ? (
-                  <p className="email-optin-note warn" role="status">{t('This Google email is not verified, so email cannot be turned on.')}</p>
-                ) : emailSaving ? (
-                  <p className="email-optin-note" role="status">{t('Saving…')}</p>
-                ) : emailPending !== null ? (
-                  <p className="email-optin-note" role="status">{t('Will save when you are back online.')}</p>
-                ) : null}
-              </>
-            ) : null}
           </section>
+
+          {account ? (
+            <section>
+              <h3>{t('Product updates by email')}</h3>
+              <label className="settings-row email-optin-setting">
+                <span className="email-optin-label">{t(emailWording.label)}</span>
+                <input
+                  type="checkbox"
+                  checked={emailChecked}
+                  aria-busy={emailSaving}
+                  onChange={(e) => void setEmailOptIn(e.target.checked, 'settings')}
+                />
+                <span className="email-optin-detail">{t(emailWording.detail)}</span>
+              </label>
+              {emailUnverified ? (
+                <p className="email-optin-note warn" role="status">{t('This Google email is not verified, so email cannot be turned on.')}</p>
+              ) : emailSaving ? (
+                <p className="email-optin-note" role="status">{t('Saving…')}</p>
+              ) : emailPending !== null ? (
+                <p className="email-optin-note" role="status">{t('Will save when you are back online.')}</p>
+              ) : null}
+            </section>
+          ) : null}
 
           <section>
             <h3>{t('Appearance')}</h3>

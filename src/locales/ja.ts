@@ -1079,9 +1079,10 @@ export const JA: Record<string, string> = {
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'クリックで見回す・WASD／矢印キーで移動・Shiftで走る・Escで終了',
   'Exit walk': 'ウォークスルーを終了',
   // Product-email opt-in: card after sign-in and the Settings switch.
-  'Email updates': 'メールでお知らせ',
-  'Yes, email me': 'はい、受け取る',
-  'Not now': '今はしない',
+  'Product updates by email': 'メールでのお知らせ',
+  // Consent wording optin-v1-2026-11-28 (L1 switch label, L2 line under it). Changing either needs a new wording id.
+  'Email me about new features and offers': '新機能やお得な情報をメールで受け取る',
+  'About once a month. Unsubscribe anytime.': '月1回程度。いつでも配信停止できます。',
   'This Google email is not verified, so email cannot be turned on.': 'このGoogleメールアドレスは確認されていないため、メールを有効にできません。',
   'Will save when you are back online.': 'オンラインに戻ったら保存されます。',
 };

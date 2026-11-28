@@ -1079,9 +1079,10 @@ export const KO: Record<string, string> = {
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': '클릭해 둘러보기 · WASD / 방향키로 이동 · Shift로 달리기 · Esc로 종료',
   'Exit walk': '워크스루 종료',
   // Product-email opt-in: card after sign-in and the Settings switch.
-  'Email updates': '이메일 소식',
-  'Yes, email me': '네, 받을게요',
-  'Not now': '나중에',
+  'Product updates by email': '이메일 소식',
+  // Consent wording optin-v1-2026-11-28 (L1 switch label, L2 line under it). Changing either needs a new wording id.
+  'Email me about new features and offers': '새 기능과 혜택 소식을 이메일로 받기',
+  'About once a month. Unsubscribe anytime.': '한 달에 한 번 정도. 언제든 수신 거부할 수 있어요.',
   'This Google email is not verified, so email cannot be turned on.': '이 Google 이메일은 인증되지 않아 이메일을 켤 수 없습니다.',
   'Will save when you are back online.': '다시 온라인이 되면 저장됩니다.',
 };
