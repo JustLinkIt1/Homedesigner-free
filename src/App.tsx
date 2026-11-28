@@ -52,6 +52,7 @@ import { useAuthStore } from './store/authStore';
 import { requirePro } from './lib/pro';
 import { Toaster, ConfirmHost } from './components/Overlays';
 import UpdateBanner from './components/UpdateBanner';
+import EmailOptinCard from './components/EmailOptinCard';
 import TooltipHost from './components/TooltipHost';
 import { useDesign } from './store/designStore';
 import { CATALOG_BY_TYPE } from './data/furnitureCatalog';
@@ -578,6 +579,7 @@ export default function App() {
         />
         <ProUpsellModal />
         <UpdateBanner />
+        <EmailOptinCard />
         <Toaster />
         <ConfirmHost />
         <TooltipHost />
@@ -1253,6 +1255,7 @@ export default function App() {
 
       <ProUpsellModal />
       <UpdateBanner />
+      <EmailOptinCard />
       <Toaster />
       <ConfirmHost />
       <TooltipHost />

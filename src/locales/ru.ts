@@ -1078,4 +1078,10 @@ export const RU: Record<string, string> = {
   'Left stick to move · drag the right side to look · Exit to leave': 'Левый джойстик — движение · проведите справа — обзор · «Завершить» — выход',
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Щелчок — обзор · WASD / стрелки — движение · Shift — бег · Esc — выход',
   'Exit walk': 'Завершить прогулку',
+  // Product-email opt-in: card after sign-in and the Settings switch.
+  'Email updates': 'Новости по почте',
+  'Yes, email me': 'Да, пишите',
+  'Not now': 'Не сейчас',
+  'This Google email is not verified, so email cannot be turned on.': 'Этот адрес Google не подтверждён, поэтому письма включить нельзя.',
+  'Will save when you are back online.': 'Сохранится, когда вы снова будете в сети.',
 };

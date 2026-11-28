@@ -1078,4 +1078,10 @@ export const KO: Record<string, string> = {
   'Left stick to move · drag the right side to look · Exit to leave': '왼쪽 스틱으로 이동 · 오른쪽을 드래그해 둘러보기 · 종료를 눌러 나가기',
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': '클릭해 둘러보기 · WASD / 방향키로 이동 · Shift로 달리기 · Esc로 종료',
   'Exit walk': '워크스루 종료',
+  // Product-email opt-in: card after sign-in and the Settings switch.
+  'Email updates': '이메일 소식',
+  'Yes, email me': '네, 받을게요',
+  'Not now': '나중에',
+  'This Google email is not verified, so email cannot be turned on.': '이 Google 이메일은 인증되지 않아 이메일을 켤 수 없습니다.',
+  'Will save when you are back online.': '다시 온라인이 되면 저장됩니다.',
 };

@@ -6528,3 +6528,141 @@ input[type='checkbox']:disabled {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
   pointer-events: none;
 }
+
+/* Product-email opt-in (spec hd-email-optin, 28 Nov 2026).
+   The card after sign-in is not a dialog: no scrim, nothing behind it blocked.
+   It sits above dialogs (sign-in often starts inside Settings) and below toasts.
+   The two answers are the same .btn in equal columns on purpose: "Not now" must
+   be exactly as prominent as "Yes, email me". Do not make either one primary. */
+.email-optin-card {
+  position: fixed;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  bottom: calc(20px + var(--safe-bottom));
+  z-index: 150;
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  padding: 14px 16px 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  animation: email-optin-in var(--dur) var(--ease);
+}
+.email-optin-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+.email-optin-head > .icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--brand);
+}
+.email-optin-head strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.email-optin-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin: -4px -8px -4px 0;
+  border-radius: 10px;
+  color: var(--text-2);
+}
+.email-optin-x:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.email-optin-x .icon {
+  width: 16px;
+  height: 16px;
+}
+.email-optin-card p {
+  margin: 6px 0 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.email-optin-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+.email-optin-actions .btn {
+  height: auto;
+  min-height: 44px;
+  padding: 6px 10px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  /* Identical for both answers, with a border that reads in both themes. */
+  border-color: var(--border-strong);
+}
+@keyframes email-optin-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@media (max-width: 520px) {
+  .email-optin-card {
+    left: calc(12px + env(safe-area-inset-left, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(12px + var(--safe-bottom));
+    width: auto;
+    max-width: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .email-optin-card {
+    animation: none;
+  }
+}
+
+/* Settings > Account: the same question as a switch. The whole block is the
+   label, so the full opt-in text is what the switch is named by. Title and
+   switch share the first line; the text gets the full width below, which is
+   what keeps it to two lines at 360 px. */
+.settings-row.email-optin-setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
+  margin-top: 8px;
+  padding: 4px 2px 0;
+}
+.email-optin-setting .email-optin-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.email-optin-setting .email-optin-text {
+  grid-column: 1 / -1;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.email-optin-note {
+  margin: 6px 2px 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+.email-optin-note.warn {
+  color: var(--text-2);
+}
+
+/* An account with no Google photo has no <img>: the name block then takes the
+   photo column too instead of being squeezed into its 40px. */
+.account-card > .account-copy:first-child {
+  grid-column: 1 / 3;
+}

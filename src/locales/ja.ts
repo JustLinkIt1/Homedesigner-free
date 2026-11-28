@@ -1078,4 +1078,10 @@ export const JA: Record<string, string> = {
   'Left stick to move · drag the right side to look · Exit to leave': '左スティックで移動・右側をドラッグで見回す・「終了」で戻る',
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'クリックで見回す・WASD／矢印キーで移動・Shiftで走る・Escで終了',
   'Exit walk': 'ウォークスルーを終了',
+  // Product-email opt-in: card after sign-in and the Settings switch.
+  'Email updates': 'メールでお知らせ',
+  'Yes, email me': 'はい、受け取る',
+  'Not now': '今はしない',
+  'This Google email is not verified, so email cannot be turned on.': 'このGoogleメールアドレスは確認されていないため、メールを有効にできません。',
+  'Will save when you are back online.': 'オンラインに戻ったら保存されます。',
 };

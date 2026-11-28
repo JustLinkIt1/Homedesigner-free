@@ -1143,4 +1143,10 @@ export const PL: Record<string, string> = {
   'Left stick to move · drag the right side to look · Exit to leave': 'Lewa gałka: ruch · przeciągnij po prawej: rozglądanie · Zakończ, by wyjść',
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Kliknij, by się rozglądać · WASD / strzałki: ruch · Shift: bieg · Esc: wyjście',
   'Exit walk': 'Zakończ spacer',
+  // Product-email opt-in: card after sign-in and the Settings switch.
+  'Email updates': 'Nowości e-mailem',
+  'Yes, email me': 'Tak, piszcie',
+  'Not now': 'Nie teraz',
+  'This Google email is not verified, so email cannot be turned on.': 'Ten adres e-mail Google nie jest zweryfikowany, więc nie można włączyć wiadomości.',
+  'Will save when you are back online.': 'Zapisze się, gdy znów będziesz online.',
 };

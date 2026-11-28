@@ -1078,4 +1078,10 @@ export const ZH: Record<string, string> = {
   'Left stick to move · drag the right side to look · Exit to leave': '左摇杆移动 · 拖动右侧环顾 · 点“退出”离开',
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': '点击环顾 · WASD / 方向键移动 · Shift 奔跑 · Esc 退出',
   'Exit walk': '退出漫游',
+  // Product-email opt-in: card after sign-in and the Settings switch.
+  'Email updates': '邮件更新',
+  'Yes, email me': '好的，发给我',
+  'Not now': '暂不',
+  'This Google email is not verified, so email cannot be turned on.': '此 Google 邮箱尚未验证，因此无法开启邮件。',
+  'Will save when you are back online.': '恢复联网后将保存。',
 };

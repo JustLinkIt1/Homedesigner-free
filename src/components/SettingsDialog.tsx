@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Settings, Monitor, Sun, Moon, ExternalLink, LogOut, Trash2, RefreshCw, MessageCircle, WandSparkles } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
@@ -13,6 +13,8 @@ import { useAuthStore } from '../store/authStore';
 import { isModelStudioOwner, openModelStudio } from '../lib/modelStudioAccess';
 import { openCommunityForum } from '../lib/communityAccess';
 import Modal from './Modal';
+import { OPTIN_TEXT, WORDING_VERSION } from '../lib/emailConsent';
+import { useEmailConsentStore } from '../store/emailConsentStore';
 
 const THEME_OPTIONS: { id: ThemePref; label: string; icon: typeof Sun }[] = [
   { id: 'system', label: 'System', icon: Monitor },
@@ -75,6 +77,21 @@ export default function SettingsDialog({
   const syncNow = useAuthStore((s) => s.syncNow);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const t = useI18n();
+  // Product-email opt-in. The switch shows the person's own last answer while it
+  // is on its way (pending), otherwise what the server confirmed; unknown = off.
+  const emailOptedIn = useEmailConsentStore((s) => s.optedIn);
+  const emailPending = useEmailConsentStore((s) => s.pending);
+  const emailSaving = useEmailConsentStore((s) => s.saving);
+  const emailUnverified = useEmailConsentStore((s) => s.unverified);
+  const setEmailOptIn = useEmailConsentStore((s) => s.setOptIn);
+  const emailChecked = !emailUnverified && (emailPending ?? emailOptedIn ?? false);
+  const accountSubject = account?.subject ?? null;
+  useEffect(() => {
+    if (!open || !accountSubject) return;
+    const consent = useEmailConsentStore.getState();
+    consent.markShown('settings');
+    void consent.refresh();
+  }, [open, accountSubject]);
   const canOpenModelStudio = isModelStudioOwner(account?.email);
   const { busy: diagBusy, holdProps } = useStoreDiagnosticHold();
 
@@ -135,6 +152,27 @@ export default function SettingsDialog({
                 </small>
               </div>
             )}
+            {account ? (
+              <>
+                <label className="settings-row email-optin-setting">
+                  <span className="email-optin-title">{t('Email updates')}</span>
+                  <input
+                    type="checkbox"
+                    checked={emailChecked}
+                    aria-busy={emailSaving}
+                    onChange={(e) => void setEmailOptIn(e.target.checked, 'settings')}
+                  />
+                  <span className="email-optin-text">{t(OPTIN_TEXT[WORDING_VERSION])}</span>
+                </label>
+                {emailUnverified ? (
+                  <p className="email-optin-note warn" role="status">{t('This Google email is not verified, so email cannot be turned on.')}</p>
+                ) : emailSaving ? (
+                  <p className="email-optin-note" role="status">{t('Saving…')}</p>
+                ) : emailPending !== null ? (
+                  <p className="email-optin-note" role="status">{t('Will save when you are back online.')}</p>
+                ) : null}
+              </>
+            ) : null}
           </section>
 
           <section>

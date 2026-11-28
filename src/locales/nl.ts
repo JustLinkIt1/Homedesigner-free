@@ -1078,4 +1078,10 @@ export const NL: Record<string, string> = {
   'Left stick to move · drag the right side to look · Exit to leave': 'Linkerstick om te bewegen · sleep rechts om rond te kijken · Stoppen om te verlaten',
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Klik om rond te kijken · WASD / pijltjes om te bewegen · Shift om te rennen · Esc om te stoppen',
   'Exit walk': 'Rondlopen stoppen',
+  // Product-email opt-in: card after sign-in and the Settings switch.
+  'Email updates': 'Updates per e-mail',
+  'Yes, email me': 'Ja, mail mij',
+  'Not now': 'Niet nu',
+  'This Google email is not verified, so email cannot be turned on.': 'Dit Google-e-mailadres is niet geverifieerd, dus e-mail kan niet worden ingeschakeld.',
+  'Will save when you are back online.': 'Wordt opgeslagen zodra je weer online bent.',
 };

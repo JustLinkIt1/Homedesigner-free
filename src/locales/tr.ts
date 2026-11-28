@@ -1143,4 +1143,10 @@ export const TR: Record<string, string> = {
   'Left stick to move · drag the right side to look · Exit to leave': 'Sol çubukla yürüyün · sağ tarafı sürükleyerek bakının · çıkmak için Çık',
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Bakmak için tıklayın · WASD / oklarla yürüyün · Shift ile koşun · Esc ile çıkın',
   'Exit walk': 'Gezintiden çık',
+  // Product-email opt-in: card after sign-in and the Settings switch.
+  'Email updates': 'E-posta haberleri',
+  'Yes, email me': 'Evet, gönderin',
+  'Not now': 'Şimdi değil',
+  'This Google email is not verified, so email cannot be turned on.': 'Bu Google e-postası doğrulanmamış, bu yüzden e-posta açılamıyor.',
+  'Will save when you are back online.': 'Yeniden çevrimiçi olduğunuzda kaydedilecek.',
 };

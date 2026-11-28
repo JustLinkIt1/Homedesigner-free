@@ -1078,4 +1078,10 @@ export const FR: Record<string, string> = {
   'Left stick to move · drag the right side to look · Exit to leave': 'Joystick gauche pour bouger · glissez à droite pour regarder · Quitter pour sortir',
   'Click to look · WASD / arrows to move · Shift to run · Esc to exit': 'Cliquez pour regarder · WASD / flèches pour bouger · Maj pour courir · Échap pour quitter',
   'Exit walk': 'Quitter la visite',
+  // Product-email opt-in: card after sign-in and the Settings switch.
+  'Email updates': 'Nouveautés par e-mail',
+  'Yes, email me': 'Oui, par e-mail',
+  'Not now': 'Pas maintenant',
+  'This Google email is not verified, so email cannot be turned on.': 'Cette adresse Google n\'est pas vérifiée : les e-mails ne peuvent pas être activés.',
+  'Will save when you are back online.': 'Sera enregistré dès que vous serez de nouveau en ligne.',
 };
