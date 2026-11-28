@@ -1,0 +1,107 @@
+{
+  "title": "Galley kitchen, 2.4 × 4 m",
+  "notes": "",
+  "widthCm": 240,
+  "depthCm": 400,
+  "furnished": true,
+  "source": null,
+  "floors": [
+    {
+      "rooms": [
+        {
+          "id": "kit",
+          "type": "kitchen",
+          "name": "Kitchen",
+          "x": 0,
+          "y": 0,
+          "w": 240,
+          "h": 400
+        }
+      ],
+      "openings": [
+        {
+          "kind": "entrance",
+          "x": 120,
+          "y": 400,
+          "vertical": false,
+          "width": 90,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 120,
+          "y": 0,
+          "vertical": false,
+          "width": 120,
+          "rooms": [
+            "kit"
+          ]
+        }
+      ]
+    }
+  ],
+  "furniture": [
+    {
+      "type": "fridge",
+      "x": 43,
+      "y": 43,
+      "rotation": 270
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 38,
+      "y": 105.5,
+      "rotation": 270
+    },
+    {
+      "type": "kitchen_sink",
+      "x": 38,
+      "y": 178,
+      "rotation": 270
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 38,
+      "y": 250.5,
+      "rotation": 270
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 38,
+      "y": 305.5,
+      "rotation": 270
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 202,
+      "y": 35.5,
+      "rotation": 90
+    },
+    {
+      "type": "stove",
+      "x": 202,
+      "y": 93,
+      "rotation": 90
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 202,
+      "y": 150.5,
+      "rotation": 90
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 202,
+      "y": 205.5,
+      "rotation": 90
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 202,
+      "y": 260.5,
+      "rotation": 90
+    }
+  ]
+}

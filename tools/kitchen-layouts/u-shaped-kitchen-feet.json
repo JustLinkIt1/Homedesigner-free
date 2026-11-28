@@ -1,0 +1,45 @@
+{
+  "title": "U-shaped kitchen, 10 × 11 ft",
+  "notes": "",
+  "widthCm": 305,
+  "depthCm": 335,
+  "furnished": false,
+  "source": null,
+  "floors": [
+    {
+      "rooms": [
+        {
+          "id": "kit",
+          "type": "kitchen",
+          "name": "Kitchen",
+          "x": 0,
+          "y": 0,
+          "w": 305,
+          "h": 335
+        }
+      ],
+      "openings": [
+        {
+          "kind": "entrance",
+          "x": 153,
+          "y": 335,
+          "vertical": false,
+          "width": 90,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 153,
+          "y": 0,
+          "vertical": false,
+          "width": 120,
+          "rooms": [
+            "kit"
+          ]
+        }
+      ]
+    }
+  ]
+}

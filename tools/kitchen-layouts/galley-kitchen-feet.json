@@ -1,0 +1,45 @@
+{
+  "title": "Galley kitchen, 8 × 13 ft",
+  "notes": "",
+  "widthCm": 244,
+  "depthCm": 396,
+  "furnished": false,
+  "source": null,
+  "floors": [
+    {
+      "rooms": [
+        {
+          "id": "kit",
+          "type": "kitchen",
+          "name": "Kitchen",
+          "x": 0,
+          "y": 0,
+          "w": 244,
+          "h": 396
+        }
+      ],
+      "openings": [
+        {
+          "kind": "entrance",
+          "x": 122,
+          "y": 396,
+          "vertical": false,
+          "width": 90,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 122,
+          "y": 0,
+          "vertical": false,
+          "width": 120,
+          "rooms": [
+            "kit"
+          ]
+        }
+      ]
+    }
+  ]
+}

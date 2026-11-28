@@ -1,0 +1,107 @@
+{
+  "title": "U-shaped kitchen, 3 × 3.3 m",
+  "notes": "",
+  "widthCm": 300,
+  "depthCm": 330,
+  "furnished": true,
+  "source": null,
+  "floors": [
+    {
+      "rooms": [
+        {
+          "id": "kit",
+          "type": "kitchen",
+          "name": "Kitchen",
+          "x": 0,
+          "y": 0,
+          "w": 300,
+          "h": 330
+        }
+      ],
+      "openings": [
+        {
+          "kind": "entrance",
+          "x": 150,
+          "y": 330,
+          "vertical": false,
+          "width": 90,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 150,
+          "y": 0,
+          "vertical": false,
+          "width": 120,
+          "rooms": [
+            "kit"
+          ]
+        }
+      ]
+    }
+  ],
+  "furniture": [
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 45.5,
+      "y": 38,
+      "rotation": 0
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 100.5,
+      "y": 38,
+      "rotation": 0
+    },
+    {
+      "type": "kitchen_sink",
+      "x": 173,
+      "y": 38,
+      "rotation": 0
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 245.5,
+      "y": 38,
+      "rotation": 0
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 38,
+      "y": 95.5,
+      "rotation": 270
+    },
+    {
+      "type": "stove",
+      "x": 38,
+      "y": 153,
+      "rotation": 270
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 38,
+      "y": 210.5,
+      "rotation": 270
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 262,
+      "y": 95.5,
+      "rotation": 90
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 262,
+      "y": 150.5,
+      "rotation": 90
+    },
+    {
+      "type": "fridge",
+      "x": 257,
+      "y": 213,
+      "rotation": 90
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "small-kitchen-metric": "klsmall300x240",
+  "small-kitchen-feet": "klsmall10x8ft",
+  "l-shaped-kitchen-metric": "kllshaped360x300",
+  "l-shaped-kitchen-feet": "kllshaped12x10ft",
+  "galley-kitchen-metric": "klgalley240x400",
+  "galley-kitchen-feet": "klgalley8x13ft",
+  "u-shaped-kitchen-metric": "klushaped300x330",
+  "u-shaped-kitchen-feet": "klushaped10x11ft",
+  "kitchen-island-metric": "klisland420x400",
+  "kitchen-island-feet": "klisland14x13ft"
+}

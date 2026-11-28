@@ -1,0 +1,83 @@
+{
+  "title": "Small kitchen, 3 × 2.4 m",
+  "notes": "",
+  "widthCm": 300,
+  "depthCm": 240,
+  "furnished": true,
+  "source": null,
+  "floors": [
+    {
+      "rooms": [
+        {
+          "id": "kit",
+          "type": "kitchen",
+          "name": "Kitchen",
+          "x": 0,
+          "y": 0,
+          "w": 300,
+          "h": 240
+        }
+      ],
+      "openings": [
+        {
+          "kind": "entrance",
+          "x": 240,
+          "y": 240,
+          "vertical": false,
+          "width": 90,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 165,
+          "y": 0,
+          "vertical": false,
+          "width": 120,
+          "rooms": [
+            "kit"
+          ]
+        }
+      ]
+    }
+  ],
+  "furniture": [
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 35.5,
+      "y": 38,
+      "rotation": 0
+    },
+    {
+      "type": "kitchen_sink",
+      "x": 108,
+      "y": 38,
+      "rotation": 0
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 180.5,
+      "y": 38,
+      "rotation": 0
+    },
+    {
+      "type": "stove",
+      "x": 238,
+      "y": 38,
+      "rotation": 0
+    },
+    {
+      "type": "kitchen_base_cabinet",
+      "x": 38,
+      "y": 95.5,
+      "rotation": 270
+    },
+    {
+      "type": "fridge",
+      "x": 43,
+      "y": 158,
+      "rotation": 270
+    }
+  ]
+}
