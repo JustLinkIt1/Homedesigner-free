@@ -155,4 +155,21 @@ await flush();
 const photo = sent.flatMap((r) => r.body.events).filter((e) => e.event === 'photo');
 check(photo.map((e) => e.detail).join() === PHOTO_STAGES.join(), 'photo sends the eight stages and drops anything else');
 check(photo.every((e) => Object.keys(e).sort().join() === 'detail,event'), 'a photo event is only { event, detail }');
+// Email opt-in: one event name, one of six fixed details, nothing else (no email, no account id).
+sent.length = 0;
+const { trackEmailOptin, EMAIL_OPTIN_DETAILS } = mod;
+check(EMAIL_OPTIN_DETAILS.join() === 'shown:signin,shown:settings,yes:signin,no:signin,yes:settings,no:settings', 'email_optin has the six details');
+for (const detail of EMAIL_OPTIN_DETAILS) trackEmailOptin(detail);
+trackEvent('email_optin', 'someone@example.com');
+trackEvent('email_optin', '109876543210987654321');
+trackEvent('email_optin', 'YES:SIGNIN');
+trackEvent('email_optin');
+await flush();
+const optin = sent.flatMap((r) => r.body.events).filter((e) => e.event === 'email_optin');
+check(optin.map((e) => e.detail).join() === EMAIL_OPTIN_DETAILS.join(), 'email_optin sends the six details and drops anything else');
+check(optin.every((e) => Object.keys(e).sort().join() === 'detail,event'), 'an email_optin event is only { event, detail }');
+{
+  const server = readFileSync('workers/design-sync/src/hd-events.ts', 'utf8');
+  check(EMAIL_OPTIN_DETAILS.every((d) => server.includes(`'${d}'`)) && server.includes("'email_optin'"), 'the worker accepts the same email_optin details');
+}
 console.log(`events: ${checks} checks passed`);

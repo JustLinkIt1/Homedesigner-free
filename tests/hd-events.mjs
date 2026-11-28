@@ -83,7 +83,7 @@ try {
     check((await post({ ...good, install: '5c0e7d2a-91b4-4f6e-b3a8-2d7e4f1a6c90', events: [{ event: 'export', detail: kind }] }, T)).status === 202 && count() === n + 1, `export event with detail ${kind} is stored`);
   }
   // E1: the Pro checkout funnel. Nine names (photo since 1.22.52), and pro_checkout's detail is one of five stages.
-  check(HD_EVENT_NAMES.size === 9 && HD_EVENT_NAMES.has('pro_checkout') && HD_EVENT_NAMES.has('export'), 'nine event names, pro_checkout among them');
+  check(HD_EVENT_NAMES.size === 10 && HD_EVENT_NAMES.has('pro_checkout') && HD_EVENT_NAMES.has('export'), 'ten event names (email_optin since 1.22.54), pro_checkout among them');
   for (const stage of ['signin_click', 'signin_ok', 'checkout_open', 'paid', 'cancel']) {
     const n = count();
     check((await post({ ...good, install: '9a1d4c7e-2b63-4e08-9f5a-6c3b8d0e7f12', events: [{ event: 'pro_checkout', detail: stage }] }, T)).status === 202 && count() === n + 1, `pro_checkout stage ${stage} is stored`);
@@ -101,6 +101,17 @@ try {
     check((await post({ ...good, install: '3e8b1f60-7c2d-4a95-8b14-0f6d2c9e5a37', events: [{ event: 'export', detail: 'png' }, { event: 'photo', detail: 'trace_saved' }] }, T)).status === 202 && count() === n + 2, 'a batch mixing photo with an older event is stored whole');
   }
   await bad({ ...good, events: [{ event: 'photos', detail: 'trace_start' }] }, 'a near-miss photo name is rejected');
+  // Email opt-in (1.22.54): the detail is one of six fixed values, never an email or account id.
+  check(HD_EVENT_NAMES.has('email_optin'), 'email_optin is an accepted event name');
+  for (const detail of ['shown:signin', 'shown:settings', 'yes:signin', 'no:signin', 'yes:settings', 'no:settings']) {
+    const n = count();
+    check((await post({ ...good, install: '7d2e9a41-3c5b-4f80-9e16-2a4b6c8d0e13', events: [{ event: 'email_optin', detail }] }, T)).status === 202 && count() === n + 1, `email_optin detail ${detail} is stored`);
+  }
+  await bad({ ...good, events: [{ event: 'email_optin' }] }, 'email_optin without a detail is rejected');
+  await bad({ ...good, events: [{ event: 'email_optin', detail: 'yes:popup' }] }, 'email_optin with an unknown detail is rejected');
+  await bad({ ...good, events: [{ event: 'email_optin', detail: '1234567890123' }] }, 'email_optin carrying an account-id-like detail is rejected');
+  await bad({ ...good, events: [{ event: 'email_optin', detail: 'yes:signin.user.example.com' }] }, 'email_optin carrying an email-like detail is rejected');
+  await bad({ ...good, events: [{ event: 'export', detail: 'png' }, { event: 'email_optin', detail: 'maybe' }] }, 'one bad email_optin detail rejects the whole batch');
   console.log(`hd-events: ${checks} checks passed`);
 } finally {
   rmSync(dir, { recursive: true, force: true });

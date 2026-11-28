@@ -12,7 +12,16 @@ export const HD_EVENT_NAMES = new Set([
   'export',
   'pro_checkout',
   'photo',
+  'email_optin',
 ]);
+/**
+ * Events whose detail must be one of a fixed list (anything else, or no detail,
+ * refuses the request). `email_optin` says only where the opt-in was shown or
+ * answered: never the email address or the account id.
+ */
+export const HD_EVENT_DETAILS: Record<string, ReadonlySet<string>> = {
+  email_optin: new Set(['shown:signin', 'shown:settings', 'yes:signin', 'no:signin', 'yes:settings', 'no:settings']),
+};
 export const HD_EVENTS_PER_REQUEST = 20;
 export const HD_EVENTS_PER_INSTALL_PER_DAY = 60;
 const MAX_BODY_CHARS = 8192;
@@ -53,6 +62,8 @@ function parse(raw: unknown): Parsed | null {
       if (typeof e.detail !== 'string' || e.detail.length > 64 || !DETAIL.test(e.detail)) return null;
       detail = e.detail;
     }
+    const allowed = HD_EVENT_DETAILS[e.event];
+    if (allowed && (detail === null || !allowed.has(detail))) return null;
     events.push({ event: e.event, detail });
   }
   return { install: body.install.toLowerCase(), appVersion, source, events };
