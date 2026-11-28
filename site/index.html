@@ -286,6 +286,21 @@
     .feature .body { padding: 18px 20px 22px; }
     .feature h3 { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
     .feature p { color: var(--text-2); font-size: 14px; margin-top: 6px; }
+    /* "Start from a ready plan": four /floor-plans/ cards. Four across, then two,
+       then a compact list (picture left) so a phone is not four screens of pictures. */
+    .features.plans { grid-template-columns: repeat(4, 1fr); margin-top: 34px; }
+    .plans-all { margin-top: 24px; font-size: 15px; font-weight: 700; }
+    .plans-all a { color: var(--brand-2); }
+    .plans-all a:hover { text-decoration: underline; }
+    @media (max-width: 980px) { .features.plans { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) {
+      .features.plans { grid-template-columns: 1fr; gap: 12px; }
+      .plans .feature { display: grid; grid-template-columns: 116px 1fr; align-items: center; border-radius: 16px; }
+      .plans .feature .shot { aspect-ratio: auto; height: 100%; min-height: 92px; }
+      .plans .feature .body { padding: 12px 14px; }
+      .plans .feature h3 { font-size: 15.5px; }
+      .plans .feature p { font-size: 13px; margin-top: 3px; }
+    }
 
     /* checklist band */
     .band { background: var(--surface); border-block: 1px solid var(--border); }
@@ -535,6 +550,34 @@
       </div>
     </section>
 
+    <!-- Ready plans: the same block scripts/build-seo-pages.mjs writes (readyPlans) on /floor-plan-maker/ and /3d-home-design/. -->
+    <section class="block" id="ready-plans" style="padding-top:0">
+      <div class="wrap">
+        <span class="kicker">Ready-made house plans</span>
+        <h2 class="title">Start from a ready plan</h2>
+        <p class="lead">Open a finished house plan with every room size in metres and feet, then move the walls and furnish it in 3D. Free to start.</p>
+        <div class="features plans">
+          <a class="feature" href="/floor-plans/3-bedroom-house-plan-13x9m/">
+            <div class="shot wide"><img src="./assets/floor-plans/3-bedroom-house-plan-13x9m-3d.webp" alt="3-Bedroom House Plan in 3D" width="1100" height="747" loading="lazy" /></div>
+            <div class="body"><h3>3-Bedroom House Plan</h3><p>3 bedrooms, 1 bath, 117 m² (1,259 sq ft)</p></div>
+          </a>
+          <a class="feature" href="/floor-plans/small-house-plan-2-bedroom-9x8m/">
+            <div class="shot wide"><img src="./assets/floor-plans/small-house-plan-2-bedroom-9x8m-3d.webp" alt="Small 2-Bedroom House Plan in 3D" width="1100" height="747" loading="lazy" /></div>
+            <div class="body"><h3>Small 2-Bedroom House Plan</h3><p>2 bedrooms, 1 bath, 72 m² (775 sq ft)</p></div>
+          </a>
+          <a class="feature" href="/floor-plans/barndominium-3-bedroom-18x12m/">
+            <div class="shot wide"><img src="./assets/floor-plans/barndominium-3-bedroom-18x12m-3d.webp" alt="3-Bedroom Barndominium Floor Plan in 3D" width="1100" height="747" loading="lazy" /></div>
+            <div class="body"><h3>3-Bedroom Barndominium Floor Plan</h3><p>3 bedrooms, 2 baths, 216 m² (2,325 sq ft)</p></div>
+          </a>
+          <a class="feature" href="/floor-plans/ranch-house-plan-3-bedroom-20x10m/">
+            <div class="shot wide"><img src="./assets/floor-plans/ranch-house-plan-3-bedroom-20x10m-3d.webp" alt="3-Bed Ranch House Plan with Garage in 3D" width="1100" height="747" loading="lazy" /></div>
+            <div class="body"><h3>3-Bed Ranch House Plan with Garage</h3><p>3 bedrooms, 2 baths, 200 m² (2,153 sq ft)</p></div>
+          </a>
+        </div>
+        <p class="plans-all"><a href="/floor-plans/">See all 10 house plans →</a></p>
+      </div>
+    </section>
+
     <!-- Checklist band -->
     <section class="block band">
       <div class="wrap">
@@ -603,6 +646,7 @@
       <a href="/ai-home-design/">AI design</a>
       <a href="/dxf-to-3d/">DXF to 3D</a>
       <a href="/pdf-floor-plan-to-3d/">PDF plan to 3D</a>
+      <a href="/floor-plans/">House plans</a>
       <a href="/privacy">Privacy policy</a>
       <a href="/terms/">Terms</a>
       <a href="https://play.google.com/store/apps/details?id=com.homedesigner.app&amp;referrer=utm_source%3Dwebsite%26utm_medium%3Dhome%26utm_campaign%3Dhome">Google Play</a>
