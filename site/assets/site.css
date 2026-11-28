@@ -177,6 +177,16 @@ footer .langs a[aria-current] { color: var(--text); font-weight: 700; }
   .compare { grid-template-columns: 1fr; gap: 16px; }
 }
 
+/* Narrow phones (under 400 px): the logo word and the button must never touch, in any language
+   ("Web-App öffnen", "Ouvrir l’appli web"). The button and the word get a little smaller; if the word
+   still does not fit, it wraps onto a second line that the 32 px high logo clips, leaving the icon. */
+@media (max-width: 399px) {
+  .nav { gap: 10px; }
+  .nav .btn { padding: 9px 12px; font-size: 13px; flex: none; }
+  .nav .logo { flex-wrap: wrap; align-content: flex-start; row-gap: 12px; height: 32px; min-width: 32px; overflow: hidden; gap: 8px; font-size: 15px; line-height: 32px; white-space: nowrap; }
+  .nav .logo img { flex: none; }
+}
+
 /* /floor-plans/ room tables */
 .plan-rooms { width: 100%; border-collapse: collapse; margin: 8px 0 22px; font-size: 14.5px; }
 .plan-rooms th, .plan-rooms td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
