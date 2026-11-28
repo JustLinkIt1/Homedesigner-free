@@ -11,6 +11,7 @@ import { toast } from '../lib/ui';
 import { t } from '../lib/i18n';
 import { useProStore } from './proStore';
 import { startProjectSync, syncProjects, deleteCloudAccount } from '../lib/cloudSync';
+import { forgetEmailConsentAccount, setEmailConsentAccount, startEmailOptinCheck } from './emailConsentStore';
 
 const ACCOUNT_CACHE_KEY = 'homedesigner.google-account.v1';
 let stopProjectSync: (() => void) | null = null;
@@ -138,10 +139,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         stopProjectSync = null;
         writeAccount(null);
         set({ account: null, ready: true });
+        setEmailConsentAccount(null);
         void useProStore.getState().unlinkAccount().catch(() => {});
         return;
       }
       set({ account: cached });
+      // The hosted web sign-in is a page redirect, so it completes HERE, not in
+      // signIn(). The check is once per account and costs nothing once asked.
+      startEmailOptinCheck(cached.subject);
       // Bounded like the rest: this one gates `ready`, and a startup that never
       // becomes ready is the same class of stuck UI.
       await bounded(Promise.allSettled([linkPurchases(cached), syncAccountData()]), SYNC_TIMEOUT_MS);
@@ -163,6 +168,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!account) throw new Error(t('Google Sign-In did not complete.'));
       writeAccount(account);
       set({ account, ready: true });
+      // Email opt-in card: fire-and-forget, once per account, never awaited,
+      // so it can neither block nor fail sign-in.
+      startEmailOptinCheck(account.subject);
       const settled = await bounded(
         Promise.allSettled([linkPurchases(account), syncAccountData()]), SYNC_TIMEOUT_MS);
       const purchases = settled?.[0];
@@ -199,6 +207,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     stopProjectSync = null;
     writeAccount(null);
     set({ account: null, ready: true });
+    setEmailConsentAccount(null);
     const cleanup = await Promise.race([
       Promise.allSettled([
         useProStore.getState().unlinkAccount(),
@@ -232,8 +241,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ busy: false });
       return false;
     }
+    const deletedSubject = get().account?.subject;
     writeAccount(null);
     set({ account: null, ready: true });
+    if (deletedSubject) forgetEmailConsentAccount(deletedSubject);
+    else setEmailConsentAccount(null);
     await Promise.race([
       Promise.allSettled([
         useProStore.getState().unlinkAccount(),
