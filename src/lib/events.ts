@@ -96,10 +96,23 @@ export function sourceFromReferrer(referrer: string): string {
   return slug(joined, 64) || 'organic';
 }
 
+/**
+ * The `source` a web session reports. Our own dev servers (smoke runs, the
+ * floor-plan and promo recordings) post to the production events worker; they
+ * report `web-dev` so the daily reads can leave them out (EXEC cycle 275).
+ * Production web stays `web`.
+ */
+export function webSourceFor(dev: boolean, host: string): string {
+  return dev || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(host) ? 'web-dev' : 'web';
+}
+
 function readSource(): Promise<string> {
   if (!sourcePromise) {
     sourcePromise = (async () => {
-      if (!Capacitor.isNativePlatform()) return 'web';
+      if (!Capacitor.isNativePlatform()) {
+        const host = typeof location !== 'undefined' ? location.hostname : '';
+        return webSourceFor(Boolean((import.meta as { env?: { DEV?: boolean } }).env?.DEV), host);
+      }
       try {
         const cached = localStorage.getItem(SOURCE_KEY);
         if (cached) return cached;
