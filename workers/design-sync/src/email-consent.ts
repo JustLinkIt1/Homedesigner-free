@@ -1,4 +1,4 @@
-// Product-update email opt-in (migrations/0011_email_consent.sql).
+// Product-update email opt-in (migrations/0012_email_consent.sql).
 //
 // Hard rule: nobody gets product email unless the NEWEST row for their account
 // says opted_in = 1. The log is append-only (one row per change, never

@@ -297,6 +297,7 @@ export const RU: Record<string, string> = {
   'Show grid': 'Показывать сетку',
   'Show dimensions': 'Показывать размеры',
   'Vibration feedback': 'Вибрация',
+  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': 'Блокировка объектов не даёт случайно сдвинуть их, пока вы перемещаете или масштабируете вид. Она остаётся включённой, пока вы её не выключите.',
   Help: 'Помощь',
   'Replay the intro tour': 'Повторить обучение',
   'Privacy policy': 'Политика конфиденциальности',

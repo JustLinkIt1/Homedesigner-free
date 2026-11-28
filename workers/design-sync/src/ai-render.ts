@@ -71,6 +71,10 @@ export interface RenderJob {
   error: string | null; created_at: number;
   /** 1 when the app must stamp the homedesignerapp.com watermark on the result. */
   watermark?: number;
+  /** Failed image downloads of a complete job (migration 0011). */
+  delivery_failures?: number;
+  /** When the image first reached the app; a delivered render is never refunded. */
+  delivered_at?: number | null;
 }
 export interface RenderOptions {
   /** A free account asks for the cheaper watermarked render. Ignored for Pro. */
@@ -142,12 +146,12 @@ function base64Bytes(base64: string, limit: number) {
   return Uint8Array.from(binary, c => c.charCodeAt(0));
 }
 /** One POST to ElevenLabs. Returns the generation id, or null if it refused or failed to answer. */
-async function submitElevenLabs(key: string, job: RenderJob, image: string, view: RenderView) {
+async function submitElevenLabs(key: string, job: RenderJob, image: string, view: RenderView, timeoutMs: number) {
   const base64 = image.slice(image.indexOf(',') + 1);
   const size = jpegDimensions(base64Bytes(base64, 64 * 1024));
   try {
     const response = await fetch(`${ELEVENLABS_API}/v1/flows/image`, {
-      method: 'POST', signal: AbortSignal.timeout(ELEVENLABS_SUBMIT_MS),
+      method: 'POST', signal: AbortSignal.timeout(timeoutMs),
       headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model_id: ELEVENLABS_IMAGE_MODEL, prompt: renderPrompt(job.style, view), resolution: '1K',
@@ -156,24 +160,28 @@ async function submitElevenLabs(key: string, job: RenderJob, image: string, view
       }),
     });
     if (!response.ok) {
-      console.warn('ai-render: ElevenLabs refused', response.status, (await response.text().catch(() => '')).slice(0, 300));
+      console.error('ai-render: stage=elevenlabs-submit refused', job.id, response.status,
+        (await response.text().catch(() => '')).slice(0, 300));
       return null;
     }
     const data = await response.json() as { id?: unknown };
     if (typeof data.id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(data.id)) return data.id;
-    console.warn('ai-render: ElevenLabs answered without a usable id');
+    console.error('ai-render: stage=elevenlabs-submit answered without a usable id', job.id);
     return null;
   } catch (error) {
-    console.warn('ai-render: ElevenLabs did not answer', error instanceof Error ? error.message : String(error));
+    console.error('ai-render: stage=elevenlabs-submit no answer', job.id, `${timeoutMs}ms`, errorText(error));
     return null;
   }
 }
 type ElevenLabsGeneration = { status?: string; content_url?: string; failure_reason?: string };
+class ProviderStatusError extends Error {
+  constructor(public status: number) { super(`ElevenLabs status ${status}`); }
+}
 async function elevenLabsGeneration(key: string, id: string) {
   const response = await fetch(`${ELEVENLABS_API}/v1/flows/image/${encodeURIComponent(id)}`, {
     headers: { 'xi-api-key': key }, signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) throw new Error(`ElevenLabs status ${response.status}`);
+  if (!response.ok) throw new ProviderStatusError(response.status);
   return await response.json() as ElevenLabsGeneration;
 }
 /** The link to download a finished render: fal's stored URL, or a fresh signed link from ElevenLabs. */
@@ -235,26 +243,47 @@ export async function reserveRender(db: D1Database, subject: string, id: string,
     throw error;
   }
 }
-// Dispatch runs after the response has gone, where a Worker gets about 30
-// seconds. Both submissions together must fit inside that: cut off part way,
-// the job sat "reserved" with nothing to say why, and failed two minutes later.
+const errorText = (error: unknown) => error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+const NOT_STARTED = 'AI render could not start. Your allowance or points were returned.';
+const DID_NOT_START = 'The render did not start. Your allowance or points were returned.';
+/** The app abandons any request after 30 s (src/lib/aiRender.ts, aiRequest).
+ * The POST dispatches before it answers, so reading the body, reserving and
+ * both provider submissions must finish inside this, measured from when the
+ * request arrived, leaving about 5 s for the database and the answer.
+ * Dispatching in waitUntil after the answer was cut off every time in
+ * production: jobs sat "reserved" with nothing written, then failed 2 min later. */
+export const RENDER_POST_DEADLINE_MS = 25_000;
 const ELEVENLABS_SUBMIT_MS = 12_000;
 const FAL_SUBMIT_MS = 12_000;
-/** Hand a reserved job to a provider. Whatever goes wrong, the job ends
- * failed (and refunded) with the reason in the log, never silently stuck. */
+/** With less than this left, fal is not tried: a 2.8 MB upload cannot finish. */
+const MIN_FAL_SUBMIT_MS = 2_000;
+/** A job still "reserved" after this never reached a provider. */
+export const STALE_RESERVED_MS = 120_000;
+/** Hand a reserved job to a provider inside the caller's deadline. Whatever
+ * goes wrong (refusal, timeout, deadline) the job ends failed, and the refund
+ * trigger returns its allowance or points, before this returns. Returns the
+ * job as it now stands. */
 export async function dispatchRender(db: D1Database, keys: string | RenderKeys, job: RenderJob, image: string,
-  view: RenderView = 'interior') {
-  try { await submitRender(db, keys, job, image, view); }
+  view: RenderView = 'interior', deadline = Date.now() + RENDER_POST_DEADLINE_MS) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const outOfTime = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('dispatch deadline passed')), Math.max(0, deadline - Date.now()));
+  });
+  try { await Promise.race([submitRender(db, keys, job, image, view, deadline), outOfTime]); }
   catch (error) {
-    console.error('ai-render: dispatch failed', error instanceof Error ? error.message : String(error));
-    await failRender(db, job.subject, job.id, 'AI render could not start. Your allowance or points were returned.')
-      .catch(() => undefined);
-  }
+    console.error('ai-render: stage=dispatch failed', job.id, errorText(error));
+    await failRender(db, job.subject, job.id, NOT_STARTED)
+      .catch(e => console.error('ai-render: stage=dispatch could not mark the job failed', job.id, errorText(e)));
+  } finally { clearTimeout(timer); }
+  return (await readRender(db, job.subject, job.id)) ?? job;
 }
-async function submitRender(db: D1Database, keys: string | RenderKeys, job: RenderJob, image: string, view: RenderView) {
+async function submitRender(db: D1Database, keys: string | RenderKeys, job: RenderJob, image: string, view: RenderView,
+  deadline: number) {
   const { fal: falKey, elevenlabs } = keysOf(keys);
+  const remaining = () => deadline - Date.now();
   if (elevenlabs?.trim()) {
-    const generation = await submitElevenLabs(elevenlabs, job, image, view);
+    const budget = Math.min(ELEVENLABS_SUBMIT_MS, remaining());
+    const generation = budget > 0 ? await submitElevenLabs(elevenlabs, job, image, view, budget) : null;
     if (generation) {
       await db.prepare("UPDATE ai_render_jobs SET status = 'queued', request_id = ? WHERE subject = ? AND id = ? AND status = 'reserved'")
         .bind(ELEVENLABS_PREFIX + generation, job.subject, job.id).run();
@@ -264,38 +293,67 @@ async function submitRender(db: D1Database, keys: string | RenderKeys, job: Rend
     // ElevenLabs request costs at most one unread generation, never the user.
   }
   if (!falKey?.trim()) {
-    console.error('ai-render: no provider accepted the render and there is no fal key');
-    await failRender(db, job.subject, job.id, 'AI render could not start. Your allowance or points were returned.');
+    console.error('ai-render: stage=fal-submit skipped: no provider accepted the render and there is no fal key', job.id);
+    await failRender(db, job.subject, job.id, NOT_STARTED);
     return;
   }
-  // The SDK retries queue POSTs by default, including ambiguous network errors.
-  // A render is billable: allow one outgoing submission, not an implicit retry.
-  let sent = false;
+  const budget = Math.min(FAL_SUBMIT_MS, remaining());
+  if (budget < MIN_FAL_SUBMIT_MS) {
+    console.error('ai-render: stage=fal-submit skipped: deadline nearly spent', job.id, `${budget}ms left`);
+    await failRender(db, job.subject, job.id, NOT_STARTED);
+    return;
+  }
+  // The SDK retries queue POSTs (429/502/503/504 and network errors), and a
+  // render is billable, so the queue submission itself is single-shot. Other
+  // requests (fal storage uploads, should an SDK version upload input files
+  // first) pass through. @fal-ai/client 1.10.1 does not upload a data: URI:
+  // storage.transformInput uploads only Blob values and returns strings as
+  // they are, so today a submit is exactly one request to queue.fal.run.
+  let submitted = false;
   const client = createFalClient({ credentials: falKey, fetch: async (url, init) => {
-    if (sent) throw new Error('A render submission cannot be retried automatically.');
-    sent = true;
+    const target = new URL(url instanceof Request ? url.url : String(url));
+    const method = (init?.method ?? (url instanceof Request ? url.method : 'GET')).toUpperCase();
+    if (method === 'POST' && target.hostname === 'queue.fal.run') {
+      if (submitted) throw new Error('A render submission cannot be retried automatically.');
+      submitted = true;
+    }
     return fetch(url, init);
   } });
   try {
-    const submitted = await client.queue.submit(ENDPOINT, {
-      abortSignal: AbortSignal.timeout(FAL_SUBMIT_MS), startTimeout: 120,
+    const queued = await client.queue.submit(ENDPOINT, {
+      abortSignal: AbortSignal.timeout(budget), startTimeout: 120,
       input: { image_url: image, prompt: renderPrompt(job.style, view), guidance_scale: 3.5, num_images: 1,
         output_format: 'jpeg', safety_tolerance: '2', enhance_prompt: false },
     });
     await db.prepare("UPDATE ai_render_jobs SET status = 'queued', request_id = ? WHERE subject = ? AND id = ? AND status = 'reserved'")
-      .bind(submitted.request_id, job.subject, job.id).run();
+      .bind(queued.request_id, job.subject, job.id).run();
   } catch (error) {
-    console.error('ai-render: fal refused', error instanceof Error ? error.message : String(error));
+    console.error('ai-render: stage=fal-submit refused', job.id, `${budget}ms`, errorText(error));
     // The same key stays terminal even after refund, so it cannot redispatch.
-    await failRender(db, job.subject, job.id, 'AI render could not start. Your allowance or points were returned.');
+    await failRender(db, job.subject, job.id, NOT_STARTED);
   }
+}
+/** Fail every job of this account still "reserved" after STALE_RESERVED_MS,
+ * through failRender so the refund trigger returns allowance or points. One
+ * stuck job otherwise locks the account: ai_render_guard refuses a new render
+ * while any job is reserved. Safe to repeat: failRender only moves a job out of
+ * reserved/queued, and the refund trigger fires only on that transition. */
+export async function sweepStaleRenders(db: D1Database, subject: string, now = Date.now()) {
+  const stale = await db.prepare("SELECT id FROM ai_render_jobs WHERE subject = ? AND status = 'reserved' AND created_at < ?")
+    .bind(subject, now - STALE_RESERVED_MS).all<{ id: string }>();
+  const ids = stale.results ?? [];
+  for (const { id } of ids) {
+    console.error('ai-render: stage=sweep stale reserved job failed', id);
+    await failRender(db, subject, id, DID_NOT_START);
+  }
+  return ids.length;
 }
 export async function refreshRender(db: D1Database, keys: string | RenderKeys, job: RenderJob) {
   const { fal: falKey, elevenlabs } = keysOf(keys);
   if (job.status === 'queued' && Date.now() - job.created_at > 30 * 60_000) {
     await failRender(db, job.subject, job.id, 'The render timed out. Your allowance or points were returned.');
-  } else if (job.status === 'reserved' && Date.now() - job.created_at > 120_000) {
-    await failRender(db, job.subject, job.id, 'The render did not start. Your allowance or points were returned.');
+  } else if (job.status === 'reserved' && Date.now() - job.created_at > STALE_RESERVED_MS) {
+    await failRender(db, job.subject, job.id, DID_NOT_START);
   } else if (job.status === 'queued' && job.request_id?.startsWith(ELEVENLABS_PREFIX)) {
     if (!elevenlabs) throw new Error('ElevenLabs is not configured');
     // Network errors are not failed generations: keep the job and allow polling again.
@@ -339,6 +397,121 @@ export async function refreshRender(db: D1Database, keys: string | RenderKeys, j
     }
   }
   return (await readRender(db, job.subject, job.id))!;
+}
+/** Failed downloads of a never-delivered complete job before it is refunded. */
+export const DELIVERY_ATTEMPTS = 3;
+const MAX_IMAGE_BYTES = 12_000_000;
+const UNDELIVERED = 'The finished image could not be delivered. Your allowance or points were returned.';
+export type RenderDelivery =
+  | { ok: true; bytes: Uint8Array<ArrayBuffer>; contentType: string }
+  | { ok: false; status: number; error: string; job?: RenderJob };
+/** Refund a complete job whose image never reached the app. It becomes
+ * failed, so the existing ai_render_refund trigger does the work: points back
+ * (with the 'refund:ai_render:<subject>:<id>' ledger row, whose primary key
+ * makes a second refund impossible) or, for a free-allowance job (charge 0),
+ * the allowance restored exactly as failRender does. A paid job is refunded
+ * only if its spend row exists and no refund row does yet; a delivered job
+ * never. Returns true if this call refunded it. */
+export async function refundUndeliveredRender(db: D1Database, subject: string, id: string, message = UNDELIVERED) {
+  const result = await db.prepare(`UPDATE ai_render_jobs SET status = 'failed', error = ?1
+    WHERE subject = ?2 AND id = ?3 AND status = 'complete' AND delivered_at IS NULL AND (charge = 0 OR (
+      EXISTS (SELECT 1 FROM point_ledger WHERE point_ledger.id = 'ai_render:' || ?2 || ':' || ?3 AND point_ledger.kind = 'spend')
+      AND NOT EXISTS (SELECT 1 FROM point_ledger WHERE point_ledger.id = 'refund:ai_render:' || ?2 || ':' || ?3)))`)
+    .bind(message, subject, id).run();
+  return result.meta.changes === 1;
+}
+async function readBounded(response: Response, max: number) {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('empty image body');
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) { await reader.cancel(); throw new Error('image too large'); }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes;
+}
+/** Fetch a complete job's image for the app.
+ *
+ * Terminal delivery failure (refund once, via refundUndeliveredRender), only
+ * for a job never delivered before:
+ *  - the provider says there is no image: a stored fal result_url that fails
+ *    validResultUrl, or an ElevenLabs generation that is gone (404/410), failed,
+ *    or completed without a usable link; or
+ *  - DELIVERY_ATTEMPTS (3) failed downloads, counted in delivery_failures
+ *    (network error, timeout, non-2xx, wrong content type, oversized body).
+ * Anything else is transient: the job stays complete and the app may retry. A
+ * missing provider key or an ElevenLabs status error other than 404/410 is not
+ * counted (our side or the provider's API, not the image). Once any download
+ * succeeds, delivered_at is set and the job is never refunded. */
+export async function deliverRender(db: D1Database, keys: string | RenderKeys, job: RenderJob): Promise<RenderDelivery> {
+  if (job.status !== 'complete') return { ok: false, status: 409, error: 'Image is not ready.' };
+  const terminal = async (stage: string) => {
+    console.error('ai-render: stage=deliver terminal', job.id, stage);
+    if (job.delivered_at) return { ok: false as const, status: 502, error: 'Image download failed. Try again.' };
+    const refunded = await refundUndeliveredRender(db, job.subject, job.id);
+    if (!refunded) console.error('ai-render: stage=deliver not refunded (no spend row, already refunded, or state changed)', job.id);
+    const now = (await readRender(db, job.subject, job.id)) ?? job;
+    return now.status === 'failed'
+      ? { ok: false as const, status: 410, error: now.error ?? UNDELIVERED, job: now }
+      : { ok: false as const, status: 502, error: 'Image download failed. Try again.', job: now };
+  };
+  const attemptFailed = async (stage: string) => {
+    console.error('ai-render: stage=deliver download failed', job.id, stage);
+    if (job.delivered_at) return { ok: false as const, status: 502, error: 'Image download failed. Try again.' };
+    await db.prepare(`UPDATE ai_render_jobs SET delivery_failures = delivery_failures + 1
+      WHERE subject = ? AND id = ? AND status = 'complete' AND delivered_at IS NULL`).bind(job.subject, job.id).run();
+    const now = await readRender(db, job.subject, job.id);
+    if (now && now.status === 'complete' && !now.delivered_at && (now.delivery_failures ?? 0) >= DELIVERY_ATTEMPTS) {
+      return terminal(`${now.delivery_failures} failed downloads`);
+    }
+    return { ok: false as const, status: 502, error: 'Image download failed. Try again.' };
+  };
+  let source: string;
+  if (job.request_id?.startsWith(ELEVENLABS_PREFIX)) {
+    const key = keysOf(keys).elevenlabs;
+    if (!key) {
+      console.error('ai-render: stage=deliver no ElevenLabs key', job.id);
+      return { ok: false, status: 503, error: 'Image is not available right now. Try again later.' };
+    }
+    let generation: ElevenLabsGeneration;
+    try { generation = await elevenLabsGeneration(key, job.request_id.slice(ELEVENLABS_PREFIX.length)); }
+    catch (error) {
+      if (error instanceof ProviderStatusError && (error.status === 404 || error.status === 410)) {
+        return terminal(`ElevenLabs generation gone (${error.status})`);
+      }
+      console.error('ai-render: stage=deliver ElevenLabs status unavailable', job.id, errorText(error));
+      return { ok: false, status: 502, error: 'Image download failed. Try again.' };
+    }
+    if (generation.status !== 'completed' || !validElevenLabsAssetUrl(generation.content_url)) {
+      return terminal(`ElevenLabs generation ${generation.status ?? 'unknown'} without a usable link`);
+    }
+    source = generation.content_url!;
+  } else {
+    if (!validResultUrl(job.result_url)) return terminal('stored result_url is not a valid fal.media URL');
+    source = job.result_url;
+  }
+  let image: Response;
+  try { image = await fetch(source, { redirect: 'error', signal: AbortSignal.timeout(20_000) }); }
+  catch (error) { return attemptFailed(`fetch: ${errorText(error)}`); }
+  if (!image.ok) { await image.body?.cancel().catch(() => undefined); return attemptFailed(`HTTP ${image.status}`); }
+  const contentType = image.headers.get('Content-Type')?.split(';')[0] ?? '';
+  if (!['image/jpeg', 'image/png'].includes(contentType)) {
+    await image.body?.cancel().catch(() => undefined);
+    return attemptFailed(`content type ${contentType || 'missing'}`);
+  }
+  let bytes: Uint8Array<ArrayBuffer>;
+  try { bytes = await readBounded(image, MAX_IMAGE_BYTES); }
+  catch (error) { return attemptFailed(`body: ${errorText(error)}`); }
+  await db.prepare('UPDATE ai_render_jobs SET delivered_at = ? WHERE subject = ? AND id = ? AND delivered_at IS NULL')
+    .bind(Date.now(), job.subject, job.id).run();
+  return { ok: true, bytes, contentType };
 }
 export function publicRender(job: RenderJob) {
   return { id: job.id, status: job.status, style: job.style, charged: job.charge, error: job.error, watermark: job.watermark === 1 };

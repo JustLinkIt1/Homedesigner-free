@@ -32,3 +32,6 @@ backups/
 # usable takes come off a GPU machine or a real phone — only the finished,
 # edited video is worth keeping. See docs/PROMO_VIDEO_PLAN.md.
 store/clips/
+
+# Smoke suite Vite dev-server output, overwritten each run.
+tests/.smoke-vite.log

@@ -1,0 +1,309 @@
+{
+  "title": "2 bedroom house with garage",
+  "notes": "",
+  "widthCm": 1200,
+  "depthCm": 1000,
+  "furnished": true,
+  "source": null,
+  "exterior": {
+    "color": "#9c5a44",
+    "material": "brick_wall_001"
+  },
+  "roof": {
+    "type": "gable",
+    "pitch": 35,
+    "overhang": 40,
+    "thickness": 18,
+    "covering": "tile",
+    "coveringScaleCm": 100,
+    "color": "#b45f3c"
+  },
+  "floors": [
+    {
+      "rooms": [
+        {
+          "id": "gar",
+          "type": "garage",
+          "name": "Garage",
+          "x": 0,
+          "y": 0,
+          "w": 350,
+          "h": 550
+        },
+        {
+          "id": "kit",
+          "type": "kitchen",
+          "name": "Kitchen",
+          "x": 350,
+          "y": 0,
+          "w": 350,
+          "h": 550
+        },
+        {
+          "id": "liv",
+          "type": "living",
+          "name": "Open Living",
+          "x": 700,
+          "y": 0,
+          "w": 500,
+          "h": 550
+        },
+        {
+          "id": "hall",
+          "type": "hallway",
+          "name": "Hallway",
+          "x": 0,
+          "y": 550,
+          "w": 850,
+          "h": 120
+        },
+        {
+          "id": "uti",
+          "type": "utility",
+          "name": "Utility",
+          "x": 850,
+          "y": 550,
+          "w": 350,
+          "h": 120
+        },
+        {
+          "id": "bed1",
+          "type": "bedroom",
+          "name": "Bedroom 1",
+          "x": 0,
+          "y": 670,
+          "w": 400,
+          "h": 330
+        },
+        {
+          "id": "bath",
+          "type": "bathroom",
+          "name": "Bathroom",
+          "x": 400,
+          "y": 670,
+          "w": 250,
+          "h": 330
+        },
+        {
+          "id": "bed2",
+          "type": "bedroom",
+          "name": "Bedroom 2",
+          "x": 650,
+          "y": 670,
+          "w": 350,
+          "h": 330
+        },
+        {
+          "id": "sto",
+          "type": "storage",
+          "name": "Storage",
+          "x": 1000,
+          "y": 670,
+          "w": 200,
+          "h": 330
+        }
+      ],
+      "openings": [
+        {
+          "kind": "door",
+          "x": 175,
+          "y": 550,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "gar",
+            "hall"
+          ]
+        },
+        {
+          "kind": "open",
+          "x": 700,
+          "y": 275,
+          "vertical": true,
+          "width": 120,
+          "rooms": [
+            "kit",
+            "liv"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 525,
+          "y": 550,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "kit",
+            "hall"
+          ]
+        },
+        {
+          "kind": "open",
+          "x": 775,
+          "y": 550,
+          "vertical": false,
+          "width": 120,
+          "rooms": [
+            "liv",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 850,
+          "y": 610,
+          "vertical": true,
+          "width": 80,
+          "rooms": [
+            "uti",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 1100,
+          "y": 670,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "uti",
+            "sto"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 200,
+          "y": 670,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "bed1",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 525,
+          "y": 670,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "bath",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 750,
+          "y": 670,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "bed2",
+            "hall"
+          ]
+        },
+        {
+          "kind": "entrance",
+          "x": 850,
+          "y": 0,
+          "vertical": false,
+          "width": 90,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "garage",
+          "x": 175,
+          "y": 0,
+          "vertical": false,
+          "width": 250,
+          "rooms": [
+            "gar"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 525,
+          "y": 0,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1048,
+          "y": 0,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1200,
+          "y": 275,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "small_window",
+          "x": 1200,
+          "y": 610,
+          "vertical": true,
+          "width": 60,
+          "rooms": [
+            "uti"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 200,
+          "y": 1000,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "bed1"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 0,
+          "y": 835,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "bed1"
+          ]
+        },
+        {
+          "kind": "small_window",
+          "x": 525,
+          "y": 1000,
+          "vertical": false,
+          "width": 60,
+          "rooms": [
+            "bath"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 825,
+          "y": 1000,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "bed2"
+          ]
+        }
+      ]
+    }
+  ]
+}

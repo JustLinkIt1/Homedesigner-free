@@ -297,6 +297,7 @@ export const FR: Record<string, string> = {
   'Show grid': 'Afficher la grille',
   'Show dimensions': 'Afficher les cotes',
   'Vibration feedback': 'Retour haptique',
+  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': 'Verrouiller les objets évite de les déplacer par accident quand vous déplacez la vue ou zoomez. L’option reste activée jusqu’à ce que vous la désactiviez.',
   Help: 'Aide',
   'Replay the intro tour': "Revoir la visite d'introduction",
   'Privacy policy': 'Politique de confidentialité',

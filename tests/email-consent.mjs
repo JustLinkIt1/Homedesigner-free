@@ -21,7 +21,7 @@ try {
   const exportScript = await import(pathToFileURL(join(process.cwd(), 'workers/design-sync/scripts/export-optins.mjs')).href);
 
   const sql = new DatabaseSync(':memory:');
-  sql.exec(readFileSync('workers/design-sync/migrations/0011_email_consent.sql', 'utf8'));
+  sql.exec(readFileSync('workers/design-sync/migrations/0012_email_consent.sql', 'utf8'));
   const db = {
     prepare(query) {
       const stmt = sql.prepare(query);

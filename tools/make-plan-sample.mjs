@@ -17,6 +17,10 @@
 // blueprintToSnapshot builds the walls, doors, windows, floors, roof and
 // furniture, so the result is exactly what the app makes.
 //
+// The front of the house is blueprint y = 0 (entrance and garage door), which
+// the 3D view puts at world z = 0 with the house running to +z, so the outside
+// shots look from -z (azimuth near 180).
+//
 // Writes project.json (opens in the app with "Open project file"), plan-<n>.png,
 // 3d-ground.jpg, 3d-upper.jpg, exterior.jpg and front.jpg.
 // A client's own plan is theirs: keep blueprints and outputs out of the repo.
@@ -38,13 +42,27 @@ await ctx.addInitScript(() => {
   localStorage.setItem('homedesigner.theme.v1', 'light');
 });
 const page = await ctx.newPage();
+// A cold Vite dev server takes well over 30 s to serve the first page here.
+page.setDefaultTimeout(240_000);
 page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
-await page.goto('http://localhost:4318/?pro=1');
+await page.goto('http://localhost:4318/?pro=1', { timeout: 300_000 });
 await page.waitForSelector('.tpl-card');
 await page.evaluate(() => window.useProStore.setState({ isPro: true }));
 await page.locator('.tpl-card', { has: page.locator('img[src*="previews/blank."]') }).first().click();
 await page.waitForSelector('.toolbar');
 await page.waitForTimeout(800);
+
+// Nothing selected and the pointer off the canvas before every picture: a
+// selected wall draws blue handles and a length in 2D and yellow corner rings
+// in 3D, and a hover draws its own highlight.
+const clean = async () => {
+  await page.mouse.move(0, 0);
+  await page.evaluate(() => {
+    const s = window.useDesign.getState();
+    s.clearSelection?.();
+    s.setSelectedIds?.([]);
+  });
+};
 
 const info = await page.evaluate(async (bp) => {
   const { blueprintToSnapshot } = await import('/src/lib/aiPlan.ts');
@@ -68,9 +86,19 @@ const hideUi = await page.addStyleTag({ content: '.toolbar,.tool-dock,.propertie
 for (let i = 0; i < info.floors.length; i++) {
   await page.evaluate((id) => window.useDesign.getState().setActiveFloor(id), info.floors[i]);
   await page.waitForTimeout(700);
-  const fit = page.locator('button[aria-label*="Fit" i], button[title*="Fit" i], [data-tip*="Fit" i]').first();
-  if (await fit.count()) { await fit.click({ force: true }); await page.waitForTimeout(600); }
-  await page.locator('.konvajs-content canvas, canvas').first().screenshot({ path: `${out}/plan-${i + 1}.png` });
+  // Frame the whole footprint with room for the dimension labels outside the
+  // walls (the app's own Fit leaves 90 px, which cut deep and very wide plans),
+  // then crop the picture to that frame so no empty grid is left around it.
+  const canvas = page.locator('.konvajs-content canvas, canvas').first();
+  const box = await canvas.boundingBox();
+  const margin = 120 + 0.06 * Math.max(bp.widthCm, bp.depthCm); // cm, each side
+  const z = Math.min(box.width / (bp.widthCm + 2 * margin), box.height / (bp.depthCm + 2 * margin));
+  const frameW = (bp.widthCm + 2 * margin) * z, frameH = (bp.depthCm + 2 * margin) * z;
+  const left = (box.width - frameW) / 2, top = (box.height - frameH) / 2;
+  await page.evaluate(([x, y, z]) => window.useDesign.getState().setViewport({ x, y }, z), [left + margin * z, top + margin * z, z]);
+  await clean();
+  await page.waitForTimeout(700);
+  await canvas.screenshot({ path: `${out}/plan-${i + 1}.png`, clip: { x: box.x + left, y: box.y + top, width: frameW, height: frameH } });
 }
 await hideUi.evaluate((n) => n.remove());
 
@@ -87,29 +115,52 @@ if (!process.argv.includes('--no-render')) {
     s.camera.position.set(tx + dist * Math.cos(e) * Math.sin(a), ty + dist * Math.sin(e), tz + dist * Math.cos(e) * Math.cos(a));
     s.camera.lookAt(tx, ty, tz);
     c?.update();
-    // The focus-anchor puck is UI, not part of the house.
-    s.scene.traverse((o) => { if (o.isMesh && o.renderOrder === 999 && o.geometry?.type === 'CircleGeometry') o.visible = false; });
+    // The focus-anchor puck and the wall-end handles are UI, not the house.
+    s.scene.traverse((o) => { if (o.isMesh && o.renderOrder === 999 && /^(Circle|Ring)Geometry$/.test(o.geometry?.type ?? '')) o.visible = false; });
     s.invalidate();
   }, [az, el, dist, target]);
   const W = bp.widthCm / 100, D = bp.depthCm / 100;
   const xs = bp.floors.flatMap((f) => f.rooms.flatMap((r) => [r.x, r.x + r.w]));
   const cx = (Math.min(...xs) + Math.max(...xs)) / 200, cz = D / 2;
   const span = Math.max(W, D);
-  const shot = async (name) => { await page.waitForTimeout(2500); await page.locator('canvas').first().screenshot({ path: `${out}/${name}`, type: 'jpeg', quality: 90 }); };
+  // Dollhouse shots look from the front-right, high up; deep plots need more room.
+  const near = D > W ? 1.5 : 1.25;
+  // Outside shots: far enough that a sphere round the whole house (walls of
+  // every storey plus roof) fits the narrower field of view.
+  const H = info.floors.length * 2.8 + 2.5;
+  const fits = await page.evaluate(() => {
+    const c = window.__r3f().camera;
+    const v = (c.fov * Math.PI) / 180;
+    const h = 2 * Math.atan(Math.tan(v / 2) * c.aspect);
+    return Math.sin(Math.min(v, h) / 2);
+  });
+  const whole = Number.isFinite(fits) && fits > 0 ? (1.06 * 0.5 * Math.hypot(W + 1, D + 1, H)) / fits : span * 1.9;
+  const shot = async (name) => {
+    await clean();
+    await page.evaluate(() => window.__r3f().scene.traverse((o) => {
+      if (o.isMesh && o.renderOrder === 999 && /^(Circle|Ring)Geometry$/.test(o.geometry?.type ?? '')) o.visible = false;
+    }));
+    await page.evaluate(() => window.__r3f().invalidate());
+    await page.waitForTimeout(2500);
+    await page.locator('canvas').first().screenshot({ path: `${out}/${name}`, type: 'jpeg', quality: 90 });
+  };
   await page.evaluate(() => { const s = window.useDesign.getState(); s.setSunTime(14); s.setDollhouse(true); });
   await page.evaluate((id) => window.useDesign.getState().setActiveFloor(id), info.floors[0]);
-  await cam(15, 56, span * 1.25, [cx, 0, cz]);
+  await cam(15, 56, span * near, [cx, 0, cz]);
   await shot('3d-ground.jpg');
   if (info.floors.length > 1) {
     await page.evaluate((id) => window.useDesign.getState().setActiveFloor(id), info.floors[info.floors.length - 1]);
-    await cam(15, 60, span * 1.35, [cx, 1.5, cz]);
+    await cam(15, 60, span * (near + 0.1), [cx, 1.5, cz]);
     await shot('3d-upper.jpg');
   }
   await page.evaluate(() => window.useDesign.getState().setDollhouse(false));
-  await page.evaluate(() => window.useDesign.getState().setSunTime(16));
-  await cam(28, 17, span * 1.55, [cx, 2.6, cz]);
+  // 15:00 puts the sun at the front-right (-z, +x), so the front wall is lit.
+  await page.evaluate(() => window.useDesign.getState().setSunTime(15));
+  // From the street side: front-right three-quarter view, then a lower, more
+  // head-on view of the front.
+  await cam(152, 17, whole, [cx, H / 2 - 0.4, cz]);
   await shot('exterior.jpg');
-  await cam(-20, 9, span * 1.25, [cx - 1, 2.2, cz]);
+  await cam(195, 9, whole, [cx, H / 2 - 0.4, cz]);
   await shot('front.jpg');
 }
 await browser.close();

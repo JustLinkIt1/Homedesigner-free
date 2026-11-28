@@ -297,6 +297,8 @@ export const TR: Record<string, string> = {
   'Show grid': 'Izgarayı göster',
   'Show dimensions': 'Ölçüleri göster',
   'Vibration feedback': 'Titreşim',
+  // English on purpose until a Turkish speaker reads it (EXEC cycle 317).
+  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': 'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.',
   Help: 'Yardım',
   'Replay the intro tour': 'Tanıtım turunu tekrar oynat',
   'Privacy policy': 'Gizlilik politikası',

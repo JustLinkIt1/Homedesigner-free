@@ -297,6 +297,7 @@ export const NL: Record<string, string> = {
   'Show grid': 'Raster tonen',
   'Show dimensions': 'Maten tonen',
   'Vibration feedback': 'Trilfeedback',
+  'Lock objects stops objects being moved by accident while you pan and zoom. It stays on until you turn it off.': 'Objecten vergrendelen voorkomt dat je objecten per ongeluk verplaatst terwijl je schuift en zoomt. Het blijft aan tot je het uitzet.',
   Help: 'Help',
   'Replay the intro tour': 'Introductie opnieuw bekijken',
   'Privacy policy': 'Privacybeleid',

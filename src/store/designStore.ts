@@ -240,8 +240,8 @@ const SETTINGS_KEY = 'homedesigner.settings.v1';
 
 /** Load persisted display settings (units, lighting) from their own key — kept
  *  out of the undo snapshot so changing them never pollutes history. */
-const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean; street: boolean; wallAngleLock: WallAngleLock } => {
-  const def = { units: 'metric' as Units, sunTime: 13, lightsOn: true, street: true, wallAngleLock: '45' as WallAngleLock };
+const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean; street: boolean; wallAngleLock: WallAngleLock; showGrid: boolean; moveLock: boolean } => {
+  const def = { units: 'metric' as Units, sunTime: 13, lightsOn: true, street: true, wallAngleLock: '45' as WallAngleLock, showGrid: true, moveLock: false };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
@@ -254,6 +254,9 @@ const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean; str
         // Anything unrecognised falls back to the historical 45° assist, so a
         // corrupt or older settings blob never leaves drawing unassisted.
         wallAngleLock: s.wallAngleLock === 'off' || s.wallAngleLock === '90' ? s.wallAngleLock : def.wallAngleLock,
+        // B4 (IFC customer, 28 Nov): grid and lock used to reset every session.
+        showGrid: typeof s.showGrid === 'boolean' ? s.showGrid : def.showGrid,
+        moveLock: typeof s.moveLock === 'boolean' ? s.moveLock : def.moveLock,
       };
     }
   } catch {
@@ -263,7 +266,7 @@ const loadSettings = (): { units: Units; sunTime: number; lightsOn: boolean; str
 };
 
 /** Merge-write a settings patch so each setter keeps the others' values. */
-const persistSettings = (patch: Partial<{ units: Units; sunTime: number; lightsOn: boolean; street: boolean; wallAngleLock: WallAngleLock }>) => {
+const persistSettings = (patch: Partial<{ units: Units; sunTime: number; lightsOn: boolean; street: boolean; wallAngleLock: WallAngleLock; showGrid: boolean; moveLock: boolean }>) => {
   try {
     const cur = loadSettings();
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...cur, ...patch }));
@@ -498,12 +501,12 @@ export const useDesign = create<DesignState>((set, get) => {
     selection: { kind: null, id: null },
     zoom: 0.35,
     pan: { x: 400, y: 300 },
-    showGrid: true,
+    showGrid: loadSettings().showGrid,
     gridSize: 25,
     showDimensions: true,
     dollhouse: true,
     walkMode: false,
-    moveLock: false,
+    moveLock: loadSettings().moveLock,
     defaultWallHeight: 270,
     defaultWallThickness: DEFAULT_WALL_THICKNESS,
     pendingFurnitureType: null,
@@ -524,7 +527,10 @@ export const useDesign = create<DesignState>((set, get) => {
     setZoom: (z) => set({ zoom: Math.max(0.05, Math.min(4, z)) }),
     setPan: (p) => set({ pan: p }),
     setViewport: (p, z) => set({ pan: p, zoom: Math.max(0.05, Math.min(4, z)) }),
-    setShowGrid: (b) => set({ showGrid: b }),
+    setShowGrid: (b) => {
+      persistSettings({ showGrid: b });
+      set({ showGrid: b });
+    },
     setWallAngleLock: (m) => {
       persistSettings({ wallAngleLock: m });
       set({ wallAngleLock: m });
@@ -539,7 +545,10 @@ export const useDesign = create<DesignState>((set, get) => {
       set({ dollhouse: b });
     },
     setWalkMode: (b) => set({ walkMode: b }),
-    setMoveLock: (b) => set({ moveLock: b }),
+    setMoveLock: (b) => {
+      persistSettings({ moveLock: b });
+      set({ moveLock: b });
+    },
     setSunTime: (t) => {
       const v = Math.min(24, Math.max(0, t));
       persistSettings({ sunTime: v });

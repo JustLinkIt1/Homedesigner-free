@@ -35,7 +35,7 @@ const workerSrc = readFileSync('workers/design-sync/src/email-consent.ts', 'utf8
 writeFileSync(join(dir, 'email-consent.mjs'), ts.transpileModule(workerSrc, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText);
 const worker = await import(pathToFileURL(join(dir, 'email-consent.mjs')).href);
 const sql = new DatabaseSync(':memory:');
-sql.exec(readFileSync('workers/design-sync/migrations/0011_email_consent.sql', 'utf8'));
+sql.exec(readFileSync('workers/design-sync/migrations/0012_email_consent.sql', 'utf8'));
 const db = {
   prepare(query) {
     const stmt = sql.prepare(query);

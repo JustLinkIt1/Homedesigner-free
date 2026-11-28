@@ -1,0 +1,328 @@
+{
+  "title": "3 bedroom house, 13 x 9 m",
+  "notes": "",
+  "widthCm": 1300,
+  "depthCm": 900,
+  "furnished": true,
+  "source": null,
+  "exterior": {
+    "color": "#9c5a44",
+    "material": "brick_wall_001"
+  },
+  "roof": {
+    "type": "gable",
+    "pitch": 35,
+    "overhang": 40,
+    "thickness": 18,
+    "covering": "tile",
+    "coveringScaleCm": 100,
+    "color": "#b45f3c"
+  },
+  "floors": [
+    {
+      "rooms": [
+        {
+          "id": "liv",
+          "type": "living",
+          "name": "Open Living",
+          "x": 0,
+          "y": 0,
+          "w": 600,
+          "h": 450
+        },
+        {
+          "id": "din",
+          "type": "dining",
+          "name": "Dining",
+          "x": 600,
+          "y": 0,
+          "w": 300,
+          "h": 450
+        },
+        {
+          "id": "kit",
+          "type": "kitchen",
+          "name": "Kitchen",
+          "x": 900,
+          "y": 0,
+          "w": 400,
+          "h": 450
+        },
+        {
+          "id": "uti",
+          "type": "utility",
+          "name": "Utility",
+          "x": 0,
+          "y": 450,
+          "w": 300,
+          "h": 120
+        },
+        {
+          "id": "hall",
+          "type": "hallway",
+          "name": "Hallway",
+          "x": 300,
+          "y": 450,
+          "w": 1000,
+          "h": 120
+        },
+        {
+          "id": "bed1",
+          "type": "bedroom",
+          "name": "Bedroom 1",
+          "x": 0,
+          "y": 570,
+          "w": 400,
+          "h": 330
+        },
+        {
+          "id": "bath",
+          "type": "bathroom",
+          "name": "Bathroom",
+          "x": 400,
+          "y": 570,
+          "w": 250,
+          "h": 330
+        },
+        {
+          "id": "bed2",
+          "type": "bedroom",
+          "name": "Bedroom 2",
+          "x": 650,
+          "y": 570,
+          "w": 330,
+          "h": 330
+        },
+        {
+          "id": "bed3",
+          "type": "bedroom",
+          "name": "Bedroom 3",
+          "x": 980,
+          "y": 570,
+          "w": 320,
+          "h": 330
+        }
+      ],
+      "openings": [
+        {
+          "kind": "open",
+          "x": 600,
+          "y": 225,
+          "vertical": true,
+          "width": 120,
+          "rooms": [
+            "liv",
+            "din"
+          ]
+        },
+        {
+          "kind": "open",
+          "x": 900,
+          "y": 225,
+          "vertical": true,
+          "width": 120,
+          "rooms": [
+            "din",
+            "kit"
+          ]
+        },
+        {
+          "kind": "open",
+          "x": 450,
+          "y": 450,
+          "vertical": false,
+          "width": 120,
+          "rooms": [
+            "liv",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 300,
+          "y": 510,
+          "vertical": true,
+          "width": 80,
+          "rooms": [
+            "uti",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 350,
+          "y": 570,
+          "vertical": false,
+          "width": 70,
+          "rooms": [
+            "bed1",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 525,
+          "y": 570,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "bath",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 815,
+          "y": 570,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "bed2",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 1140,
+          "y": 570,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "bed3",
+            "hall"
+          ]
+        },
+        {
+          "kind": "entrance",
+          "x": 180,
+          "y": 0,
+          "vertical": false,
+          "width": 90,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 413,
+          "y": 0,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 0,
+          "y": 225,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 750,
+          "y": 0,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "din"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1100,
+          "y": 0,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1300,
+          "y": 225,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "small_window",
+          "x": 0,
+          "y": 510,
+          "vertical": true,
+          "width": 60,
+          "rooms": [
+            "uti"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 200,
+          "y": 900,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "bed1"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 0,
+          "y": 735,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "bed1"
+          ]
+        },
+        {
+          "kind": "small_window",
+          "x": 525,
+          "y": 900,
+          "vertical": false,
+          "width": 60,
+          "rooms": [
+            "bath"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 815,
+          "y": 900,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "bed2"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1140,
+          "y": 900,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "bed3"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1300,
+          "y": 735,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "bed3"
+          ]
+        }
+      ]
+    }
+  ]
+}
