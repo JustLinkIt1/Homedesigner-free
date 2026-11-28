@@ -20,12 +20,11 @@
 import { Buffer } from 'node:buffer';
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import process from 'node:process';
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { forbiddenOutput, unsubscribeToken } from './export-optins.mjs';
+import { forbiddenOutput, runD1, unsubscribeToken } from './export-optins.mjs';
 
 export const FROM = 'HomeDesigner <nathan@homedesignerapp.com>';
 export const MESSAGE_ID_DOMAIN = 'homedesignerapp.com';
@@ -285,11 +284,7 @@ export const latestSql = (subject) => {
 /** A db over wrangler d1 execute (production or --local). */
 export function wranglerDb(workerDir, local) {
   const query = (sql) => {
-    const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-    const out = execFileSync(npx, [
-      'wrangler', 'd1', 'execute', 'homedesigner-community', local ? '--local' : '--remote', '--json',
-      '--command', sql.replace(/\s+/g, ' '),
-    ], { cwd: workerDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], shell: process.platform === 'win32', maxBuffer: 256 * 1024 * 1024 });
+    const out = runD1(workerDir, local, sql);
     const parsed = JSON.parse(out);
     return Array.isArray(parsed) ? parsed.flatMap((r) => r.results ?? []) : parsed.results ?? [];
   };

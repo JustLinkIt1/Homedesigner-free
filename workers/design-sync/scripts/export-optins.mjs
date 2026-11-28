@@ -107,12 +107,21 @@ function defaultBase(workerDir) {
   }
 }
 
+/**
+ * Run one SQL statement through wrangler's own JS entry with node, never a
+ * shell: on Windows `shell: true` left the SQL unquoted, so cmd split it on
+ * spaces and wrangler saw no --command (found in the 28 Nov live dry run).
+ */
+export function runD1(workerDir, local, sql, stderr = 'ignore') {
+  const bin = join(workerDir, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
+  return execFileSync(process.execPath, [
+    bin, 'd1', 'execute', 'homedesigner-community', local ? '--local' : '--remote', '--json',
+    '--command', sql.replace(/\s+/g, ' '),
+  ], { cwd: workerDir, encoding: 'utf8', stdio: ['ignore', 'pipe', stderr], maxBuffer: 256 * 1024 * 1024 });
+}
+
 function readRows(workerDir, local) {
-  const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const out = execFileSync(npx, [
-    'wrangler', 'd1', 'execute', 'homedesigner-community', local ? '--local' : '--remote', '--json',
-    '--command', LATEST_OPTED_IN_SQL.replace(/\s+/g, ' '),
-  ], { cwd: workerDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], shell: process.platform === 'win32', maxBuffer: 256 * 1024 * 1024 });
+  const out = runD1(workerDir, local, LATEST_OPTED_IN_SQL, 'inherit');
   const parsed = JSON.parse(out);
   const results = Array.isArray(parsed) ? parsed.flatMap((r) => r.results ?? []) : parsed.results ?? [];
   return results.filter((r) => typeof r.subject === 'string' && typeof r.email === 'string');
