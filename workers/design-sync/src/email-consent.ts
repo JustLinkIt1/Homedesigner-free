@@ -227,6 +227,16 @@ const UNSUBSCRIBED_TEXT: Record<string, { title: string; message: string }> = {
   es: { title: 'Te has dado de baja.', message: 'HomeDesigner ya no te enviará correos de novedades. Puedes volver a activarlos en Ajustes.' },
 };
 
+// Confirm step (EXEC cycle 297): opening the link writes nothing, so mail
+// scanners that prefetch links can't unsubscribe anyone. The button posts back.
+// Draft wording (Squid), for Clawford's review.
+const CONFIRM_TEXT: Record<string, { title: string; message: string; button: string }> = {
+  en: { title: 'Unsubscribe from HomeDesigner emails?', message: "You'll stop getting product emails from HomeDesigner.", button: 'Unsubscribe' },
+  de: { title: 'Von HomeDesigner-E-Mails abmelden?', message: 'Du bekommst dann keine Produkt-E-Mails von HomeDesigner mehr.', button: 'Abmelden' },
+  fr: { title: 'Se désabonner des e-mails HomeDesigner ?', message: "Vous ne recevrez plus d'e-mails sur l'app HomeDesigner.", button: 'Se désabonner' },
+  es: { title: '¿Darte de baja de los correos de HomeDesigner?', message: 'Dejarás de recibir correos de novedades de HomeDesigner.', button: 'Darme de baja' },
+};
+
 /** Primary subtag of a stored language tag if there is K4 text for it, otherwise 'en'. */
 export function unsubscribePageLang(lang: string | null | undefined): string {
   const primary = (lang ?? '').split('-')[0].toLowerCase();
@@ -237,7 +247,7 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function page(status: number, title: string, message: string, lang = 'en'): HtmlResult {
+function page(status: number, title: string, message: string, lang = 'en', form = ''): HtmlResult {
   return {
     status,
     contentType: 'text/html; charset=utf-8',
@@ -252,7 +262,7 @@ function page(status: number, title: string, message: string, lang = 'en'): Html
 <body>
 <h1>${escapeHtml(title)}</h1>
 <p>${escapeHtml(message)}</p>
-</body>
+${form}</body>
 </html>
 `,
   };
@@ -267,31 +277,49 @@ export const UNSUBSCRIBE_HEADERS: Record<string, string> = {
   'X-Robots-Tag': 'noindex',
 };
 
-/** GET /v1/email/unsubscribe?t=<token>: the link in the email body. */
+/** GET /v1/email/unsubscribe?t=<token>: the link in the email body. Writes nothing. */
 export async function unsubscribeLinkPage(
-  url: URL, db: D1Database, secret: string | undefined, now = Date.now(),
+  url: URL, db: D1Database, secret: string | undefined,
 ): Promise<HtmlResult> {
   if (!secret) return page(503, 'Please try again later', 'We could not process this request right now. Please try again later.');
-  const subject = await verifyUnsubscribeToken(secret, url.searchParams.get('t'));
+  const token = url.searchParams.get('t');
+  const subject = await verifyUnsubscribeToken(secret, token);
   if (!subject) return page(400, 'Link not valid', 'This unsubscribe link is not valid. Please use the link from the most recent email, or change your email setting in the app.');
-  await unsubscribe(db, subject, 'unsubscribe_link', now);
-  // Same page whether this click unsubscribed or the account already was.
   const lang = unsubscribePageLang(await newestLang(db, subject));
-  const text = UNSUBSCRIBED_TEXT[lang];
-  return page(200, text.title, text.message, lang);
+  const current = await newestRow(db, subject);
+  if (!current || current.opted_in !== 1) {
+    const done = UNSUBSCRIBED_TEXT[lang];
+    return page(200, done.title, done.message, lang);
+  }
+  const ask = CONFIRM_TEXT[lang];
+  // Relative action keeps the signed token; form-action does not fall back to
+  // default-src 'none', so the CSP still allows this same-URL POST.
+  const form = `<form method="post" action="?t=${escapeHtml(encodeURIComponent(token ?? ''))}">
+<input type="hidden" name="confirm" value="1">
+<button type="submit">${escapeHtml(ask.button)}</button>
+</form>
+`;
+  return page(200, ask.title, ask.message, lang, form);
 }
 
-/** POST /v1/email/unsubscribe?t=<token>: RFC 8058 one-click from the mail client. */
+/**
+ * POST /v1/email/unsubscribe?t=<token>. Two callers:
+ * - the confirm page's button (form body `confirm=1`): unsubscribes and shows the K4 page;
+ * - a mail client's RFC 8058 one-click (`List-Unsubscribe=One-Click`): unsubscribes, plain 200.
+ * A valid signed token is the authorisation either way; the body only picks
+ * the recorded source and the response type.
+ */
 export async function unsubscribeOneClick(
-  url: URL, db: D1Database, secret: string | undefined, now = Date.now(),
+  url: URL, db: D1Database, secret: string | undefined, now = Date.now(), body = '',
 ): Promise<HtmlResult> {
-  const text = (status: number, body: string): HtmlResult => ({ status, contentType: 'text/plain; charset=utf-8', body });
-  if (!secret) return text(503, 'Unavailable');
+  const fromPage = new URLSearchParams(body).get('confirm') === '1';
+  const text = (status: number, msg: string): HtmlResult => ({ status, contentType: 'text/plain; charset=utf-8', body: msg });
+  if (!secret) return fromPage ? page(503, 'Please try again later', 'We could not process this request right now. Please try again later.') : text(503, 'Unavailable');
   const subject = await verifyUnsubscribeToken(secret, url.searchParams.get('t'));
-  if (!subject) return text(400, 'Invalid token');
-  // The body should be "List-Unsubscribe=One-Click" (RFC 8058). It is not
-  // required: a valid signed token is the whole authorisation, and refusing an
-  // unsubscribe over a body detail would only keep mailing someone who said stop.
-  await unsubscribe(db, subject, 'list_unsubscribe', now);
-  return text(200, 'Unsubscribed');
+  if (!subject) return fromPage ? page(400, 'Link not valid', 'This unsubscribe link is not valid. Please use the link from the most recent email, or change your email setting in the app.') : text(400, 'Invalid token');
+  await unsubscribe(db, subject, fromPage ? 'unsubscribe_link' : 'list_unsubscribe', now);
+  if (!fromPage) return text(200, 'Unsubscribed');
+  const lang = unsubscribePageLang(await newestLang(db, subject));
+  const done = UNSUBSCRIBED_TEXT[lang];
+  return page(200, done.title, done.message, lang);
 }

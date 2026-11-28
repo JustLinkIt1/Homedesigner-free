@@ -118,76 +118,177 @@ try {
   r = await m.getEmailConsent(db, other);
   check(r.body.optedIn === false && r.body.updatedAt !== null, 'after Not now the server has a row (so the card is not shown again)');
 
-  // ---- Unsubscribe GET / POST -----------------------------------------------
+  // ---- Unsubscribe: GET shows a confirm page and writes nothing; POST unsubscribes ----
+  // EXEC cycle 297: mail scanners prefetch links, so the GET may never write.
   const u = (t) => new URL(`https://x/v1/email/unsubscribe?t=${encodeURIComponent(t)}`);
-  const beforeBad = total();
-  let h = await m.unsubscribeLinkPage(u(`${subPart}.${flip(sigPart, 3)}`), db, SECRET, T + 4000);
-  check(h.status === 400 && total() === beforeBad && /not valid/i.test(h.body), 'GET with a tampered token: 400 page, no row');
-  h = await m.unsubscribeLinkPage(u(token), db, undefined, T + 4000);
-  check(h.status === 503 && total() === beforeBad, 'GET with no secret configured: 503, no row');
-  h = await m.unsubscribeLinkPage(u(token), db, SECRET, T + 4000);
-  const afterGet = rows(SUB).at(-1);
-  // SUB's newest row with a language is the T+3000 'de' opt-in.
-  const DE = 'Du bist abgemeldet. HomeDesigner schickt dir keine Produkt-E-Mails mehr. In den Einstellungen kannst du sie wieder einschalten.';
   const pageText = (body) => body.replace(/^[\s\S]*<body>|<\/body>[\s\S]*$/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
     .replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-  check(h.status === 200 && h.contentType.startsWith('text/html') && pageText(h.body) === DE, 'GET returns the "unsubscribed" page in the newest language (de, K4 text)');
-  check(afterGet.opted_in === 0 && afterGet.source === 'unsubscribe_link' && afterGet.email === 'person@example.com' && afterGet.created_at === T + 4000, 'GET appends opted_in=0 with source unsubscribe_link');
-  check(afterGet.lang === 'de', 'the unsubscribe row carries the newest real language (de), not und');
-  check(!/<style|<script|style=|<link/i.test(h.body) && /<html lang="de">/.test(h.body), 'page is plain HTML: no styles, no scripts, <html lang="de">');
-  check(!h.body.includes(SUB) && !h.body.includes('person@example.com'), 'page shows neither the account id nor the email');
-  const n1 = rows(SUB).length;
-  h = await m.unsubscribeLinkPage(u(token), db, SECRET, T + 5000);
-  check(h.status === 200 && rows(SUB).length === n1, 'GET is idempotent: a second click adds no row');
-  check(pageText(h.body) === DE && /<html lang="de">/.test(h.body), 'already unsubscribed: same page, same language');
+  const CONFIRM_BODY = 'confirm=1';
+  const ONE_CLICK_BODY = 'List-Unsubscribe=One-Click';
+  const DONE = {
+    en: "You're unsubscribed. HomeDesigner won't send you product emails any more. You can turn them back on in Settings.",
+    de: 'Du bist abgemeldet. HomeDesigner schickt dir keine Produkt-E-Mails mehr. In den Einstellungen kannst du sie wieder einschalten.',
+    fr: "Vous êtes désabonné. HomeDesigner ne vous enverra plus d'e-mails sur l'app. Vous pouvez les réactiver dans les Réglages.",
+    es: 'Te has dado de baja. HomeDesigner ya no te enviará correos de novedades. Puedes volver a activarlos en Ajustes.',
+  };
+  const ASK = {
+    en: { text: "Unsubscribe from HomeDesigner emails? You'll stop getting product emails from HomeDesigner. Unsubscribe", button: 'Unsubscribe' },
+    de: { text: 'Von HomeDesigner-E-Mails abmelden? Du bekommst dann keine Produkt-E-Mails von HomeDesigner mehr. Abmelden', button: 'Abmelden' },
+    fr: { text: "Se désabonner des e-mails HomeDesigner ? Vous ne recevrez plus d'e-mails sur l'app HomeDesigner. Se désabonner", button: 'Se désabonner' },
+    es: { text: '¿Darte de baja de los correos de HomeDesigner? Dejarás de recibir correos de novedades de HomeDesigner. Darme de baja', button: 'Darme de baja' },
+  };
+  // The confirm form: one POST form back to the same ?t= URL, a hidden confirm=1 and one button.
+  const formOf = (body) => {
+    const forms = body.match(/<form\b[^>]*>[\s\S]*?<\/form>/g) ?? [];
+    if (forms.length !== 1) return null;
+    const f = forms[0];
+    return {
+      method: (f.match(/\bmethod="([^"]*)"/) ?? [])[1],
+      action: (f.match(/\baction="([^"]*)"/) ?? [])[1],
+      hiddenConfirm: /<input type="hidden" name="confirm" value="1">/.test(f),
+      buttons: (f.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? []).map((b) => pageText(`<body>${b}</body>`)),
+      inputs: (f.match(/<input\b/g) ?? []).length,
+    };
+  };
+  const unescapeAttr = (s) => s.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  const privateOk = (body, subject, email) => !body.includes(subject) && !body.includes(email);
 
+  const beforeBad = total();
+  let h = await m.unsubscribeLinkPage(u(`${subPart}.${flip(sigPart, 3)}`), db, SECRET);
+  check(h.status === 400 && total() === beforeBad && /not valid/i.test(h.body) && formOf(h.body) === null, 'GET with a tampered token: 400 page, no form, no row');
+  h = await m.unsubscribeLinkPage(u(token), db, undefined);
+  check(h.status === 503 && total() === beforeBad && formOf(h.body) === null, 'GET with no secret configured: 503, no form, no row');
+  const evil = `"><script>alert(1)</script>${token}`;
+  h = await m.unsubscribeLinkPage(u(evil), db, SECRET);
+  check(h.status === 400 && !h.body.includes('<script') && !h.body.includes(token) && total() === beforeBad, 'a token with markup in it is refused and never echoed');
+
+  // SUB is opted in; its newest row with a language is the T+3000 'de' opt-in.
+  const n0 = rows(SUB).length;
+  h = await m.unsubscribeLinkPage(u(token), db, SECRET);
+  const f = formOf(h.body);
+  check(rows(SUB).length === n0 && total() === beforeBad, 'GET for an opted-in account writes NO row');
+  check(h.status === 200 && h.contentType.startsWith('text/html') && /<html lang="de">/.test(h.body) && pageText(h.body) === ASK.de.text, 'GET shows the confirm page in de');
+  check(f && f.method === 'post' && f.hiddenConfirm && f.inputs === 1 && f.buttons.length === 1 && f.buttons[0] === ASK.de.button, 'confirm page: one POST form, hidden confirm=1, one "Abmelden" button');
+  check(f.action === `?t=${encodeURIComponent(token)}` && /^\?t=[A-Za-z0-9._~%-]+$/.test(f.action), 'form action is the relative ?t= URL with the token URL-encoded (no raw quotes or markup)');
+  check(new URL(unescapeAttr(f.action), u(token)).href === u(token).href, 'form action resolves back to the same unsubscribe URL (path and token)');
+  check(!/<style|<script|style=|<link/i.test(h.body), 'confirm page is plain HTML: no styles, no scripts');
+  check(privateOk(h.body, SUB, 'person@example.com'), 'confirm page shows neither the account id nor the email');
+  check(!pageText(h.body).includes(DONE.de.split('.')[0]), 'confirm page does not claim the account is unsubscribed');
+  for (let i = 0; i < 3; i++) await m.unsubscribeLinkPage(u(token), db, SECRET);
+  check(rows(SUB).length === n0 && (await m.getEmailConsent(db, verified)).body.optedIn === true, 'repeated GETs (scanner prefetch) still write nothing; account stays opted in');
+
+  // The button: POST confirm=1.
+  let p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 4000, CONFIRM_BODY);
+  const afterConfirm = rows(SUB).at(-1);
+  check(rows(SUB).length === n0 + 1, 'POST confirm=1 appends exactly one row');
+  check(afterConfirm.opted_in === 0 && afterConfirm.source === 'unsubscribe_link' && afterConfirm.email === 'person@example.com' && afterConfirm.created_at === T + 4000,
+    'POST confirm=1 row: opted_in=0, source unsubscribe_link');
+  check(afterConfirm.lang === 'de', 'the unsubscribe row carries the newest real language (de), not und');
+  check(p.status === 200 && p.contentType.startsWith('text/html') && /<html lang="de">/.test(p.body) && pageText(p.body) === DONE.de && formOf(p.body) === null,
+    'POST confirm=1 returns the K4 "unsubscribed" HTML page in de, without a form');
+  check(!/<style|<script|style=|<link/i.test(p.body) && privateOk(p.body, SUB, 'person@example.com'), 'unsubscribed page: plain HTML, no account id or email');
+  const n1 = rows(SUB).length;
+  p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 5000, CONFIRM_BODY);
+  check(p.status === 200 && rows(SUB).length === n1 && pageText(p.body) === DONE.de, 'repeated POST confirm=1 is idempotent: no row, same page');
+  h = await m.unsubscribeLinkPage(u(token), db, SECRET);
+  check(h.status === 200 && rows(SUB).length === n1 && pageText(h.body) === DONE.de && /<html lang="de">/.test(h.body) && formOf(h.body) === null,
+    'GET when already unsubscribed: K4 "unsubscribed" page, no form, no row');
+
+  // RFC 8058 one-click from the mail client.
   await post(verified, { ...yes, source: 'settings' }, T + 6000); // opted back in, in Settings (lang en)
-  let p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 7000);
-  const afterPost = rows(SUB).at(-1);
-  check(p.status === 200 && afterPost.opted_in === 0 && afterPost.source === 'list_unsubscribe', 'one-click POST returns 200 and appends list_unsubscribe opted_in=0');
-  check(afterPost.lang === 'en', 'the one-click row carries the newest real language (en)');
-  h = await m.unsubscribeLinkPage(u(token), db, SECRET, T + 7500);
-  check(/<html lang="en">/.test(h.body) && pageText(h.body) === "You're unsubscribed. HomeDesigner won't send you product emails any more. You can turn them back on in Settings."
-    && h.body.includes('You&#39;re') && !/You're/.test(h.body), 'en page: K4 text, apostrophes HTML-escaped');
+  h = await m.unsubscribeLinkPage(u(token), db, SECRET);
+  check(/<html lang="en">/.test(h.body) && pageText(h.body) === ASK.en.text && formOf(h.body)?.buttons[0] === 'Unsubscribe'
+    && h.body.includes('You&#39;ll') && !/You'll/.test(h.body), 'en confirm page: draft text, apostrophe HTML-escaped');
   const n2 = rows(SUB).length;
-  p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 8000);
-  check(p.status === 200 && rows(SUB).length === n2, 'POST is idempotent');
-  p = await m.unsubscribeOneClick(u('garbage.token'), db, SECRET, T + 8000);
-  check(p.status === 400 && rows(SUB).length === n2, 'POST with an invalid token: 400, no row');
+  p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 7000, ONE_CLICK_BODY);
+  const afterPost = rows(SUB).at(-1);
+  check(rows(SUB).length === n2 + 1 && afterPost.opted_in === 0 && afterPost.source === 'list_unsubscribe', 'one-click POST appends one list_unsubscribe opted_in=0 row');
+  check(p.status === 200 && p.contentType.startsWith('text/plain') && p.body === 'Unsubscribed', 'one-click POST returns plain-text 200');
+  check(afterPost.lang === 'en', 'the one-click row carries the newest real language (en)');
+  h = await m.unsubscribeLinkPage(u(token), db, SECRET);
+  check(pageText(h.body) === DONE.en && h.body.includes('You&#39;re') && !/You're/.test(h.body), 'en unsubscribed page: K4 text, apostrophes HTML-escaped');
+  const n3 = rows(SUB).length;
+  p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 8000, ONE_CLICK_BODY);
+  check(p.status === 200 && p.body === 'Unsubscribed' && rows(SUB).length === n3, 'repeated one-click POST is idempotent');
+  await post(verified, { ...yes, source: 'settings' }, T + 8500);
+  p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 9000);
+  check(p.status === 200 && p.contentType.startsWith('text/plain') && rows(SUB).at(-1).source === 'list_unsubscribe' && rows(SUB).at(-1).opted_in === 0,
+    'a POST with an empty body still unsubscribes as one-click (the token is the authorisation)');
+  await post(verified, { ...yes, source: 'settings' }, T + 9500);
+  p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 9600, 'confirm=0');
+  check(p.contentType.startsWith('text/plain') && rows(SUB).at(-1).source === 'list_unsubscribe', 'confirm other than 1 is treated as one-click');
+
+  // Bad token / no secret on both POST kinds.
+  const n4 = total();
+  p = await m.unsubscribeOneClick(u('garbage.token'), db, SECRET, T + 10000, ONE_CLICK_BODY);
+  check(p.status === 400 && p.contentType.startsWith('text/plain') && total() === n4, 'one-click POST with an invalid token: plain 400, no row');
+  p = await m.unsubscribeOneClick(u(`${subPart}.${flip(sigPart, 3)}`), db, SECRET, T + 10000, CONFIRM_BODY);
+  check(p.status === 400 && p.contentType.startsWith('text/html') && /not valid/i.test(p.body) && total() === n4, 'confirm POST with a tampered token: 400 HTML page, no row');
+  p = await m.unsubscribeOneClick(u(evil), db, SECRET, T + 10000, CONFIRM_BODY);
+  check(p.status === 400 && !p.body.includes('<script') && !p.body.includes(token) && total() === n4, 'confirm POST with markup in the token: refused, never echoed');
+  p = await m.unsubscribeOneClick(u(token), db, undefined, T + 10000, CONFIRM_BODY);
+  check(p.status === 503 && p.contentType.startsWith('text/html') && total() === n4, 'confirm POST with no secret: 503 page, no row');
+  p = await m.unsubscribeOneClick(u(token), db, undefined, T + 10000, ONE_CLICK_BODY);
+  check(p.status === 503 && p.contentType.startsWith('text/plain') && total() === n4, 'one-click POST with no secret: plain 503, no row');
+
+  // Never subscribed: GET and POST write nothing, and nothing ever subscribes.
   const never = await m.unsubscribeToken(SECRET, '123456789');
-  const n3 = total();
-  check((await m.unsubscribeLinkPage(u(never), db, SECRET)).status === 200 && total() === n3, 'unsubscribing an account with no rows writes nothing (and still says unsubscribed)');
-  check((await m.getEmailConsent(db, verified)).body.optedIn === false, 'the link only ever unsubscribes (no re-subscribe by link)');
-  check(/<html lang="en">/.test((await m.unsubscribeLinkPage(u(never), db, SECRET)).body), 'no rows at all: English page');
+  h = await m.unsubscribeLinkPage(u(never), db, SECRET);
+  check(h.status === 200 && total() === n4 && pageText(h.body) === DONE.en && formOf(h.body) === null && /<html lang="en">/.test(h.body),
+    'GET for an account with no rows: English "unsubscribed" page, no form, no row');
+  p = await m.unsubscribeOneClick(u(never), db, SECRET, T + 11000, CONFIRM_BODY);
+  check(p.status === 200 && total() === n4 && pageText(p.body) === DONE.en, 'confirm POST for an account with no rows writes nothing');
+  p = await m.unsubscribeOneClick(u(never), db, SECRET, T + 11000, ONE_CLICK_BODY);
+  check(p.status === 200 && total() === n4, 'one-click POST for an account with no rows writes nothing');
+  check(sql.prepare("SELECT COUNT(*) AS n FROM email_consent_log WHERE source IN ('unsubscribe_link', 'list_unsubscribe') AND opted_in = 1").get().n === 0,
+    'no unsubscribe path ever wrote an opted_in=1 row');
 
   // ---- Unsubscribe page language per account --------------------------------
   {
     const langIns = sql.prepare("INSERT INTO email_consent_log (subject, email, opted_in, wording, lang, source, created_at) VALUES (?, ?, ?, 'optin-v1', ?, ?, ?)");
     const cases = [
-      // [subject, rows [opted_in, lang, source], expected page lang, expected text, expected unsubscribe-row lang]
-      ['200', [[1, 'fr', 'signin']], 'fr', "Vous êtes désabonné. HomeDesigner ne vous enverra plus d'e-mails sur l'app. Vous pouvez les réactiver dans les Réglages.", 'fr'],
-      ['201', [[1, 'es-MX', 'settings']], 'es', 'Te has dado de baja. HomeDesigner ya no te enviará correos de novedades. Puedes volver a activarlos en Ajustes.', 'es-MX'],
-      ['202', [[1, 'DE-at', 'signin']], 'de', DE, 'DE-at'],
-      ['203', [[1, 'it', 'signin']], 'en', "You're unsubscribed. HomeDesigner won't send you product emails any more. You can turn them back on in Settings.", 'it'],
+      // [subject, rows [opted_in, lang, source], expected page lang, expected unsubscribe-row lang]
+      ['200', [[1, 'fr', 'signin']], 'fr', 'fr'],
+      ['201', [[1, 'es-MX', 'settings']], 'es', 'es-MX'],
+      ['202', [[1, 'DE-at', 'signin']], 'de', 'DE-at'],
+      ['203', [[1, 'it', 'signin']], 'en', 'it'],
       // An old 'und' unsubscribe row is skipped: the language comes from the row before it.
-      ['204', [[1, 'fr', 'signin'], [0, 'und', 'unsubscribe_link'], [1, 'und', 'settings']], 'fr', null, 'fr'],
+      ['204', [[1, 'fr', 'signin'], [0, 'und', 'unsubscribe_link'], [1, 'und', 'settings']], 'fr', 'fr'],
       // Only 'und' rows: English page, and the row stays 'und'.
-      ['205', [[1, 'und', 'signin']], 'en', null, 'und'],
+      ['205', [[1, 'und', 'signin']], 'en', 'und'],
     ];
-    for (const [subject, seed, pageLang, text, rowLang] of cases) {
+    for (const [subject, seed, pageLang, rowLang] of cases) {
       seed.forEach(([opted, lang, source], i) => langIns.run(subject, `${subject}@example.com`, opted, lang, source, i + 1));
       const before = rows(subject).length;
-      const res = await m.unsubscribeLinkPage(u(await m.unsubscribeToken(SECRET, subject)), db, SECRET, T + 9000);
+      const tok = await m.unsubscribeToken(SECRET, subject);
+      const ask = await m.unsubscribeLinkPage(u(tok), db, SECRET);
+      const af = formOf(ask.body);
+      check(ask.status === 200 && new RegExp(`<html lang="${pageLang}">`).test(ask.body) && pageText(ask.body) === ASK[pageLang].text
+        && af && af.method === 'post' && af.hiddenConfirm && af.buttons.length === 1 && af.buttons[0] === ASK[pageLang].button && af.action === `?t=${encodeURIComponent(tok)}`,
+        `account ${subject} (${seed.at(-1)[1]}): GET confirm page in ${pageLang} with its button`);
+      check(rows(subject).length === before, `account ${subject}: GET writes no row`);
+      const done = await m.unsubscribeOneClick(u(tok), db, SECRET, T + 12000, CONFIRM_BODY);
       const last = rows(subject).at(-1);
-      check(res.status === 200 && new RegExp(`<html lang="${pageLang}">`).test(res.body) && (text === null || pageText(res.body) === text),
-        `account ${subject} (${seed.at(-1)[1]}): page in ${pageLang}${text ? ' with the K4 text' : ''}`);
-      check(rows(subject).length === before + 1 && last.opted_in === 0 && last.lang === rowLang, `account ${subject}: unsubscribe row stores lang ${rowLang}`);
-      check(!res.body.includes(subject) && !res.body.includes(`${subject}@example.com`), `account ${subject}: page shows no account id or email`);
+      check(done.status === 200 && new RegExp(`<html lang="${pageLang}">`).test(done.body) && pageText(done.body) === DONE[pageLang],
+        `account ${subject}: POST confirm=1 page in ${pageLang} with the K4 text`);
+      check(rows(subject).length === before + 1 && last.opted_in === 0 && last.source === 'unsubscribe_link' && last.lang === rowLang, `account ${subject}: unsubscribe row stores lang ${rowLang}`);
+      check(privateOk(ask.body, subject, `${subject}@example.com`) && privateOk(done.body, subject, `${subject}@example.com`), `account ${subject}: pages show no account id or email`);
     }
     check(m.unsubscribePageLang('fr-CA') === 'fr' && m.unsubscribePageLang('pt-BR') === 'en' && m.unsubscribePageLang('und') === 'en' && m.unsubscribePageLang(null) === 'en'
       && m.unsubscribePageLang('constructor') === 'en', 'page language: primary subtag, en/de/fr/es only, everything else English');
     const bad = await m.unsubscribeLinkPage(u('garbage.token'), db, SECRET);
     check(bad.status === 400 && /<html lang="en">/.test(bad.body) && /not valid/i.test(bad.body), 'bad token page stays English');
+  }
+
+  // ---- Worker wiring and headers --------------------------------------------
+  {
+    const index = readFileSync('workers/design-sync/src/index.ts', 'utf8');
+    const route = index.slice(index.indexOf("url.pathname === '/v1/email/unsubscribe'"), index.indexOf('return new Response(result.body'));
+    check(/request\.method === 'GET'\s*\?\s*await unsubscribeLinkPage\(url, env\.COMMUNITY, env\.UNSUBSCRIBE_SECRET\)/.test(route), 'GET calls the write-free confirm page');
+    check(/boundedBody\(request, 1024\)\.catch\(\(\) => new ArrayBuffer\(0\)\)/.test(route), 'POST body is bounded (1 KB); a missing or oversized body reads as one-click, not a 503');
+    const csp = m.UNSUBSCRIBE_HEADERS['Content-Security-Policy'];
+    check(/default-src 'none'/.test(csp) && !/form-action 'none'/.test(csp), "CSP keeps default-src 'none' and does not block the form POST (form-action has no default-src fallback)");
+    check(m.UNSUBSCRIBE_HEADERS['Cache-Control'] === 'no-store' && m.UNSUBSCRIBE_HEADERS['Referrer-Policy'] === 'no-referrer', 'unsubscribe responses are no-store, no-referrer');
   }
 
   // ---- Export: newest row per account, only yes -----------------------------

@@ -1990,7 +1990,10 @@ export default {
       try {
         const result = request.method === 'GET'
           ? await unsubscribeLinkPage(url, env.COMMUNITY, env.UNSUBSCRIBE_SECRET)
-          : await unsubscribeOneClick(url, env.COMMUNITY, env.UNSUBSCRIBE_SECRET);
+          // A missing or oversized body reads as '' (one-click): boundedBody
+          // throws on both, and a 503 there would keep mailing someone who said stop.
+          : await unsubscribeOneClick(url, env.COMMUNITY, env.UNSUBSCRIBE_SECRET, Date.now(),
+            new TextDecoder().decode(await boundedBody(request, 1024).catch(() => new ArrayBuffer(0))));
         return new Response(result.body, {
           status: result.status,
           headers: { ...UNSUBSCRIBE_HEADERS, 'Content-Type': result.contentType },
