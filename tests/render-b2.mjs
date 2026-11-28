@@ -15,7 +15,7 @@ const originalError = console.error;
 let checks = 0;
 const check = (value, label) => { assert.ok(value, label); checks++; };
 try {
-  for (const name of ['index', 'community', 'points', 'ai-features', 'ai-advisor', 'ai-providers', 'ai-plan', 'stripe', 'ai-render', 'entitlements', 'shared-plans', 'hd-events']) {
+  for (const name of ['index', 'community', 'points', 'ai-features', 'ai-advisor', 'ai-providers', 'ai-plan', 'stripe', 'ai-render', 'entitlements', 'shared-plans', 'hd-events', 'email-consent']) {
     let source = readFileSync(`workers/design-sync/src/${name}.ts`, 'utf8');
     // Google sign-in and the entitlement lookup are replaced; everything after them is the real handler.
     if (name === 'index') source += '\nexport function testHooks(auth, pro) { authenticate = auth; isProSubject = pro; }';

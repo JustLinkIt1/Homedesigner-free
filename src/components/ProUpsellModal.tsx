@@ -200,7 +200,7 @@ export default function ProUpsellModal() {
   const selectedPlan = shownPlans.find((plan) => plan.id === selectedPlanID) ?? null;
   // "Best value" has to be true at the prices the store actually returns.
   // Lifetime wins once it costs no more than two years of Yearly — at the
-  // current Play prices (€4.99 a year, €6.99 lifetime) it pays for itself in
+  // current Play prices (€7.99 a year, €14.99 lifetime, 28 Nov) it pays for itself in
   // well under two years, and a badge on Yearly would mislead.
   const bestValueID = useMemo(() => {
     const yearly = shownPlans.find((plan) => plan.id === 'yearly');
