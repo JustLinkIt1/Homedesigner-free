@@ -114,6 +114,7 @@ function defaultBase(workerDir) {
  */
 export function runD1(workerDir, local, sql, stderr = 'ignore') {
   const bin = join(workerDir, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
+  if (!existsSync(bin)) throw new Error('wrangler not installed: run npm install in workers/design-sync');
   return execFileSync(process.execPath, [
     bin, 'd1', 'execute', 'homedesigner-community', local ? '--local' : '--remote', '--json',
     '--command', sql.replace(/\s+/g, ' '),

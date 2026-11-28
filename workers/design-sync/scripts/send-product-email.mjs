@@ -412,7 +412,9 @@ export async function run(argv, deps = {}) {
   }
 
   const db = deps.db ?? wranglerDb(workerDir, args.local);
-  const rows = await db.recipients();
+  let rows;
+  // Fixed message: a raw wrangler error could quote its own stdout.
+  try { rows = await db.recipients(); } catch { return refuse('could not read the consent table (wrangler failed); nothing was sent'); }
   const known = rows.filter((r) => typeof r.subject === 'string' && SUBJECT_RE.test(r.subject)
     && typeof r.email === 'string' && KNOWN_WORDINGS.has(r.wording));
   const unknownWording = rows.length - known.length;
