@@ -199,28 +199,59 @@ export async function postEmailConsent(
 // opting back in is done in the app's Settings, never by link. Idempotent: an
 // already-unsubscribed (or never-subscribed) account gets no new row.
 
+/**
+ * The language of the person's newest consent row that has a real one
+ * (unsubscribe rows written before this change carry 'und'), else 'und'.
+ */
+async function newestLang(db: D1Database, subject: string): Promise<string> {
+  const row = await db.prepare(
+    "SELECT lang FROM email_consent_log WHERE subject = ? AND lang <> 'und' ORDER BY id DESC LIMIT 1",
+  ).bind(subject).first<{ lang: string }>();
+  return row && LANG.test(row.lang) ? row.lang : 'und';
+}
+
 async function unsubscribe(db: D1Database, subject: string, source: ConsentSource, now: number): Promise<boolean> {
   const current = await newestRow(db, subject);
   if (!current || current.opted_in !== 1) return false;
-  await appendRow(db, subject, current.email, false, current.wording, 'und', source, now);
+  await appendRow(db, subject, current.email, false, current.wording, await newestLang(db, subject), source, now);
   return true;
 }
 
-function page(status: number, title: string, message: string): HtmlResult {
+// Accepted K4 text (shared/drafts/hd-email-optin-text-2026-11-28.md 1b). The
+// Settings word matches each app catalog's 'Settings' row (fr catalog: Réglages).
+// Any other language gets English.
+const UNSUBSCRIBED_TEXT: Record<string, { title: string; message: string }> = {
+  en: { title: "You're unsubscribed.", message: "HomeDesigner won't send you product emails any more. You can turn them back on in Settings." },
+  de: { title: 'Du bist abgemeldet.', message: 'HomeDesigner schickt dir keine Produkt-E-Mails mehr. In den Einstellungen kannst du sie wieder einschalten.' },
+  fr: { title: 'Vous êtes désabonné.', message: "HomeDesigner ne vous enverra plus d'e-mails sur l'app. Vous pouvez les réactiver dans les Réglages." },
+  es: { title: 'Te has dado de baja.', message: 'HomeDesigner ya no te enviará correos de novedades. Puedes volver a activarlos en Ajustes.' },
+};
+
+/** Primary subtag of a stored language tag if there is K4 text for it, otherwise 'en'. */
+export function unsubscribePageLang(lang: string | null | undefined): string {
+  const primary = (lang ?? '').split('-')[0].toLowerCase();
+  return Object.prototype.hasOwnProperty.call(UNSUBSCRIBED_TEXT, primary) ? primary : 'en';
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function page(status: number, title: string, message: string, lang = 'en'): HtmlResult {
   return {
     status,
     contentType: 'text/html; charset=utf-8',
     body: `<!doctype html>
-<html lang="en">
+<html lang="${escapeHtml(lang)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>${title}</title>
+<title>${escapeHtml(title)}</title>
 </head>
 <body>
-<h1>${title}</h1>
-<p>${message}</p>
+<h1>${escapeHtml(title)}</h1>
+<p>${escapeHtml(message)}</p>
 </body>
 </html>
 `,
@@ -244,7 +275,10 @@ export async function unsubscribeLinkPage(
   const subject = await verifyUnsubscribeToken(secret, url.searchParams.get('t'));
   if (!subject) return page(400, 'Link not valid', 'This unsubscribe link is not valid. Please use the link from the most recent email, or change your email setting in the app.');
   await unsubscribe(db, subject, 'unsubscribe_link', now);
-  return page(200, 'You are unsubscribed', 'You will no longer receive product update emails from HomeDesigner. You can change this at any time in the app\'s Settings.');
+  // Same page whether this click unsubscribed or the account already was.
+  const lang = unsubscribePageLang(await newestLang(db, subject));
+  const text = UNSUBSCRIBED_TEXT[lang];
+  return page(200, text.title, text.message, lang);
 }
 
 /** POST /v1/email/unsubscribe?t=<token>: RFC 8058 one-click from the mail client. */

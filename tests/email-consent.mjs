@@ -127,18 +127,28 @@ try {
   check(h.status === 503 && total() === beforeBad, 'GET with no secret configured: 503, no row');
   h = await m.unsubscribeLinkPage(u(token), db, SECRET, T + 4000);
   const afterGet = rows(SUB).at(-1);
-  check(h.status === 200 && h.contentType.startsWith('text/html') && /unsubscribed/i.test(h.body), 'GET returns the plain "unsubscribed" HTML page');
+  // SUB's newest row with a language is the T+3000 'de' opt-in.
+  const DE = 'Du bist abgemeldet. HomeDesigner schickt dir keine Produkt-E-Mails mehr. In den Einstellungen kannst du sie wieder einschalten.';
+  const pageText = (body) => body.replace(/^[\s\S]*<body>|<\/body>[\s\S]*$/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    .replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  check(h.status === 200 && h.contentType.startsWith('text/html') && pageText(h.body) === DE, 'GET returns the "unsubscribed" page in the newest language (de, K4 text)');
   check(afterGet.opted_in === 0 && afterGet.source === 'unsubscribe_link' && afterGet.email === 'person@example.com' && afterGet.created_at === T + 4000, 'GET appends opted_in=0 with source unsubscribe_link');
-  check(!/<style|<script|style=|<link/i.test(h.body) && /lang="en"/.test(h.body), 'page is plain HTML: no styles, no scripts');
+  check(afterGet.lang === 'de', 'the unsubscribe row carries the newest real language (de), not und');
+  check(!/<style|<script|style=|<link/i.test(h.body) && /<html lang="de">/.test(h.body), 'page is plain HTML: no styles, no scripts, <html lang="de">');
   check(!h.body.includes(SUB) && !h.body.includes('person@example.com'), 'page shows neither the account id nor the email');
   const n1 = rows(SUB).length;
   h = await m.unsubscribeLinkPage(u(token), db, SECRET, T + 5000);
   check(h.status === 200 && rows(SUB).length === n1, 'GET is idempotent: a second click adds no row');
+  check(pageText(h.body) === DE && /<html lang="de">/.test(h.body), 'already unsubscribed: same page, same language');
 
-  await post(verified, { ...yes, source: 'settings' }, T + 6000); // opted back in, in Settings
+  await post(verified, { ...yes, source: 'settings' }, T + 6000); // opted back in, in Settings (lang en)
   let p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 7000);
   const afterPost = rows(SUB).at(-1);
   check(p.status === 200 && afterPost.opted_in === 0 && afterPost.source === 'list_unsubscribe', 'one-click POST returns 200 and appends list_unsubscribe opted_in=0');
+  check(afterPost.lang === 'en', 'the one-click row carries the newest real language (en)');
+  h = await m.unsubscribeLinkPage(u(token), db, SECRET, T + 7500);
+  check(/<html lang="en">/.test(h.body) && pageText(h.body) === "You're unsubscribed. HomeDesigner won't send you product emails any more. You can turn them back on in Settings."
+    && h.body.includes('You&#39;re') && !/You're/.test(h.body), 'en page: K4 text, apostrophes HTML-escaped');
   const n2 = rows(SUB).length;
   p = await m.unsubscribeOneClick(u(token), db, SECRET, T + 8000);
   check(p.status === 200 && rows(SUB).length === n2, 'POST is idempotent');
@@ -148,6 +158,37 @@ try {
   const n3 = total();
   check((await m.unsubscribeLinkPage(u(never), db, SECRET)).status === 200 && total() === n3, 'unsubscribing an account with no rows writes nothing (and still says unsubscribed)');
   check((await m.getEmailConsent(db, verified)).body.optedIn === false, 'the link only ever unsubscribes (no re-subscribe by link)');
+  check(/<html lang="en">/.test((await m.unsubscribeLinkPage(u(never), db, SECRET)).body), 'no rows at all: English page');
+
+  // ---- Unsubscribe page language per account --------------------------------
+  {
+    const langIns = sql.prepare("INSERT INTO email_consent_log (subject, email, opted_in, wording, lang, source, created_at) VALUES (?, ?, ?, 'optin-v1', ?, ?, ?)");
+    const cases = [
+      // [subject, rows [opted_in, lang, source], expected page lang, expected text, expected unsubscribe-row lang]
+      ['200', [[1, 'fr', 'signin']], 'fr', "Vous êtes désabonné. HomeDesigner ne vous enverra plus d'e-mails sur l'app. Vous pouvez les réactiver dans les Réglages.", 'fr'],
+      ['201', [[1, 'es-MX', 'settings']], 'es', 'Te has dado de baja. HomeDesigner ya no te enviará correos de novedades. Puedes volver a activarlos en Ajustes.', 'es-MX'],
+      ['202', [[1, 'DE-at', 'signin']], 'de', DE, 'DE-at'],
+      ['203', [[1, 'it', 'signin']], 'en', "You're unsubscribed. HomeDesigner won't send you product emails any more. You can turn them back on in Settings.", 'it'],
+      // An old 'und' unsubscribe row is skipped: the language comes from the row before it.
+      ['204', [[1, 'fr', 'signin'], [0, 'und', 'unsubscribe_link'], [1, 'und', 'settings']], 'fr', null, 'fr'],
+      // Only 'und' rows: English page, and the row stays 'und'.
+      ['205', [[1, 'und', 'signin']], 'en', null, 'und'],
+    ];
+    for (const [subject, seed, pageLang, text, rowLang] of cases) {
+      seed.forEach(([opted, lang, source], i) => langIns.run(subject, `${subject}@example.com`, opted, lang, source, i + 1));
+      const before = rows(subject).length;
+      const res = await m.unsubscribeLinkPage(u(await m.unsubscribeToken(SECRET, subject)), db, SECRET, T + 9000);
+      const last = rows(subject).at(-1);
+      check(res.status === 200 && new RegExp(`<html lang="${pageLang}">`).test(res.body) && (text === null || pageText(res.body) === text),
+        `account ${subject} (${seed.at(-1)[1]}): page in ${pageLang}${text ? ' with the K4 text' : ''}`);
+      check(rows(subject).length === before + 1 && last.opted_in === 0 && last.lang === rowLang, `account ${subject}: unsubscribe row stores lang ${rowLang}`);
+      check(!res.body.includes(subject) && !res.body.includes(`${subject}@example.com`), `account ${subject}: page shows no account id or email`);
+    }
+    check(m.unsubscribePageLang('fr-CA') === 'fr' && m.unsubscribePageLang('pt-BR') === 'en' && m.unsubscribePageLang('und') === 'en' && m.unsubscribePageLang(null) === 'en'
+      && m.unsubscribePageLang('constructor') === 'en', 'page language: primary subtag, en/de/fr/es only, everything else English');
+    const bad = await m.unsubscribeLinkPage(u('garbage.token'), db, SECRET);
+    check(bad.status === 400 && /<html lang="en">/.test(bad.body) && /not valid/i.test(bad.body), 'bad token page stays English');
+  }
 
   // ---- Export: newest row per account, only yes -----------------------------
   const ins = sql.prepare("INSERT INTO email_consent_log (subject, email, opted_in, wording, lang, source, created_at) VALUES (?, ?, ?, 'optin-v1', 'en', 'settings', ?)");
