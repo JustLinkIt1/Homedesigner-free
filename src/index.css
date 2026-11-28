@@ -5866,6 +5866,13 @@ button.account-points-card:hover { box-shadow: 0 0 0 2px color-mix(in srgb, var(
   line-height: 1.45;
 }
 
+/* Settings segmented controls: four one-word options (German "Energiesparen",
+   "Ausgewogen") cannot shrink into a 320px row, and the last one was pushed
+   out of the dialog. Let the row break onto a second line instead. */
+.settings-body .seg {
+  flex-wrap: wrap;
+}
+
 /* Small explanatory line inside a Properties card. */
 .prop-hint {
   margin: 2px 0 9px;
