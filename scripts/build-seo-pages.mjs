@@ -27,8 +27,10 @@
 // de-DE, fr-FR and es-ES blocks), so the site and the store use the same words.
 // A translation never says more than the English page it translates.
 
+import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { FLOOR_PLANS, FLOOR_PLANS_HUB, FLOOR_PLANS_PATH, FLOOR_PLANS_DRAFT, DRAFT_PLACEHOLDER, floorPlanProblems } from './floor-plans-data.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const site = resolve(root, 'site');
@@ -103,6 +105,7 @@ const LANGS = {
       sub: 'Ein kostenloser Grundriss-Planer und 3D-Hausplaner. Zeichne in wenigen Minuten einen Plan, richte ihn ein, plane die Küche und geh durch das Ergebnis, auf dem Handy oder direkt hier im Browser.',
       kicker: 'Das kannst du damit machen',
       heading: 'Planen, einrichten, rendern',
+      aiLink: 'KI-Grundriss: Haus beschreiben, bearbeitbaren Plan erhalten →',
     },
   },
   fr: {
@@ -137,6 +140,7 @@ const LANGS = {
       sub: 'Un créateur de plans de maison et une appli d’architecture 3D, gratuits. Dessinez un plan en quelques minutes, meublez-le, aménagez la cuisine et visitez le résultat, sur votre téléphone ou ici même dans votre navigateur.',
       kicker: 'Ce que vous pouvez faire',
       heading: 'Dessinez, meublez, visualisez',
+      aiLink: 'Plan de maison par IA : décrivez votre maison, obtenez un plan modifiable →',
     },
   },
   es: {
@@ -171,6 +175,7 @@ const LANGS = {
       sub: 'Un creador de planos y una app de diseño de casas en 3D, gratis. Dibuja un plano en minutos, amuéblalo, planifica la cocina y recorre el resultado, en tu teléfono o aquí mismo en el navegador.',
       kicker: 'Qué puedes hacer',
       heading: 'Dibuja, amuebla, renderiza',
+      aiLink: 'Planos con IA: describe tu casa y obtén un plano editable →',
     },
   },
 };
@@ -994,6 +999,11 @@ const TOPICS = [
       { src: 'plan-2d.webp', w: 1280, h: 823 },
     ],
     cardImg: { src: 'ai-after.webp', w: 1264, h: 848 },
+    // A plan image and the 3D view the app's own import made from it (see drafts/hd-site-traffic-2026-11-27.md, T3).
+    compare: {
+      before: { src: 'plan-to-3d-before.webp', w: 1056, h: 880 },
+      after: { src: 'plan-to-3d-after.webp', w: 1056, h: 880 },
+    },
     en: {
       slug: 'ai-home-design',
       nav: 'AI design',
@@ -1004,7 +1014,7 @@ const TOPICS = [
       sub: 'Describe the home you want in plain words and get a floor plan you can edit. Then turn the 3D view into a picture that looks like a photo.',
       heroAlt: 'An AI render of a furnished house cut open to show the living room, kitchen and bathroom',
       kicker: 'AI tools in the app',
-      heading: 'AI that works on your own plan',
+      heading: 'AI that makes real projects',
       lead: 'The AI tools use the plan you are working on, so the result is a real HomeDesigner project with walls and furniture you can move, not just a picture.',
       rows: [
         {
@@ -1035,7 +1045,21 @@ const TOPICS = [
         ['Edit the plan', 'Move walls and furniture, or ask the AI to revise it.'],
         ['Render it', 'Switch to 3D and turn the view into a photo-like picture.'],
       ],
+      compare: {
+        kicker: 'Before and after',
+        heading: 'From a floor plan to 3D',
+        lead: 'Already have a plan? Import it instead of describing it. This is a black-and-white drawing of one of our sample homes, and the 3D view HomeDesigner made from it: the walls were detected automatically and the rooms got their floors. Nothing was redrawn by hand.',
+        beforeAlt: 'A black-and-white ground floor plan with a great room, a bedroom and a bathroom',
+        afterAlt: 'The same floor plan in the HomeDesigner 3D view, with walls and room floors, seen from above',
+        beforeCap: ['Before', 'the floor plan image that was imported'],
+        afterCap: ['After', 'the walls and rooms in 3D, ready for doors, windows and furniture'],
+        note: 'Wall detection is image analysis, not generative AI. Importing needs no points. You add doors, windows and furniture afterwards.',
+      },
       faq: [
+        ['Is there an AI floor plan generator in HomeDesigner?', 'Yes. Open AI plan, choose the storeys, bedrooms, bathrooms and total size, say whether you want a garage and furniture, and describe the home in your own words. You get a floor plan with walls, doors and windows that opens as a normal project. Drawing it can take up to a minute.'],
+        ['Is the AI house plan generator free?', 'The app is free to download, and drawing, furnishing and importing a plan need no points. An AI house plan costs AI points. A new account with a verified Google sign-in gets free points to try it; after that, points are sold in packs in the app. Plans with two or three storeys need HomeDesigner Pro.'],
+        ['Can AI turn my own house map, PDF or photo into a design?', 'That is a different tool. The AI planner starts from your description, not from a file. To use a plan you already have, import a PDF, a photo or a scan: HomeDesigner detects the walls automatically, you set the scale with the real width of the plan, and it becomes 3D rooms. Clean black-and-white drawings work best, and you add doors, windows and furniture yourself.'],
+        ['Can I build from an AI-generated house plan?', 'Treat it as a first draft. The AI lays out rectangular rooms from your answers; you can ask it for changes or edit every wall yourself. It is not a construction drawing, so have an architect or engineer check anything you plan to build.'],
         ['What do the AI tools cost?', 'They use points, which can be bought in the app. Everything else in HomeDesigner works without points.'],
         ['Can I edit a plan the AI made?', 'Yes. The result is a normal HomeDesigner project. You can move walls, change rooms, swap furniture and view it in 3D.'],
         ['How close is the AI render to my design?', 'It keeps the layout, walls and main furniture of your 3D view and adds realistic materials and lighting. It can add small decorative details, so treat it as an impression, not a technical drawing.'],
@@ -1052,7 +1076,7 @@ const TOPICS = [
       sub: 'Beschreibe dein Wunschhaus in eigenen Worten und erhalte einen Grundriss, den du bearbeiten kannst. Verwandle danach die 3D-Ansicht in ein Bild, das wie ein Foto aussieht.',
       heroAlt: 'KI-Rendering eines eingerichteten Hauses im Aufschnitt mit Wohnzimmer, Küche und Bad',
       kicker: 'KI-Werkzeuge in der App',
-      heading: 'KI, die mit deinem eigenen Plan arbeitet',
+      heading: 'KI, die echte Projekte erstellt',
       lead: 'Die KI-Werkzeuge nutzen den Plan, an dem du gerade arbeitest. Das Ergebnis ist deshalb ein echtes HomeDesigner-Projekt mit Wänden und Möbeln, die du verschieben kannst, und nicht bloß ein Bild.',
       rows: [
         {
@@ -1073,7 +1097,7 @@ const TOPICS = [
             ['Bearbeitbares Ergebnis', 'echte Wände, Türen, Fenster und Möbel'],
             ['Überarbeiten', 'beschreibe, was sich ändern soll, und lass den Plan neu erzeugen'],
             ['Designberatung', 'hol dir eine schriftliche Einschätzung zu deinem aktuellen Grundriss'],
-            ['Gesprochene Tour', 'ein vertonter Rundgang durch dein Zuhause (Pro)'],
+            ['Vertonter Rundgang', 'eine gesprochene Führung durch dein Zuhause (Pro)'],
           ],
         },
       ],
@@ -1083,7 +1107,21 @@ const TOPICS = [
         ['Plan bearbeiten', 'Verschiebe Wände und Möbel oder lass die KI den Plan überarbeiten.'],
         ['Rendern', 'Wechsle zu 3D und verwandle die Ansicht in ein fotoähnliches Bild.'],
       ],
+      compare: {
+        kicker: 'Vorher und nachher',
+        heading: 'Vom Grundriss zur 3D-Ansicht',
+        lead: 'Du hast schon einen Plan? Dann importiere ihn, statt ihn zu beschreiben. Das ist eine Schwarz-Weiß-Zeichnung eines unserer Beispielhäuser und die 3D-Ansicht, die HomeDesigner daraus erstellt hat: Die Wände wurden automatisch erkannt, die Räume haben ihre Böden bekommen. Nichts wurde von Hand nachgezeichnet.',
+        beforeAlt: 'Schwarz-weißer Erdgeschoss-Grundriss mit Wohnraum, Schlafzimmer und Bad',
+        afterAlt: 'Derselbe Grundriss in der 3D-Ansicht von HomeDesigner mit Wänden und Raumböden, von oben gesehen',
+        beforeCap: ['Vorher', 'das importierte Grundriss-Bild'],
+        afterCap: ['Nachher', 'Wände und Räume in 3D, bereit für Türen, Fenster und Möbel'],
+        note: 'Die Wand-Erkennung ist Bildanalyse, keine generative KI. Der Import braucht keine Punkte. Türen, Fenster und Möbel fügst du danach selbst hinzu.',
+      },
       faq: [
+        ['Gibt es in HomeDesigner einen KI-Grundriss-Generator?', 'Ja. Im KI-Planer wählst du Etagen, Schlafzimmer, Bäder und Gesamtgröße, legst fest, ob du Garage und Möbel möchtest, und beschreibst das Haus in eigenen Worten. Du erhältst einen Grundriss mit Wänden, Türen und Fenstern, der sich als normales Projekt öffnet. Das Erstellen kann bis zu einer Minute dauern.'],
+        ['Ist der KI-Hausplaner kostenlos?', 'Der Download der App ist kostenlos, und Zeichnen, Einrichten und Importieren brauchen keine Punkte. Ein KI-Grundriss kostet KI-Punkte. Ein neues Konto mit bestätigter Google-Anmeldung erhält Gratis-Punkte zum Ausprobieren; danach kaufst du Punkte in Paketen in der App. Pläne mit zwei oder drei Etagen brauchen HomeDesigner Pro.'],
+        ['Kann die KI meinen eigenen Grundriss als PDF oder Foto umsetzen?', 'Das ist ein anderes Werkzeug. Der KI-Planer geht von deiner Beschreibung aus, nicht von einer Datei. Einen vorhandenen Plan importierst du als PDF, Foto oder Scan: HomeDesigner erkennt die Wände automatisch, du legst den Maßstab über die echte Breite des Plans fest, und daraus werden Räume in 3D. Klare Schwarz-Weiß-Zeichnungen funktionieren am besten; Türen, Fenster und Möbel ergänzt du selbst.'],
+        ['Kann ich nach einem KI-Grundriss bauen?', 'Sieh ihn als ersten Entwurf. Die KI ordnet rechteckige Räume nach deinen Angaben an; du kannst Änderungen anfordern oder jede Wand selbst bearbeiten. Er ist keine Bauzeichnung: Lass alles, was du bauen willst, von einem Architekten oder Statiker prüfen.'],
         ['Was kosten die KI-Werkzeuge?', 'Sie verbrauchen Punkte, die sich in der App kaufen lassen. Alles andere in HomeDesigner funktioniert ohne Punkte.'],
         ['Kann ich einen KI-Grundriss bearbeiten?', 'Ja. Das Ergebnis ist ein normales HomeDesigner-Projekt. Du kannst Wände verschieben, Räume ändern, Möbel tauschen und alles in 3D ansehen.'],
         ['Wie nah ist das KI-Rendering an meinem Entwurf?', 'Es behält Aufteilung, Wände und die wichtigsten Möbel deiner 3D-Ansicht bei und ergänzt realistische Materialien und Licht. Es kann kleine dekorative Details hinzufügen. Sieh es deshalb als Eindruck, nicht als technische Zeichnung.'],
@@ -1101,13 +1139,13 @@ const TOPICS = [
       sub: 'Décrivez la maison que vous voulez avec vos propres mots et obtenez un plan que vous pouvez modifier. Transformez ensuite la vue 3D en une image qui ressemble à une photo.',
       heroAlt: 'Rendu IA d’une maison meublée vue en coupe, avec le salon, la cuisine et la salle de bain',
       kicker: 'Outils IA dans l’appli',
-      heading: 'Une IA qui travaille sur votre propre plan',
+      heading: 'Une IA qui crée de vrais projets',
       lead: 'Les outils IA partent du plan sur lequel vous travaillez. Le résultat est donc un vrai projet HomeDesigner, avec des murs et des meubles que vous pouvez déplacer, et pas seulement une image.',
       rows: [
         {
           alt: 'La vue 3D d’une maison avant le rendu IA',
           h: 'Rendu IA : de la vue 3D à la photo',
-          p: 'Cadrez une vue en 3D et envoyez-la au rendu. En une quinzaine de secondes, vous recevez une image photoréaliste qui conserve votre agencement, avec des matériaux, une lumière et une végétation réalistes. L’image en haut de la page est le rendu de la vue ci-contre.',
+          p: 'Cadrez une vue en 3D et lancez le rendu. En une quinzaine de secondes, vous recevez une image photoréaliste qui conserve votre agencement, avec des matériaux, une lumière et une végétation réalistes. L’image en haut de la page est le rendu de la vue ci-contre.',
           list: [
             ['Tout compte connecté', 'peut lancer un rendu, avec ou sans filigrane'],
             ['Pro', 'les rendus sont toujours sans filigrane'],
@@ -1121,7 +1159,7 @@ const TOPICS = [
           list: [
             ['Résultat modifiable', 'de vrais murs, portes, fenêtres et meubles'],
             ['Révision', 'décrivez ce qu’il faut changer et relancez la génération'],
-            ['Avis d’un designer', 'demandez des conseils écrits sur votre agencement actuel'],
+            ['Avis de design par IA', 'demandez des conseils écrits sur votre agencement actuel'],
             ['Visite commentée', 'une visite de votre maison racontée à voix haute (Pro)'],
           ],
         },
@@ -1132,11 +1170,25 @@ const TOPICS = [
         ['Modifiez le plan', 'Déplacez murs et meubles, ou demandez à l’IA de le revoir.'],
         ['Lancez le rendu', 'Passez en 3D et transformez la vue en image photoréaliste.'],
       ],
+      compare: {
+        kicker: 'Avant et après',
+        heading: 'Du plan à la 3D',
+        lead: 'Vous avez déjà un plan ? Importez-le au lieu de le décrire. Voici le dessin en noir et blanc d’une de nos maisons d’exemple et la vue 3D que HomeDesigner en a tirée : les murs ont été détectés automatiquement et les pièces ont reçu leur sol. Rien n’a été redessiné à la main.',
+        beforeAlt: 'Plan de rez-de-chaussée en noir et blanc avec une pièce de vie, une chambre et une salle de bain',
+        afterAlt: 'Le même plan dans la vue 3D de HomeDesigner, avec les murs et les sols des pièces, vu d’en haut',
+        beforeCap: ['Avant', 'l’image du plan qui a été importée'],
+        afterCap: ['Après', 'les murs et les pièces en 3D, prêts à recevoir portes, fenêtres et meubles'],
+        note: 'La détection des murs est une analyse d’image, pas de l’IA générative. L’import ne demande aucun point. Vous ajoutez ensuite les portes, les fenêtres et les meubles.',
+      },
       faq: [
+        ['HomeDesigner a-t-il un générateur de plan de maison par IA ?', 'Oui. Dans le planificateur IA, choisissez le nombre de niveaux, de chambres et de salles de bain et la surface totale, indiquez si vous voulez un garage et des meubles, puis décrivez la maison avec vos mots. Vous obtenez un plan avec murs, portes et fenêtres qui s’ouvre comme un projet normal. La génération peut prendre jusqu’à une minute.'],
+        ['Le plan de maison par IA est-il gratuit ?', 'L’appli se télécharge gratuitement, et dessiner, meubler ou importer un plan ne demande aucun point. Un plan IA coûte des points IA. Un nouveau compte avec une connexion Google vérifiée reçoit des points gratuits pour essayer ; ensuite, les points s’achètent par packs dans l’appli. Les plans à deux ou trois niveaux nécessitent HomeDesigner Pro.'],
+        ['L’IA peut-elle partir de mon propre plan, en PDF ou en photo ?', 'C’est un autre outil. Le planificateur IA part de votre description, pas d’un fichier. Pour utiliser un plan existant, importez un PDF, une photo ou un scan : HomeDesigner détecte les murs automatiquement, vous réglez l’échelle avec la largeur réelle du plan, et il se transforme en pièces 3D. Les dessins nets en noir et blanc donnent les meilleurs résultats ; vous ajoutez vous-même portes, fenêtres et meubles.'],
+        ['Peut-on construire à partir d’un plan généré par IA ?', 'Voyez-le comme une première ébauche. L’IA agence des pièces rectangulaires d’après vos réponses ; vous pouvez demander des modifications ou retoucher chaque mur vous-même. Ce n’est pas un plan d’exécution : faites vérifier tout projet de construction par un architecte ou un ingénieur.'],
         ['Combien coûtent les outils IA ?', 'Ils utilisent des points, qui s’achètent dans l’appli. Tout le reste de HomeDesigner fonctionne sans points.'],
         ['Puis-je modifier un plan créé par l’IA ?', 'Oui. Le résultat est un projet HomeDesigner normal. Vous pouvez déplacer les murs, modifier les pièces, changer les meubles et voir le tout en 3D.'],
         ['Le rendu IA est-il fidèle à mon projet ?', 'Il conserve l’agencement, les murs et les meubles principaux de votre vue 3D et ajoute des matériaux et un éclairage réalistes. Il peut ajouter de petits détails décoratifs : voyez-le comme une impression d’ensemble, pas comme un dessin technique.'],
-        ['Où vont mes images ?', 'Un rendu n’envoie que l’image d’aperçu au service de rendu. Un plan IA envoie vos réponses, et un avis de designer envoie une image du plan. La politique de confidentialité indique les services utilisés.'],
+        ['Où vont mes images ?', 'Un rendu n’envoie que l’image d’aperçu au service de rendu. Un plan IA envoie vos réponses, et un avis de design par IA envoie une image du plan. La politique de confidentialité indique les services utilisés.'],
       ],
       card: ['Plans et rendus IA', 'Décrivez votre maison pour obtenir un plan, puis transformez la vue 3D en image photoréaliste.', 'Rendu IA photoréaliste d’une maison'],
     },
@@ -1150,7 +1202,7 @@ const TOPICS = [
       sub: 'Describe con tus palabras la casa que quieres y obtén un plano que puedes editar. Después convierte la vista 3D en una imagen que parece una foto.',
       heroAlt: 'Render con IA de una casa amueblada vista en sección, con el salón, la cocina y el baño',
       kicker: 'Herramientas de IA en la app',
-      heading: 'IA que trabaja sobre tu propio plano',
+      heading: 'IA que crea proyectos reales',
       lead: 'Las herramientas de IA parten del plano en el que estás trabajando, así que el resultado es un proyecto real de HomeDesigner, con paredes y muebles que puedes mover, y no solo una imagen.',
       rows: [
         {
@@ -1169,8 +1221,8 @@ const TOPICS = [
           p: 'Responde a unas pocas preguntas (plantas, dormitorios, baños, superficie, garaje) y añade lo demás con tus palabras. Obtienes un plano amueblado que se edita como cualquier otro proyecto, y puedes pedir cambios.',
           list: [
             ['Resultado editable', 'paredes, puertas, ventanas y muebles reales'],
-            ['Revísalo', 'describe qué cambiar y vuelve a generarlo'],
-            ['Revisión de un diseñador', 'pide consejos por escrito sobre tu distribución actual'],
+            ['Pide cambios', 'describe qué cambiar y vuelve a generarlo'],
+            ['Revisión de diseño con IA', 'pide consejos por escrito sobre tu distribución actual'],
             ['Visita guiada con voz', 'un recorrido narrado por tu casa (Pro)'],
           ],
         },
@@ -1181,11 +1233,25 @@ const TOPICS = [
         ['Edita el plano', 'Mueve paredes y muebles, o pide a la IA que lo revise.'],
         ['Renderízalo', 'Pasa al 3D y convierte la vista en una imagen fotorrealista.'],
       ],
+      compare: {
+        kicker: 'Antes y después',
+        heading: 'Del plano al 3D',
+        lead: '¿Ya tienes un plano? Impórtalo en lugar de describirlo. Este es el dibujo en blanco y negro de una de nuestras casas de ejemplo y la vista 3D que HomeDesigner creó a partir de él: las paredes se detectaron automáticamente y las habitaciones recibieron su suelo. Nada se redibujó a mano.',
+        beforeAlt: 'Plano de planta baja en blanco y negro con un salón, un dormitorio y un baño',
+        afterAlt: 'El mismo plano en la vista 3D de HomeDesigner, con paredes y suelos de las habitaciones, visto desde arriba',
+        beforeCap: ['Antes', 'la imagen del plano que se importó'],
+        afterCap: ['Después', 'las paredes y las habitaciones en 3D, listas para puertas, ventanas y muebles'],
+        note: 'La detección de paredes es análisis de imagen, no IA generativa. La importación no necesita puntos. Las puertas, las ventanas y los muebles los añades tú después.',
+      },
       faq: [
+        ['¿HomeDesigner tiene un generador de planos de casas con IA?', 'Sí. En el planificador con IA eliges plantas, dormitorios, baños y superficie total, indicas si quieres garaje y muebles, y describes la casa con tus palabras. Obtienes un plano con paredes, puertas y ventanas que se abre como un proyecto normal. Generarlo puede tardar hasta un minuto.'],
+        ['¿El generador de planos con IA es gratis?', 'La app se descarga gratis, y dibujar, amueblar o importar un plano no necesita puntos. Un plano con IA cuesta puntos de IA. Una cuenta nueva con inicio de sesión de Google verificado recibe puntos gratis para probarlo; después, los puntos se compran en paquetes dentro de la app. Los planos de dos o tres plantas necesitan HomeDesigner Pro.'],
+        ['¿Puede la IA partir de mi propio plano, en PDF o en foto?', 'Esa es otra herramienta. El planificador con IA parte de tu descripción, no de un archivo. Para usar un plano que ya tienes, importa un PDF, una foto o un escaneo: HomeDesigner detecta las paredes automáticamente, ajustas la escala con el ancho real del plano y se convierte en habitaciones en 3D. Los dibujos limpios en blanco y negro funcionan mejor; las puertas, las ventanas y los muebles los añades tú.'],
+        ['¿Puedo construir con un plano generado por IA?', 'Tómalo como un primer borrador. La IA distribuye habitaciones rectangulares según tus respuestas; puedes pedir cambios o editar cada pared tú mismo. No es un plano de obra: pide a un arquitecto o ingeniero que revise todo lo que vayas a construir.'],
         ['¿Cuánto cuestan las herramientas de IA?', 'Usan puntos, que se pueden comprar en la app. Todo lo demás en HomeDesigner funciona sin puntos.'],
         ['¿Puedo editar un plano hecho por la IA?', 'Sí. El resultado es un proyecto normal de HomeDesigner. Puedes mover paredes, cambiar habitaciones, sustituir muebles y verlo en 3D.'],
         ['¿Cuánto se parece el render con IA a mi diseño?', 'Conserva la distribución, las paredes y los muebles principales de tu vista 3D y añade materiales e iluminación realistas. Puede añadir pequeños detalles decorativos, así que tómalo como una impresión, no como un dibujo técnico.'],
-        ['¿Adónde van mis imágenes?', 'Un render envía solo la imagen de vista previa al servicio de renderizado. Un plano con IA envía tus respuestas, y la revisión de un diseñador envía una imagen del plano. La política de privacidad indica los servicios que se utilizan.'],
+        ['¿Adónde van mis imágenes?', 'Un render envía solo la imagen de vista previa al servicio de renderizado. Un plano con IA envía tus respuestas, y la revisión de diseño con IA envía una imagen del plano. La política de privacidad indica los servicios que se utilizan.'],
       ],
       card: ['Planos y renders con IA', 'Describe tu casa para obtener un plano y convierte la vista 3D en una imagen fotorrealista.', 'Render fotorrealista con IA de una casa'],
     },
@@ -1518,7 +1584,20 @@ ${page.rows
   .join('\n')}
       </div>
     </section>
-
+${topic.compare && page.compare ? `
+    <section class="block" style="padding-top:0">
+      <div class="wrap">
+        <span class="kicker">${esc(page.compare.kicker)}</span>
+        <h2 class="title">${esc(page.compare.heading)}</h2>
+        <p class="lead">${esc(page.compare.lead)}</p>
+        <div class="compare">
+          <figure>${img(topic.compare.before, page.compare.beforeAlt)}<figcaption><b>${esc(page.compare.beforeCap[0] + colon)}</b> ${esc(page.compare.beforeCap[1])}</figcaption></figure>
+          <figure>${img(topic.compare.after, page.compare.afterAlt)}<figcaption><b>${esc(page.compare.afterCap[0] + colon)}</b> ${esc(page.compare.afterCap[1])}</figcaption></figure>
+        </div>
+        <p class="compare-note">${esc(page.compare.note)}</p>
+      </div>
+    </section>
+` : ''}
     <section class="block band">
       <div class="wrap">
         <span class="kicker">${esc(ui.howKicker)}</span>
@@ -1557,6 +1636,9 @@ ${footer(code, paths)}
 `;
 }
 
+/** The AI topic, which every home page links to from its first section. */
+const AI_TOPIC = TOPICS.find((t) => t.en.slug === 'ai-home-design');
+
 /** A language's landing page: what the app is, and a card for each topic. */
 function renderHome(code) {
   const { ui, home } = LANGS[code];
@@ -1590,6 +1672,7 @@ ${header(code, null)}
           ${playBadge(code, false)}
           <a class="btn primary" href="/app/">${esc(ui.tryIt)}</a>
         </div>
+        <p class="hero-link"><a href="${topicPath(AI_TOPIC, code)}">${esc(home.aiLink)}</a></p>
       </div>
     </section>
 
@@ -1618,6 +1701,161 @@ ${footer(code, paths)}
 `;
 }
 
+// The /floor-plans/ pages (TASKS T10b): English only, data in scripts/floor-plans-data.mjs.
+const fpText = (s) => (FLOOR_PLANS_DRAFT && s.trim() === 'TODO' ? DRAFT_PLACEHOLDER : s);
+const fpDraft = (html) => (FLOOR_PLANS_DRAFT ? html.replace('<head>', '<head>\n  <meta name="robots" content="noindex" />') : html);
+const fpPath = (plan) => `${FLOOR_PLANS_PATH}${plan.slug}/`;
+const fpImg = (i, alt, lazy = true) =>
+  `<img src="${i.src}" alt="${esc(alt)}" width="${i.w}" height="${i.h}"${lazy ? ' loading="lazy"' : ''} />`;
+const fpArea = (p) => `${p.areaM2} m² (${p.areaSqFt.toLocaleString('en-US')} sq ft)`;
+const fpFacts = (p) => [
+  p.beds ? `${p.beds} bedroom${p.beds > 1 ? 's' : ''}` : 'Sleeping area in the living space',
+  `${p.baths} bath${p.baths === 1 ? '' : 's'}`,
+  `${p.storeys} storey${p.storeys > 1 ? 's' : ''}`,
+  `${p.footprint.m} (${p.footprint.ft})`,
+  `${fpArea(p)}${p.storeys > 1 ? ' in total' : ''}`,
+];
+const fpCrumbs = (items) => ({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map(([name, path], i) => ({ '@type': 'ListItem', position: i + 1, name, item: ORIGIN + path })),
+});
+const fpCards = (plans) => `<div class="more">
+          ${plans.map((p) => `<a href="${fpPath(p)}"><b>${esc(p.h1)}</b><span>${esc(`${fpFacts(p).slice(0, 2).join(', ')}, ${fpArea(p)}`)}</span></a>`).join('\n          ')}
+        </div>`;
+const fpParas = (text, cls) => text.split(/\n\s*\n/).map((para) => `        <p class="${cls}">${esc(para.trim())}</p>`).join('\n');
+
+function renderFloorPlan(plan) {
+  const { ui } = LANGS.en;
+  const path = fpPath(plan);
+  const paths = { en: path };
+  const jsonLd = [
+    fpCrumbs([['HomeDesigner', '/'], ['Floor plans', FLOOR_PLANS_PATH], [plan.h1, path]]),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CreativeWork',
+      name: plan.h1,
+      description: plan.description,
+      url: ORIGIN + path,
+      image: Object.values(plan.images).map((i) => ORIGIN + i.src),
+      inLanguage: 'en',
+      isAccessibleForFree: true,
+      creator: { '@type': 'Organization', name: 'HomeDesigner', url: `${ORIGIN}/` },
+    },
+  ];
+  return `<!doctype html>
+<html lang="en">
+${head('en', { title: plan.title, description: plan.description, paths, jsonLd })}
+<body>
+${header('en', null)}
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <p class="crumbs"><a href="/">HomeDesigner</a> › <a href="${FLOOR_PLANS_PATH}">Floor plans</a> › ${esc(plan.h1)}</p>
+        <h1>${esc(plan.h1)}</h1>
+        <p class="sub">${fpFacts(plan).map(esc).join(' · ')}</p>
+        <div class="ctas">
+          <a class="btn primary" href="${plan.appLink}">Open this plan in HomeDesigner (free to start)</a>
+          ${playBadge('en', false)}
+        </div>
+        <p class="sub">Free to start, in your browser or on Android.</p>
+        <div class="hero-shot">${fpImg(plan.images.view3d, `${plan.h1}, furnished, in 3D`, false)}</div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <span class="kicker">The plan</span>
+        <h2 class="title">Rooms and sizes</h2>
+${fpParas(fpText(plan.body), 'lead')}
+        <div class="split">
+          <div class="pic">${plan.images.plan2
+            ? `<figure style="margin:0 0 16px">${fpImg(plan.images.plan, `${plan.h1}: 2D floor plan, ground floor`)}<figcaption>Ground floor</figcaption></figure>
+            <figure style="margin:0 0 16px">${fpImg(plan.images.plan2, `${plan.h1}: 2D floor plan, upper floor`)}<figcaption>Upper floor</figcaption></figure>
+            <figure style="margin:0">${fpImg(plan.images.view3dUpper, `${plan.h1}: upper floor, furnished, in 3D`)}<figcaption>Upper floor in 3D</figcaption></figure>`
+            : fpImg(plan.images.plan, `${plan.h1}: 2D floor plan`)}</div>
+          <div>
+${plan.floors.map((floor) => `            <h3>${esc(floor.name)}</h3>
+            <table class="plan-rooms">
+              <thead><tr><th>Room</th><th>Metres</th><th>Feet</th><th>Area</th></tr></thead>
+              <tbody>
+                ${floor.rooms.map((r) => `<tr><td>${esc(r.name)}</td><td>${esc(r.m)}</td><td>${esc(r.ft)}</td><td>${r.areaM2} m²</td></tr>`).join('\n                ')}
+              </tbody>
+            </table>`).join('\n')}
+          </div>
+        </div>
+        <p class="lead">${esc(plan.invite)}</p>
+        <div class="ctas">
+          <a class="btn primary" href="${plan.appLink}">Open this plan in HomeDesigner (free to start)</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" style="padding-top:0">
+      <div class="wrap">
+        <span class="kicker">${esc(ui.more)}</span>
+        ${fpCards(FLOOR_PLANS.filter((p) => p !== plan))}
+      </div>
+    </section>
+
+${getTheApp('en')}
+  </main>
+
+${footer('en', paths)}
+</body>
+</html>
+`;
+}
+
+function renderFloorPlansHub() {
+  const hub = FLOOR_PLANS_HUB;
+  const paths = { en: FLOOR_PLANS_PATH };
+  const jsonLd = [
+    fpCrumbs([['HomeDesigner', '/'], ['Floor plans', FLOOR_PLANS_PATH]]),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      itemListElement: FLOOR_PLANS.map((p, i) => ({ '@type': 'ListItem', position: i + 1, url: ORIGIN + fpPath(p), name: p.h1 })),
+    },
+  ];
+  return `<!doctype html>
+<html lang="en">
+${head('en', { title: hub.title, description: hub.description, paths, jsonLd })}
+<body>
+${header('en', null)}
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <p class="crumbs"><a href="/">HomeDesigner</a> › Floor plans</p>
+        <h1>${esc(hub.h1)}</h1>
+${fpParas(fpText(hub.intro), 'sub')}
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+${FLOOR_PLANS.map((p) => `        <div class="split">
+          <div class="pic"><a href="${fpPath(p)}">${fpImg(p.images.view3d, `${p.h1} in 3D`)}</a></div>
+          <div>
+            <h3><a href="${fpPath(p)}">${esc(p.h1)}</a></h3>
+            <p>${fpFacts(p).map(esc).join(' · ')}</p>
+            <div class="ctas"><a class="btn" href="${fpPath(p)}">See the plan</a> <a class="btn primary" href="${p.appLink}">Open in HomeDesigner</a></div>
+          </div>
+        </div>`).join('\n')}
+      </div>
+    </section>
+
+${getTheApp('en')}
+  </main>
+
+${footer('en', paths)}
+</body>
+</html>
+`;
+}
+
 // Search results cut a title at about 65 characters and a description at about
 // 160, and a description under 120 wastes the space. Refuse to write a page
 // that would be cut, so a new translation cannot ship one by accident.
@@ -1634,6 +1872,9 @@ for (const code of CODES) {
     if (page.rows.length !== topic.shots.length) problems.push(`${topicPath(topic, code)}: ${page.rows.length} rows for ${topic.shots.length} pictures`);
   }
 }
+// The /floor-plans/ pages: nothing is written while one is thin, has no
+// pictures or says something it cannot back up (floor-plans-data.mjs).
+problems.push(...floorPlanProblems((src) => existsSync(resolve(site, `.${src}`))));
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
@@ -1656,6 +1897,48 @@ for (const code of CODES) {
     written.push(topicPath(topic, code));
   }
 }
+await write(FLOOR_PLANS_PATH, fpDraft(renderFloorPlansHub()));
+if (!FLOOR_PLANS_DRAFT) written.push(FLOOR_PLANS_PATH);
+for (const plan of FLOOR_PLANS) {
+  await write(`${FLOOR_PLANS_PATH}${plan.slug}/`, fpDraft(renderFloorPlan(plan)));
+  if (!FLOOR_PLANS_DRAFT) written.push(`${FLOOR_PLANS_PATH}${plan.slug}/`);
+}
+if (FLOOR_PLANS_DRAFT) console.log('DRAFT floor-plan pages: placeholder text, noindex, left out of the sitemap. Do not deploy.');
+
+// Every Google Play link on the site carries an install referrer naming the page
+// it was on (TASKS T1, 27 Nov 2026). The app reads it once through the Play
+// Install Referrer API and reports `source` = "website:<page>" (src/lib/events.ts
+// sourceFromReferrer: utm_source + ":" + utm_campaign), so site-driven installs
+// stop counting as organic. Only href attributes are tagged, never JSON-LD, and
+// a link that already has a referrer is left alone, so this pass can run on the
+// hand-written pages (/, /buy/, ...) as well as the generated ones and be re-run.
+const PLAY_HREF = /href="(https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.homedesigner\.app(?:&amp;hl=[A-Za-z-]+)?)"/g;
+export const pageCampaign = (path) => path.replace(/^\/+|\/+$/g, '').replace(/\//g, '-').replace(/\.html$/, '') || 'home';
+export const playReferrer = (campaign) =>
+  encodeURIComponent(`utm_source=website&utm_medium=${campaign}&utm_campaign=${campaign}`);
+export const tagPlayLinks = (html, path) =>
+  html.replace(PLAY_HREF, (_, url) => `href="${url}&amp;referrer=${playReferrer(pageCampaign(path))}"`);
+
+{
+  const { readdir, readFile } = await import('node:fs/promises');
+  const pages = async (dir, rel) => {
+    const out = [];
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (entry.name === 'assets' || entry.name === 'app') continue;
+        out.push(...await pages(resolve(dir, entry.name), `${rel}${entry.name}/`));
+      } else if (entry.name === 'index.html') out.push([resolve(dir, entry.name), rel]);
+    }
+    return out;
+  };
+  let tagged = 0;
+  for (const [file, rel] of await pages(site, '/')) {
+    const html = await readFile(file, 'utf8');
+    const next = tagPlayLinks(html, rel);
+    if (next !== html) { await writeFile(file, next); tagged++; }
+  }
+  console.log(`Play links tagged with an install referrer in ${tagged} page(s).`);
+}
 
 // Only pages that should appear in search results. /app/ is listed because
 // people search for an online floor planner and that is the page that is one.
@@ -1666,8 +1949,8 @@ const entries = [
   ['/buy/', '0.6', UPDATED_OTHER],
   ['/community/', '0.5', UPDATED_OTHER],
   ['/terms/', '0.2', UPDATED_OTHER],
-  // The account deletion page Google Play links to (written by hand, 22 Nov 2026).
-  ['/delete-account/', '0.2', '2026-11-22'],
+  // Not /delete-account/: Google Play links to it directly, and it is no search
+  // result. Google crawled it and left it out of the index (Search Console, 26 Nov 2026).
 ];
 await writeFile(
   resolve(site, 'sitemap.xml'),
@@ -1679,5 +1962,5 @@ ${entries.map(([path, pri, date]) => `  <url><loc>${ORIGIN}${path}</loc><lastmod
 );
 
 console.log(
-  `Wrote ${written.length} pages (${TOPICS.length} topics in ${CODES.length} languages, ${CODES.length - 1} landing pages) and sitemap.xml (${entries.length} URLs) into site/`,
+  `Wrote ${written.length} pages (${TOPICS.length} topics in ${CODES.length} languages, ${CODES.length - 1} landing pages, ${FLOOR_PLANS.length + 1} floor-plan pages) and sitemap.xml (${entries.length} URLs) into site/`,
 );

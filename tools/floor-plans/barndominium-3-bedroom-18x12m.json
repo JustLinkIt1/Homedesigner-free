@@ -1,0 +1,388 @@
+{
+  "title": "Barndominium, 3 bedrooms with shop",
+  "notes": "",
+  "widthCm": 1800,
+  "depthCm": 1200,
+  "furnished": true,
+  "source": null,
+  "exterior": {
+    "color": "#b9bcc0",
+    "material": "steel_brushed"
+  },
+  "roof": {
+    "type": "gable",
+    "pitch": 25,
+    "overhang": 45,
+    "thickness": 18,
+    "covering": "metal",
+    "coveringScaleCm": 150,
+    "color": "#4a4f55"
+  },
+  "floors": [
+    {
+      "rooms": [
+        {
+          "id": "gar",
+          "type": "garage",
+          "name": "Garage / Shop",
+          "x": 0,
+          "y": 0,
+          "w": 600,
+          "h": 500
+        },
+        {
+          "id": "liv",
+          "type": "living",
+          "name": "Open Living",
+          "x": 600,
+          "y": 0,
+          "w": 800,
+          "h": 500
+        },
+        {
+          "id": "kit",
+          "type": "kitchen",
+          "name": "Kitchen",
+          "x": 1400,
+          "y": 0,
+          "w": 400,
+          "h": 500
+        },
+        {
+          "id": "sto",
+          "type": "storage",
+          "name": "Storage",
+          "x": 0,
+          "y": 500,
+          "w": 300,
+          "h": 150
+        },
+        {
+          "id": "hall",
+          "type": "hallway",
+          "name": "Hallway",
+          "x": 300,
+          "y": 500,
+          "w": 1200,
+          "h": 150
+        },
+        {
+          "id": "uti",
+          "type": "utility",
+          "name": "Utility",
+          "x": 1500,
+          "y": 500,
+          "w": 300,
+          "h": 150
+        },
+        {
+          "id": "bed1",
+          "type": "bedroom",
+          "name": "Primary Bedroom",
+          "x": 0,
+          "y": 650,
+          "w": 450,
+          "h": 550
+        },
+        {
+          "id": "bath",
+          "type": "bathroom",
+          "name": "Bathroom",
+          "x": 450,
+          "y": 650,
+          "w": 250,
+          "h": 275
+        },
+        {
+          "id": "ens",
+          "type": "bathroom",
+          "name": "En-suite",
+          "x": 450,
+          "y": 925,
+          "w": 250,
+          "h": 275
+        },
+        {
+          "id": "bed2",
+          "type": "bedroom",
+          "name": "Bedroom 2",
+          "x": 700,
+          "y": 650,
+          "w": 400,
+          "h": 550
+        },
+        {
+          "id": "off",
+          "type": "office",
+          "name": "Office",
+          "x": 1100,
+          "y": 650,
+          "w": 300,
+          "h": 550
+        },
+        {
+          "id": "bed3",
+          "type": "bedroom",
+          "name": "Bedroom 3",
+          "x": 1400,
+          "y": 650,
+          "w": 400,
+          "h": 550
+        }
+      ],
+      "openings": [
+        {
+          "kind": "door",
+          "x": 450,
+          "y": 500,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "gar",
+            "hall"
+          ]
+        },
+        {
+          "kind": "open",
+          "x": 1400,
+          "y": 250,
+          "vertical": true,
+          "width": 120,
+          "rooms": [
+            "liv",
+            "kit"
+          ]
+        },
+        {
+          "kind": "open",
+          "x": 1000,
+          "y": 500,
+          "vertical": false,
+          "width": 120,
+          "rooms": [
+            "liv",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 1650,
+          "y": 500,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "kit",
+            "uti"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 300,
+          "y": 575,
+          "vertical": true,
+          "width": 80,
+          "rooms": [
+            "sto",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 375,
+          "y": 650,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "bed1",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 450,
+          "y": 1063,
+          "vertical": true,
+          "width": 80,
+          "rooms": [
+            "bed1",
+            "ens"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 575,
+          "y": 650,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "bath",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 900,
+          "y": 650,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "bed2",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 1250,
+          "y": 650,
+          "vertical": false,
+          "width": 80,
+          "rooms": [
+            "off",
+            "hall"
+          ]
+        },
+        {
+          "kind": "door",
+          "x": 1450,
+          "y": 650,
+          "vertical": false,
+          "width": 70,
+          "rooms": [
+            "bed3",
+            "hall"
+          ]
+        },
+        {
+          "kind": "entrance",
+          "x": 840,
+          "y": 0,
+          "vertical": false,
+          "width": 90,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "garage",
+          "x": 300,
+          "y": 0,
+          "vertical": false,
+          "width": 250,
+          "rooms": [
+            "gar"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1143,
+          "y": 0,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "liv"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1600,
+          "y": 0,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1800,
+          "y": 250,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "kit"
+          ]
+        },
+        {
+          "kind": "small_window",
+          "x": 1800,
+          "y": 575,
+          "vertical": true,
+          "width": 60,
+          "rooms": [
+            "uti"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 225,
+          "y": 1200,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "bed1"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 0,
+          "y": 925,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "bed1"
+          ]
+        },
+        {
+          "kind": "small_window",
+          "x": 575,
+          "y": 1200,
+          "vertical": false,
+          "width": 60,
+          "rooms": [
+            "ens"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 900,
+          "y": 1200,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "bed2"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1250,
+          "y": 1200,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "off"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1600,
+          "y": 1200,
+          "vertical": false,
+          "width": 140,
+          "rooms": [
+            "bed3"
+          ]
+        },
+        {
+          "kind": "window",
+          "x": 1800,
+          "y": 925,
+          "vertical": true,
+          "width": 140,
+          "rooms": [
+            "bed3"
+          ]
+        }
+      ]
+    }
+  ]
+}
