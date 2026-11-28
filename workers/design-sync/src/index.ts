@@ -30,7 +30,8 @@ import { recordHdEvents, purgeOldHdEvents } from './hd-events';
 import {
   RenderError, validRenderId, validRenderImage, readRender,
   reserveRender, dispatchRender, refreshRender, publicRender, freeRenderAvailable,
-  validRenderStyle, validRenderView, RENDER_STYLES, renderAvailable, renderImageUrl,
+  validRenderStyle, validRenderView, RENDER_STYLES, renderAvailable, deliverRender, sweepStaleRenders,
+  RENDER_POST_DEADLINE_MS,
 } from './ai-render';
 import {
   PRO_ENTITLEMENT_ID, liveEntitlements, matchesProEntitlement, proIdsFromCatalogue,
@@ -2046,6 +2047,8 @@ export default {
           const renderKeys = { fal: env.FAL_KEY, elevenlabs: env.ELEVENLABS_API_KEY };
           const enabled = env.AI_RENDER_ENABLED === 'true' && renderAvailable(renderKeys);
           if (request.method === 'GET' && url.pathname === '/v1/ai/renders') {
+            // A job stuck "reserved" would otherwise lock the account until its own id is polled.
+            await sweepStaleRenders(env.COMMUNITY, identity.subject);
             const active = await env.COMMUNITY.prepare("SELECT * FROM ai_render_jobs WHERE subject = ? ORDER BY created_at DESC LIMIT 1")
               .bind(identity.subject).first<import('./ai-render').RenderJob>();
             const isPro = await isProSubject(env, identity.subject);
@@ -2055,6 +2058,8 @@ export default {
               latest: active ? publicRender(active) : null });
           }
           if (request.method === 'POST' && url.pathname === '/v1/ai/renders') {
+            // One deadline for the whole request, inside the app's 30 s timeout.
+            const deadline = Date.now() + RENDER_POST_DEADLINE_MS;
             if (!enabled) return json(request, { error: 'AI rendering is temporarily unavailable.' }, 503);
             if (!identity.emailVerified) {
               return json(request, { error: 'Sign in with a verified Google account to use AI rendering.' }, 403);
@@ -2070,25 +2075,26 @@ export default {
             }
             // Older apps never send `watermark`; a free account on one gets a clean render at the premium.
             const isPro = await isProSubject(env, identity.subject);
+            await sweepStaleRenders(env.COMMUNITY, identity.subject);
             const { job, created } = await reserveRender(env.COMMUNITY, identity.subject, body.id, Number(body.expectedCharge), body.style,
               { isPro, watermark: body.watermark === true });
+            if (!created) return json(request, publicRender(job), 202);
+            // Dispatch before answering (waitUntil was cut off every time). On any
+            // failure the job is already failed and refunded when this returns.
             // Older apps never say what the capture shows: a room, as it always was.
-            if (created) ctx.waitUntil(dispatchRender(env.COMMUNITY, renderKeys, job, body.image,
-              validRenderView(body.view) ? body.view : 'interior'));
-            return json(request, publicRender(job), 202);
+            const started = await dispatchRender(env.COMMUNITY, renderKeys, job, body.image,
+              validRenderView(body.view) ? body.view : 'interior', deadline);
+            // A failed start answers with an error status so the app shows job.error.
+            return json(request, publicRender(started), started.status === 'failed' ? 502 : 202);
           }
           const match = url.pathname.match(/^\/v1\/ai\/renders\/([a-f0-9-]{36})(\/image)?$/);
           if (request.method === 'GET' && match) {
             let job = await readRender(env.COMMUNITY, identity.subject, match[1]);
             if (!job) return json(request, { error: 'Render not found.' }, 404);
             if (match[2]) {
-              const source = await renderImageUrl(renderKeys, job);
-              if (!source) return json(request, { error: 'Image is not ready.' }, 409);
-              const image = await fetch(source, { redirect: 'error', signal: AbortSignal.timeout(20_000) });
-              if (!image.ok) return json(request, { error: 'Image download failed. Try again.' }, 502);
-              const contentType = image.headers.get('Content-Type')?.split(';')[0];
-              if (!['image/jpeg', 'image/png'].includes(contentType ?? '')) return json(request, { error: 'Unexpected image format.' }, 502);
-              return new Response(await boundedBody(image, 12_000_000), { headers: { ...cors(request), 'Content-Type': contentType!, 'Cache-Control': 'no-store' } });
+              const delivery = await deliverRender(env.COMMUNITY, renderKeys, job);
+              if (!delivery.ok) return json(request, { error: delivery.error }, delivery.status);
+              return new Response(delivery.bytes, { headers: { ...cors(request), 'Content-Type': delivery.contentType, 'Cache-Control': 'no-store' } });
             }
             job = await refreshRender(env.COMMUNITY, renderKeys, job);
             return json(request, publicRender(job));
