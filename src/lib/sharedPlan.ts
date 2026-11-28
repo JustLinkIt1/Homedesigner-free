@@ -103,6 +103,15 @@ export function parseSharedPlan(value: unknown): SharedPlan | null {
   };
 }
 
+/**
+ * The view a shared plan opens in. A furnished plan is a finished house to
+ * look at, so it opens in 3D. An unfurnished one (the kitchen-layout pages'
+ * empty rooms) is a room to arrange, so it opens in 2D, where units are placed.
+ */
+export function sharedPlanView(plan: Pick<SharedPlan, 'blueprint'>): '2d' | '3d' {
+  return plan.blueprint.furnished ? '3d' : '2d';
+}
+
 export async function fetchSharedPlan(id: string): Promise<SharedPlanResult> {
   if (!/^https:\/\//.test(BASE) || !ID.test(id)) return { ok: false, reason: 'failed' };
   try {

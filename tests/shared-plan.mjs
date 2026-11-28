@@ -33,7 +33,7 @@ try {
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
-const { sharedPlanId, parseSharedPlan, fetchSharedPlan } = app;
+const { sharedPlanId, parseSharedPlan, fetchSharedPlan, sharedPlanView } = app;
 const { SHARED_PLAN_PATH, readSharedPlan, countSharedPlanOpen } = worker;
 
 let failures = 0;
@@ -84,6 +84,15 @@ check('id: missing, short, long or odd ids are refused',
   extra.owner = 'someone';
   const cleaned = parseSharedPlan(extra);
   check('unknown fields are not copied', !('script' in cleaned.blueprint.floors[0].rooms[0]) && !('texture' in cleaned.roof) && !('owner' in cleaned.blueprint));
+}
+// ---- S2b: which view a shared plan opens in
+{
+  const furnished = parseSharedPlan(good());
+  const emptyRoom = parseSharedPlan({ ...good(), furnished: false });
+  const unset = good(); delete unset.furnished;
+  check('S2b: a furnished plan opens in 3D', sharedPlanView(furnished) === '3d');
+  check('S2b: an unfurnished plan (furnished:false) opens in 2D', sharedPlanView(emptyRoom) === '2d');
+  check('S2b: no furnished flag counts as furnished, opens in 3D', sharedPlanView(parseSharedPlan(unset)) === '3d');
 }
 {
   const bad = (edit) => { const p = good(); edit(p); return parseSharedPlan(p); };

@@ -297,7 +297,7 @@ export default function App() {
     if (!new URLSearchParams(window.location.search).has('plan')) return;
     let cancelled = false;
     void (async () => {
-      const [{ sharedPlanId, fetchSharedPlan }, { blueprintToSnapshot }] = await Promise.all([
+      const [{ sharedPlanId, fetchSharedPlan, sharedPlanView }, { blueprintToSnapshot }] = await Promise.all([
         import('./lib/sharedPlan'),
         import('./lib/aiPlan'),
       ]);
@@ -342,7 +342,11 @@ export default function App() {
         roof,
       }));
       useDesign.getState().setDollhouse(false);
-      useDesign.getState().setView('3d');
+      // Furnished plans open in 3D (what the person was shown); empty rooms
+      // from the kitchen-layout pages open in 2D, where units are placed.
+      // Setting the view here is not a toolbar exit from 3D, so it never
+      // opens the exit-3D Pro wall (lib/exit3dWall.ts).
+      useDesign.getState().setView(sharedPlanView(result.plan));
       setScreen('editor');
       toast.success(translate('Your plan is ready to edit'));
     })();
