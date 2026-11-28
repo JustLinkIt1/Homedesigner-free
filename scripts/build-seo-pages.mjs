@@ -1463,6 +1463,39 @@ function head(code, { title, description, paths, jsonLd }) {
 </head>`;
 }
 
+// The /floor-plans/ hub in the footer of the English pages (S1, 28 Nov 2026). "Floor
+// plans" already names /floor-plan-maker/, so the library is "House plans". The
+// other languages have no such pages and get no link. Footer only: the header
+// links are hidden under 1011 px, and an eighth one pushes the buttons off the row.
+const HOUSE_PLANS_NAV = 'House plans';
+// "Start from a ready plan" on /floor-plan-maker/ and /3d-home-design/; the same
+// block is written by hand in site/index.html. Keep the two in step.
+const READY_PLAN_TOPICS = ['floor-plan-maker', '3d-home-design'];
+const READY_PLANS = ['3-bedroom-house-plan-13x9m', 'small-house-plan-2-bedroom-9x8m', 'barndominium-3-bedroom-18x12m', 'ranch-house-plan-3-bedroom-20x10m'];
+function readyPlans() {
+  const plans = READY_PLANS.map((slug) => {
+    const plan = FLOOR_PLANS.find((p) => p.slug === slug);
+    if (!plan) throw new Error(`READY_PLANS: no floor plan "${slug}"`);
+    return plan;
+  });
+  return `
+    <section class="block" id="ready-plans" style="padding-top:0">
+      <div class="wrap">
+        <span class="kicker">Ready-made house plans</span>
+        <h2 class="title">Start from a ready plan</h2>
+        <p class="lead">Open a finished house plan with every room size in metres and feet, then move the walls and furnish it in 3D. Free to start.</p>
+        <div class="features plans">
+          ${plans.map((p) => `<a class="feature" href="${fpPath(p)}">
+            <div class="shot wide">${fpImg(p.images.view3d, `${p.h1} in 3D`)}</div>
+            <div class="body"><h3>${esc(p.h1)}</h3><p>${esc(`${fpFacts(p).slice(0, 2).join(', ')}, ${fpArea(p)}`)}</p></div>
+          </a>`).join('\n          ')}
+        </div>
+        <p class="plans-all"><a href="${FLOOR_PLANS_PATH}">See all ${FLOOR_PLANS.length} house plans →</a></p>
+      </div>
+    </section>
+`;
+}
+
 function header(code, current) {
   const { ui } = LANGS[code];
   return `  <header>
@@ -1508,7 +1541,7 @@ function footer(code, paths) {
       <span>© ${UPDATED.slice(0, 4)} HomeDesigner</span>
       <span class="spacer"></span>
       ${topicsIn(code).map((t) => `<a href="${topicPath(t, code)}">${esc(t[code].nav)}</a>`).join('\n      ')}
-      <a href="/buy/">Pro</a>
+${code === 'en' ? `      <a href="${FLOOR_PLANS_PATH}">${HOUSE_PLANS_NAV}</a>\n` : ''}      <a href="/buy/">Pro</a>
       <a href="/privacy">${esc(ui.privacy)}</a>
       <a href="/terms/">${esc(ui.terms)}</a>
     </div>
@@ -1597,7 +1630,7 @@ ${topic.compare && page.compare ? `
         <p class="compare-note">${esc(page.compare.note)}</p>
       </div>
     </section>
-` : ''}
+` : ''}${code === 'en' && READY_PLAN_TOPICS.includes(page.slug) ? readyPlans() : ''}
     <section class="block band">
       <div class="wrap">
         <span class="kicker">${esc(ui.howKicker)}</span>

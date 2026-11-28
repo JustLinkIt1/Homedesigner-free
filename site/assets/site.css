@@ -134,6 +134,22 @@ p.lead { color: var(--text-2); font-size: 17px; max-width: 680px; margin-top: 14
 .feature h3 { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
 .feature p { color: var(--text-2); font-size: 14px; margin-top: 6px; }
 
+/* "Start from a ready plan": four /floor-plans/ cards. Four across, then two,
+   then a compact list (picture left) so a phone is not four screens of pictures. */
+.features.plans { grid-template-columns: repeat(4, 1fr); margin-top: 34px; }
+.plans-all { margin-top: 24px; font-size: 15px; font-weight: 700; }
+.plans-all a { color: var(--brand-2); }
+.plans-all a:hover { text-decoration: underline; }
+@media (max-width: 980px) { .features.plans { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) {
+  .features.plans { grid-template-columns: 1fr; gap: 12px; }
+  .plans .feature { display: grid; grid-template-columns: 116px 1fr; align-items: center; border-radius: 16px; }
+  .plans .feature .shot { aspect-ratio: auto; height: 100%; min-height: 92px; }
+  .plans .feature .body { padding: 12px 14px; }
+  .plans .feature h3 { font-size: 15.5px; }
+  .plans .feature p { font-size: 13px; margin-top: 3px; }
+}
+
 .get { text-align: center; border: 1px solid var(--border); border-radius: 26px; padding: 60px 26px; background: radial-gradient(560px 280px at 50% -10%, rgba(13, 99, 248, 0.28), transparent 70%), var(--surface); }
 .get h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.03em; }
 .get p { color: var(--text-2); max-width: 560px; margin: 12px auto 0; }
