@@ -1320,22 +1320,43 @@ browser.close().catch(() => {});
   const opened = await motionPage.locator('.modal.settings').isVisible().catch(() => false);
   check('motion context: settings dialog opens', opened);
   if (opened) {
+    // Record the dialog on every animation frame from the close click on,
+    // inside the page. Sampling once from Node after the click (the old check)
+    // raced the exit animation: under a busy CPU the round-trip could land after
+    // the animation had already finished, giving during=0 on a working build.
+    // A capture-phase listener stamps the click inside the page, so the frames
+    // counted are exactly the ones painted after it.
+    await motionPage.evaluate(() => {
+      const rec = { clickAt: null, frames: [], goneAt: null };
+      window.__dialogExit = rec;
+      const btn = document.querySelector('.modal.settings .modal-foot .btn.primary');
+      btn?.addEventListener('click', () => {
+        rec.clickAt = performance.now();
+        const tick = (now) => {
+          const present = document.querySelector('.modal.settings') !== null;
+          rec.frames.push(present);
+          if (!present) { rec.goneAt = now; return; }
+          if (now - rec.clickAt < 5000) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }, { capture: true, once: true });
+    });
     await motionPage.locator('.modal.settings .modal-foot .btn.primary').click();
-    // Immediately after the close click the panel must STILL be there (it is
-    // animating out). With no exit animation this is 0 and the check fails —
-    // which is the point: it is what stops "all green" from being compatible
-    // with having shipped no animation.
-    const during = await motionPage.locator('.modal.settings').count();
     // ...and it must still finish. A never-completing exit would leave a
     // backdrop swallowing every click, which is exactly what an earlier draft
     // of <Modal> did (mixed element- and variant-level transitions).
-    let gone = false;
-    for (let i = 0; i < 25 && !gone; i++) {
-      gone = (await motionPage.locator('.modal.settings').count()) === 0;
-      if (!gone) await motionPage.waitForTimeout(60);
-    }
-    check('dialog animates out instead of vanishing in one frame', during === 1 && gone,
-      `during=${during} gone=${gone}`);
+    await motionPage.waitForFunction(() => window.__dialogExit.goneAt !== null
+      || (window.__dialogExit.clickAt !== null && performance.now() - window.__dialogExit.clickAt > 5000),
+    null, { timeout: 15000 }).catch(() => {});
+    const exit = await motionPage.evaluate(() => window.__dialogExit);
+    // With no exit animation the panel is removed before the first frame after
+    // the click is painted, so frames is [false] and the check fails, which is
+    // the point: "all green" must not be compatible with shipping no animation.
+    const during = exit.frames.filter(Boolean).length;
+    const gone = exit.goneAt !== null
+      && (await motionPage.locator('.modal.settings').count()) === 0;
+    check('dialog animates out instead of vanishing in one frame', exit.clickAt !== null && during >= 1 && gone,
+      `framesWithDialog=${during} of ${exit.frames.length} gone=${gone} exitMs=${exit.goneAt && exit.clickAt ? Math.round(exit.goneAt - exit.clickAt) : 'n/a'}`);
   }
   await motionPage.close();
 }
