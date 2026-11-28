@@ -1927,9 +1927,9 @@ ${header(code, null)}
         <p class="crumbs"><a href="${homePath(code)}">HomeDesigner</a> › <a href="${hub.path}">${esc(ui.back)}</a> › ${esc(page.title)}</p>
         <h1>${esc(page.title)}</h1>
         <p class="sub">${esc(page.example)}</p>
-        <p class="lead">${esc(page.body)}</p>
+        <p class="lead" style="margin-left:auto;margin-right:auto">${esc(page.body)}</p>
         <div class="ctas">
-          ${page.buttons.map((b) => `<a class="btn primary" href="${b.href}">${esc(label(b))}</a>`).join('\n          ')}
+          ${page.buttons.map((b) => `<a class="btn primary" style="white-space:normal;text-align:center" href="${b.href}">${esc(label(b))}</a>`).join('\n          ')}
         </div>
         <p class="sub">${esc(ui.under)}</p>
 ${page.proNote ? `        <p class="sub">${esc(ui.proNote)}</p>\n` : ''}      </div>
@@ -1948,7 +1948,7 @@ ${page.proNote ? `        <p class="sub">${esc(ui.proNote)}</p>\n` : ''}      </
       <div class="wrap">
         <span class="kicker">${esc(LANGS[code].ui.more)}</span>
         ${klCards(code, KITCHEN_LAYOUTS.filter((l) => l !== layout))}
-        <p><a href="${hub.path}">${esc(ui.back)}</a></p>
+        <p style="margin-top:18px"><a href="${hub.path}">${esc(ui.back)}</a></p>
         ${klPlannerLink(code)}
       </div>
     </section>

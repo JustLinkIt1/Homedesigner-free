@@ -17,7 +17,9 @@
 // fridge; the island page's island is base cabinets back to back.
 // `furniture` items use the app's FurnitureItem fields: `type`, centre `x`/`y`
 // in cm, `rotation` in degrees as the furnisher sets it (src/lib/aiPlan.ts
-// ROTATION: back against N 0, E 90, S 180, W 270).
+// ROTATION: back against N 0, E 90, S 180, W 270). `dollhouseCamera` (az, el,
+// near) moves the 3D picture's camera in tools/make-plan-sample.mjs so the open
+// door leaf of a small room does not stand in front of the units.
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,13 +68,13 @@ const S0 = INSET + 60; // where a second run starts, past the first run's depth
 
 export const LAYOUTS = [
   {
-    slug: 'small-kitchen', title: 'Small kitchen',
+    slug: 'small-kitchen', title: 'Small kitchen', camera: { az: -12, el: 64, near: 1.6 },
     metric: [300, 240, 'klsmall300x240'], feet: [10, 8, 'klsmall10x8ft'],
     open: (w) => ({ door: ['S', w - 60], window: ['N', Math.round(w * 0.55)] }),
     furnish: (w, d) => [...run(w, d, 'N', INSET, [B, 'kitchen_sink', B, 'stove']), ...run(w, d, 'W', S0, [B, 'fridge'])],
   },
   {
-    slug: 'l-shaped-kitchen', title: 'L-shaped kitchen',
+    slug: 'l-shaped-kitchen', title: 'L-shaped kitchen', camera: { az: -12, el: 64, near: 1.6 },
     metric: [360, 300, 'kllshaped360x300'], feet: [12, 10, 'kllshaped12x10ft'],
     open: (w) => ({ door: ['S', w - 70], window: ['N', Math.round(w / 2)] }),
     furnish: (w, d) => [...run(w, d, 'N', INSET, [B, B, 'kitchen_sink', B, B]), ...run(w, d, 'W', S0, [B, 'stove', 'fridge'])],
@@ -84,7 +86,7 @@ export const LAYOUTS = [
     furnish: (w, d) => [...run(w, d, 'W', INSET, ['fridge', B, 'kitchen_sink', B, B]), ...run(w, d, 'E', INSET, [B, 'stove', B, B, B])],
   },
   {
-    slug: 'u-shaped-kitchen', title: 'U-shaped kitchen',
+    slug: 'u-shaped-kitchen', title: 'U-shaped kitchen', camera: { az: 8, el: 68, near: 1.6 },
     metric: [300, 330, 'klushaped300x330'], feet: [10, 11, 'klushaped10x11ft'],
     open: (w) => ({ door: ['S', Math.round(w / 2)], window: ['N', Math.round(w / 2)] }),
     furnish: (w, d) => [
@@ -140,7 +142,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
       }
       boxes.push(box);
     }
-    writeFileSync(join(here, 'render', `${l.slug}.json`), `${JSON.stringify({ ...metric, furnished: true, furniture }, null, 2)}\n`);
+    writeFileSync(join(here, 'render', `${l.slug}.json`), `${JSON.stringify({ ...metric, furnished: true, furniture, ...(l.camera ? { dollhouseCamera: l.camera } : {}) }, null, 2)}\n`);
     console.log(`wrote tools/kitchen-layouts/${l.slug}-metric.json, ${l.slug}-feet.json, render/${l.slug}.json (${furniture.length} items)`);
   }
   writeFileSync(join(here, 'ids.json'), `${JSON.stringify(ids, null, 2)}\n`);

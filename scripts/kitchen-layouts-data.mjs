@@ -50,11 +50,11 @@ export const KITCHEN_UI = {
     caption: 'Example arrangement. The editor opens the empty room.',
   },
   fr: {
-    button: "Ouvrir cette taille de cuisine dans l'éditeur",
+    button: "Ouvrir cette taille de cuisine dans l’éditeur",
     under: 'Ouvre une pièce de cette taille. Vous placez les meubles vous-même.',
     proNote: 'Les éléments marqués sont Pro. Tout le reste de cette page est gratuit.',
     back: 'Toutes les implantations de cuisine',
-    caption: "Exemple d'aménagement. L'éditeur ouvre la pièce vide.",
+    caption: "Exemple d’aménagement. L’éditeur ouvre la pièce vide.",
   },
   de: {
     button: 'Diese Küchengröße im Editor öffnen',
@@ -68,7 +68,7 @@ export const KITCHEN_UI = {
 /** Picture alt texts: the caption's first sentence plus which view it is. */
 export const KITCHEN_ALT = {
   en: { view3d: 'example arrangement in 3D', plan: 'example arrangement, 2D plan' },
-  fr: { view3d: "exemple d'aménagement en 3D", plan: "exemple d'aménagement, plan 2D" },
+  fr: { view3d: "exemple d’aménagement en 3D", plan: "exemple d’aménagement, plan 2D" },
   de: { view3d: 'Beispiel-Einrichtung in 3D', plan: 'Beispiel-Einrichtung, 2D-Grundriss' },
 };
 
@@ -81,9 +81,9 @@ export const KITCHEN_HUB = {
   },
   fr: {
     path: '/fr/implantation-cuisine/',
-    title: "Idées d'implantation de cuisine : petite, en L, couloir, en U, îlot",
+    title: "Idées d’implantation de cuisine : petite, en L, couloir, en U, îlot",
     description: 'Cinq implantations de cuisine avec des tailles d\'exemple. Ouvrez une pièce dans le planificateur gratuit et placez les meubles en 2D et 3D.',
-    body: "La plupart des cuisines suivent l'une de cinq formes. Une petite cuisine tient sur un ou deux murs. Une cuisine en L occupe deux murs qui se rejoignent dans un angle. Une cuisine en couloir aligne deux rangées face à face. Une cuisine en U fait le tour de trois murs. L'îlot ajoute une rangée au centre de la pièce. Choisissez une implantation ci-dessous pour voir des tailles d'exemple, puis ouvrez une pièce de cette taille dans HomeDesigner. Vous placez les meubles en 2D et faites le tour du résultat en 3D, dans le navigateur ou sur Android. Meubles bas, plans de travail, évier, cuisinière et réfrigérateur sont gratuits.",
+    body: "La plupart des cuisines suivent l’une de cinq formes. Une petite cuisine tient sur un ou deux murs. Une cuisine en L occupe deux murs qui se rejoignent dans un angle. Une cuisine en couloir aligne deux rangées face à face. Une cuisine en U fait le tour de trois murs. L’îlot ajoute une rangée au centre de la pièce. Choisissez une implantation ci-dessous pour voir des tailles d’exemple, puis ouvrez une pièce de cette taille dans HomeDesigner. Vous placez les meubles en 2D et faites le tour du résultat en 3D, dans le navigateur ou sur Android. Meubles bas, plans de travail, évier, cuisinière et réfrigérateur sont gratuits.",
   },
   de: {
     path: '/de/kuechenformen/',
@@ -104,7 +104,7 @@ const K5 = K5_FREE_ISLAND_OK ? {
   },
   fr: {
     description: 'Planifiez une cuisine avec îlot dans une pièce de 4,2 × 4 m. Montez un îlot gratuit avec des meubles bas, en 2D et 3D.',
-    body: "L'îlot ajoute une rangée indépendante au centre de la cuisine : plus de plan de travail, plus de rangement, et souvent une place pour s'asseoir. Il demande une pièce plus grande que les autres implantations, car on circule tout autour. Beaucoup de cuisinistes laissent environ 1 m de chaque côté. Ouvrez une pièce de cette taille, montez d'abord la rangée murale, puis formez l'îlot avec des Meubles bas gratuits placés dos à dos au milieu de la pièce. Vous obtenez un îlot sans rien payer. Si vous préférez une pièce toute faite, l'Îlot de cuisine dédié (180 × 90 cm) est Pro. Dans les deux cas, faites-en le tour en 3D.",
+    body: "L’îlot ajoute une rangée indépendante au centre de la cuisine : plus de plan de travail, plus de rangement, et souvent une place pour s’asseoir. Il demande une pièce plus grande que les autres implantations, car on circule tout autour. Beaucoup de cuisinistes laissent environ 1 m de chaque côté. Ouvrez une pièce de cette taille, montez d’abord la rangée murale, puis formez l’îlot avec des Meubles bas gratuits placés dos à dos au milieu de la pièce. Vous obtenez un îlot sans rien payer. Si vous préférez une pièce toute faite, l’Îlot de cuisine dédié (180 × 90 cm) est Pro. Dans les deux cas, faites-en le tour en 3D.",
   },
   de: {
     description: 'Plane eine Küche mit Insel in einem Raum von 4,2 × 4 m. Bau eine kostenlose Insel aus Unterschränken, in 2D und 3D.',
@@ -117,7 +117,7 @@ const K5 = K5_FREE_ISLAND_OK ? {
   },
   fr: {
     description: 'Planifiez une cuisine avec îlot dans une pièce de 4,2 × 4 m. Montez la rangée murale avec des meubles bas gratuits, en 2D et 3D.',
-    body: "L'îlot ajoute une rangée indépendante au centre de la cuisine : plus de plan de travail, plus de rangement, et souvent une place pour s'asseoir. Il demande une pièce plus grande que les autres implantations, car on circule tout autour. Beaucoup de cuisinistes laissent environ 1 m de chaque côté. Ouvrez une pièce de cette taille, montez d'abord la rangée murale, puis utilisez l'Îlot de cuisine (180 × 90 cm, Pro). Ou laissez plutôt une table gratuite à cette place. Dans les deux cas, faites-en le tour en 3D.",
+    body: "L’îlot ajoute une rangée indépendante au centre de la cuisine : plus de plan de travail, plus de rangement, et souvent une place pour s’asseoir. Il demande une pièce plus grande que les autres implantations, car on circule tout autour. Beaucoup de cuisinistes laissent environ 1 m de chaque côté. Ouvrez une pièce de cette taille, montez d’abord la rangée murale, puis utilisez l’Îlot de cuisine (180 × 90 cm, Pro). Ou laissez plutôt une table gratuite à cette place. Dans les deux cas, faites-en le tour en 3D.",
   },
   de: {
     description: 'Plane eine Küche mit Insel in einem Raum von 4,2 × 4 m. Bau die Wandzeile aus kostenlosen Unterschränken, in 2D und 3D.',
@@ -147,7 +147,7 @@ const LAYOUTS = [
       description: 'Planifiez une petite cuisine dans une pièce de 3 × 2,4 m. Meubles bas, évier, cuisinière et réfrigérateur gratuits, en 2D et 3D.',
       example: 'Exemple : 3 × 2,4 m',
       sizes: [['3 × 2,4 m', 'metric']],
-      body: "Dans une petite cuisine, chaque meuble de 55 cm compte. Commencez par les trois éléments que vous utilisez le plus : évier, cuisinière et réfrigérateur. Placez l'évier entre les deux autres pour garder du plan de travail de chaque côté, et mettez le réfrigérateur en bout de rangée pour que sa porte s'ouvre loin du plan de travail. Si un mur ne suffit pas, tournez l'angle et continuez sur un deuxième mur. Ouvrez une pièce de cette taille, ajoutez des Meubles bas jusqu'à remplir le mur, puis passez en 3D pour vérifier les portes et le passage. Déplacez un meuble, vérifiez à nouveau.",
+      body: "Dans une petite cuisine, chaque meuble de 55 cm compte. Commencez par les trois éléments que vous utilisez le plus : évier, cuisinière et réfrigérateur. Placez l’évier entre les deux autres pour garder du plan de travail de chaque côté, et mettez le réfrigérateur en bout de rangée pour que sa porte s’ouvre loin du plan de travail. Si un mur ne suffit pas, tournez l’angle et continuez sur un deuxième mur. Ouvrez une pièce de cette taille, ajoutez des Meubles bas jusqu’à remplir le mur, puis passez en 3D pour vérifier les portes et le passage. Déplacez un meuble, vérifiez à nouveau.",
     },
     de: {
       path: '/de/kuechenformen/kleine-kueche/',
@@ -170,11 +170,11 @@ const LAYOUTS = [
     },
     fr: {
       path: '/fr/implantation-cuisine/cuisine-en-l/',
-      title: "Plan cuisine en L : idées et tailles d'exemple",
+      title: "Plan cuisine en L : idées et tailles d’exemple",
       description: 'Planifiez une cuisine en L dans une pièce de 3,6 × 3 m. Les deux rangées se montent avec des meubles bas gratuits, en 2D et 3D.',
       example: 'Exemple : 3,6 × 3 m',
       sizes: [['3,6 × 3 m', 'metric']],
-      body: "La cuisine en L occupe deux murs qui se rejoignent dans un angle et laisse le reste de la pièce libre, ce qui la rend pratique quand la cuisine partage l'espace avec une table. Placez l'évier sur un côté et la cuisinière sur l'autre, pour que deux personnes puissent cuisiner sans se gêner. Ouvrez une pièce de cette taille et montez chaque côté avec des Meubles bas gratuits : une rangée le long du premier mur, puis une seconde qui part de sa fin. L'angle est le seul point délicat. Vous pouvez y laisser deux meubles qui se rejoignent, ou utiliser le Meuble d'angle dédié (Pro). Vérifiez l'angle en 3D avant de choisir.",
+      body: "La cuisine en L occupe deux murs qui se rejoignent dans un angle et laisse le reste de la pièce libre, ce qui la rend pratique quand la cuisine partage l’espace avec une table. Placez l’évier sur un côté et la cuisinière sur l’autre, pour que deux personnes puissent cuisiner sans se gêner. Ouvrez une pièce de cette taille et montez chaque côté avec des Meubles bas gratuits : une rangée le long du premier mur, puis une seconde qui part de sa fin. L’angle est le seul point délicat. Vous pouvez y laisser deux meubles qui se rejoignent, ou utiliser le Meuble d’angle dédié (Pro). Vérifiez l’angle en 3D avant de choisir.",
     },
     de: {
       path: '/de/kuechenformen/l-kueche/',
@@ -197,7 +197,7 @@ const LAYOUTS = [
     },
     fr: {
       path: '/fr/implantation-cuisine/cuisine-en-couloir/',
-      title: "Plan cuisine en couloir : idées et tailles d'exemple",
+      title: "Plan cuisine en couloir : idées et tailles d’exemple",
       description: 'Planifiez une cuisine en couloir dans une pièce de 2,4 × 4 m : deux rangées face à face, en meubles gratuits, en 2D et 3D.',
       example: 'Exemple : 2,4 × 4 m',
       sizes: [['2,4 × 4 m', 'metric']],
@@ -224,11 +224,11 @@ const LAYOUTS = [
     },
     fr: {
       path: '/fr/implantation-cuisine/cuisine-en-u/',
-      title: "Plan cuisine en U : idées et tailles d'exemple",
+      title: "Plan cuisine en U : idées et tailles d’exemple",
       description: 'Planifiez une cuisine en U dans une pièce de 3 × 3,3 m. Trois rangées de meubles bas gratuits, en 2D et 3D.',
       example: 'Exemple : 3 × 3,3 m',
       sizes: [['3 × 3,3 m', 'metric']],
-      body: "La cuisine en U fait le tour de trois murs. C'est l'implantation qui offre le plus de plan de travail et de rangement, et la personne qui cuisine a tout à portée de main au centre. En contrepartie, elle a deux angles et une seule entrée, donc le centre doit rester dégagé. Ouvrez une pièce de cette taille, montez les trois rangées avec des Meubles bas gratuits, puis répartissez évier, cuisinière et réfrigérateur sur des côtés différents. Chaque angle peut accueillir deux meubles qui se rejoignent, ou le Meuble d'angle dédié (Pro). Entrez dans le U en 3D et faites demi-tour : si c'est impossible, retirez un meuble.",
+      body: "La cuisine en U fait le tour de trois murs. C’est l’implantation qui offre le plus de plan de travail et de rangement, et la personne qui cuisine a tout à portée de main au centre. En contrepartie, elle a deux angles et une seule entrée, donc le centre doit rester dégagé. Ouvrez une pièce de cette taille, montez les trois rangées avec des Meubles bas gratuits, puis répartissez évier, cuisinière et réfrigérateur sur des côtés différents. Chaque angle peut accueillir deux meubles qui se rejoignent, ou le Meuble d’angle dédié (Pro). Entrez dans le U en 3D et faites demi-tour : si c’est impossible, retirez un meuble.",
     },
     de: {
       path: '/de/kuechenformen/u-kueche/',
@@ -250,7 +250,7 @@ const LAYOUTS = [
     },
     fr: {
       path: '/fr/implantation-cuisine/cuisine-avec-ilot/',
-      title: "Plan cuisine avec îlot : idées et tailles d'exemple",
+      title: "Plan cuisine avec îlot : idées et tailles d’exemple",
       ...K5.fr,
       example: 'Exemple : 4,2 × 4 m',
       sizes: [['4,2 × 4 m', 'metric']],
@@ -288,7 +288,7 @@ const words = (s) => s.trim().split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)
 // building code, no cost or price), plus no building regulations in fr/de.
 const BANNED = [/\bAI\b/, /\bA\.I\./i, /artificial intelligence/i, /intelligence artificielle/i, /\bKI\b/, /künstliche Intelligenz/i, /\bpdf\b/i, /building code/i, /\bcode[- ]compliant/i, /planning permission/i, /\bcosts?\b/i, /\bprice/i, /\bbudget/i, /\bprix\b/i, /\bPreis/i, /Bauordnung/i, /norme/i, /\bDIN\b/];
 // Pro catalog items (furnitureCatalog.ts: island, corner, drawer, wall cabinet, dishwasher).
-const PRO_ITEMS = [/Kitchen Island/i, /Corner Cabinet/i, /Drawer Unit/i, /Wall Cabinet/i, /Dishwasher/i, /Îlot de cuisine/i, /Meuble d'angle/i, /Kücheninsel/i, /Eckschrank/i];
+const PRO_ITEMS = [/Kitchen Island/i, /Corner Cabinet/i, /Drawer Unit/i, /Wall Cabinet/i, /Dishwasher/i, /Îlot de cuisine/i, /Meuble d['’]angle/i, /Kücheninsel/i, /Eckschrank/i];
 const FREE = /\bfree\b|gratuit|kostenlos|no charge|sans rien payer|nichts kostet/i;
 const sentences = (s) => s.split(/(?<=[.!?])\s+/);
 

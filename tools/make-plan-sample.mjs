@@ -67,9 +67,13 @@ const clean = async () => {
 const info = await page.evaluate(async (bp) => {
   const { blueprintToSnapshot } = await import('/src/lib/aiPlan.ts');
   const st = () => window.useDesign.getState();
-  const snap = blueprintToSnapshot(bp, { allowPro: true, exterior: bp.exterior, roof: bp.roof });
+  // A blueprint with its own `furniture` list (tools/kitchen-layouts/render/) is
+  // shown with exactly those items: no automatic furnishing on top.
+  const own = Array.isArray(bp.furniture);
+  const snap = blueprintToSnapshot(own ? { ...bp, furnished: false } : bp, { allowPro: true, exterior: bp.exterior, roof: bp.roof });
   st().loadSnapshot(snap);
   st().setActiveFloor(st().floors[0].id);
+  if (own) for (const f of bp.furniture) st().addFurniture(f.type, { x: f.x, y: f.y }, { rotation: f.rotation ?? 0 });
   if (bp.stairs) st().addFurniture('stairs', { x: bp.stairs.x, y: bp.stairs.y }, { rotation: bp.stairs.rotation ?? 0 });
   st().clearSelection?.();
   const s = st();
@@ -146,7 +150,8 @@ if (!process.argv.includes('--no-render')) {
   };
   await page.evaluate(() => { const s = window.useDesign.getState(); s.setSunTime(14); s.setDollhouse(true); });
   await page.evaluate((id) => window.useDesign.getState().setActiveFloor(id), info.floors[0]);
-  await cam(15, 56, span * near, [cx, 0, cz]);
+  const dc = bp.dollhouseCamera ?? {};
+  await cam(dc.az ?? 15, dc.el ?? 56, span * (dc.near ?? near), [cx, 0, cz]);
   await shot('3d-ground.jpg');
   if (info.floors.length > 1) {
     await page.evaluate((id) => window.useDesign.getState().setActiveFloor(id), info.floors[info.floors.length - 1]);

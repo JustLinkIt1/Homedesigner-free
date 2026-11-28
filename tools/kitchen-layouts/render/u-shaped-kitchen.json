@@ -103,5 +103,10 @@
       "y": 213,
       "rotation": 90
     }
-  ]
+  ],
+  "dollhouseCamera": {
+    "az": 8,
+    "el": 68,
+    "near": 1.6
+  }
 }
