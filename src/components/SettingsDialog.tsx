@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, Monitor, Sun, Moon, ExternalLink, LogOut, Trash2, RefreshCw, MessageCircle, WandSparkles } from 'lucide-react';
+import { Settings, Monitor, Sun, Moon, ExternalLink, ChevronDown, LogOut, Trash2, RefreshCw, MessageCircle, WandSparkles } from 'lucide-react';
 import { useDesign } from '../store/designStore';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { hapticsEnabled, setHapticsEnabled, tapLight } from '../lib/haptics';
@@ -177,6 +177,20 @@ export default function SettingsDialog({
               ) : emailPending !== null ? (
                 <p className="email-optin-note" role="status">{t('Will save when you are back online.')}</p>
               ) : null}
+              {/* Short version of the privacy policy's "Product update emails"
+                  section (text: hd-email-optin-text-2026-11-28 §3). Outside the
+                  <label> so opening it never flips the switch. */}
+              <details className="email-optin-more">
+                <summary>
+                  {t('Details')} <ChevronDown className="icon" aria-hidden="true" />
+                </summary>
+                <p>
+                  {t('About once a month we email new features, AI point packs and offers, only if you switch this on. We send to your Google sign-in address. Switch it off here or use the link in any email (one click). We keep a record of your choice (yes/no, date, wording, language) as proof, and delete it with your account. We never share the list.')}{' '}
+                  <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+                    {t('Privacy policy')} <ExternalLink className="icon" aria-hidden="true" />
+                  </a>
+                </p>
+              </details>
             </section>
           ) : null}
 

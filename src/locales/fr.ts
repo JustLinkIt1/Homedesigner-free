@@ -1086,4 +1086,7 @@ export const FR: Record<string, string> = {
   'About once a month. Unsubscribe anytime.': 'Environ une fois par mois. Désabonnement à tout moment.',
   'This Google email is not verified, so email cannot be turned on.': 'Cette adresse Google n\'est pas vérifiée : les e-mails ne peuvent pas être activés.',
   'Will save when you are back online.': 'Sera enregistré dès que vous serez de nouveau en ligne.',
+  // "Details" under the Settings email switch (short privacy text, hd-email-optin-text-2026-11-28 §3).
+  'Details': "Détails",
+  'About once a month we email new features, AI point packs and offers, only if you switch this on. We send to your Google sign-in address. Switch it off here or use the link in any email (one click). We keep a record of your choice (yes/no, date, wording, language) as proof, and delete it with your account. We never share the list.': "Environ une fois par mois, nous vous envoyons par e-mail les nouveautés, les packs de points IA et les offres, uniquement si vous activez cette option. Ils sont envoyés à l'adresse de votre connexion Google. Désactivez-la ici ou via le lien présent dans chaque e-mail (un clic). Nous conservons votre choix (oui/non, date, texte affiché, langue) comme preuve, et le supprimons avec votre compte. Nous ne partageons jamais la liste.",
 };

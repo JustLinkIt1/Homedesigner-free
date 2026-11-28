@@ -1086,4 +1086,8 @@ export const KO: Record<string, string> = {
   'About once a month. Unsubscribe anytime.': '한 달에 한 번 정도. 언제든 수신 거부할 수 있어요.',
   'This Google email is not verified, so email cannot be turned on.': '이 Google 이메일은 인증되지 않아 이메일을 켤 수 없습니다.',
   'Will save when you are back online.': '다시 온라인이 되면 저장됩니다.',
+  // "Details" under the Settings email switch (short privacy text, hd-email-optin-text-2026-11-28 §3).
+  'Details': "자세히",
+  // English until a native check.
+  'About once a month we email new features, AI point packs and offers, only if you switch this on. We send to your Google sign-in address. Switch it off here or use the link in any email (one click). We keep a record of your choice (yes/no, date, wording, language) as proof, and delete it with your account. We never share the list.': "About once a month we email new features, AI point packs and offers, only if you switch this on. We send to your Google sign-in address. Switch it off here or use the link in any email (one click). We keep a record of your choice (yes/no, date, wording, language) as proof, and delete it with your account. We never share the list.",
 };

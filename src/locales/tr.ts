@@ -1152,4 +1152,8 @@ export const TR: Record<string, string> = {
   'About once a month. Unsubscribe anytime.': 'Ayda yaklaşık bir kez. Her zaman iptal edilebilir.',
   'This Google email is not verified, so email cannot be turned on.': 'Bu Google e-postası doğrulanmamış, bu yüzden e-posta açılamıyor.',
   'Will save when you are back online.': 'Yeniden çevrimiçi olduğunuzda kaydedilecek.',
+  // "Details" under the Settings email switch (short privacy text, hd-email-optin-text-2026-11-28 §3).
+  'Details': "Ayrıntılar",
+  // English until a native check.
+  'About once a month we email new features, AI point packs and offers, only if you switch this on. We send to your Google sign-in address. Switch it off here or use the link in any email (one click). We keep a record of your choice (yes/no, date, wording, language) as proof, and delete it with your account. We never share the list.': "About once a month we email new features, AI point packs and offers, only if you switch this on. We send to your Google sign-in address. Switch it off here or use the link in any email (one click). We keep a record of your choice (yes/no, date, wording, language) as proof, and delete it with your account. We never share the list.",
 };

@@ -6663,6 +6663,58 @@ input[type='checkbox']:disabled {
 .email-optin-note.warn {
   color: var(--text-2);
 }
+/* "Details" under the Settings switch: a short version of the privacy policy's
+   email section, closed by default. The summary is a 44px touch target. */
+.email-optin-more {
+  margin: 2px 2px 0;
+}
+.email-optin-more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  list-style: none;
+  border-radius: 8px;
+}
+.email-optin-more > summary::-webkit-details-marker {
+  display: none;
+}
+.email-optin-more > summary:hover {
+  color: var(--text);
+}
+.email-optin-more > summary .icon {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--dur) var(--ease);
+}
+.email-optin-more[open] > summary .icon {
+  transform: rotate(180deg);
+}
+.email-optin-more > p {
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.email-optin-more > p a {
+  color: var(--brand);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.email-optin-more > p a .icon {
+  width: 11px;
+  height: 11px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .email-optin-more > summary .icon {
+    transition: none;
+  }
+}
 
 /* An account with no Google photo has no <img>: the name block then takes the
    photo column too instead of being squeezed into its 40px. */
