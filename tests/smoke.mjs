@@ -8,6 +8,7 @@
 // then soft-passes. Everything else always hard-fails.
 
 import { spawn } from 'node:child_process';
+import { openSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,6 +26,9 @@ chromium.launch = async (options) => {
     const p = await openPage(pageOptions);
     p.setDefaultTimeout(60000);
     p.setDefaultNavigationTimeout(120000);
+    // A renderer crash otherwise surfaces only as a later timeout or a
+    // "Target closed" error with no hint of the cause.
+    p.on('crash', () => console.log(`CRASH ${new Date().toISOString()} ${p.url()} (last step: ${lastStep})`));
     return p;
   };
   return b;
@@ -34,13 +38,19 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4599;
 const BASE = `http://localhost:${PORT}/`;
 const PAGE_BOOT_TIMEOUT = 60000;
+// Last smoke step reached (a check name or a settle label), printed with NAV and
+// CRASH lines so an unexpected reload or crash says where it happened.
+let lastStep = 'boot';
 
 // Launch Vite through Node so the smoke suite is portable: Windows cannot
 // spawn the extensionless `.bin/vite` shim directly.
 const viteEntry = join(root, 'node_modules', 'vite', 'bin', 'vite.js');
+// Vite's output goes to a log (overwritten each run, gitignored) so a dependency
+// re-optimisation or full reload can be matched against NAV lines afterwards.
+const viteLog = openSync(join(root, 'tests', '.smoke-vite.log'), 'w');
 const dev = spawn(process.execPath, [viteEntry, '--port', String(PORT), '--strictPort'], {
   cwd: root,
-  stdio: 'ignore',
+  stdio: ['ignore', viteLog, viteLog],
   env: {
     ...process.env,
     // A public-format placeholder exercises the signed-out desktop checkout
@@ -83,6 +93,22 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
+// Permanent navigation logger for the main page. The first real load (the
+// goto in section 1) is expected; anything after it is a reload or navigation
+// nobody asked for, and should name itself here instead of showing up later
+// as a click timeout.
+{
+  let firstLoadSeen = false;
+  page.on('framenavigated', (frame) => {
+    if (frame !== page.mainFrame()) return;
+    const url = frame.url();
+    if (!firstLoadSeen) {
+      if (url !== 'about:blank') firstLoadSeen = true;
+      return;
+    }
+    console.log(`NAV ${new Date().toISOString()} ${url} (last step: ${lastStep})`);
+  });
+}
 
 // Keep the smoke suite deterministic and exercise the versioned cloud catalog
 // without depending on the public R2 endpoint or downloading a GLB.
@@ -136,21 +162,48 @@ await page.route('https://pub-6583adc5c7ee4926ae2b8037175a5dfc.r2.dev/catalog/v1
 );
 
 let failures = 0;
-// Under SwiftShader the 3D view draws only a few frames a second. Playwright's click
-// waits for its target to hold still across animation frames, so right after 3D
-// mounts it can give up before the page has drawn enough of them. Let the page draw
-// a few frames first (at most 60 s), then click with the same 60 s budget. Test
-// timing only: the app is not changed (EXEC cycle 184).
-const settleFrames = (frames = 3, timeout = 60000) => page.evaluate(
-  ({ frames, timeout }) => new Promise((resolve) => {
-    let seen = 0;
-    const stop = setTimeout(resolve, timeout);
-    const tick = () => { seen += 1; if (seen >= frames) { clearTimeout(stop); resolve(); } else requestAnimationFrame(tick); };
-    requestAnimationFrame(tick);
-  }),
-  { frames, timeout },
-);
+// Counting frames alone (the old settleFrames) is not enough. Under SwiftShader the main
+// thread can still be blocked for seconds between them (shader compiles), and a
+// click issued then times out inside Playwright. settleIdle waits until the
+// page is actually responsive: 3 consecutive animation-frame gaps each under
+// 200 ms. Capped at 90 s; on the cap it logs SETTLE-CAP and carries on, so the
+// following assertion still decides pass/fail. Test timing only.
+const SETTLE_CAP_MS = 90000;
+const settleIdle = async (label, p = page) => {
+  lastStep = `settle: ${label}`;
+  const inPage = p.evaluate(
+    ({ cap }) => new Promise((resolve) => {
+      const start = performance.now();
+      let last = start;
+      let good = 0;
+      const tick = (now) => {
+        good = now - last < 200 ? good + 1 : 0;
+        last = now;
+        if (good >= 3) return resolve(true);
+        if (now - start > cap) return resolve(false);
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }),
+    { cap: SETTLE_CAP_MS },
+  ).catch(() => false);
+  // The in-page cap only runs once the page runs script at all; this one
+  // covers a main thread that never picks up the evaluate.
+  let timer;
+  const outer = new Promise((resolve) => { timer = setTimeout(() => resolve(false), SETTLE_CAP_MS + 5000); });
+  const settled = await Promise.race([inPage, outer]);
+  clearTimeout(timer);
+  if (!settled) console.log(`SETTLE-CAP ${label}`);
+};
+// Clicks in the 3D section: never wait on "scheduled navigations" after the
+// action (the caller asserts the result with its own wait instead).
+const CLICK_3D = { noWaitAfter: true, timeout: 90000 };
+// Budget for the post-click assertion waits: the result of a 3D click (e.g. the
+// docked catalog mounting its own WebGL surface) can itself take over 60 s
+// under SwiftShader.
+const WAIT_3D = 90000;
 const check = (name, ok, detail = '') => {
+  lastStep = `check: ${name}`;
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : ` — ${detail}`}`);
   if (!ok) failures++;
 };
@@ -808,7 +861,8 @@ if (process.env.SMOKE_SKIP_3D) {
     const { planCapture } = await import('/src/lib/renderBridge.ts');
     planCapture.current = () => { throw new Error('synthetic tainted canvas'); };
   });
-  await page.click('.view-toggle button:nth-child(2)');
+  await settleIdle('3D view toggle');
+  await page.locator('.view-toggle button:nth-child(2)').click(CLICK_3D);
   check(
     'thumbnail capture failure does not block 3D navigation',
     await page.locator('.view-toggle button:nth-child(2).active').waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false),
@@ -818,9 +872,10 @@ if (process.env.SMOKE_SKIP_3D) {
   check('3D mounts (no webgl-missing)', !webglMissing);
   const objectsButton = page.locator('.objects3d-btn');
   check('3D Objects entry point appears', await objectsButton.isVisible().catch(() => false));
-  await settleFrames();
-  await objectsButton.click({ timeout: 60000 });
-  check('3D object catalog opens', await page.locator('.catalog.docked').isVisible().catch(() => false));
+  await settleIdle('3D Objects button');
+  await objectsButton.click(CLICK_3D);
+  check('3D object catalog opens', await page.locator('.catalog.docked')
+    .waitFor({ state: 'visible', timeout: WAIT_3D }).then(() => true).catch(() => false));
   check(
     'cloud catalog manifest loads',
     await page.locator('.catalog.docked .cat-item', { hasText: 'Cloud Smoke Chair' })
@@ -859,13 +914,14 @@ if (process.env.SMOKE_SKIP_3D) {
   // The same catalogue entry may also appear in Recent or Favourites. Exercise
   // one visible instance instead of relying on there being only one DOM copy.
   const sideTableCard = page.locator('.catalog.docked .cat-item[data-tip="Side Table"]').first();
-  // 45s like the other clicks in this block: the docked 3D catalog has just
-  // mounted a WebGL surface, and under software GL that compile stalls the main
-  // thread well past the 30s default.
-  await sideTableCard.locator('.cat-item-select').click({ timeout: 45000, force: true });
+  // The docked 3D catalog has just mounted a WebGL surface, and under software
+  // GL that compile stalls the main thread; settle first, then click.
+  await settleIdle('Side Table select');
+  await sideTableCard.locator('.cat-item-select').click({ ...CLICK_3D, force: true });
   check(
     'catalog selection stays GPU-light until 3D preview is requested',
-    await page.locator('.catalog.docked .catalog-preview-static').isVisible().catch(() => false)
+    await page.locator('.catalog.docked .catalog-preview-static')
+      .waitFor({ state: 'visible', timeout: WAIT_3D }).then(() => true).catch(() => false)
       && await page.locator('.catalog.docked .catalog-preview-canvas').count() === 0,
   );
   check(
@@ -874,17 +930,21 @@ if (process.env.SMOKE_SKIP_3D) {
   );
   // The docked catalogue shares the live 3D frame and can shift by subpixels
   // under software rendering. The exact card is already visible above.
-  await sideTableCard.locator('.ci-favorite').click({ force: true });
+  await settleIdle('Side Table favourite');
+  await sideTableCard.locator('.ci-favorite').click({ ...CLICK_3D, force: true });
+  await page.locator('.catalog.docked .cat-section', { hasText: 'Favourites' })
+    .waitFor({ state: 'visible', timeout: WAIT_3D }).catch(() => {});
   const savedFavorites = await page.evaluate(() => JSON.parse(localStorage.getItem('homedesigner.favorites.v1') ?? '[]'));
   check(
     'catalog favourites persist and appear as a shortcut row',
     savedFavorites.includes('side_table')
       && await page.locator('.catalog.docked .cat-section', { hasText: 'Favourites' }).isVisible().catch(() => false),
   );
-  await page.locator('.catalog.docked .catalog-preview-3d').click({ force: true });
+  await settleIdle('catalog 3D preview');
+  await page.locator('.catalog.docked .catalog-preview-3d').click({ ...CLICK_3D, force: true });
   check(
     'on-demand catalog 3D preview opens',
-    await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: 30000 }).then(() => true).catch(() => false),
+    await page.waitForSelector('.catalog.docked .catalog-preview-canvas', { timeout: WAIT_3D }).then(() => true).catch(() => false),
   );
   // ---- Pro items are legible before they are tapped ------------------------
   // Reported: "the user has no idea it is a paid feature, only after clicking on
@@ -907,7 +967,10 @@ if (process.env.SMOKE_SKIP_3D) {
     // The Free chip is the answer to "click through every single furniture".
     const freeChip = page.locator('.catalog.docked .cat-chips .chip', { hasText: /^Free$/ });
     check('pro: a Free chip is offered to non-Pro users', await freeChip.isVisible().catch(() => false));
-    await freeChip.click({ force: true });
+    await settleIdle('Free chip');
+    await freeChip.click({ ...CLICK_3D, force: true });
+    await page.locator('.catalog.docked .cat-chips .chip.active', { hasText: /^Free$/ })
+      .waitFor({ state: 'visible', timeout: WAIT_3D }).catch(() => {});
     await page.waitForTimeout(300);
     const afterFilter = await page.evaluate(() => ({
       items: document.querySelectorAll('.catalog.docked .cat-item').length,
@@ -933,17 +996,21 @@ if (process.env.SMOKE_SKIP_3D) {
       asPro.category === 'All', JSON.stringify(asPro));
     await page.evaluate(() => window.useProStore.setState({ isPro: false }));
     await page.waitForTimeout(300);
-    await page.locator('.catalog.docked .cat-chips .chip', { hasText: /^All$/ }).click({ force: true });
+    await settleIdle('All chip');
+    await page.locator('.catalog.docked .cat-chips .chip', { hasText: /^All$/ }).click({ ...CLICK_3D, force: true });
+    await page.locator('.catalog.docked .cat-chips .chip.active', { hasText: /^All$/ })
+      .waitFor({ state: 'visible', timeout: WAIT_3D }).catch(() => {});
     await page.waitForTimeout(200);
   }
 
-  // 45s to match the rotate-pill wait below: both land right after the WebGL
-  // preview opens, and under software GL that compile stalls the main thread
-  // long enough that a 30s click timed out in 3 of 4 runs on a loaded machine.
-  await page.locator('.catalog.docked .catalog-place').click({ timeout: 45000, force: true });
+  // Lands right after the WebGL preview opens; under software GL that compile
+  // stalls the main thread, so settle first and assert with its own wait.
+  await settleIdle('catalog Place');
+  await page.locator('.catalog.docked .catalog-place').click({ ...CLICK_3D, force: true });
   check(
     '3D placement guidance appears',
-    await page.locator('.placement-affordance', { hasText: 'Tap a floor to place Side Table' }).isVisible().catch(() => false),
+    await page.locator('.placement-affordance', { hasText: 'Tap a floor to place Side Table' })
+      .waitFor({ state: 'visible', timeout: WAIT_3D }).then(() => true).catch(() => false),
   );
   // The selection ring replaced the ±45° rotate pill in 3D. It is anchored to
   // the object through drei's <Html>, so this also proves the projection works.
@@ -979,8 +1046,10 @@ if (process.env.SMOKE_SKIP_3D) {
     // by subpixels forever and never satisfy Playwright's "stable" heuristic.
     // Visibility and non-overlap are asserted above; dispatch to that exact
     // visible control without waiting for a static bounding box.
-    await settleFrames();
-    await page.locator('.sel-ring button[aria-label^="Rotate"]').click({ force: true });
+    await settleIdle('3D ring rotate');
+    await page.locator('.sel-ring button[aria-label^="Rotate"]').click({ ...CLICK_3D, force: true });
+    await page.waitForFunction((before) => window.useDesign.getState().furniture[0].rotation !== before,
+      r0, { timeout: WAIT_3D }).catch(() => {});
     await page.waitForTimeout(250);
     const r1 = await store(() => window.useDesign.getState().furniture[0].rotation);
     check('3D selection ring: rotate turns the object by 90°', (r1 - r0 + 360) % 360 === 90, `got ${r1 - r0}`);
@@ -1251,22 +1320,43 @@ browser.close().catch(() => {});
   const opened = await motionPage.locator('.modal.settings').isVisible().catch(() => false);
   check('motion context: settings dialog opens', opened);
   if (opened) {
+    // Record the dialog on every animation frame from the close click on,
+    // inside the page. Sampling once from Node after the click (the old check)
+    // raced the exit animation: under a busy CPU the round-trip could land after
+    // the animation had already finished, giving during=0 on a working build.
+    // A capture-phase listener stamps the click inside the page, so the frames
+    // counted are exactly the ones painted after it.
+    await motionPage.evaluate(() => {
+      const rec = { clickAt: null, frames: [], goneAt: null };
+      window.__dialogExit = rec;
+      const btn = document.querySelector('.modal.settings .modal-foot .btn.primary');
+      btn?.addEventListener('click', () => {
+        rec.clickAt = performance.now();
+        const tick = (now) => {
+          const present = document.querySelector('.modal.settings') !== null;
+          rec.frames.push(present);
+          if (!present) { rec.goneAt = now; return; }
+          if (now - rec.clickAt < 5000) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }, { capture: true, once: true });
+    });
     await motionPage.locator('.modal.settings .modal-foot .btn.primary').click();
-    // Immediately after the close click the panel must STILL be there (it is
-    // animating out). With no exit animation this is 0 and the check fails —
-    // which is the point: it is what stops "all green" from being compatible
-    // with having shipped no animation.
-    const during = await motionPage.locator('.modal.settings').count();
     // ...and it must still finish. A never-completing exit would leave a
     // backdrop swallowing every click, which is exactly what an earlier draft
     // of <Modal> did (mixed element- and variant-level transitions).
-    let gone = false;
-    for (let i = 0; i < 25 && !gone; i++) {
-      gone = (await motionPage.locator('.modal.settings').count()) === 0;
-      if (!gone) await motionPage.waitForTimeout(60);
-    }
-    check('dialog animates out instead of vanishing in one frame', during === 1 && gone,
-      `during=${during} gone=${gone}`);
+    await motionPage.waitForFunction(() => window.__dialogExit.goneAt !== null
+      || (window.__dialogExit.clickAt !== null && performance.now() - window.__dialogExit.clickAt > 5000),
+    null, { timeout: 15000 }).catch(() => {});
+    const exit = await motionPage.evaluate(() => window.__dialogExit);
+    // With no exit animation the panel is removed before the first frame after
+    // the click is painted, so frames is [false] and the check fails, which is
+    // the point: "all green" must not be compatible with shipping no animation.
+    const during = exit.frames.filter(Boolean).length;
+    const gone = exit.goneAt !== null
+      && (await motionPage.locator('.modal.settings').count()) === 0;
+    check('dialog animates out instead of vanishing in one frame', exit.clickAt !== null && during >= 1 && gone,
+      `framesWithDialog=${during} of ${exit.frames.length} gone=${gone} exitMs=${exit.goneAt && exit.clickAt ? Math.round(exit.goneAt - exit.clickAt) : 'n/a'}`);
   }
   await motionPage.close();
 }
